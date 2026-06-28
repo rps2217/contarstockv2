@@ -1,8 +1,20 @@
 import JSZip from "jszip";
 
+// Re-exportar funciones compartidas para compatibilidad
+export { 
+  formatCurrency, 
+  formatNumber, 
+  parseNumber,
+  normalizeSku as normalizeSkuBase 
+} from '@/shared/utils/common';
+
+// Importar para usar internamente
+import { normalizeSku as normalizeSkuBase } from '@/shared/utils/common';
+
 /**
  * MOTOR DE IDENTIDAD LOGÍSTICA (DRY)
- * Única fuente de verdad para normalizar SKUs y Cabeceras en toda la app.
+ * Única fuente de verdad para normalizar SKUs y Barcodes en toda la app.
+ * sanitizeBarcode es más estricta: elimina caracteres de control también.
  */
 export const sanitizeBarcode = (code: string): string => {
   if (!code) return "";
@@ -10,9 +22,12 @@ export const sanitizeBarcode = (code: string): string => {
     .trim()
     .toUpperCase()
     .replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g, "")
-    .replace(/[^A-Z0-9]/g, ""); // Deja solo letras y números (Unificado)
+    .replace(/[^A-Z0-9]/g, "");
 };
 
+/**
+ * Normaliza SKU usando sanitizeBarcode para mantener consistencia
+ */
 export const normalizeSku = (val: string): string => sanitizeBarcode(val);
 
 /**
@@ -35,8 +50,8 @@ export const normalizeHeader = (h: string): string =>
     .trim()
     .toUpperCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Elimina acentos
-    .replace(/[^A-Z0-9]/g, ""); // Deja solo letras y números
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]/g, "");
 
 export const generateUUID = (): string => {
   if (typeof crypto !== "undefined" && crypto.randomUUID)
@@ -101,13 +116,5 @@ export const compressImage = (
     };
     img.onerror = (e) => reject(e);
   });
-};
-
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
-    maximumFractionDigits: 0
-  }).format(value);
 };
 
