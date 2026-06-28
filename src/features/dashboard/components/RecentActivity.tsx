@@ -6,6 +6,7 @@
 import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { getIconColorClass } from '@/lib/ui';
 
 interface ActivityItem {
   id: string;
@@ -32,21 +33,6 @@ const getUserInitial = (title: string, user?: string): string => {
     return user.charAt(0).toUpperCase();
   }
   return title.charAt(0).toUpperCase();
-};
-
-const getIconColorClass = (iconColor?: string, isDark?: boolean): string => {
-  switch (iconColor) {
-    case 'emerald':
-      return 'text-emerald-400';
-    case 'amber':
-      return 'text-amber-400';
-    case 'purple':
-      return 'text-purple-400';
-    case 'rose':
-      return 'text-rose-400';
-    default:
-      return isDark ? 'text-slate-400' : 'text-slate-500';
-  }
 };
 
 export const RecentActivity: React.FC<RecentActivityProps> = memo(({
