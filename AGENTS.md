@@ -1,4 +1,35 @@
 
+---
+
+## Optimización de Bundles y Performance (2026-06-27)
+
+### Configuración de Chunks en vite.config.ts
+```typescript
+manualChunks: {
+  'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+  'vendor-ui': ['lucide-react', 'framer-motion', 'motion', 'sonner'],
+  'vendor-charts': ['recharts'],          // Separado para lazy loading
+  'vendor-db': ['dexie', 'dexie-react-hooks'],
+  'vendor-export': ['xlsx', 'jspdf', 'jspdf-autotable'],
+  'vendor-parse': ['papaparse', 'jszip'],
+  'vendor-date': ['date-fns'],
+  'vendor-scanner': ['html5-qrcode', 'qrcode.react'],
+  'vendor-gemini': ['@google/genai'],
+  'vendor-transformers': ['@xenova/transformers']
+}
+```
+
+### Lazy Loading de Recharts
+- `SparklineChart` ahora carga recharts dinámicamente con `import('recharts')`
+- Muestra skeleton mientras carga
+
+### Componentes Memoizados
+- `EventCard` - Card de eventos
+- `EventHeader` - Header de eventos
+- `EventFormHeader` - Header de formulario
+
+### Commits:
+- `4e959715` - perf: Optimización de bundles y memoización
 
 ---
 
@@ -24,6 +55,9 @@ src/lib/
 | `DesignStatusBadge` | `design-system/StatusBadge.tsx` | RecordDetailView |
 
 ### Commits de Refactorización:
+- `4e959715` - perf: Optimización de bundles y memoización
+- `d7078ed2` - fix: Hacer props opcionales en ScannerToolsSheet
+- `edc16a88` - refactor: Unificar funciones de formateo en SyncIncidents
 - `cbe587c0` - refactor: Unificar formateo de fechas en componentes sync
 - `d3b22dc9` - fix: Corregir errores de compilación por refs faltantes
 - `2dc2793c` - refactor: Unificar funciones duplicadas de status y fechas
