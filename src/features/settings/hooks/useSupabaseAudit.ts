@@ -27,7 +27,7 @@ export const SYSTEM_TABLES: SystemTable[] = [
   { name: 'PROVEEDORES', pkey: 'rut', desc: 'Registro de Proveedores Autorizados', required: true },
   { name: 'SESSIONS', pkey: 'id', desc: 'Sesiones de Conteo Activas e Históricas', required: true },
   { name: 'SCANS', pkey: 'id', desc: 'Registros de Escaneo Individuales', required: true },
-  { name: 'CONFIG_SISTEMA', pkey: 'key', desc: 'Parámetros Globales y Plantillas', required: true },
+  // CONFIG_SISTEMA fue eliminado - no existe en Supabase
   { name: 'VENCIMIENTOS', pkey: 'id', desc: 'Lotes de Vencimiento Registrados', required: true },
   { name: 'EVENTOS', pkey: 'id', desc: 'Bitácora de Siniestros y Mermas', required: true },
   { name: 'CLIENTES', pkey: 'id', desc: 'Asignación de Cargas a Clientes', required: true },

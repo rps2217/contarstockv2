@@ -60,7 +60,7 @@ export const runSystemHealthCheck = async (): Promise<TestResult[]> => {
   // --- 3. CHEQUEOS CLOUD (CONECTIVIDAD) ---
   if (navigator.onLine && config) {
     try {
-      const response = await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
+      const response = await supabaseSyncService.pullBatch('PRODUCTS', undefined, 'barcode');
       if (response.success) {
         results.push({ 
           step: 'CLOUD_LINK', 

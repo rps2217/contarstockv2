@@ -48,10 +48,10 @@ const SystemStatusInner: React.FC = () => {
         return;
       }
 
-      // 2. Medir Latencia
+      // 2. Medir Latencia (usando tabla PRODUCTS que sí existe)
       const start = performance.now();
       try {
-        const res: any = await pullBatch('CONFIG_SISTEMA');
+        const res: any = await pullBatch('PRODUCTS', undefined, 'barcode');
         if (res.isOffline || res.success === false) {
           setLatency(null);
           setSupabaseConnected(false);
