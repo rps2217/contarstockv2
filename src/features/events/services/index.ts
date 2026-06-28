@@ -1,15 +1,9 @@
 /**
  * Event Services - Módulos para gestión de eventos
+ *
+ * Nota: La sincronización ahora usa genericSyncEngine directamente.
+ * Solo se mantienen los servicios de procesamiento.
  */
-
-// Sync services
-export {
-  fetchInitialEventData,
-  startEventRealtimeSync,
-  syncEvent,
-  deleteEventRemote,
-  type EventSyncResult,
-} from './eventSyncService';
 
 // Processor services
 export {
