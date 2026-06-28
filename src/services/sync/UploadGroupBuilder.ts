@@ -1,11 +1,12 @@
 /**
- * UploadGroupBuilder - Construye grupos de upload para sincronización
- * 
- * Extraído de syncManager.ts para reducir complejidad y mejorar mantenibilidad.
+ * UploadGroupBuilder - Construye grupos de upload para sincronizacion
+ *
+ * Extraido de syncManager.ts para reducir complejidad y mejorar mantenibilidad.
  */
 
 import { db } from '../../db';
 import { CountingSession } from '../../types';
+import { unifiedSyncEngine } from './unified';
 
 export interface UploadGroup {
   erpOrder: string;
@@ -16,8 +17,6 @@ export interface UploadGroup {
   type: 'inventory' | 'reception' | 'products' | 'orphans' | 'dynamic';
   sessionType?: string;
 }
-
-const UPLOAD_BATCH_SIZE = 500;
 
 /**
  * Agrupa sesiones pendientes por orden ERP
@@ -37,7 +36,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 
   for (const session of pendingSessions) {
     const erpOrder = session.erpOrder || 'ORPHANS';
-    
+
     if (!groupsMap.has(erpOrder)) {
       groupsMap.set(erpOrder, {
         erpOrder,
@@ -54,7 +53,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     group.sessionCount++;
     group.totalUnits += session.totalUnits || 0;
     group.sessionIds.push(session.id);
-    
+
     if (session.logisticsLabel) {
       group.logisticsLabels.push(session.logisticsLabel);
     }
@@ -64,21 +63,72 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 };
 
 /**
- * Determina el tipo de grupo basado en la sesión
+ * Alias de getPendingUploadGroups para compatibilidad
+ */
+export const getPendingGroups = getPendingUploadGroups;
+
+/**
+ * Sube un grupo de datos usando el motor unificado
+ */
+export const uploadGroupCompat = async (
+  group: UploadGroup,
+  onProgress?: (message: string) => void
+): Promise<{ success: boolean; uploaded: number }> => {
+  // Obtener sesiones del grupo
+  const sessions = await db.sessions
+    .where('id')
+    .anyOf(group.sessionIds)
+    .toArray();
+
+  // Preparar datos para upload - usar campos que existen en CountingSession
+  const data = sessions.map(s => ({
+    id: s.id,
+    erpOrder: s.erpOrder,
+    sessionType: s.sessionType,
+    createdAt: s.createdAt,
+    status: s.status,
+    totalUnits: s.totalUnits,
+    logisticsLabel: s.logisticsLabel,
+    syncStatus: 'synced',
+    lastSyncTimestamp: Date.now(),
+  }));
+
+  onProgress?.(`Subiendo ${data.length} sesiones...`);
+
+  const result = await unifiedSyncEngine.pushBatch('sessions', data);
+
+  if (result.success) {
+    // Marcar sesiones como sincronizadas
+    await db.sessions.bulkPut(
+      sessions.map(s => ({ ...s, syncStatus: 'synced' as const }))
+    );
+    onProgress?.(`Upload completado: ${result.uploaded} sesiones`);
+  } else {
+    onProgress?.(`Error: ${result.errors?.join(', ')}`);
+  }
+
+  return {
+    success: result.success,
+    uploaded: result.uploaded || 0,
+  };
+};
+
+/**
+ * Determina el tipo de grupo basado en la sesion
  */
 function getGroupType(session: { erpOrder?: string; sessionType?: string }): UploadGroup['type'] {
   if (!session.erpOrder || session.erpOrder === 'ORPHANS') {
     return 'orphans';
   }
-  
+
   if (session.sessionType === 'reception') {
     return 'reception';
   }
-  
+
   if (session.sessionType === 'hammer') {
     return 'inventory';
   }
-  
+
   return 'inventory';
 }
 
@@ -86,7 +136,7 @@ function getGroupType(session: { erpOrder?: string; sessionType?: string }): Upl
  * Obtiene el batch size configurado
  */
 export const getUploadBatchSize = (): number => {
-  return UPLOAD_BATCH_SIZE;
+  return 500;
 };
 
 /**
@@ -114,7 +164,7 @@ export const sortGroupsByPriority = (groups: UploadGroup[]): UploadGroup[] => {
   return [...groups].sort((a, b) => {
     const priorityDiff = priority[a.type] - priority[b.type];
     if (priorityDiff !== 0) return priorityDiff;
-    
+
     // Dentro de misma prioridad, ordenar por cantidad de unidades (mayor primero)
     return b.totalUnits - a.totalUnits;
   });

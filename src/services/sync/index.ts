@@ -1,28 +1,25 @@
 /**
- * Sync Services - Módulos para sincronización
+ * Sync Services - Modulos para sincronizacion
  *
  * ARQUITECTURA CONSOLIDADA:
- * 
+ *
  *   ┌──────────────────────────────────────────────────────────────┐
  *   │                    UNIFIED SYNC ENGINE                        │
- *   │  (Nuevo punto de entrada único - 1 motor para todo)          │
+ *   │  (Unico punto de entrada para toda la sincronizacion)        │
  *   │                                                               │
  *   │  Combina:                                                    │
- *   │  • GenericSyncEngine (catálogos)                            │
+ *   │  • GenericSyncEngine (catalogos)                            │
  *   │  • BatchSyncService (operaciones batch)                     │
  *   │  • RealtimeSyncService (tiempo real)                        │
  *   │  • SyncQueueService (cola offline)                          │
  *   └──────────────────────────────────────────────────────────────┘
  *
- * Para código NUEVO, usar:
- *   import { unifiedSyncEngine } from './unified';
- *
- * Para código LEGACY, usar:
- *   import { syncOrchestrator } from './SyncOrchestrator';
+ * Uso recomendado:
+ *   import { unifiedSyncEngine } from '@/services/sync';
  */
 
 // =============================================================================
-// UNIFIED SYNC ENGINE (NUEVO - RECOMENDADO)
+// UNIFIED SYNC ENGINE (UNICO MOTOR)
 // =============================================================================
 export {
   unifiedSyncEngine,
@@ -59,23 +56,12 @@ export type {
 } from './unified';
 
 // =============================================================================
-// SYNC ORCHESTRATOR (COMPATIBILIDAD LEGACY)
-// =============================================================================
-export {
-  syncOrchestrator,
-  syncAll as syncAllLegacy,
-  syncCatalogsOnly,
-  syncBatchesOnly,
-  registryToSync,
-} from './SyncOrchestrator.compat';
-
-export type { SyncResult as SyncResultLegacy, SyncStatus as SyncStatusLegacy } from './SyncOrchestrator.compat';
-
-// =============================================================================
-// UPLOAD GROUPING UTILITIES
+// UPLOAD GROUPING UTILITIES (con compatibilidad)
 // =============================================================================
 export {
   getPendingUploadGroups,
+  getPendingGroups,
+  uploadGroupCompat,
   filterGroupsByType,
   sortGroupsByPriority,
   getUploadBatchSize,
@@ -84,27 +70,7 @@ export {
 export type { UploadGroup } from './UploadGroupBuilder';
 
 // =============================================================================
-// BATCH UPLOADER
-// =============================================================================
-export {
-  performBatchUpload,
-  resetUploadLock,
-  getBatchSize,
-  isUploadInProgress,
-} from './BatchUploader';
-
-// =============================================================================
-// CATALOG IMPORTER
-// =============================================================================
-export {
-  syncCatalogs as syncCatalogsImporter,
-  importProductsFromCloud,
-  importProvidersFromCloud,
-  importCustomersAndTemplatesFromCloud,
-} from './CatalogImporter';
-
-// =============================================================================
-// RECONCILIATION
+// RECONCILIATION (Usado por useReceptionLogic)
 // =============================================================================
 export {
   reconcileReception,
@@ -112,15 +78,22 @@ export {
 } from './Reconciliation';
 
 // =============================================================================
-// FSM PARA CONTROL DE FLUJO (PARA CÓDIGO LEGACY)
+// FSM PARA CONTROL DE FLUJO
 // =============================================================================
 export { syncFSM } from './fsm';
 export { useSyncFSM } from './fsm/useSyncFSM';
 export type { SyncState as FSMSyncState, SyncEvent, SyncContext } from './fsm/types';
 
 // =============================================================================
-// LEGACY COMPATIBILITY
+// LEGACY COMPATIBILITY (DataImporter)
 // =============================================================================
-export { uploadGroupCompat } from './uploadBatchCompat';
-export { getPendingGroups } from './SyncOrchestrator.compat';
+export {
+  importProductsFromCloud,
+  importProvidersFromCloud,
+  importCustomersAndTemplatesFromCloud,
+} from './legacyImports';
 
+// =============================================================================
+// Alias para compatibilidad (evitar breaking changes)
+// =============================================================================
+export { unifiedSyncEngine as syncOrchestrator } from './unified';

@@ -1,7 +1,7 @@
 /**
- * Sync FSM - Máquina de estados finitos para sincronización
- * 
- * Proporciona control de flujo robusto con retry automático.
+ * Sync FSM - Maquina de estados finitos para sincronizacion
+ *
+ * Proporciona control de flujo robusto con retry automatico.
  */
 
 import type { SyncState, SyncEvent, SyncContext } from './types';
@@ -78,8 +78,8 @@ class SyncFSMClass {
   }
 
   private notify(): void {
-    const update: { isSyncing: boolean; lastError?: string } = { 
-      isSyncing: this.isRunning() 
+    const update: { isSyncing: boolean; lastError?: string } = {
+      isSyncing: this.isRunning()
     };
     if (this.context.error) {
       update.lastError = this.context.error;
@@ -93,7 +93,7 @@ class SyncFSMClass {
     if (!transition) return false;
 
     const { nextState, handler } = transition;
-    
+
     // Aplicar updates del handler
     if (handler) {
       const updates = handler(this.context);
@@ -101,7 +101,7 @@ class SyncFSMClass {
         this.context = { ...this.context, ...updates };
       }
     }
-    
+
     // Para eventos con payload, actualizar contexto
     if (event.type === 'ERROR' && event.error) {
       this.context.error = event.error;
@@ -109,7 +109,7 @@ class SyncFSMClass {
     if (event.type === 'UPLOADING' && event.progress !== undefined) {
       this.context.progress = event.progress;
     }
-    
+
     this.context.lastUpdate = Date.now();
     this.state = nextState;
     this.notify();
@@ -121,23 +121,23 @@ class SyncFSMClass {
     onProgress?: (msg: string) => void
   ): Promise<void> {
     if (this.state === 'error' && this.context.retryCount >= MAX_RETRIES) {
-      throw new Error(`Máximo de reintentos alcanzado: ${this.context.error}`);
+      throw new Error(`Maximo de reintentos alcanzado: ${this.context.error}`);
     }
 
     this.dispatch({ type: 'START' });
     try {
       this.dispatch({ type: 'PREPARED' });
-      if (onProgress) onProgress('Iniciando sincronización...');
+      if (onProgress) onProgress('Iniciando sincronizacion...');
 
       this.dispatch({ type: 'UPLOADING', progress: 10 });
       await action();
-      
+
       this.dispatch({ type: 'WAITING' });
       if (onProgress) onProgress('Procesando respuesta...');
 
       this.dispatch({ type: 'PROCESSING' });
       this.dispatch({ type: 'SUCCESS' });
-      if (onProgress) onProgress('Sincronización completada');
+      if (onProgress) onProgress('Sincronizacion completada');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       this.dispatch({ type: 'ERROR', error: errorMsg });
@@ -167,7 +167,7 @@ export interface LegacySyncStatus {
 }
 
 /**
- * Wrapper de compatibilidad para código que usa el viejo syncFSM
+ * Wrapper de compatibilidad para codigo que usa el viejo syncFSM
  * Convierte la nueva FSM a la API legacy
  */
 export const legacySyncWrapper = {
@@ -198,16 +198,16 @@ export const legacySyncWrapper = {
         state: legacyState,
         error: context.error,
         lastSync: context.lastUpdate || 0,
-        pendingCount: 0, // Se calcula por separado
+        pendingCount: 0,
       });
     });
   },
 
   async runSync(onProgress?: (msg: string) => void): Promise<void> {
-    // La lógica real de sync está en BatchUploader
-    const { performBatchUpload } = await import('../BatchUploader');
+    // Usar el motor unificado en lugar de BatchUploader
+    const { unifiedSyncEngine } = await import('../unified');
     return syncFSM.execute(async () => {
-      await performBatchUpload();
+      await unifiedSyncEngine.syncAll();
     }, onProgress);
   },
 
