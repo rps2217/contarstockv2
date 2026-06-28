@@ -6,8 +6,6 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { 
   Package, 
   MapPin, 
@@ -25,6 +23,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
+import { formatDetailDate } from '@/lib/ui';
 
 interface EventDetailModalProps {
   isOpen: boolean;
@@ -68,12 +67,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 }) => {
 
   if (!event) return null;
-
-  // Formateador específico con formato localized
-  const formatEventDate = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
-  };
 
   // Determinar estado
   const status = event.isAdjusted ? 'success' : 
