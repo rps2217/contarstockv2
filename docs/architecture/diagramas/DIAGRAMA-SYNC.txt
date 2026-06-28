@@ -1,0 +1,271 @@
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                    ARQUITECTURA DE SINCRONIZACIÓN - CONTARSTOCK v2                           ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       FRONTEND (React/PWA)                                    │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                              │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐  │
+│  │  useAutoSync    │    │    useSync      │    │ useSyncManager  │    │ useProductSync  │  │
+│  │  ────────────   │    │  ────────────   │    │  ────────────   │    │  ────────────   │  │
+│  │  • Auto sync    │    │  • Hook genérico│    │  • Manager UI   │    │  • Productos    │  │
+│  │  • Online event │    │  • Retry/CB     │    │  • Logs UI      │    │  • Force sync   │  │
+│  │  • Interval 60s │    │  • Pause/Resume │    │  • Groups UI    │    │  • Providers    │  │
+│  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘    └────────┬────────┘  │
+│           │                      │                      │                      │           │
+│           └──────────────────────┼──────────────────────┼──────────────────────┘           │
+│                                  │                      │                                    │
+│  ┌──────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                              useSyncStore / useToastStore                             │  │
+│  └──────────────────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+                                            │
+                                            ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                              UNIFIED SYNC ENGINE (Motor Unificado)                            │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                              syncRegistry (Registro de tablas)                         │  │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐     │  │
+│  │  │  products   │ │  sessions   │ │   scans     │ │ providers   │ │  configs    │     │  │
+│  │  │  ───────    │ │  ───────    │ │  ───────    │ │  ───────    │ │  ───────    │     │  │
+│  │  │ local: P    │ │ local: S    │ │ local: SC   │ │ local: PR   │ │ local: DY   │     │  │
+│  │  │ remote: PR  │ │ remote: SE  │ │ remote: SC  │ │ remote: PR  │ │ remote: CF  │     │  │
+│  │  │ pk: barcode │ │ pk: id      │ │ pk: id      │ │ pk: rut     │ │ pk: id      │     │  │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘     │  │
+│  └──────────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                              │
+│  ┌───────────────────────────┐  ┌───────────────────────────┐  ┌────────────────────────┐ │
+│  │    GenericSyncEngine      │  │    BatchSyncService       │  │   SyncQueueService     │ │
+│  │    ───────────────────    │  │    ──────────────────     │  │   ────────────────     │ │
+│  │    • Pull remote changes  │  │    • Upload batches IA    │  │   • Cola offline       │ │
+│  │    • Push local catalog   │  │    • Batch size: 50       │  │   • Priority queue     │ │
+│  │    • Map fields           │  │    • Progress tracking    │  │   • Retry mechanism    │ │
+│  └───────────────────────────┘  └───────────────────────────┘  └────────────────────────┘ │
+│                                                                                              │
+│  ┌───────────────────────────┐  ┌───────────────────────────┐                              │
+│  │   RealtimeSyncService     │  │     ConflictHelper        │                              │
+│  │   ───────────────────     │  │     ──────────────        │                              │
+│  │   • Supabase realtime     │  │     • detectConflicts()   │                              │
+│  │   • Debounce updates      │  │     • mergeRecords()      │                              │
+│  │   • Auto reconnect        │  │     • resolveManually()   │                              │
+│  └───────────────────────────┘  └───────────────────────────┘                              │
+│                                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                          SyncMetricsService                                           │  │
+│  │  • recordMetric() → In-Memory Cache → IndexedDB                                       │  │
+│  │  • getTableMetrics() • getTrends() • getHealthSummary() • cleanupOldMetrics()         │  │
+│  └──────────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                              │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+                                            │
+                    ┌───────────────────────┼───────────────────────┐
+                    │                       │                       │
+                    ▼                       ▼                       ▼
+┌───────────────────────────┐  ┌───────────────────────────┐  ┌───────────────────────────┐
+│      IndexedDB (Dexie)    │  │     Supabase Client       │  │        Services           │
+├───────────────────────────┤  ├───────────────────────────┤  ├───────────────────────────┤
+│ Tables:                   │  │                           │  │ • logger                  │
+│ • products                │  │ Tables Remotas:           │  │ • telemetry               │
+│ • sessions                │  │ • PRODUCTOS               │  │ • circuitBreaker          │
+│ • scans                   │  │ • SESSIONS                │  │ • withRetry               │
+│ • providers               │  │ • SCANS                   │  │                           │
+│ • syncQueue               │  │ • PROVIDERS               │  │                           │
+│ • syncMetrics ← NUEVA     │  │ • CONFIGS                 │  │                           │
+│ • syncLogs                │  │                           │  │                           │
+│ • dynamic_data            │  │                           │  │                           │
+└───────────────────────────┘  └───────────────────────────┘  └───────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                              FLUJO DE DATOS - SINCRONIZACIÓN                                 ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  USUARIO                    HOOK                     UNIFIED ENGINE                    REMOTO
+  
+    │                         │                            │                              │
+    │  Online detected        │                            │                              │
+    ├────────────────────────>│                            │                              │
+    │                         │                            │                              │
+    │                         │  syncAll()                 │                              │
+    │                         ├───────────────────────────>│                              │
+    │                         │                            │                              │
+    │                         │                            │  ┌──────────────────────┐   │
+    │                         │                            │  │ 1. checkConflicts()  │   │
+    │                         │                            │  └──────────┬───────────┘   │
+    │                         │                            │             │               │
+    │                         │                            │  ┌──────────▼───────────┐   │
+    │                         │                            │  │ 2. pullTable()       │   │
+    │                         │                            │  │    GET * FROM remote │   │
+    │                         │                            ├──────────────────────────>│   │
+    │                         │                            │  │                       │   │
+    │                         │                            │  <───────────────────────────│
+    │                         │                            │  │    (datos remotos)    │   │
+    │                         │                            │  │                       │   │
+    │                         │                            │  │ 3. put() local DB    │   │
+    │                         │                            │  └──────────────────────┘   │
+    │                         │                            │                              │
+    │                         │                            │  ┌──────────────────────┐   │
+    │                         │                            │  │ 4. pushBatch()       │   │
+    │                         │                            │  │    UPSERT remote     │   │
+    │                         │                            ├──────────────────────────>│   │
+    │                         │                            │  │                       │   │
+    │                         │                            │  <───────────────────────────│
+    │                         │                            │  │    (confirmación)    │   │
+    │                         │                            │                              │
+    │                         │                            │  ┌──────────────────────┐   │
+    │                         │                            │  │ 5. recordMetric()    │   │
+    │                         │                            │  │    → syncMetrics     │   │
+    │                         │                            │  └──────────────────────┘   │
+    │                         │                            │                              │
+    │                         │  <──────────────────────────┤                              │
+    │                         │  │  SyncResult {            │                              │
+    │                         │  │    success: true,        │                              │
+    │                         │  │    uploaded: N,          │                              │
+    │                         │  │    downloaded: M         │                              │
+    │                         │  │  }                       │                              │
+    │                         │                            │                              │
+    ├<────────────────────────┤                            │                              │
+    │  Toast: "Sync OK"       │                            │                              │
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                              ESTRUCTURA DE DATOS PRINCIPALES                                 ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────┐     ┌─────────────────────────────────┐
+│         SyncResult              │     │       TableSyncResult           │
+├─────────────────────────────────┤     ├─────────────────────────────────┤
+│ success: boolean                │     │ tableName: string               │
+│ uploaded: number                │     │ added: number                   │
+│ downloaded: number              │     │ updated: number                 │
+│ errors: string[]                │     │ deleted: number                 │
+│ duration: number                │     │ errors: string[]                │
+│ conflicts?: SyncConflict[]      │     │ duration: number                │
+└─────────────────────────────────┘     └─────────────────────────────────┘
+
+┌─────────────────────────────────┐     ┌─────────────────────────────────┐
+│       QueuedSyncItem            │     │       SyncConflict              │
+├─────────────────────────────────┤     ├─────────────────────────────────┤
+│ tableName: string               │     │ tableName: string               │
+│ operation: 'create'|'update'|   │     │ recordId: string               │
+│            'delete'            │     │ localVersion: Record           │
+│ recordId: string               │     │ remoteVersion: Record          │
+│ data: Record<string, unknown>  │     │ conflictType: 'field'|'delete' │
+│ timestamp: number              │     │ resolution?: ConflictResolution│
+│ retries: number                │     └─────────────────────────────────┘
+│ priority: 'high'|'normal'|     │
+│          'low'                 │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│        MetricRecord             │
+├─────────────────────────────────┤
+│ id?: number                    │
+│ timestamp: number              │
+│ operation: string              │
+│ tableName: string              │
+│ duration: number               │
+│ success: boolean               │
+│ recordsAffected: number        │
+│ error?: string                 │
+└─────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                           ESTRATEGIAS DE RESOLUCIÓN DE CONFLICTOS                            ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  ConflictResolutionStrategy = {
+  
+    LOCAL_WINS:    "Gana siempre el registro local (más reciente en dispositivo)",
+    REMOTE_WINS:   "Gana siempre el registro remoto (más reciente en servidor)",  
+    MERGE:         "Fusiona campos: local + remote → merged",
+    MANUAL:        "Requiere resolución manual del usuario",
+    TIMESTAMP:     "Gana el registro con timestamp más reciente",
+    FIELD_PRIORITY: {
+      barcode: "remote",
+      name: "local", 
+      price: "remote"
+    }
+  }
+
+  applyResolution(conflict, strategy) {
+    switch(strategy) {
+      case 'LOCAL_WINS':    return conflict.localVersion;
+      case 'REMOTE_WINS':   return conflict.remoteVersion;
+      case 'MERGE':         return mergeRecords(conflict);
+      case 'MANUAL':        return null; // User decides
+      case 'TIMESTAMP':     return newer(conflict.localVersion, conflict.remoteVersion);
+    }
+  }
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                              CIRCUIT BREAKER & RETRY                                         ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                          Circuit Breaker Config                             │
+  ├─────────────────────────────────────────────────────────────────────────────┤
+  │  name: 'auto-sync' | 'shared-sync'                                         │
+  │  failureThreshold: 5  (abre después de 5 errores consecutivos)             │
+  │  successThreshold: 2  (cierra después de 2 éxitos consecutivos)            │
+  │  timeout: 60000ms     (espera 1 min antes de probar снова)                │
+  └─────────────────────────────────────────────────────────────────────────────┘
+  
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                          Exponential Backoff                                │
+  ├─────────────────────────────────────────────────────────────────────────────┤
+  │  maxRetries: 3                                                             │
+  │  baseDelay: 1000ms                                                         │
+  │  delays: [1000, 2000, 4000]                                                │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                              MÉTRICAS DE RENDIMIENTO                                         ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  SyncMetricsService:
+  
+  ├── recordMetric(record)
+  │   ├── Valida record
+  │   ├── Agrega timestamp
+  │   └── Push a in-memory cache (max 50)
+  │       └── Flush a IndexedDB cada 30s
+  │
+  ├── getTableMetrics(since?)
+  │   └── Agrupa por tableName → stats por tabla
+  │
+  ├── getTrends(days = 7)
+  │   └── Agrupa por día → tendencias
+  │
+  ├── getHealthSummary()
+  │   └── 24h: successRate, avgResponseTime, lastSyncAt
+  │
+  └── cleanupOldMetrics(days = 30)
+      └── Borra métricas > 30 días
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+║                              ARCHIVOS DEL MÓDULO SYNC                                        ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  src/services/sync/unified/
+  ├── UnifiedSyncEngine.ts       800+ líneas   Motor principal unificado
+  ├── types.ts                   280+ líneas   Definiciones de tipos
+  ├── index.ts                   160+ líneas   Exports públicos
+  ├── registry.ts                 60+ líneas   Registro de tablas
+  ├── ConflictResolutionHelper.ts              Resolución de conflictos
+  └── SyncMetricsService.ts                    Métricas de rendimiento
+
+  src/
+  ├── hooks/
+  │   └── useAutoSync.ts                      Hook de sync automático
+  ├── shared/hooks/
+  │   └── useSync.ts                          Hook genérico de sync
+  └── features/sync/hooks/
+      └── useSyncManager.ts                   Manager de UI de sync
