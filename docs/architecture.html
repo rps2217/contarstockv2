@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContarStock v2 - Arquitectura</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+        .diagram-section {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid #334155;
+        }
+        .diagram-section h2 {
+            color: #3b82f6;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #334155;
+        }
+        .diagram {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            white-space: pre;
+            line-height: 1.4;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #1e293b;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        .color-primary { background: #3b82f6; }
+        .color-success { background: #22c55e; }
+        .color-warning { background: #f59e0b; }
+        .color-error { background: #ef4444; }
+        .color-purple { background: #8b5cf6; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 2rem;
+        }
+        .flow-box {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+            min-width: 120px;
+        }
+        .flow-arrow {
+            color: #64748b;
+            font-size: 1.5rem;
+        }
+        .box-frontend { background: #3b82f6; }
+        .box-sync { background: #8b5cf6; }
+        .box-db { background: #22c55e; }
+        .box-cloud { background: #f59e0b; }
+        .box-queue { background: #ef4444; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        th {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .code-inline {
+            background: #334155;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ContarStock v2</h1>
+        <p class="subtitle">Arquitectura del Sistema de Sincronización</p>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">1314</div>
+                <div class="stat-label">Líneas UnifiedSyncEngine</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">~2300</div>
+                <div class="stat-label">Total líneas sync</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Archivos reducidos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Errores TypeScript</div>
+            </div>
+        </div>
+
+        <!-- Diagrama Principal -->
+        <div class="diagram-section">
+            <h2>🏗️ Arquitectura General</h2>
+            <div class="flow-diagram">
+                <div class="flow-box box-frontend">FRONTEND<br><small>React + Hooks</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box box-sync">UNIFIED<br>SYNC ENGINE<br><small>Motor Central</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box box-queue">SYNC QUEUE<br><small>Offline-first</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box box-db">INDEXEDDB<br><small>Cliente</small></div>
+                <div class="flow-arrow">↔</div>
+                <div class="flow-box box-cloud">SUPABASE<br><small>Cloud</small></div>
+            </div>
+        </div>
+
+        <!-- Diagrama Detallado -->
+        <div class="diagram-section">
+            <h2>📊 Diagrama Detallado de Componentes</h2>
+            <div class="diagram">
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              CONTARSTOCK v2 - ARQUITECTURA                          │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────┐    ┌───────────────────────────────────────┐
+│              FRONTEND                  │    │              SERVICES                   │
+│  ┌─────────────────────────────────┐  │    │  ┌─────────────────────────────────┐  │
+│  │         PAGES                   │  │    │  │         SYNC SERVICES          │  │
+│  │  • CountingPage                 │  │    │  │                                 │  │
+│  │  • ReceptionPage                │  │    │  │  ┌─────────────────────────┐   │  │
+│  │  • SyncPage                     │  │    │  │  │   UNIFIED SYNC ENGINE  │   │  │
+│  └─────────────────────────────────┘  │    │  │  │                         │   │  │
+│                                       │    │  │  │  • syncAll()           │   │  │
+│  ┌─────────────────────────────────┐  │    │  │  │  • syncCatalogs()      │   │  │
+│  │         HOOKS                    │  │    │  │  │  • syncBatches()      │   │  │
+│  │  • useSync.ts      ◄───        │  │    │  │  │  • pushBatch()        │   │  │
+│  │  • useAutoSync.ts               │──┼────┼──│  │  • pullTable()        │   │  │
+│  │  • useSyncQueue.ts              │  │    │  │  │  • enqueue()          │   │  │
+│  └─────────────────────────────────┘  │    │  │  │  • processQueue()     │   │  │
+│                                       │    │  │  │  • resolveConflicts()  │   │  │
+└───────────────────────────────────────┘    │  │  └─────────────────────────┘   │  │
+                                             │  │                                 │  │
+                                             │  │  ┌─────────────────────────┐   │  │
+                                             │  │  │     SYNC FSM           │   │  │
+                                             │  │  │  idle → preparing →   │   │  │
+                                             │  │  │  uploading → success   │   │  │
+                                             │  │  └─────────────────────────┘   │  │
+                                             │  │                                 │  │
+                                             │  │  ┌─────────────────────────┐   │  │
+                                             │  │  │   SYNC QUEUE SERVICE   │   │  │
+                                             │  │  │  • Cola offline        │   │  │
+                                             │  │  │  • Retry automático    │   │  │
+                                             │  │  │  • Batch processing    │   │  │
+                                             │  │  └─────────────────────────┘   │  │
+                                             │  └─────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+                                             │
+                                             ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                    DATABASE LAYER                                    │
+│  ┌───────────────────────┐           ┌───────────────────────┐                       │
+│  │     INDEXEDDB         │           │      SUPABASE         │                       │
+│  │     (Dexie.js)        │  ←──→    │       (Cloud)        │                       │
+│  │                       │  sync     │                       │                       │
+│  │  • sessions           │           │  • sessions          │                       │
+│  │  • scanRecords        │           │  • scan_records      │                       │
+│  │  • products           │           │  • products          │                       │
+│  │  • providers          │           │  • providers         │                       │
+│  │  • syncQueue          │           │  • customers         │                       │
+│  └───────────────────────┘           └───────────────────────┘                       │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- Flujo de Datos -->
+        <div class="diagram-section">
+            <h2>🔄 Flujo de Datos</h2>
+            <div class="diagram">
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              FLUJO DE DATOS                                         │
+│                                                                                     │
+│   USUARIO ──► UI ──► useSync() ──► IndexedDB ──► SyncQueue ──► SUPABASE          │
+│                              │                │              │           │          │
+│                              │                │              │           ▼          │
+│                              │                │              │    ┌─────────────┐   │
+│                              │                │              │    │  Tablas     │   │
+│                              │                │              │    │  Cloud      │   │
+│                              │                │              │    └─────────────┘   │
+│                              │                │              │           │          │
+│                              ▼                ▼              ▼           │          │
+│                         [OFFLINE-FIRST]   [PERSIST]    [RETRY]         │          │
+│                              │                │              │           ▼          │
+│                              │                │              │    ┌─────────────┐   │
+│                              │                │              │    │  Conflict   │   │
+│                              │                │              │    │  Resolution │   │
+│                              │                │              │    └─────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- Estados FSM -->
+        <div class="diagram-section">
+            <h2>⚡ Máquina de Estados (FSM)</h2>
+            <div class="diagram">
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              SYNC FSM STATES                                        │
+│                                                                                     │
+│                                                                                     │
+│         ┌───────┐      START      ┌───────────┐                                     │
+│         │ IDLE  │ ─────────────► │ PREPARING │                                     │
+│         └───────┘                └─────┬─────┘                                     │
+│              ▲                         │                                           │
+│              │                         ▼                                           │
+│         RESET│                   ┌───────────┐                                     │
+│              │                   │ UPLOADING │ ◄─── UPLOADING (progress)            │
+│              │                   └─────┬─────┘                                     │
+│              │                         │                                           │
+│              │                         ▼                                           │
+│         ┌───────┐      ERROR       ┌─────────┐                                     │
+│         │ ERROR │ ◄────────────── │ WAITING │                                     │
+│         └───┬───┘                 └────┬────┘                                     │
+│             │                         │                                            │
+│             │      RETRY             ▼                                            │
+│             │ ◄──────────────  ┌───────────┐     SUCCESS    ┌───────┐              │
+│             │                  │ PROCESSING │ ─────────────► │SUCCESS│              │
+│             │                  └───────────┘                └───────┘              │
+│             │                                                     │                │
+│             │                      MAX RETRIES                   │                │
+│             └───────────────────────────────────────────────────┘                │
+│                                                                                   │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- Hooks -->
+        <div class="diagram-section">
+            <h2>🪝 Hooks de Sincronización</h2>
+            <table>
+                <tr>
+                    <th>Hook</th>
+                    <th>Líneas</th>
+                    <th>Uso</th>
+                    <th>API Principal</th>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">useSync.ts</span></td>
+                    <td>302</td>
+                    <td>Hook principal, usado en toda la app</td>
+                    <td><code>syncAll()</code>, <code>pushRecord()</code></td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">useAutoSync.ts</span></td>
+                    <td>127</td>
+                    <td>Sincronización automática en background</td>
+                    <td><code>startAutoSync()</code>, <code>stopAutoSync()</code></td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">useSyncQueue.ts</span></td>
+                    <td>~150</td>
+                    <td>Gestión de cola offline</td>
+                    <td><code>enqueue()</code>, <code>getQueueStatus()</code></td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">useSyncManager.ts</span></td>
+                    <td>380</td>
+                    <td>Panel de gestión de sync</td>
+                    <td><code>getStats()</code>, <code>runSync()</code></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Archivos -->
+        <div class="diagram-section">
+            <h2>📁 Estructura de Archivos</h2>
+            <table>
+                <tr>
+                    <th>Archivo</th>
+                    <th>Líneas</th>
+                    <th>Estado</th>
+                    <th>Descripción</th>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">unified/UnifiedSyncEngine.ts</span></td>
+                    <td>1314</td>
+                    <td style="color: #22c55e;">✅ ACTIVO</td>
+                    <td>Motor centralizado de sincronización</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">unified/types.ts</span></td>
+                    <td>~300</td>
+                    <td style="color: #22c55e;">✅ ACTIVO</td>
+                    <td>Tipos TypeScript</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">SyncOrchestrator.ts</span></td>
+                    <td>380</td>
+                    <td style="color: #ef4444;">❌ ELIMINADO</td>
+                    <td>Legacy - Duplicado de UnifiedSyncEngine</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">BatchUploader.ts</span></td>
+                    <td>147</td>
+                    <td style="color: #ef4444;">❌ ELIMINADO</td>
+                    <td>Legacy - Funcionalidad integrada en UnifiedSyncEngine</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">CatalogImporter.ts</span></td>
+                    <td>85</td>
+                    <td style="color: #ef4444;">❌ ELIMINADO</td>
+                    <td>Legacy - Duplicado</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">SyncQueueService.ts</span></td>
+                    <td>220</td>
+                    <td style="color: #ef4444;">❌ ELIMINADO</td>
+                    <td>Legacy - Cola integrada en UnifiedSyncEngine</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">Reconciliation.ts</span></td>
+                    <td>100</td>
+                    <td style="color: #22c55e;">✅ ACTIVO</td>
+                    <td>Reconciliación de datos (usado por useReceptionLogic)</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">UploadGroupBuilder.ts</span></td>
+                    <td>171</td>
+                    <td style="color: #22c55e;">✅ ACTIVO</td>
+                    <td>Agrupación de uploads + compat legacy</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="diagram-section">
+            <h2>📌 Leyenda</h2>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color color-primary"></div>
+                    <span>Frontend (UI + Hooks)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-purple"></div>
+                    <span>Motor de Sincronización</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-success"></div>
+                    <span>Base de Datos Local</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-warning"></div>
+                    <span>Cloud (Supabase)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-error"></div>
+                    <span>Cola Offline</span>
+                </div>
+            </div>
+        </div>
+
+        <p style="text-align: center; color: #64748b; margin-top: 2rem;">
+            ContarStock v2 - Sistema de Inventario con Sincronización Offline-First
+        </p>
+    </div>
+</body>
+</html>
