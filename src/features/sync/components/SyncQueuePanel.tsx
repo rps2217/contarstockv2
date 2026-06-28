@@ -7,10 +7,9 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ChevronRight, ChevronDown, Send, Check, Trash2, X, FileText, CheckCircle2 } from 'lucide-react';
 import type { SyncQueueItem } from '@/types/global/sync';
+import { formatTimeWithDate } from '@/lib/date';
 
 interface SyncQueuePanelProps {
   items: SyncQueueItem[] | undefined;
@@ -53,7 +52,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
   const renderItem = (item: SyncQueueItem) => {
     const statusType = getQueueStatusStyle(item.status);
     const isExpanded = expandedId === item.id || selectedItem?.id === item.id;
-    const dateStr = format(new Date(item.timestamp), 'HH:mm:ss (dd/MM)', { locale: es });
+    const dateStr = formatTimeWithDate(item.timestamp);
 
     return (
       <div key={`${item.key}-${item.id}`} className="space-y-2">

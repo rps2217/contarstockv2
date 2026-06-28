@@ -4,10 +4,9 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ChevronRight, Clock, CheckCircle2 } from 'lucide-react';
 import { SyncQueueItem } from '@/features/sync/types';
+import { formatTimeWithDate } from '@/lib/date';
 
 interface Props {
   items: SyncQueueItem[] | undefined;
@@ -31,7 +30,7 @@ export const SyncQueueList: React.FC<Props> = ({ items, selectedItem, onSelect }
   return (
     <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
       {items.map((item) => {
-        const dateStr = format(new Date(item.timestamp), 'HH:mm:ss (dd/MM)', { locale: es });
+        const dateStr = formatTimeWithDate(item.timestamp);
         const isError = item.status === 'error';
         const isDelete = item.status === 'pending_delete';
         
