@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useSyncStore } from '@/stores';
 import { SyncStatusBadge } from './SyncStatusBadge';
+import { StatCard } from '@/shared/components/ui';
+import { formatRelativeTime } from '@/lib/date';
 
 interface SyncPanelProps {
   onFullSync: () => Promise<void>;
@@ -34,20 +36,6 @@ export const SyncPanel: React.FC<SyncPanelProps> = ({
   } = useSyncStore();
 
   const [isClearing, setIsClearing] = useState(false);
-
-  // Formatear tiempo relativo
-  const formatRelativeTime = (timestamp: number | null): string => {
-    if (!timestamp) return 'Nunca';
-    const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'Hace un momento';
-    if (minutes < 60) return `Hace ${minutes} min`;
-    if (hours < 24) return `Hace ${hours} horas`;
-    return `Hace ${days} días`;
-  };
 
   const handleClearData = async () => {
     if (isClearing) return;
@@ -100,7 +88,7 @@ export const SyncPanel: React.FC<SyncPanelProps> = ({
           <Clock className="w-4 h-4" />
           <span>Última sincronización:</span>
           <span className="font-medium">
-            {isSyncing ? 'En progreso...' : formatRelativeTime(lastSyncTime)}
+            {isSyncing ? 'En progreso...' : formatRelativeTime(lastSyncTime || 0)}
           </span>
         </div>
       </div>
@@ -123,22 +111,25 @@ export const SyncPanel: React.FC<SyncPanelProps> = ({
         </div>
       )}
 
-      {/* Estadísticas */}
+      {/* Estadísticas usando StatCard compartido */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <StatCard
-          icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
           label="Completado"
           value={isSyncing ? '...' : 'OK'}
+          icon={<CheckCircle2 className="w-5 h-5" />}
+          variant="green"
         />
         <StatCard
-          icon={<Clock className="w-5 h-5 text-yellow-500" />}
           label="Pendientes"
           value={pendingItems}
+          icon={<Clock className="w-5 h-5" />}
+          variant="yellow"
         />
         <StatCard
-          icon={<Database className="w-5 h-5 text-blue-500" />}
           label="Incidentes"
           value={useSyncStore.getState().incidents.length}
+          icon={<Database className="w-5 h-5" />}
+          variant="blue"
         />
       </div>
 
@@ -177,20 +168,5 @@ export const SyncPanel: React.FC<SyncPanelProps> = ({
     </div>
   );
 };
-
-// Componente auxiliar para estadísticas
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ icon, label, value }) => (
-  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-    <div className="flex justify-center mb-1">{icon}</div>
-    <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
-    <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-  </div>
-);
 
 export default SyncPanel;

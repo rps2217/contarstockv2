@@ -9,6 +9,7 @@ import { AnalyticService } from '../../../services/analyticService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 import { legacySyncWrapper, LegacySyncStatus } from '../../../services/sync/fsm';
 import { useSyncStore } from '@/stores';
+import { formatTimeAgo } from '@/lib/date';
 
 import { dynamicDataRepository } from '../../../repositories/DynamicDataRepository';
 
@@ -89,7 +90,7 @@ export const useDashboard = () => {
     // Sesiones recientes
     const recentSessions = await SessionRepository.getRecent(5);
     for (const session of recentSessions) {
-      const timeAgo = getTimeAgo(session.createdAt);
+      const timeAgo = formatTimeAgo(session.createdAt);
       let icon = 'C';
       let iconColor = 'blue';
       let title = 'Sesión de conteo';
@@ -125,7 +126,7 @@ export const useDashboard = () => {
         icon: 'O',
         iconColor: 'purple',
         title: `Orden esperada: ${order.metadata?.purchaseOrder || order.internalId}`,
-        time: getTimeAgo(order.importedAt || Date.now()),
+        time: formatTimeAgo(order.importedAt || Date.now()),
         count: order.items?.length || 0,
         countLabel: 'Ítems'
       });
@@ -218,20 +219,4 @@ export const useDashboard = () => {
     weeklyTrend
   };
 };
-
-// Helper para formatear tiempo relativo
-function getTimeAgo(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  
-  if (minutes < 1) return 'Hace un momento';
-  if (minutes < 60) return `hace ${minutes} min`;
-  if (hours < 24) return `hace ${hours} horas`;
-  if (days === 1) return 'Ayer';
-  if (days < 7) return `hace ${days} días`;
-  return new Date(timestamp).toLocaleDateString('es-ES');
-}
 

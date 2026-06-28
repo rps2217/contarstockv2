@@ -9,6 +9,7 @@ export * from './Spinner';
 export * from './Input';
 export * from './Skeleton';
 export * from './VirtualList';
+export * from './StatCard';
 
 // Re-export specific components from Card
 export { CardHeader, CardTitle, CardContent } from './Card';
