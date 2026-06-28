@@ -19,7 +19,7 @@ import { useCloudCache, clearCache } from '@/shared/hooks/useCloudCache';
 // Cache key para sync de eventos
 const EVENTS_CACHE_KEY = 'events-initial-sync';
 
-interface ProcessedEvent {
+export interface ProcessedEvent {
   id: string;
   barcode: string;
   productName: string;
@@ -119,7 +119,10 @@ export function useEventQueries(): UseEventQueriesReturn {
   useEffect(() => {
     setIsSyncing(isCacheLoading);
 
-    const unsubscribe = supabaseSyncService.startSync(tableName, eventRepository);
+    const unsubscribe = supabaseSyncService.startSync(
+      tableName, 
+      eventRepository as unknown as Parameters<typeof supabaseSyncService.startSync>[1]
+    );
     return () => {
       unsubscribe();
     };
@@ -138,7 +141,8 @@ export function useEventQueries(): UseEventQueriesReturn {
 
     for (let i = 0; i < items.length; i++) {
       const record = items[i];
-      const exp = record;
+      // Cast para acceso con strings dinámicos (mapeo de campos)
+      const exp = record as unknown as Record<string, unknown>;
       
       const getField = (mappingKey: string | undefined, fallbacks: string[]) => {
         if (mappingKey && exp[mappingKey] !== undefined && String(exp[mappingKey]).trim() !== '') {
@@ -165,13 +169,13 @@ export function useEventQueries(): UseEventQueriesReturn {
       const barcode = String(getField(eventMapping?.barcode, ['SKU', 'sku', 'barcode', 'BARCODE', 'codigo', 'CODIGO', 'Codigo', 'EAN', 'ean', 'UPC', 'upc']) || '').trim();
       const product = productMap.get(normalizeSku(barcode));
       
-      const productName = product?.name || 
+      const productName = String(product?.name || 
         getField(eventMapping?.name, ['DESCRIPTOR', 'descriptor', 'productName', 'PRODUCTO', 'producto', 'Name', 'name', 'DESCRIPCION', 'descripcion']) || 
-        'Producto Desconocido';
+        'Producto Desconocido');
         
-      const providerName = product?.supplier || 
+      const providerName = String(product?.supplier || 
         getField(eventMapping?.supplier, ['PROVEEDOR', 'proveedor', 'supplier', 'SUPPLIER', 'Proveedor', 'Provider', 'FABRICANTE', 'fabricante']) || 
-        'N/A';
+        'N/A');
       
       const quantityValue = getField(eventMapping?.quantity, ['CANTIDAD', 'cantidad', 'quantity', 'QUANTITY', 'Cant', 'CANT', 'QTY', 'qty']) || 0;
       const locationValue = getField(eventMapping?.location, ['UBICACION', 'ubicacion', 'location', 'LOCATION', 'Ubic', 'UBIC', 'SITIO', 'sitio']) || 'GENERAL';

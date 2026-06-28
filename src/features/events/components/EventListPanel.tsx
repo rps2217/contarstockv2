@@ -163,7 +163,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
                 <EventItemCard 
                   item={item}
                   isSelected={selectedIds.has(item.id)}
-                  onToggleSelect={onToggleSelect}
+                  onToggleSelect={onToggleSelect || (() => {})}
                   onUpdateStatus={onUpdateStatus}
                   onRemove={onRemove}
                   onEdit={onEdit}

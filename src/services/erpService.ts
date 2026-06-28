@@ -62,7 +62,7 @@ export const erpService = {
       const erpId = String(manifestId || '').toUpperCase().trim();
       
       // Filter rows for this ERP
-      const rows = res.rows
+      const rows = res.rows ?? []
         .map((row: ErpRow) => {
           try {
             return CloudOrderRowSchema.parse(row);
@@ -70,13 +70,13 @@ export const erpService = {
             return null;
           }
         })
-        .filter((p: ErpRow) => p !== null && String(p.erp || '').toUpperCase() === erpId);
+        .filter((p: ErpRow | null) => p !== null && String(p.erp || '').toUpperCase() === erpId);
 
       if (rows.length === 0) {
         throw new Error(`No se encontró el ERP "${erpId}" en la nube.`);
       }
 
-      const rawMatch = res.rows.find((r: ErpRow) => {
+      const rawMatch = (res.rows ?? []).find((r: ErpRow) => {
         const n: any = {};
         Object.keys(r).forEach(k => n[k.trim().toUpperCase()] = r[k]);
         return n["ERP"] === erpId || n["ORDEN"] === erpId;
@@ -89,7 +89,7 @@ export const erpService = {
         expectedTrays: expectedTrays || rows.length,
         description: `Pedido ERP: ${erpId} (${rows.length} items)`,
         status: 'pending',
-        items: rows
+        items: rows as ErpRow[]
       };
     } catch (error: unknown) {
       const msg = (error as Error).message || String(error);
@@ -140,7 +140,7 @@ export const erpService = {
 
       erpGroups.forEach((rows, erpId) => {
         // Find raw match for expected trays
-        const rawMatch = res.rows.find((r: ErpRow) => {
+        const rawMatch = (res.rows ?? []).find((r: ErpRow) => {
           const normalized: any = {};
           Object.keys(r).forEach(k => normalized[k.trim().toUpperCase()] = r[k]);
           return normalized["ERP"] === erpId || normalized["ORDEN"] === erpId;
@@ -153,7 +153,7 @@ export const erpService = {
           expectedTrays,
           description: `Pedido ERP: ${erpId} (${rows.length} items)`,
           status: 'pending',
-          items: rows
+          items: rows as ErpRow[]
         });
       });
 

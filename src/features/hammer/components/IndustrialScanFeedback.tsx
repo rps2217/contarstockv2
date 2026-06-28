@@ -63,20 +63,20 @@ export const IndustrialScanFeedback: React.FC<IndustrialScanFeedbackProps> = mem
   const [animationClass, setAnimationClass] = useState('');
 
   useEffect(() => {
-    if (feedback) {
-      setIsVisible(true);
-      setAnimationClass('animate-in fade-in zoom-in duration-200');
-      
-      // Auto-hide after delay
-      const timer = setTimeout(() => {
-        setAnimationClass('animate-out fade-out zoom-out duration-150');
-        setTimeout(() => setIsVisible(false), 150);
-      }, 600);
+    if (!feedback) return;
+    
+    setIsVisible(true);
+    setAnimationClass('animate-in fade-in zoom-in duration-200');
 
-      return () => clearTimeout(timer);
-    }
+    // Auto-hide after delay
+    const timer = setTimeout(() => {
+      setAnimationClass('animate-out fade-out zoom-out duration-150');
+      setTimeout(() => setIsVisible(false), 150);
+    }, 600);
+
+    return () => clearTimeout(timer);
   }, [feedback, lastBarcode]);
-
+  
   if (!isVisible || !feedback) return null;
 
   const config = FEEDBACK_CONFIG[feedback];

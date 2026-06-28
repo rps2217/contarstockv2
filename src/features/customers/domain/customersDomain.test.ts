@@ -17,9 +17,9 @@ import {
 
 describe('customersDomain', () => {
   const mockCustomers: Customer[] = [
-    { id: '1', firstName: 'Juan', lastName: 'Pérez', phone: '+56912345678', createdAt: 1000, syncStatus: 'synced' },
-    { id: '2', firstName: 'María', lastName: 'García', phone: '+56987654321', createdAt: 2000, syncStatus: 'pending' },
-    { id: '3', firstName: 'Pedro', lastName: 'López', phone: '+56123456789', createdAt: 3000, syncStatus: 'synced' }
+    { id: '1', firstName: 'Juan', lastName: 'Pérez', phone: '+56912345678', createdAt: 1000, updatedAt: 1000, syncStatus: 'synced' },
+    { id: '2', firstName: 'María', lastName: 'García', phone: '+56987654321', createdAt: 2000, updatedAt: 2000, syncStatus: 'pending' },
+    { id: '3', firstName: 'Pedro', lastName: 'López', phone: '+56123456789', createdAt: 3000, updatedAt: 3000, syncStatus: 'synced' }
   ];
 
   describe('normalizeText', () => {
@@ -82,7 +82,7 @@ describe('customersDomain', () => {
     });
 
     it('debe manejar valores faltantes', () => {
-      const customer: Customer = { id: '1', firstName: 'Juan', lastName: '', phone: '', createdAt: 0 };
+      const customer: Customer = { id: '1', firstName: 'Juan', lastName: '', phone: '', createdAt: 0, updatedAt: 0 };
       expect(getCustomerInitials(customer)).toBe('J');
     });
   });
@@ -93,7 +93,7 @@ describe('customersDomain', () => {
     });
 
     it('debe manejar valores faltantes', () => {
-      const customer: Customer = { id: '1', firstName: 'Juan', lastName: '', phone: '', createdAt: 0 };
+      const customer: Customer = { id: '1', firstName: 'Juan', lastName: '', phone: '', createdAt: 0, updatedAt: 0 };
       expect(getFullName(customer)).toBe('Juan');
     });
   });

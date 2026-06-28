@@ -2,16 +2,12 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores';
+import type { CountingSession } from '@/types';
 import { isModuleEnabled } from './services/moduleManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Sidebar } from '@/components/Sidebar';
-import { BottomDock } from '@/components/BottomDock';
-import { SystemStatus } from '@/components/SystemStatus';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
-import { ToastContainer } from '@/shared/components/ui/ToastContainer';
 import { Toaster } from 'sonner';
-import { TaskProgressIndicator } from '@/shared/components/TaskProgressIndicator';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
@@ -20,41 +16,47 @@ import { useNavigate } from 'react-router-dom';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
 import { ThemeProvider } from '@/hooks/useTheme/useTheme';
+import { useAppInit } from '@/hooks/useAppInit';
+import { motion, AnimatePresence } from 'motion/react';
 
-// --- COMPONENTES DIFERIDOS ---
+// ============================================================================
+// LAZY IMPORTS - OPTIMIZACIÓN DE BUNDLE
+// ============================================================================
+
+// Componentes de autenticación
 const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
 const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
-// --- VISTAS PRINCIPALES (AppSheet-style) ---
+// Vistas principales (AppSheet-style) - Carga diferida
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
 const CapturePage = lazyWithRetry(() => import('./features/capture/CapturePage'));
 const DataPage = lazyWithRetry(() => import('./features/data/DataPage'));
 const SyncPage = lazyWithRetry(() => import('./features/sync/SyncPage'));
 const SettingsPage = lazyWithRetry(() => import('./features/settings/SettingsPage'));
 
-// --- RUTAS LEGACY (mantener para compatibilidad temporal) ---
+// Vistas legacy - Carga solo cuando se accede (no en bundle inicial)
 const ReportsLegacy = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
-const ReceptionLegacy = lazyWithRetry(() => import('@/features/reception/ReceptionPage'));
-const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
-const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
-const ExpiryLegacy = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
 const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
-const InventoryLegacy = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
+const ExpiryLegacy = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
+const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
+const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
+const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
+const ExpectedOrdersLegacy = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
 const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
-const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
-const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
-const ExpectedOrdersLegacy = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
+const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
 
-import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
-import { SystemOperationsDrawer } from '@/shared/components/core/SystemOperationsDrawer';
-import { ThemeDemo } from '@/shared/components/ui/ThemeDemo';
+// Componentes pesados - Solo carga cuando se necesitan
+const Sidebar = lazyWithRetry(() => import('@/components/Sidebar').then(m => ({ default: m.Sidebar })));
+const BottomDock = lazyWithRetry(() => import('@/components/BottomDock').then(m => ({ default: m.BottomDock })));
+const OnboardingOverlay = lazyWithRetry(() => import('@/shared/components/core/OnboardingOverlay').then(m => ({ default: m.OnboardingOverlay })));
+const SystemOperationsDrawer = lazyWithRetry(() => import('@/shared/components/core/SystemOperationsDrawer').then(m => ({ default: m.SystemOperationsDrawer })));
+const ToastContainer = lazyWithRetry(() => import('@/shared/components/ui/ToastContainer').then(m => ({ default: m.ToastContainer })));
+const TaskProgressIndicator = lazyWithRetry(() => import('@/shared/components/TaskProgressIndicator').then(m => ({ default: m.TaskProgressIndicator })));
+const ThemeDemo = lazyWithRetry(() => import('@/shared/components/ui/ThemeDemo').then(m => ({ default: m.ThemeDemo })));
 
-// Wrapper para ThemeDemo (evita problemas con lazy)
+// Wrapper para ThemeDemo
 const ThemeDemoPage = () => <ThemeDemo />;
-
-import { useAppInit } from '@/hooks/useAppInit';
-import { motion, AnimatePresence } from 'motion/react';
 
 const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
   return isModuleEnabled(moduleKey) ? <React.Fragment>{element}</React.Fragment> : <Navigate to="/" replace />;
@@ -110,10 +112,10 @@ const AppContent = () => {
   const currentThemeClass = 
     settings.theme === 'high-contrast' ? 'bg-black text-yellow-400' :
     settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 
-    settings.theme === 'night-steel' ? 'night-steel-theme' :
+    
     'bg-slate-950 text-slate-100';
 
-  const isDarkMode = settings.theme === 'dark' || settings.theme === 'high-contrast' || settings.theme === 'night-steel';
+  const isDarkMode = settings.theme === 'dark' || settings.theme === 'high-contrast' ;
   const isHighContrast = settings.theme === 'high-contrast';
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
@@ -171,21 +173,25 @@ const AppContent = () => {
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} ${isHighContrast ? 'high-contrast' : ''} font-sans selection:bg-blue-500/30`}>
-      <OnboardingOverlay />
-      <SystemOperationsDrawer />
+      <Suspense fallback={null}>
+        <OnboardingOverlay />
+        <SystemOperationsDrawer />
+        <ToastContainer />
+        <TaskProgressIndicator />
+      </Suspense>
       <OfflineBanner />
-      <ToastContainer />
       <Toaster position="bottom-center" />
-      <TaskProgressIndicator />
       
       <div className="flex-1 flex overflow-hidden relative">
         {!isScanningMode && (
-          <Sidebar 
-            view={location.pathname.split('/')[1] || 'dashboard'} 
-            settings={settings} 
-            isCollapsed={isSidebarCollapsed}
-            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
+          <Suspense fallback={null}>
+            <Sidebar 
+              view={location.pathname.split('/')[1] || 'dashboard'} 
+              settings={settings} 
+              isCollapsed={isSidebarCollapsed}
+              onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </Suspense>
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-[padding-left] duration-300 ease-in-out ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
@@ -260,7 +266,9 @@ const AppContent = () => {
       
       {!isScanningMode && (
         <>
-          <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
+          <Suspense fallback={null}>
+            <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
+          </Suspense>
           {(location.pathname === '/' || location.pathname === '/dashboard') && (
             <motion.button 
               whileHover={{ scale: 1.05 }}
@@ -279,7 +287,7 @@ const AppContent = () => {
           <StartSessionModal 
             isOpen={isStartSessionModalOpen}
             onClose={() => setStartSessionModalOpen(false)}
-            onSessionStart={(session) => navigate(`/counting/${session.id}`)}
+            onSessionStart={(session: CountingSession) => navigate(`/counting/${session.id}`)}
           />
         </Suspense>
       )}

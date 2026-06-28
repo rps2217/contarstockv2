@@ -309,7 +309,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          onClick={e => e.stopPropagation()}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
           className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
             theme === 'dark' ? 'bg-slate-900 border border-white/10' : 'bg-white border border-slate-200'
           }`}

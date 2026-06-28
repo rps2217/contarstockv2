@@ -94,7 +94,7 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
   }
 
   async saveMany(entities: T[]): Promise<ID[]> {
-    const ids = await this.wrapped.saveMany(entities);
+    const ids = await this.wrapped!.saveMany(entities);
     
     for (let i = 0; i < entities.length; i++) {
       await this.logAudit(
@@ -114,7 +114,7 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
     const oldEntity = await this.wrapped.get(id);
     
     // Realizar update
-    await this.wrapped.update(id, data);
+    await this.wrapped!.update(id, data);
     
     // Log de auditoría por campo cambiado
     if (oldEntity) {
@@ -169,7 +169,7 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
   }
 
   async exists(id: ID): Promise<boolean> {
-    return this.wrapped.exists(id);
+    return this.wrapped!.exists(id);
   }
 
   // Delegar métodos específicos del repositorio envuelto

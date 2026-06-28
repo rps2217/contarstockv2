@@ -2,9 +2,39 @@
  * Sync Services - Módulos para sincronización
  * 
  * Exporta las funciones principales de sincronización.
+ * 
+ * ARQUITECTURA:
+ * 
+ *   SyncOrchestrator (NUEVO - Punto de entrada recomendado)
+ *       ├── GenericSyncEngine → Catálogos bidireccionales
+ *       └── BatchUploader → Datos operativos ERP
+ * 
+ * Para código NUEVO, usar:
+ *   import { syncOrchestrator } from './SyncOrchestrator';
+ * 
+ * Para código LEGACY, los exports mantienen compatibilidad.
  */
 
-// Upload grouping utilities from UploadGroupBuilder
+// =============================================================================
+// SYNC ORCHESTRATOR (NUEVO)
+// =============================================================================
+export {
+  syncOrchestrator,
+  syncAll,
+  syncCatalogsOnly,
+  syncBatchesOnly,
+  getPendingGroups,
+  uploadBatch,
+  resetSyncLock,
+  CATALOG_TABLES,
+  registryToSync,
+} from './SyncOrchestrator';
+
+export type { SyncResult, SyncStatus } from './SyncOrchestrator';
+
+// =============================================================================
+// UPLOAD GROUPING UTILITIES
+// =============================================================================
 export {
   getPendingUploadGroups,
   filterGroupsByType,
@@ -14,7 +44,9 @@ export {
 
 export type { UploadGroup } from './UploadGroupBuilder';
 
-// Batch uploader
+// =============================================================================
+// BATCH UPLOADER
+// =============================================================================
 export {
   performBatchUpload,
   resetUploadLock,
@@ -22,25 +54,27 @@ export {
   isUploadInProgress,
 } from './BatchUploader';
 
-// Catalog importer
+// =============================================================================
+// CATALOG IMPORTER
+// =============================================================================
 export {
   syncCatalogs,
   importProductsFromCloud,
   importProvidersFromCloud,
+  importCustomersAndTemplatesFromCloud,
 } from './CatalogImporter';
 
-// Reconciliation
+// =============================================================================
+// RECONCILIATION
+// =============================================================================
 export {
   reconcileReception,
   getGlobalPendingCount,
 } from './Reconciliation';
 
-// Re-export desde syncManager original
-export {
-  resetSyncLock,
-} from './BatchUploader';
-
-// FSM para control de flujo
+// =============================================================================
+// FSM PARA CONTROL DE FLUJO
+// =============================================================================
 export { syncFSM } from './fsm';
 export { useSyncFSM } from './fsm/useSyncFSM';
 export type { SyncState, SyncEvent, SyncContext } from './fsm/types';

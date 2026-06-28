@@ -20,6 +20,7 @@ describe('expectedOrdersDomain', () => {
   const mockOrders: ExpectedOrder[] = [
     {
       id: 'ORD-001',
+      internalId: 'INT-001',
       items: [
         { barcode: '111', name: 'Producto A', expectedQty: 10 },
         { barcode: '222', name: 'Producto B', expectedQty: 5 }
@@ -30,6 +31,7 @@ describe('expectedOrdersDomain', () => {
     },
     {
       id: 'ORD-002',
+      internalId: 'INT-002',
       items: [
         { barcode: '333', name: 'Producto C', expectedQty: 20 }
       ],
@@ -39,6 +41,7 @@ describe('expectedOrdersDomain', () => {
     },
     {
       id: 'ORD-003',
+      internalId: 'INT-003',
       items: [
         { barcode: '444', name: 'Producto D', expectedQty: 8 }
       ],

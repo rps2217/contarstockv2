@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
-import { useLocationManager } from '../../shared/hooks/useLocationManager';
-import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '../../services/massiveSync';
+import { useLocationManager } from '@/shared/hooks/useLocationManager';
+import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '@/services/massiveSync';
 import { MassiveToolsSheet } from './components/MassiveToolsSheet';
 import { LoadTheoreticalModal } from './components/LoadTheoreticalModal';
-import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
-import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
-import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { BarcodeLabelModal } from '@/shared/components/ui/BarcodeLabelModal';
+import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal';
+import { useHIDScanner } from '@/hooks/useHIDScanner';
 import { HammerCameraView } from './components/HammerCameraView';
-import { useProductivity } from '../counting/hooks/useProductivity';
-import { useTurboMode } from '../counting/hooks/useTurboMode';
+import { useProductivity, useTurboMode } from '@/shared/hooks';
 import { ProductivityDashboard } from '../counting/components/ProductivityDashboard';
 import { TurboModeOverlay } from '../counting/components/TurboModeOverlay';
 import { useAppStore } from '@/stores';
-import { exportHammerToExcel } from '../../services/export';
+import { exportHammerToExcel } from '@/services/export';
 
 export const HammerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -106,7 +105,7 @@ export const HammerPage: React.FC = () => {
       return;
     }
     try {
-      const { sessionId } = await migrateHammerManifestToExpectedOrders(batchId);
+      const sessionId = await migrateHammerManifestToExpectedOrders(batchId);
       navigate(`/counting/${sessionId}`);
     } catch (err) {
       console.error('Error al iniciar conteo de prueba:', err);

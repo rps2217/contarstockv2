@@ -113,6 +113,7 @@ export function useEventMutations({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
       addToast(`Error al registrar: ${message}`, 'error');
+      return undefined;
     }
   }, [tableName, unmapData, baseProcessedData, addToast]);
 

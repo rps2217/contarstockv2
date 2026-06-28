@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { X, Loader2, Plus, Package, AlertTriangle, FileText, Truck, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useEventForm } from '../hooks/useEventForm';
+import { EventType } from '../constants/eventConstants';
 import { ProductSearchInput } from './ProductSearchInput';
 import { ItemList } from '@/shared/components/ui/ItemList';
 import { FormField } from '@/shared/components/ui/FormField';
@@ -184,7 +185,7 @@ export const CreateEventModal: React.FC<Props> = ({
                 <FormField
                   label="Tipo de Evento"
                   value={eventType}
-                  onChange={setEventType}
+                  onChange={(v: string) => setEventType(v as EventType)}
                   icon={<AlertTriangle className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />}
                   options={EVENT_TYPES.map(e => ({ value: e.value, label: `${e.icon} ${e.label}` }))}
                   theme={theme}

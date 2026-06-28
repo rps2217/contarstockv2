@@ -99,7 +99,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, b
               animate={{ scale: 1 }}
               className={`absolute ${isCollapsed ? '-top-1.5 -right-1.5' : '-top-1.5 -right-2'} min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[9px] font-bold px-1 rounded-full shadow-lg`}
             >
-              {badge > 99 ? '99+' : badge}
+              {badge !== undefined && badge > 99 ? '99+' : badge ?? 0}
             </motion.span>
           )}
         </div>

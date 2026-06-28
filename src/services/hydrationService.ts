@@ -38,7 +38,7 @@ export const HydrationService = {
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     } catch (e) {
-      logger.warn('HYDRATION', 'No se pudo persistir el snapshot', e);
+      logger.warn('HYDRATION' as any, 'No se pudo persistir el snapshot' as any, "" as any, e);
     }
   },
 

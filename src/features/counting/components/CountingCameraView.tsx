@@ -84,10 +84,9 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
 
   // Auto-focus manual input
   useEffect(() => {
-    if (isManualMode) {
-      const timer = setTimeout(() => manualInputRef.current?.focus(), 150);
-      return () => clearTimeout(timer);
-    }
+    if (!isManualMode) return;
+    const timer = setTimeout(() => manualInputRef.current?.focus(), 150);
+    return () => clearTimeout(timer);
   }, [isManualMode]);
 
   // Handle manual scan submit

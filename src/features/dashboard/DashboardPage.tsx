@@ -53,13 +53,13 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const msg = (location.state as any)?.message;
-    if (msg) {
-      setSuccessMessage(msg);
-      SoundFX.play("success");
-      navigate(location.pathname, { replace: true, state: {} });
-      const timer = setTimeout(() => setSuccessMessage(null), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!msg) return;
+    
+    setSuccessMessage(msg);
+    SoundFX.play("success");
+    navigate(location.pathname, { replace: true, state: {} });
+    const timer = setTimeout(() => setSuccessMessage(null), 3000);
+    return () => clearTimeout(timer);
   }, [location, navigate]);
 
   // Acciones rápidas disponibles

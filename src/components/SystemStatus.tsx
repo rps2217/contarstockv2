@@ -1,12 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity, AlertTriangle, AlertCircle, DatabaseZap } from 'lucide-react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
+import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity, AlertTriangle } from 'lucide-react';
 import { useSyncStore } from '@/stores';
 import { pullBatch } from '../services/cloud/BatchSyncService';
 import { useNavigate } from 'react-router-dom';
 import { SystemRepository } from '../repositories/SystemRepository';
+import { getGlobalPendingCount } from '@/services/sync';
 
-export const SystemStatus: React.FC = () => {
+// ============================================================================
+// COMPONENTE MEMOIZADO
+// ============================================================================
+
+const SystemStatusInner: React.FC = () => {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showBackOnline, setShowBackOnline] = useState(false);
@@ -62,7 +67,6 @@ export const SystemStatus: React.FC = () => {
 
       // 3. Contar Pendientes (Global de transacciones)
       try {
-        const { getGlobalPendingCount } = await import('../services/syncManager');
         const totalPending = await getGlobalPendingCount();
         setPendingItems(totalPending);
       } catch {}
@@ -215,4 +219,10 @@ export const SystemStatus: React.FC = () => {
     </div>
   );
 };
+
+// ============================================================================
+// EXPORT MEMOIZADO
+// ============================================================================
+
+export const SystemStatus = memo(SystemStatusInner);
 

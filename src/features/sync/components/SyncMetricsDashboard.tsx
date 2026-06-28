@@ -238,7 +238,7 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
                   <span className="text-[10px] font-bold uppercase">Última Sync</span>
                 </div>
                 <p className="text-lg font-black text-white">
-                  {formatTimeAgo(stats.lastSyncTime)}
+                  {formatTimeAgo(stats.lastSyncTime ?? 0)}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-1">
                   {stats.lastSyncTime 

@@ -105,33 +105,34 @@ export function useEventForm({ editingItem, isOpen }: UseEventFormProps): UseEve
 
   // Search product when SKU changes
   useEffect(() => {
-    if (sku.length >= 3) {
-      const timer = setTimeout(async () => {
-        setIsSearching(true);
-        try {
-          const found = await productRepository.getById(normalizeSku(sku));
-          if (found) {
-            setProduct(found);
-          } else if (editingItem && sku === editingItem.barcode) {
-            setProduct({
-              barcode: editingItem.barcode,
-              name: editingItem.productName,
-              supplier: editingItem.providerName,
-              category: 'GENERAL'
-            } as Product);
-          } else {
-            setProduct(null);
-          }
-        } catch (error) {
-          console.error('Error searching product:', error);
-        } finally {
-          setIsSearching(false);
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
+    if (sku.length < 3) {
       setProduct(null);
+      return;
     }
+    
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const found = await productRepository.getById(normalizeSku(sku));
+        if (found) {
+          setProduct(found);
+        } else if (editingItem && sku === editingItem.barcode) {
+          setProduct({
+            barcode: editingItem.barcode,
+            name: editingItem.productName,
+            supplier: editingItem.providerName,
+            category: 'GENERAL'
+          } as Product);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error('Error searching product:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [sku, editingItem]);
 
   const addItem = useCallback(() => {

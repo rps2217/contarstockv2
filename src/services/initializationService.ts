@@ -1,129 +1,131 @@
+/**
+ * InitializationService - Orquestador de inicialización
+ * 
+ * REFACTORIZADO: Ahora usa módulos separados para cada responsabilidad:
+ * - VersionChecker: Verificación de versión
+ * - DatabaseBootstrap: Inicialización de IndexedDB
+ * - DataImporter: Importación de datos
+ * - ConfigSynchronizer: Sincronización de configuración
+ */
+
 import { logger } from './logger';
-import { importProductsFromCloud, importProvidersFromCloud, importCustomersAndTemplatesFromCloud } from './syncManager';
-import { getSettings, saveSettings } from './settings';
+import { HydrationService } from './hydrationService';
+import { purgeOldData } from './maintenance';
 import { db } from '../db';
 import { normalizeSku } from '../services/utils';
-import { recoverFromEmergencySnapshot } from './backupService';
-import { HydrationService } from './hydrationService';
-import { supabaseSyncService } from './supabaseSyncService';
-import { purgeOldData } from './maintenance';
 import { AppMaintenanceService } from './maintenanceService';
 
-export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
+// Módulos de inicialización
+import { 
+  checkVersion, 
+  bootstrapDatabase, 
+  needsInitialSync,
+  importInitialData, 
+  sanitizeDatabase,
+  syncConfig,
+  type InitStep 
+} from './initialization';
 
-const CURRENT_APP_VERSION = "5.8.1"; 
+export type { InitStep };
+export { InitializationService };
 
-export const InitializationService = {
+/**
+ * Pasos de inicialización
+ */
+export type InitStepState = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
+
+const InitializationService = {
   /**
-  * Secuencia de Arranque Maestra
-  */
+   * Secuencia de Arranque Maestra
+   * 
+   * Flujo:
+   * 1. Version check
+   * 2. Database bootstrap
+   * 3. Si productos suficientes → ready (background refresh)
+   * 4. Si offline → ready (modo offline)
+   * 5. Sync config + Import data
+   * 6. Ready
+   */
   run: async (onStep: (step: InitStep) => void): Promise<void> => {
+    const startTime = Date.now();
+    
     try {
-      onStep('version_check');
-      const wasUpdated = await AppMaintenanceService.checkVersion(CURRENT_APP_VERSION, onStep);
-      if (wasUpdated) return;
-
-      // Semáforo de Base de Datos: Esperar a que IndexedDB esté disponible
-      let dbReady = false;
-      let attempts = 0;
-      while (!dbReady && attempts < 5) {
-        try {
-          await (db as any).open();
-          dbReady = true;
-        } catch (e) {
-          attempts++;
-          await new Promise(r => setTimeout(r, 500));
-        }
+      // 1. Version check
+      const versionResult = await checkVersion((step) => onStep(step));
+      if (versionResult.wasUpdated) {
+        logger.info('INIT', 'App was updated, skipping full initialization');
+        return;
       }
 
-      if (dbReady) {
-        const sessionCount = await db.sessions.count();
-        if (sessionCount === 0) {
-          await recoverFromEmergencySnapshot();
-        }
-      }
+      // 2. Database bootstrap
+      const dbResult = await bootstrapDatabase();
+      logger.info('INIT', `Database ready: ${dbResult.sessionCount} sessions, firstLaunch: ${dbResult.isFirstLaunch}`);
 
-      // Tareas de saneamiento y carga inicial
-      const sanitizeTask = async () => {
-        try {
-          const { DatabaseSanitizer } = await import('../repositories/DatabaseSanitizer');
-          await DatabaseSanitizer.runAuditAndSanitize();
-        } catch (e) {
-          logger.warn('INIT', 'Fallo saneamiento', e);
-        }
-      };
-
-      const productCount = await db.products.count();
-      if (productCount >= 10) {
+      // 3. Verificar si necesita sync inicial
+      const needsSync = await needsInitialSync();
+      
+      if (!needsSync) {
+        logger.info('INIT', 'Products already synced, skipping initial import');
         onStep('ready');
         InitializationService.backgroundRefresh();
         return;
       }
 
+      // 4. Modo offline
       if (!navigator.onLine) {
+        logger.warn('INIT', 'Offline mode, skipping cloud sync');
         onStep('offline');
         setTimeout(() => onStep('ready'), 2000);
         return;
       }
 
+      // 5. Sync config
       onStep('config');
-      await InitializationService.syncConfig();
+      await syncConfig();
       
-      onStep('database');
-      await Promise.all([
-        importProductsFromCloud(),
-        importProvidersFromCloud(),
-        importCustomersAndTemplatesFromCloud(),
-        sanitizeTask()
-      ]);
+      // 6. Import initial data
+      await importInitialData((step) => onStep(step));
       
+      // 7. Done
       onStep('ready');
       await HydrationService.persist();
-    } catch (error: any) {
-      logger.error('INIT_CRITICAL', 'Fallo arranque', error.message);
-      onStep('ready');
+      
+      const duration = Date.now() - startTime;
+      logger.success('INIT', `Initialization complete in ${duration}ms`);
+      
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('INIT_CRITICAL', `Initialization failed: ${message}`);
+      onStep('ready'); // Siempre marcar como ready para no bloquear la UI
     }
   },
 
-  syncConfig: async () => {
-    try {
-      const settings = getSettings();
-      // Intentar sincronizar configuración desde la nube
-      const response = await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
-      if (response.success && response.rows && response.rows.length > 0) {
-        const cloudConfig = response.rows[0];
-        const updated = { 
-          ...settings, 
-          cloudConfig: { 
-            ...settings.cloudConfig, 
-            ...cloudConfig 
-          } 
-        };
-        await saveSettings(updated);
-        logger.success('INIT', 'Configuración sincronizada desde la nube');
-      }
-    } catch (e) {
-      logger.warn('INIT', 'Error sincronizando configuración', e);
-    }
-  },
+  /**
+   * Sincroniza configuración con la nube
+   */
+  syncConfig: syncConfig,
 
-  backgroundRefresh: async () => {
+  /**
+   * Refresco en segundo plano
+   * Se ejecuta después de que la app está lista
+   */
+  backgroundRefresh: async (): Promise<void> => {
     try {
-      // Refresco en paralelo y archivado automático
-      const { DatabaseSanitizer } = await import('../repositories/DatabaseSanitizer');
+      logger.info('INIT_BG', 'Starting background refresh');
       
       await Promise.all([
-        InitializationService.syncConfig(),
-        importProductsFromCloud(),
-        importProvidersFromCloud(),
-        importCustomersAndTemplatesFromCloud(),
+        syncConfig(),
+        importInitialData(),
         HydrationService.persist(),
-        purgeOldData(30), // Step 5: Archivado automático > 30 días
-        DatabaseSanitizer.runAuditAndSanitize()
+        purgeOldData(30), // Archivado automático > 30 días
+        sanitizeDatabase()
       ]);
+      
+      logger.success('INIT_BG', 'Background refresh complete');
     } catch (e) {
-      logger.warn('INIT', 'Error en refresco de fondo', e);
+      logger.warn('INIT_BG', 'Background refresh failed' as any, "" as any, e);
     }
   }
 };
+
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useRef, useEffect, useState } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 export interface SmartDockItem {
@@ -9,8 +9,8 @@ export interface SmartDockItem {
   isActive?: boolean;
   badge?: number;
   badgeStyle?: 'default' | 'error' | 'warning';
-  activeColor?: string; // Tailwind class, e.g., 'text-blue-400'
-  activeBg?: string;    // Tailwind class, e.g., 'bg-blue-500/20'
+  activeColor?: string;
+  activeBg?: string;
 }
 
 interface SmartDockProps {
@@ -18,11 +18,11 @@ interface SmartDockProps {
   variant?: 'global' | 'contextual';
 }
 
-export const SmartDock: React.FC<SmartDockProps> = ({ items, variant = 'global' }) => {
+const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' }) => {
   const isGlobal = variant === 'global';
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [showLeft, setShowLeft] = React.useState(false);
-  const [showRight, setShowRight] = React.useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(true);
 
   // Monitor scroll to dynamically fade left/right edges
   const handleScroll = () => {
@@ -33,11 +33,10 @@ export const SmartDock: React.FC<SmartDockProps> = ({ items, variant = 'global' 
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const el = containerRef.current;
     if (el) {
       el.addEventListener('scroll', handleScroll, { passive: true });
-      // Run once initially to set starting gradients
       handleScroll();
     }
     return () => {
@@ -46,20 +45,21 @@ export const SmartDock: React.FC<SmartDockProps> = ({ items, variant = 'global' 
   }, [items]);
 
   // Center active element on mount/selection change
-  React.useEffect(() => {
-    if (containerRef.current) {
-      const activeEl = containerRef.current.querySelector('[data-active="true"]');
-      if (activeEl) {
-        const timer = setTimeout(() => {
-          activeEl.scrollIntoView({
-            behavior: 'smooth',
-            inline: 'center',
-            block: 'nearest'
-          });
-        }, 150);
-        return () => clearTimeout(timer);
-      }
-    }
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    
+    const activeEl = el.querySelector('[data-active="true"]');
+    if (!activeEl) return;
+    
+    const timer = setTimeout(() => {
+      activeEl.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }, 150);
+    return () => clearTimeout(timer);
   }, [items]);
 
   return (
@@ -147,3 +147,5 @@ export const SmartDock: React.FC<SmartDockProps> = ({ items, variant = 'global' 
     </nav>
   );
 };
+
+export const SmartDock = memo(SmartDockInner);

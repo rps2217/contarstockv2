@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useCountingLogic } from './hooks/useCountingLogic';
-import { useProductivity } from './hooks/useProductivity';
-import { useTurboMode } from './hooks/useTurboMode';
+import { useProductivity } from '@/shared/hooks';
+import { useTurboMode } from '@/shared/hooks';
 import { CountingCameraView } from './components/CountingCameraView';
 import { ScannerToolsSheet } from './components/ScannerToolsSheet';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
@@ -11,14 +11,14 @@ import { TurboModeOverlay } from './components/TurboModeOverlay';
 import { ExpirationModal } from '../expiry/components/ExpirationModal';
 import { TestModeExpiryModal } from './components/TestModeExpiryModal';
 import { Loader2 } from 'lucide-react';
-import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { useHIDScanner } from '@/hooks';
 import { useSyncStore } from '@/stores';
-import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
-import { SoundFX } from '../../services/audio';
-import { normalizeSku } from '../../services/utils';
-import * as sessionService from '../../services/sessionService';
-import * as syncManager from '../../services/syncManager';
-import { logger } from '../../services/logger';
+import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal';
+import { SoundFX } from '@/services/audio';
+import { normalizeSku } from '@/services/utils';
+import * as sessionService from '@/services/sessionService';
+import { getPendingUploadGroups, uploadBatch } from '@/services/sync';
+import { logger } from '@/services/logger';
 
 export const CountingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +79,7 @@ export const CountingPage: React.FC = () => {
     if (handledByTestMode) return;
     
     // Fall back to normal scan
-    originalHandleScan(barcode, qty);
+    originalHandleScan(barcode, qty ?? 1);
   }, [handleScanInTestMode, originalHandleScan]);
   
   // Handle expiry modal completion - find expected item from expectedItems directly
@@ -169,10 +169,10 @@ export const CountingPage: React.FC = () => {
   const handleManualSync = async () => {
     if (!id) return;
     try {
-      const groups = await syncManager.getPendingUploadGroups();
+      const groups = await getPendingUploadGroups();
       const sessionGroup = groups.find(g => g.sessionIds.includes(id));
       if (sessionGroup) {
-        await syncManager.performBatchUpload(sessionGroup);
+        await uploadBatch(sessionGroup);
       }
     } catch (e) {
       logger.error('CountingPage', 'Manual sync failed', String(e));

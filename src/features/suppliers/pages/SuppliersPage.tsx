@@ -353,7 +353,7 @@ export const SuppliersPage: React.FC = () => {
           // Delegar al hook de base de datos
           toast.success('Proveedor guardado');
         }}
-        initialData={ui.editingProvider}
+        initialData={ui.editingProvider ?? undefined}
         theme={theme}
       />
 

@@ -1,36 +1,46 @@
 /**
  * useProductSync - Hook para sincronización de productos
  * 
- * Usa useGenericSync como motor central para operaciones estándar.
+ * Usa useSync (hook unificado) para operaciones estándar.
  * Mantiene lógica especial para force sync con lotes IA (embeddings).
  * 
- * @deprecated Verificar si puede reemplazarse completamente por useGenericSync
- * con registryKey: 'products' en futuras versiones.
+ * @deprecated Usar useSync de @/shared/hooks para operaciones genéricas
+ * y genericSyncEngine directamente para sync de tablas específicas.
  */
 
 import { useCallback } from 'react';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { pushBatch } from '../../../services/cloud/BatchSyncService';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
-import { useGenericSync } from '../../../hooks/useGenericSync';
+import { useSync } from '@/shared/hooks';
 import { getSettings } from '../../../services/settings';
 import { logger } from '../../../services/logger';
 
 const BATCH_SIZE_AI = 50; // Lotes pequeños para embeddings IA
 
 export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: string) => void) => {
-  // Usar GenericSyncEngine para operaciones estándar
-  const { push, pull, sync, isSyncing } = useGenericSync({
-    registryKey: 'products',
-    tableName: 'PRODUCTOS',
-    onSuccess: (msg) => showFeedback('success', msg),
-    onError: (msg) => showFeedback('error', msg),
+  // Usar useSync para operaciones estándar (migrado desde useGenericSync)
+  const { triggerSync, isSyncing, lastError } = useSync({
+    mode: 'manual',
+    autoRetry: false,
+    onSuccess: (result) => {
+      const pushed = result.catalogSync?.products || 0;
+      if (pushed > 0) {
+        showFeedback('success', `${pushed} productos sincronizados`);
+      }
+    },
+    onError: (error) => {
+      showFeedback('error', error.message);
+    }
   });
 
-  // Sync productos pending (usa GenericSyncEngine via useGenericSync)
+  // Sync productos (usa useSync)
   const handleSyncToCloud = useCallback(async () => {
-    await push();
-  }, [push]);
+    const result = await triggerSync();
+    if (result && !result.success && result.errors?.length) {
+      showFeedback('error', result.errors[0]);
+    }
+  }, [triggerSync]);
 
   // Force sync todos los productos (usa lotes pequeños para embeddings IA)
   // NOTA: Esta lógica es específica para embeddings y no puede usar GenericSyncEngine
@@ -71,18 +81,26 @@ export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: st
       }
 
       showFeedback('success', `${successCount} productos subidos a la nube`);
-    } catch (err: any) {
-      logger.error('FORCE_SYNC', 'Force sync failed', err.message);
-      showFeedback('error', err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('FORCE_SYNC', 'Force sync failed', errorMsg);
+      showFeedback('error', errorMsg);
     }
   }, [showFeedback]);
 
-  // Download desde la nube (force full refresh)
+  // Download desde la nube (usa genericSyncEngine directamente)
   const handleDownloadFromCloud = useCallback(async () => {
-    await pull(true); // forceFullRefresh = true
-  }, [pull]);
+    try {
+      const result = await genericSyncEngine.pullRemoteChanges('products');
+      const total = result.added + result.updated;
+      showFeedback('success', `${total} productos descargados`);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      showFeedback('error', errorMsg);
+    }
+  }, []);
 
-  // Sync proveedores (usa el mismo registry pero tabla diferente)
+  // Sync proveedores (usa genericSyncEngine directamente)
   const handleSyncProviders = useCallback(async () => {
     try {
       const result = await genericSyncEngine.sync('providers');
@@ -91,8 +109,9 @@ export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: st
       } else {
         showFeedback('error', result.error || 'Error en sync');
       }
-    } catch (err: any) {
-      showFeedback('error', err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      showFeedback('error', errorMsg);
     }
   }, [showFeedback]);
 

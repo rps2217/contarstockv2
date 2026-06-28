@@ -35,7 +35,8 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
   const stockStatus = evaluateStockStatus(product);
   
   // Policy config
-  const policyConfig = {
+  const policyConfig: Record<ProductPolicyStatus, { icon: React.ReactNode; color: string; bg: string }> = {
+    [ProductPolicyStatus.ALL]: { icon: <Package className="w-4 h-4" />, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     [ProductPolicyStatus.EXCHANGE]: {
       icon: <ArrowUpRight className="w-4 h-4" />,
       color: 'text-emerald-400',

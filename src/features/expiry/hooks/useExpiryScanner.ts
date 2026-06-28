@@ -55,7 +55,7 @@ export function useExpiryScanner(
           barcode: product.barcode,
           name: product.name,
           category: product.category,
-          supplierName: product.supplierName
+          supplierName: product.supplier
         };
         
         setScannedProduct(productInfo);

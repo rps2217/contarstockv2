@@ -4,5 +4,5 @@
  * Servicios analíticos centralizados
  */
 
-export { analyticService } from './analyticService';
-export { telemetryService } from './telemetryService';
+export { AnalyticService } from '../analyticService';
+export { telemetry } from './telemetryService';

@@ -5,7 +5,8 @@
 import React, { memo } from 'react';
 import { Package, Trash2, FileText, MapPin, Clock, Eye } from 'lucide-react';
 import { 
-  EventRecord, 
+  EventRecord,
+  EventStatus, 
   getEventStatusLabel,
   getEventStatusConfig,
   formatEventDate 
@@ -26,8 +27,8 @@ export const EventCard: React.FC<EventCardProps> = memo(({
   onViewDetail,
   isSelected
 }) => {
-  const config = getEventStatusConfig(record.status);
-  const statusLabel = getEventStatusLabel(record.status);
+  const config = getEventStatusConfig(record.status as EventStatus || 'PENDING' as EventStatus);
+  const statusLabel = getEventStatusLabel(record.status as EventStatus || 'PENDING' as EventStatus);
 
   return (
     <div 

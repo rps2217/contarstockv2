@@ -1,28 +1,39 @@
 /**
  * useGenericSync - Hook genérico para sincronización
  * 
+ * ⚠️ DEPRECATED: Usar `useSync` de `@/shared/hooks` para sincronización global
+ * o `genericSyncEngine` directamente para operaciones específicas por tabla.
+ * 
  * Proporciona una interfaz unificada para sincronizar cualquier entidad
  * entre el repositorio local (Dexie) y Supabase.
  * 
- * @example
+ * @deprecated Usar:
+ * - `useSync({ mode: 'auto' })` para sincronización global automática
+ * - `genericSyncEngine.sync(key)` para sincronizar una tabla específica
+ * - `genericSyncEngine.pushIncremental(key)` para subir cambios
+ * - `genericSyncEngine.pullRemoteChanges(key)` para descargar cambios
+ * 
+ * @example Migración a useSync:
  * ```tsx
- * const { push, pull, sync, isSyncing } = useGenericSync({
- *   registryKey: 'products',
- *   tableName: 'PRODUCTOS',
- * });
+ * // ANTES (deprecated)
+ * const { push, pull } = useGenericSync({ registryKey: 'products' });
+ * 
+ * // DESPUÉS (recomendado)
+ * const { triggerSync } = useSync({ mode: 'manual' });
  * ```
  * 
- * @example Con callbacks de feedback
+ * @example Usar genericSyncEngine directamente:
  * ```tsx
- * const showFeedback = (type, msg) => {
- *   if (type === 'success') toast.success(msg);
- *   else toast.error(msg);
- * };
- * const { push } = useGenericSync({
- *   registryKey: 'products',
- *   onSuccess: (msg) => showFeedback('success', msg),
- *   onError: (msg) => showFeedback('error', msg),
- * });
+ * import { genericSyncEngine } from '@/services/cloud/GenericSyncEngine';
+ * 
+ * // Push cambios locales
+ * const result = await genericSyncEngine.pushIncremental('products');
+ * 
+ * // Pull cambios remotos
+ * const changes = await genericSyncEngine.pullRemoteChanges('products');
+ * 
+ * // Sync bidireccional completo
+ * const syncResult = await genericSyncEngine.sync('products');
  * ```
  */
 
@@ -199,7 +210,7 @@ export function useGenericSync(config: GenericSyncConfig): GenericSyncReturn {
       
       if (result.success) {
         const { pullRes, pushRes } = result;
-        const totalPull = pullRes?.added + pullRes?.updated || 0;
+        const totalPull = (pullRes?.added ?? 0) + (pullRes?.updated ?? 0);
         const totalPush = pushRes?.success || 0;
         
         const msg = `Sync: ${totalPull}↓ ${totalPush}↑`;

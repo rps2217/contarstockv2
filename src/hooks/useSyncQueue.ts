@@ -1,5 +1,14 @@
 /**
  * useSyncQueue - Hook para integrar cola de sincronización offline
+ * 
+ * ⚠️ DEPRECATED: La funcionalidad de cola offline ahora está integrada
+ * en SyncOrchestrator y useSync. Usar useSync para casos generales.
+ * 
+ * Este hook permanece para uso interno del sistema de sync queue
+ * y para casos que requieren control granular de la cola.
+ * 
+ * @deprecated Usar `useSync({ mode: 'auto' })` para sincronización automática
+ * con cola offline integrada.
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -118,5 +127,5 @@ export async function queueOperation(
   data: Record<string, unknown>,
   priority?: 'high' | 'normal' | 'low'
 ): Promise<void> {
-  await syncQueueService.enqueue({ tableName, operation, recordId, data, priority });
+  await syncQueueService.enqueue({ tableName, operation, recordId, data, priority: priority ?? 'normal' });
 }

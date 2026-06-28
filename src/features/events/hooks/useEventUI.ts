@@ -126,10 +126,10 @@ export const useEventUI = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Sistema global de acciones masivas
-  const bulk = useBulkActions({
+  const bulk: ReturnType<typeof useBulkActions<any>> = useBulkActions({
     module: 'events',
     getItemId: (item: any) => item.id,
-    actions: EVENT_BULK_ACTIONS.map(action => {
+    actions: (EVENT_BULK_ACTIONS as BulkAction<any>[]).map(action => {
       // Wrapped actions con acceso a db
       if (action.id === 'delete') {
         return {

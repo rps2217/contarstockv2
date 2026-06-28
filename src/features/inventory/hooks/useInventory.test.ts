@@ -204,7 +204,7 @@ describe('useInventory', () => {
 
     it('debe abrir modal de editar', () => {
       const { result } = renderHook(() => useInventory());
-      const product = { barcode: '001', name: 'Producto A' };
+      const product = { barcode: '001', name: 'Producto A', category: 'GENERAL' };
       
       expect(result.current.ui.isEditModalOpen).toBe(false);
       
@@ -218,7 +218,7 @@ describe('useInventory', () => {
 
     it('debe cerrar modal de editar', () => {
       const { result } = renderHook(() => useInventory());
-      const product = { barcode: '001', name: 'Producto A' };
+      const product = { barcode: '001', name: 'Producto A', category: 'GENERAL' };
       
       act(() => {
         result.current.actions.openEdit(product);
@@ -235,7 +235,7 @@ describe('useInventory', () => {
 
     it('debe abrir detalle de producto', () => {
       const { result } = renderHook(() => useInventory());
-      const product = { barcode: '001', name: 'Producto A' };
+      const product = { barcode: '001', name: 'Producto A', category: 'GENERAL' };
       
       expect(result.current.ui.isDetailModalOpen).toBe(false);
       
@@ -249,7 +249,7 @@ describe('useInventory', () => {
 
     it('debe cerrar detalle de producto', () => {
       const { result } = renderHook(() => useInventory());
-      const product = { barcode: '001', name: 'Producto A' };
+      const product = { barcode: '001', name: 'Producto A', category: 'GENERAL' };
       
       act(() => {
         result.current.actions.openDetail(product);

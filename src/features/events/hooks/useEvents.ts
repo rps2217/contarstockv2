@@ -174,7 +174,7 @@ export const useEvents = (): UseEventsReturn => {
 
       // Filtro por estado
       if (filters.selectedStatuses.length > 0) {
-        if (!filters.selectedStatuses.includes(event.status)) return false;
+        if (!filters.selectedStatuses.includes(event.status as EventStatus)) return false;
       }
 
       // Filtro por rango de fechas

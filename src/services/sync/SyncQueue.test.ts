@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Tipos
+// Tipos locales para el test
 interface QueuedItem {
   id: string;
   table: string;
@@ -16,6 +16,9 @@ interface QueuedItem {
   retryCount: number;
   lastError?: string;
 }
+
+// Input para enqueue (sin campos generados internamente)
+type EnqueueInput = Omit<QueuedItem, 'id' | 'timestamp' | 'retryCount'>;
 
 // Simulación del SyncQueue
 class MockSyncQueue {
@@ -28,7 +31,7 @@ class MockSyncQueue {
     this.baseDelay = baseDelay;
   }
 
-  enqueue(item: Omit<QueuedItem, 'timestamp' | 'retryCount'>): string {
+  enqueue(item: EnqueueInput): string {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.queue.push({
       ...item,

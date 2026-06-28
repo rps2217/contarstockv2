@@ -7,7 +7,8 @@ import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ExpiryRepository } from '../../../repositories/ExpiryRepository';
 import { AnalyticService } from '../../../services/analyticService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
-import { legacySyncWrapper, LegacySyncStatus } from '../../../services/sync/fsm';
+import { legacySyncWrapper } from '../../../services/sync/fsm';
+import type { LegacySyncStatus } from '../../../services/sync/fsm/SyncFSM';
 import { useSyncStore } from '@/stores';
 import { formatTimeAgo } from '@/lib/date';
 
@@ -30,8 +31,8 @@ export const useDashboard = () => {
   const { pendingItems, isSupabaseConnected } = useSyncStore();
 
   useEffect(() => {
-    return legacySyncWrapper.subscribe((newStatus: LegacySyncStatus) => {
-      setSyncStatus(newStatus);
+    return legacySyncWrapper.subscribe((status: LegacySyncStatus) => {
+      setSyncStatus(status);
     });
   }, []);
   

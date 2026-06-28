@@ -5,7 +5,7 @@ import { SessionRepository } from '../../../repositories/SessionRepository';
 import * as sessionService from '../../../services/sessionService';
 import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
-import * as syncManager from '../../../services/syncManager';
+import { getPendingUploadGroups, uploadBatch, reconcileReception } from '@/services/sync';
 import { useToastStore } from '@/stores';
 import { BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
 import { Trash2, Download, CheckCircle, Send } from 'lucide-react';
@@ -124,12 +124,12 @@ export const useReceptionLogic = () => {
       // Automatic cloud synchronization
       if (navigator.onLine) {
         addToast('Sincronizando recepción con la nube...', 'info');
-        const groups = await syncManager.getPendingUploadGroups();
+        const groups = await getPendingUploadGroups();
         const receptionGroup = groups.find(g => g.type === 'reception');
         
         if (receptionGroup) {
           try {
-            await syncManager.performBatchUpload(receptionGroup);
+            await uploadBatch(receptionGroup);
             addToast('Recepción sincronizada correctamente', 'success');
           } catch (syncError) {
             console.error('Sync error:', syncError);
@@ -172,15 +172,15 @@ export const useReceptionLogic = () => {
         await Promise.all(ids.map(id => SessionRepository.markAsCompleted(id)));
       }
 
-      const groups = await syncManager.getPendingUploadGroups();
+      const groups = await getPendingUploadGroups();
       const receptionGroup = groups.find(g => g.type === 'reception');
       
       if (receptionGroup) {
-        await syncManager.performBatchUpload(receptionGroup);
+        await uploadBatch(receptionGroup);
       }
 
       // RECONCILIACIÓN: Limpiar registros borrados en otros dispositivos
-      const reconcileResult = await syncManager.reconcileReception();
+      const reconcileResult = await reconcileReception();
       
       if (receptionGroup || reconcileResult.deleted > 0) {
         let msg = 'Recepción sincronizada correctamente';

@@ -1,35 +1,50 @@
 /**
  * useProvidersSync - Hook para sincronización de proveedores
  * 
- * Usa useGenericSync como motor central.
+ * Usa genericSyncEngine directamente para sync de proveedores.
+ * 
+ * @deprecated Usar useSync de @/shared/hooks para sincronización genérica
+ * y genericSyncEngine para operaciones específicas.
  */
 
-import { useCallback } from 'react';
-import { useGenericSync } from '../../../hooks/useGenericSync';
+import { useCallback, useState } from 'react';
+import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 
 export const useProvidersSync = (
   tableName: string, 
   loadProviders: () => Promise<void>
 ) => {
-  // Usar GenericSyncEngine via useGenericSync
-  const { push, pull, isSyncing } = useGenericSync({
-    registryKey: 'providers',
-    tableName: tableName || 'PROVEEDORES',
-  });
+  // Estado de sincronización
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Push proveedores pending a la nube
   const handleSyncToCloud = useCallback(async () => {
-    const result = await push();
-    return result;
-  }, [push]);
+    setIsSyncing(true);
+    try {
+      const result = await genericSyncEngine.pushIncremental('providers');
+      setIsSyncing(false);
+      return result;
+    } catch (error) {
+      setIsSyncing(false);
+      throw error;
+    }
+  }, []);
 
   // Download proveedores desde la nube (force full refresh)
   const handleDownloadFromCloud = useCallback(async () => {
-    // Force full refresh para proveedores
-    await pull(true);
-    // Recargar la lista después de descargar
-    await loadProviders();
-  }, [pull, loadProviders]);
+    setIsSyncing(true);
+    try {
+      // Force full refresh para proveedores
+      const result = await genericSyncEngine.pullRemoteChanges('providers');
+      // Recargar la lista después de descargar
+      await loadProviders();
+      setIsSyncing(false);
+      return result;
+    } catch (error) {
+      setIsSyncing(false);
+      throw error;
+    }
+  }, [loadProviders]);
 
   return {
     isSyncing,

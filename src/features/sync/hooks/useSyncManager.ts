@@ -1,14 +1,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import * as syncManager from '../../../services/syncManager';
-import { erpService } from '../../../services/erpService';
-import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
-import { supabaseSyncService } from '../../../services/supabaseSyncService';
-import { getSettings } from '../../../services/settings';
-import { ScanRepository } from '../../../repositories/ScanRepository';
-import { configSyncService } from '../../../services/configSyncService';
-import type { UploadGroup } from '../../../services/sync/UploadGroupBuilder';
+import { syncOrchestrator, getPendingGroups, uploadBatch, resetSyncLock } from '@/services/sync';
+import { erpService } from '@/services/erpService';
+import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository';
+import { supabaseSyncService } from '@/services/supabaseSyncService';
+import { getSettings } from '@/services/settings';
+import { ScanRepository } from '@/repositories/ScanRepository';
+import { configSyncService } from '@/services/configSyncService';
+import type { UploadGroup } from '@/services/sync/UploadGroupBuilder';
 
 // Tipo para entradas de log
 export interface LogEntry {
@@ -89,11 +89,11 @@ export const useSyncManager = () => {
   };
 
   const refreshGroups = useCallback(async () => {
-    const groups = await syncManager.getPendingUploadGroups();
+    const groups = await getPendingGroups();
     setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle', progress: undefined })));
     
     if (logs.length === 0) {
-      addLog(">>> Diagnóstico de Motor Cloud v6.3", 'info');
+      addLog(">>> Diagnóstico de Motor Sync v7.0 (SyncOrchestrator)", 'info');
       if (groups.length > 0) {
         addLog(`Se detectaron ${groups.length} grupos pendientes de subida.`, 'info');
         addLog("Presione 'Sincronizar Cola Ahora' para iniciar.", 'info');
@@ -108,7 +108,7 @@ export const useSyncManager = () => {
   }, [refreshGroups]);
 
   const handleForceReset = () => {
-    syncManager.resetSyncLock();
+    resetSyncLock();
     addLog("Motor reiniciado manualmente por el usuario.", 'info');
     refreshGroups();
   };
@@ -180,7 +180,7 @@ export const useSyncManager = () => {
       setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading', progress: 'Iniciando...' } : g));
       
       try {
-        await syncManager.performBatchUpload(group, (m) => {
+        await uploadBatch(group, (m) => {
           addLog(m, 'info');
           setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, progress: m } : g));
         });

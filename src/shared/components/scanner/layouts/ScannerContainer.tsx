@@ -112,10 +112,9 @@ export const ScannerContainer: React.FC<ScannerContainerProps> = ({
 
   // Auto-focus manual input
   useEffect(() => {
-    if (isManualMode) {
-      const timer = setTimeout(() => manualInputRef.current?.focus(), 150);
-      return () => clearTimeout(timer);
-    }
+    if (!isManualMode) return;
+    const timer = setTimeout(() => manualInputRef.current?.focus(), 150);
+    return () => clearTimeout(timer);
   }, [isManualMode]);
 
   // Filtered items

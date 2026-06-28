@@ -111,7 +111,7 @@ export const PreferencesSection: React.FC<Props> = ({ settings, updateSetting, t
                     <input 
                       type="text"
                       value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
+                      onChange={(e) => (field.onChange as (v: any) => void)(e.target.value)}
                       className={`px-4 py-2 rounded-xl border-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
                     />
                   )}
@@ -120,7 +120,7 @@ export const PreferencesSection: React.FC<Props> = ({ settings, updateSetting, t
                     <input 
                       type="number"
                       value={field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => (field.onChange as (v: any) => void)(Number(e.target.value))}
                       className={`w-24 px-4 py-2 rounded-xl border-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
                     />
                   )}
@@ -128,10 +128,10 @@ export const PreferencesSection: React.FC<Props> = ({ settings, updateSetting, t
                   {field.type === 'select' && (
                     <select 
                       value={field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value) || e.target.value)}
+                      onChange={(e) => (field.onChange as (v: any) => void)(Number(e.target.value) || e.target.value)}
                       className={`px-4 py-2 rounded-xl border-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
                     >
-                      {field.options?.map(opt => (
+                      {(field as any).options?.map((opt: any) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
@@ -139,7 +139,7 @@ export const PreferencesSection: React.FC<Props> = ({ settings, updateSetting, t
 
                   {field.type === 'toggle' && (
                     <button 
-                      onClick={() => field.onChange(!field.value)}
+                      onClick={() => (field.onChange as (v: any) => void)(!field.value)}
                       className={`w-12 h-6 rounded-full relative transition-colors border-2 ${
                         field.value 
                           ? (isHighContrast ? 'bg-yellow-400 border-yellow-600' : 'bg-blue-600 border-blue-800') 
