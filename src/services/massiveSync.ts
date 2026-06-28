@@ -119,7 +119,8 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
 
     const payload = scans.map(s => {
       const locPart = s.location || 'ZONA-A';
-      const uniqueId = `HM_ACTIVE_${batchId}_${locPart}_${s.barcode}`;
+      // ID único incluye timestamp para evitar duplicados en upsert
+      const uniqueId = `HM_ACTIVE_${batchId}_${locPart}_${s.barcode}_${s.timestamp}`;
       return {
         id: uniqueId,
         barcode: s.barcode,
