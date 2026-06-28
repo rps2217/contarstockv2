@@ -2,11 +2,10 @@
  * EventCard - Card de evento simplificado (patrón Expiry)
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Package, Trash2, FileText, MapPin, Clock, Eye } from 'lucide-react';
 import { 
   EventRecord, 
-  EventStatus, 
   getEventStatusLabel,
   getEventStatusConfig,
   formatEventDate 
@@ -20,7 +19,7 @@ interface EventCardProps {
   isSelected: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({
+export const EventCard: React.FC<EventCardProps> = memo(({
   record,
   onDelete,
   onSelect,
@@ -110,6 +109,8 @@ export const EventCard: React.FC<EventCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+EventCard.displayName = 'EventCard';
 
 export default EventCard;

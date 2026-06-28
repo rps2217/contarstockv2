@@ -31,9 +31,12 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-ui': ['lucide-react', 'framer-motion', 'motion', 'recharts', 'sonner'],
+            'vendor-ui': ['lucide-react', 'framer-motion', 'motion', 'sonner'],
+            'vendor-charts': ['recharts'],
             'vendor-db': ['dexie', 'dexie-react-hooks'],
-            'vendor-utils': ['xlsx', 'jspdf', 'papaparse', 'date-fns', 'jszip'],
+            'vendor-export': ['xlsx', 'jspdf', 'jspdf-autotable'],
+            'vendor-parse': ['papaparse', 'jszip'],
+            'vendor-date': ['date-fns'],
             'vendor-scanner': ['html5-qrcode', 'qrcode.react'],
             // AI chunks - cargados lazily
             'vendor-gemini': ['@google/genai'],

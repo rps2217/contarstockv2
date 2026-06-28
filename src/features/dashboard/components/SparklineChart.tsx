@@ -3,8 +3,7 @@
  * Muestra una línea de tendencia sin ejes ni labels
  */
 
-import React, { memo } from 'react';
-import { ResponsiveContainer, LineChart, Line } from 'recharts';
+import React, { memo, useState, useEffect } from 'react';
 
 interface SparklineChartProps {
   data: number[];
@@ -14,23 +13,43 @@ interface SparklineChartProps {
   showDot?: boolean;
 }
 
-export const SparklineChart: React.FC<SparklineChartProps> = memo(({
+// Componente interno que usa recharts (lazy loaded)
+const SparklineChartInner = memo(({
   data,
-  color = '#3b82f6',
-  height = 32,
-  isDark = true,
-  showDot = false
-}) => {
-  if (!data || data.length === 0) {
+  color,
+  height,
+  isDark,
+  showDot
+}: SparklineChartProps) => {
+  const [RechartsComponents, setRechartsComponents] = useState<{
+    ResponsiveContainer: any;
+    LineChart: any;
+    Line: any;
+  } | null>(null);
+
+  useEffect(() => {
+    // Lazy load de recharts
+    Promise.all([
+      import('recharts').then(m => ({ 
+        ResponsiveContainer: m.ResponsiveContainer, 
+        LineChart: m.LineChart, 
+        Line: m.Line 
+      }))
+    ]).then(([components]) => {
+      setRechartsComponents(components);
+    });
+  }, []);
+
+  if (!RechartsComponents) {
     return (
       <div 
         className={`w-full ${isDark ? 'bg-neutral-800' : 'bg-neutral-100'} rounded animate-pulse`} 
-        style={{ height }}
+        style={{ height }} 
       />
     );
   }
 
-  // Convertir array de números a formato para recharts
+  const { ResponsiveContainer, LineChart, Line } = RechartsComponents;
   const chartData = data.map((value, index) => ({ value, index }));
 
   return (
@@ -51,6 +70,22 @@ export const SparklineChart: React.FC<SparklineChartProps> = memo(({
       </ResponsiveContainer>
     </div>
   );
+});
+
+SparklineChartInner.displayName = 'SparklineChartInner';
+
+// Componente principal con fallback
+export const SparklineChart: React.FC<SparklineChartProps> = memo((props) => {
+  if (!props.data || props.data.length === 0) {
+    return (
+      <div 
+        className={`w-full ${props.isDark ? 'bg-neutral-800' : 'bg-neutral-100'} rounded animate-pulse`} 
+        style={{ height: props.height }} 
+      />
+    );
+  }
+
+  return <SparklineChartInner {...props} />;
 });
 
 SparklineChart.displayName = 'SparklineChart';

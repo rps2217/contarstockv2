@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertCircle, RefreshCw, Calendar, Sun, Moon, Settings2, Cloud } from 'lucide-react';
+import React, { memo, useCallback } from 'react';
+import { AlertCircle, RefreshCw, Calendar, Settings2, Cloud } from 'lucide-react';
 
 interface EventHeaderProps {
   totalCount: number;
@@ -12,13 +12,12 @@ interface EventHeaderProps {
   children?: React.ReactNode;
 }
 
-export const EventHeader: React.FC<EventHeaderProps> = ({
+export const EventHeader: React.FC<EventHeaderProps> = memo(({
   totalCount,
   pendingOperations,
   isSyncing,
   theme,
   onNavigateExpiry,
-  onToggleTheme,
   onOpenSettings,
   children
 }) => {
@@ -92,5 +91,7 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
       {children}
     </div>
   );
-};
+});
+
+EventHeader.displayName = 'EventHeader';
 

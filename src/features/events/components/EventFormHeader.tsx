@@ -2,7 +2,7 @@
  * EventFormHeader - Header del formulario de eventos
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { X, FileText, Plus } from 'lucide-react';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   theme: 'dark' | 'light' | 'high-contrast';
 }
 
-export const EventFormHeader: React.FC<Props> = ({ isEditing, onClose, theme }) => {
+export const EventFormHeader: React.FC<Props> = memo(({ isEditing, onClose, theme }) => {
   return (
     <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black shrink-0">
       <div className="flex items-center gap-4">
@@ -33,4 +33,6 @@ export const EventFormHeader: React.FC<Props> = ({ isEditing, onClose, theme }) 
       </button>
     </div>
   );
-};
+});
+
+EventFormHeader.displayName = 'EventFormHeader';
