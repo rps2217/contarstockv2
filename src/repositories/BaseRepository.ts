@@ -174,7 +174,9 @@ export abstract class BaseRepository<T extends BaseEntity> {
    */
   async count(filter?: Partial<T>): Promise<number> {
     if (filter) {
-      return this.table.where(Object.keys(filter)[0]).equals(filter[Object.keys(filter)[0]]).toArray().then(arr => arr.length);
+      const key = Object.keys(filter)[0] as string;
+      const value = filter[key as keyof T];
+      return this.table.where(key).equals(value as string).toArray().then(arr => arr.length);
     }
     return this.table.count();
   }
@@ -351,7 +353,7 @@ export function withCategories<T extends BaseEntity & { category?: string }>(
     async getCategories(): Promise<string[]> {
       const all = await this.getAll();
       const categories = new Set(all.map(item => item.category).filter(Boolean));
-      return Array.from(categories);
+      return Array.from(categories).filter((c): c is string => c !== undefined);
     }
   };
 }

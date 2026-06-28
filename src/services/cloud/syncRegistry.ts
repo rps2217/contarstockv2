@@ -179,14 +179,14 @@ const applyLocalMapping = (
 const createDynamicTableMappers = (tableName: string, mappingKey: string) => {
   const mapToRemote = (record: any): Record<string, any> => {
     const settings = getSettings();
-    const mapping = settings?.cloudConfig?.mappings?.[mappingKey] || settings?.cloudConfig?.columnMapping;
+    const mapping = (settings?.cloudConfig?.mappings as any)?.[mappingKey] || settings?.cloudConfig?.columnMapping;
     const data = record.data || {};
     return applyRemoteMapping(data, mapping, record.id, record.timestamp);
   };
 
   const mapToLocal = (remote: any) => {
     const settings = getSettings();
-    const mapping = settings?.cloudConfig?.mappings?.[mappingKey] || settings?.cloudConfig?.columnMapping;
+    const mapping = (settings?.cloudConfig?.mappings as any)?.[mappingKey] || settings?.cloudConfig?.columnMapping;
     const id = remote.id || remote.ID || (mapping?.id ? remote[mapping.id] : undefined) || 'unknown';
     return applyLocalMapping(remote, mapping, id, getSafeTimestamp(remote.updated_at || remote.updatedat), tableName);
   };

@@ -6,7 +6,7 @@ const MAX_LOGS = 2000;
 
 // Tipos para el logger
 type LogLevel = SystemLog['level'];
-type LoggerDetails = Record<string, unknown> | string | number | boolean | null;
+export type LoggerDetails = Record<string, unknown> | string | number | boolean | null | unknown;
 
 const safeStringify = (obj: unknown): string => {
   const cache = new Set();

@@ -95,7 +95,9 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             };
           } else {
             // Fallback: buscar solo en providers
-            const provider = await db.table('providers').get(foundProduct.supplierRut);
+            const provider = foundProduct.supplierRut 
+              ? await db.table('providers').get(foundProduct.supplierRut)
+              : undefined;
             if (provider) {
               providerPolicy = {
                 hasExchange: provider.hasExchange ?? false,

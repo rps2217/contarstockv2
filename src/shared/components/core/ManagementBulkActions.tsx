@@ -107,7 +107,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
               <div className="space-y-2">
                 {actions.map((action, index) => {
                   const variant = action.variant || 'secondary';
-                  const classes = variantClasses[variant][theme];
+                  const classes = (variantClasses[variant] as any)[theme];
                   const iconClass = variantClasses[variant].icon;
                   const Icon = action.icon;
 
@@ -137,7 +137,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
           <div className="p-6 border-t border-white/5">
             <button
               onClick={onClearSelection}
-              className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${variantClasses.ghost[theme]}`}
+              className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${(variantClasses.ghost as any)[theme]}`}
             >
               Cancelar Selección
             </button>

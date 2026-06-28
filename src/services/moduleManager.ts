@@ -1,4 +1,5 @@
 import { getSettings, saveSettings } from './settings';
+import type { AppSettings } from "../types";
 import { useAppStore } from '@/stores';
 
 export const isModuleEnabled = (moduleKey: string): boolean => {
@@ -19,7 +20,7 @@ export const toggleModule = async (moduleKey: string, enabled: boolean): Promise
       }
     }
   };
-  await saveSettings(newSettings);
+  await saveSettings(newSettings as AppSettings);
 };
 
 export const getModules = () => {

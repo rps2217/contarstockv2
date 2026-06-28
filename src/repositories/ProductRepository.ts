@@ -84,7 +84,7 @@ export class ProductRepository {
 
   async getSuppliers(): Promise<string[]> {
     const products = await this.table.toArray();
-    return [...new Set(products.map(p => p.supplier).filter(Boolean))];
+    return [...new Set(products.map(p => p.supplier).filter(Boolean) as string[])];
   }
 
   // Paginación con cursor

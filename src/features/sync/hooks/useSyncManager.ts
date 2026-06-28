@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { syncOrchestrator, getPendingGroups, uploadBatch, resetSyncLock } from '@/services/sync';
+import { syncOrchestrator, getPendingGroups, uploadGroupCompat, resetSyncLock } from '@/services/sync';
 import { erpService } from '@/services/erpService';
 import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository';
 import { supabaseSyncService } from '@/services/supabaseSyncService';
@@ -89,8 +89,8 @@ export const useSyncManager = () => {
   };
 
   const refreshGroups = useCallback(async () => {
-    const groups = await getPendingGroups();
-    setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle', progress: undefined })));
+    const groups: UploadGroup[] = await getPendingGroups();
+    setUiGroups(groups.map((g: UploadGroup) => ({ ...g, uiStatus: 'idle' as const, progress: undefined })));
     
     if (logs.length === 0) {
       addLog(">>> Diagnóstico de Motor Sync v7.0 (SyncOrchestrator)", 'info');
@@ -180,7 +180,7 @@ export const useSyncManager = () => {
       setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading', progress: 'Iniciando...' } : g));
       
       try {
-        await uploadBatch(group, (m) => {
+        await uploadGroupCompat(group, (m) => {
           addLog(m, 'info');
           setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, progress: m } : g));
         });

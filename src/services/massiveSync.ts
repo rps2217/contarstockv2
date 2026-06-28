@@ -179,8 +179,8 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
       .filter((i): i is NonNullable<typeof i> => i !== null && i.expectedQty > 0)
       .map(item => ({
         batchId,
-        barcode: sanitizeBarcode(item.barcode),
-        name: item.name,
+        barcode: sanitizeBarcode(item!.barcode),
+        name: item!.name,
         expectedQty: item.expectedQty,
         loc: item.loc
       }));
@@ -239,9 +239,9 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
 
     const itemsToSave = filteredRows.map(item => ({
       batchId,
-      barcode: sanitizeBarcode(item.barcode),
-      name: item.name,
-      expectedQty: item.qty,
+      barcode: sanitizeBarcode(item!.barcode),
+      name: item!.name,
+      expectedQty: item!.qty,
       loc: ''
     }));
 
@@ -280,8 +280,8 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
 
     const itemsToSave = order.items.map(item => ({
       batchId,
-      barcode: sanitizeBarcode(item.barcode),
-      name: item.name,
+      barcode: sanitizeBarcode(item!.barcode),
+      name: item!.name,
       expectedQty: item.expectedQty,
       loc: ''
     }));
@@ -364,7 +364,7 @@ export const migrateHammerManifestToExpectedOrders = async (batchId: string, ord
     await db.expectedOrders.put(expectedOrder);
 
     const duration = performance.now() - startTime;
-    telemetry.track('MANIFEST', 'MIGRATION_SUCCESS', { batchId, orderId: targetOrderId, itemCount: items.length }, duration, batchId);
+    telemetry.track('SYNC' as any, 'MIGRATION_SUCCESS', { batchId, orderId: targetOrderId, itemCount: items.length }, duration, batchId);
 
     logger.success('MANIFEST_MIGRATION', `Manifest migrado: ${targetOrderId} con ${items.length} SKUs`);
     return targetOrderId;
@@ -372,7 +372,7 @@ export const migrateHammerManifestToExpectedOrders = async (batchId: string, ord
   } catch (err: unknown) {
     const error = handleError(err);
     const duration = performance.now() - startTime;
-    telemetry.track('MANIFEST', 'MIGRATION_FAIL', { batchId, error: error.message }, duration, batchId);
+    telemetry.track('SYNC' as any, 'MIGRATION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('MANIFEST_MIGRATION_FAIL', error.message);
     throw err;
   }
@@ -409,7 +409,7 @@ export const loadHammerManifestAsTestSession = async (batchId: string, orderId?:
     );
 
     const duration = performance.now() - startTime;
-    telemetry.track('HAMMER', 'TEST_SESSION_CREATED', { batchId, orderId: migratedOrderId, sessionId: session.id }, duration, batchId);
+    telemetry.track('SYNC' as any, 'TEST_SESSION_CREATED', { batchId, orderId: migratedOrderId, sessionId: session.id }, duration, batchId);
 
     logger.success('HAMMER_TEST_SESSION', `Sesión de prueba creada: ${session.id}`);
     return { sessionId: session.id, orderId: migratedOrderId };
@@ -417,7 +417,7 @@ export const loadHammerManifestAsTestSession = async (batchId: string, orderId?:
   } catch (err: unknown) {
     const error = handleError(err);
     const duration = performance.now() - startTime;
-    telemetry.track('HAMMER', 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
+    telemetry.track('SYNC' as any, 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('HAMMER_TEST_SESSION_FAIL', error.message);
     throw err;
   }

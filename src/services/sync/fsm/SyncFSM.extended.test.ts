@@ -137,7 +137,7 @@ describe('SyncFSM Extended', () => {
     it('should call progress callback during execution', async () => {
       const progressCalls: string[] = [];
       await syncFSM.execute(async () => {
-        return 'done';
+        void 'done';
       }, (msg) => progressCalls.push(msg));
 
       expect(progressCalls.length).toBeGreaterThan(0);
@@ -146,7 +146,7 @@ describe('SyncFSM Extended', () => {
     it('should include sync messages in callback', async () => {
       const progressCalls: string[] = [];
       await syncFSM.execute(async () => {
-        return 'done';
+        void 'done';
       }, (msg) => progressCalls.push(msg));
 
       const hasSyncMessage = progressCalls.some(msg => 

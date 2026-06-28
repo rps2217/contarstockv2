@@ -17,7 +17,7 @@ import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorMo
 import { SoundFX } from '@/services/audio';
 import { normalizeSku } from '@/services/utils';
 import * as sessionService from '@/services/sessionService';
-import { getPendingUploadGroups, uploadBatch } from '@/services/sync';
+import { getPendingUploadGroups, uploadGroupCompat } from '@/services/sync';
 import { logger } from '@/services/logger';
 
 export const CountingPage: React.FC = () => {
@@ -172,7 +172,7 @@ export const CountingPage: React.FC = () => {
       const groups = await getPendingUploadGroups();
       const sessionGroup = groups.find(g => g.sessionIds.includes(id));
       if (sessionGroup) {
-        await uploadBatch(sessionGroup);
+        await uploadGroupCompat(sessionGroup);
       }
     } catch (e) {
       logger.error('CountingPage', 'Manual sync failed', String(e));

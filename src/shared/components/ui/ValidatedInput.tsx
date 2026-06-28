@@ -275,13 +275,13 @@ export const ValidationRules = {
 
   // Warn if different from another field
   matches: (field: string, message?: string): ValidationRule => ({
-    validate: (value, allValues) => value === allValues[field],
+    validate: (value, allValues) => value === (allValues ?? {})[field],
     message: message || `No coincide con ${field}`,
     level: 'error'
   }),
 
   warningIf: (condition: (value: string, allValues: Record<string, any>) => boolean, message: string): ValidationRule => ({
-    validate: (value, allValues) => !condition(value, allValues),
+    validate: (value, allValues) => !condition(value, allValues ?? {}),
     message,
     level: 'warning'
   }),

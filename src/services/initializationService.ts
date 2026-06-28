@@ -123,7 +123,7 @@ const InitializationService = {
       
       logger.success('INIT_BG', 'Background refresh complete');
     } catch (e) {
-      logger.warn('INIT_BG', 'Background refresh failed' as any, "" as any, e);
+      logger.warn('INIT_BG', 'Background refresh failed', e);
     }
   }
 };

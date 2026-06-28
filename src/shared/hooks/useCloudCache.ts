@@ -25,21 +25,21 @@ export function clearCache(key?: string): void {
   }
 }
 
-// Get cache entry
-export function getCacheEntry<T>(key: string): CacheEntry<T> | undefined {
-  return globalCache.get(key) as CacheEntry<T> | undefined;
-}
-
-interface UseCloudCacheOptions {
+interface UseCloudCacheOptions<T> {
   ttl?: number; // Time to live en ms (default: 5 minutos)
   enabled?: boolean;
   onStale?: (data: T) => void;
 }
 
+// Get cache entry
+export function getCacheEntry<T>(key: string): CacheEntry<T> | undefined {
+  return globalCache.get(key) as CacheEntry<T> | undefined;
+}
+
 export function useCloudCache<T>(
   key: string,
   fetcher: () => Promise<T>,
-  options: UseCloudCacheOptions = {}
+  options: UseCloudCacheOptions<T> = {}
 ): {
   data: T | null;
   isLoading: boolean;

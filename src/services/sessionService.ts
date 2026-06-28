@@ -5,7 +5,7 @@ import { logger } from './logger';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { ScanRepository } from '../repositories/ScanRepository';
-import { CountingSession, ExpectedOrder, ScanRecord } from '../types';
+import { CountingSession, ExpectedOrder, ExpectedItem, ScanRecord } from '../types';
 
 let pendingBuffer: any[] = [];
 
@@ -131,7 +131,7 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
        const manifest = await erpService.downloadManifest(cleanId);
        
        if (manifest && manifest.items && manifest.items.length > 0) {
-         const mappedItems: Array<{ barcode: string; name: string; expectedQty: number }> = manifest.items.map((item: { barcode: unknown; name?: unknown; qty?: unknown }) => ({
+         const mappedItems = manifest.items.map((item: Record<string, unknown>) => ({
            barcode: String(item.barcode),
            name: String(item.name || "") || `Producto ${item.barcode}`,
            expectedQty: (item.qty as number) || 0

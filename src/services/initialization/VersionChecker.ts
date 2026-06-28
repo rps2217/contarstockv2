@@ -19,7 +19,7 @@ export const checkVersion = async (
 ): Promise<VersionCheckResult> => {
   try {
     onProgress?.('version_check');
-    const wasUpdated = await AppMaintenanceService.checkVersion(CURRENT_APP_VERSION, onProgress);
+    const wasUpdated = await AppMaintenanceService.checkVersion(CURRENT_APP_VERSION, onProgress as (step: string) => void);
     
     logger.info('INIT_VERSION', `App version: ${CURRENT_APP_VERSION}, Was updated: ${wasUpdated}`);
     

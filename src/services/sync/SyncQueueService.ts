@@ -10,7 +10,7 @@
 
 import { db } from '../../db';
 import { logger } from '../logger';
-import { telemetry } from '../telemetry';
+import { telemetry } from '../telemetryService';
 import { handleError } from '../utils';
 
 // Tipos compatibles con el schema existente
@@ -23,7 +23,7 @@ export interface QueuedSyncItem {
   timestamp: number;
   retries: number;
   lastError?: string;
-  priority?: 'high' | 'normal' | 'low';
+  priority: 'high' | 'normal' | 'low';
 }
 
 export interface SyncQueueOptions {
@@ -114,10 +114,11 @@ class SyncQueueService {
       ...item,
       timestamp: Date.now(),
       retries: 0,
+      priority: item.priority ?? 'normal',
     };
 
-    const id = await db.syncQueue.add(newItem);
-    telemetry.track('SYNC_QUEUE', 'ITEM_ENQUEUED', { table: item.tableName, operation: item.operation }, performance.now() - startTime);
+    const id = await db.syncQueue.add(newItem) as number;
+    telemetry.track('SYNC', 'ITEM_ENQUEUED', { table: item.tableName, operation: item.operation }, performance.now() - startTime);
     logger.info('SYNC_QUEUE', `Item encolado: ${item.tableName}/${item.recordId} (${item.operation})`);
     
     const queuedItem = await db.syncQueue.get(id);
@@ -166,7 +167,7 @@ class SyncQueueService {
     if (newRetries >= this.options.maxRetries) {
       // Max retries exceeded - remove from queue
       await this.remove(id);
-      telemetry.track('SYNC_QUEUE', 'MAX_RETRIES_EXCEEDED', { table: item.tableName, recordId: item.recordId });
+      telemetry.track('SYNC', 'MAX_RETRIES_EXCEEDED', { table: item.tableName, recordId: item.recordId });
       logger.error('SYNC_QUEUE_FAIL', `Max retries exceeded for ${item.tableName}/${item.recordId}: ${error}`);
       this.emit('item_failed', item, error);
       return false;
@@ -178,7 +179,7 @@ class SyncQueueService {
     });
 
     const updatedItem = await db.syncQueue.get(id);
-    telemetry.track('SYNC_QUEUE', 'ITEM_RETRY', { 
+    telemetry.track('SYNC', 'ITEM_RETRY', { 
       table: item.tableName, 
       retries: newRetries, 
       maxRetries: this.options.maxRetries 
@@ -194,7 +195,7 @@ class SyncQueueService {
     try {
       await syncFn(item);
       await this.remove(item.id!);
-      telemetry.track('SYNC_QUEUE', 'ITEM_SYNCED', { table: item.tableName, operation: item.operation });
+      telemetry.track('SYNC', 'ITEM_SYNCED', { table: item.tableName, operation: item.operation });
       logger.success('SYNC_QUEUE', `Sincronizado: ${item.tableName}/${item.recordId}`);
       return true;
     } catch (error) {
@@ -236,7 +237,7 @@ class SyncQueueService {
     }
 
     const remaining = await this.getQueueSize();
-    telemetry.track('SYNC_QUEUE', 'QUEUE_PROCESSED', { processed, failed, remaining });
+    telemetry.track('SYNC', 'QUEUE_PROCESSED', { processed, failed, remaining });
     
     if (processed > 0 || failed > 0) {
       this.emit('sync_complete');

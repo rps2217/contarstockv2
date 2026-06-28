@@ -75,9 +75,9 @@ export function ConflictResolutionModal<T>({
       return String(mergeValues[field]);
     }
     if (selectedOption === 'remote') {
-      return String(conflict.remoteVersion[field]);
+      return String((conflict.remoteVersion as any)[field]);
     }
-    return String(conflict.localVersion[field]);
+    return String((conflict.localVersion as any)[field]);
   };
 
   const handleResolve = () => {
@@ -109,7 +109,7 @@ export function ConflictResolutionModal<T>({
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
             className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: any) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="px-6 py-4 border-b border-white/10 bg-amber-500/10">
@@ -177,8 +177,8 @@ export function ConflictResolutionModal<T>({
                 
                 {conflict.conflictingFields.map((field) => {
                   const isExpanded = expandedFields.has(field);
-                  const localVal = conflict.localVersion[field];
-                  const remoteVal = conflict.remoteVersion[field];
+                  const localVal = (conflict.localVersion as any)[field];
+                  const remoteVal = (conflict.remoteVersion as any)[field];
                   const isDifferent = localVal !== remoteVal;
 
                   if (!isDifferent) return null;

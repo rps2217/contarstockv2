@@ -86,7 +86,7 @@ describe('Card Component', () => {
       const { container } = render(
         <Card className="custom-card-class">Custom</Card>
       );
-      expect(container.firstChild?.className).toContain('custom-card-class');
+      expect((container.firstChild as Element)?.className).toContain('custom-card-class');
     });
   });
 });
@@ -101,7 +101,7 @@ describe('CardHeader Component', () => {
     const { container } = render(
       <CardHeader className="custom-header-class">Header</CardHeader>
     );
-    expect(container.firstChild?.className).toContain('custom-header-class');
+    expect((container.firstChild as Element)?.className).toContain('custom-header-class');
   });
 });
 
@@ -120,7 +120,7 @@ describe('CardTitle Component', () => {
     const { container } = render(
       <CardTitle className="custom-title-class">Title</CardTitle>
     );
-    expect(container.firstChild?.className).toContain('custom-title-class');
+    expect((container.firstChild as Element)?.className).toContain('custom-title-class');
   });
 });
 
@@ -134,6 +134,6 @@ describe('CardContent Component', () => {
     const { container } = render(
       <CardContent className="custom-content-class">Content</CardContent>
     );
-    expect(container.firstChild?.className).toContain('custom-content-class');
+    expect((container.firstChild as Element)?.className).toContain('custom-content-class');
   });
 });

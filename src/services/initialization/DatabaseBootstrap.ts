@@ -30,7 +30,7 @@ export const bootstrapDatabase = async (): Promise<DatabaseBootstrapResult> => {
       logger.info('INIT_DB', `Database opened successfully on attempt ${attempts + 1}`);
     } catch (e) {
       attempts++;
-      logger.warn('INIT_DB' as any, "" as any, e);
+      logger.warn('INIT_DB', 'Database open failed', e);
       if (attempts < DB_BOOTSTRAP_RETRIES) {
         await new Promise(r => setTimeout(r, DB_BOOTSTRAP_DELAY_MS));
       }
@@ -52,7 +52,7 @@ export const bootstrapDatabase = async (): Promise<DatabaseBootstrapResult> => {
       recoveredFromSnapshot = true;
       logger.success('INIT_DB', 'Recovered from emergency snapshot');
     } catch (e) {
-      logger.warn('INIT_DB', 'No emergency snapshot found or recovery failed' as any, "" as any, e);
+      logger.warn('INIT_DB', 'No emergency snapshot found or recovery failed', e);
     }
   }
 

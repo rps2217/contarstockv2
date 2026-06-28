@@ -1,6 +1,21 @@
 import JSZip from "jszip";
 
 // Re-exportar funciones compartidas para compatibilidad
+
+/**
+ * Format error message
+ */
+export const handleError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'Unknown error';
+};
+
+
 export { 
   formatCurrency, 
   formatNumber, 

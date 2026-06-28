@@ -10,7 +10,7 @@
  * Este archivo se mantiene por compatibilidad con código existente.
  */
 
-import type { SupabaseRow } from './cloud/RealtimeSyncService';
+import type { SupabaseRow } from './types/common';
 import type { LocalTableRepository } from './cloud/RealtimeSyncService';
 
 // Re-export types

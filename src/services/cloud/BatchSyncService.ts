@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../logger';
 
 // Tipos
-type SupabaseRow = Record<string, unknown>;
+import type { SupabaseRow } from '../types/common';
 
 /**
  * Formatea errores para salida legible

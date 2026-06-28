@@ -87,7 +87,7 @@ describe('Badge Component', () => {
       const { container } = render(
         <Badge className="custom-class">Custom</Badge>
       );
-      expect(container.firstChild?.className).toContain('custom-class');
+      expect((container.firstChild as Element)?.className).toContain('custom-class');
     });
   });
 });

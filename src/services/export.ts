@@ -175,33 +175,33 @@ export const exportToPDF = async (session: CountingSession, items: ConsolidatedI
  doc.setTextColor(0, 0, 0);
 
  // Left Column
- doc.setFont(undefined, 'bold');
+ doc.setFont('helvetica', 'bold');
  doc.text("Orden ERP:", 20, 45);
- doc.setFont(undefined, 'normal');
+ doc.setFont('helvetica', 'normal');
  doc.text(session.erpOrder, 50, 45);
 
- doc.setFont(undefined, 'bold');
+ doc.setFont('helvetica', 'bold');
  doc.text("Etiqueta Logística:", 20, 52);
- doc.setFont(undefined, 'normal');
+ doc.setFont('helvetica', 'normal');
  doc.text(session.logisticsLabel, 50, 52);
 
- doc.setFont(undefined, 'bold');
+ doc.setFont('helvetica', 'bold');
  doc.text("Fecha:", 20, 59);
- doc.setFont(undefined, 'normal');
+ doc.setFont('helvetica', 'normal');
  doc.text(new Date(session.createdAt).toLocaleString(), 50, 59);
 
  // Right Column (Totals)
  const totalUnits = items.reduce((acc, i) => acc + i.totalQuantity, 0);
  const totalSKUs = items.length;
 
- doc.setFont(undefined, 'bold');
+ doc.setFont('helvetica', 'bold');
  doc.text("Total Unidades:", 120, 45);
- doc.setFont(undefined, 'normal');
+ doc.setFont('helvetica', 'normal');
  doc.text(totalUnits.toString(), 155, 45);
 
- doc.setFont(undefined, 'bold');
+ doc.setFont('helvetica', 'bold');
  doc.text("Total SKUs:", 120, 52);
- doc.setFont(undefined, 'normal');
+ doc.setFont('helvetica', 'normal');
  doc.text(totalSKUs.toString(), 155, 52);
 
   // --- Table ---

@@ -5,7 +5,7 @@ import { SessionRepository } from '../../../repositories/SessionRepository';
 import * as sessionService from '../../../services/sessionService';
 import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
-import { getPendingUploadGroups, uploadBatch, reconcileReception } from '@/services/sync';
+import { getPendingUploadGroups, uploadGroupCompat, reconcileReception } from '@/services/sync';
 import { useToastStore } from '@/stores';
 import { BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
 import { Trash2, Download, CheckCircle, Send } from 'lucide-react';
@@ -129,7 +129,7 @@ export const useReceptionLogic = () => {
         
         if (receptionGroup) {
           try {
-            await uploadBatch(receptionGroup);
+            await uploadGroupCompat(receptionGroup);
             addToast('Recepción sincronizada correctamente', 'success');
           } catch (syncError) {
             console.error('Sync error:', syncError);
@@ -176,7 +176,7 @@ export const useReceptionLogic = () => {
       const receptionGroup = groups.find(g => g.type === 'reception');
       
       if (receptionGroup) {
-        await uploadBatch(receptionGroup);
+        await uploadGroupCompat(receptionGroup);
       }
 
       // RECONCILIACIÓN: Limpiar registros borrados en otros dispositivos

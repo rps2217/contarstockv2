@@ -38,10 +38,16 @@ const getCurrentUserId = (): string => {
 };
 
 export class AuditRepository<T extends { id?: ID }, ID = string> {
+  private wrapped!: IRepository<T, ID>;
+  private tableName!: string;
+
   constructor(
-    private wrapped: IRepository<T, ID>,
-    private tableName: string
-  ) {}
+    wrapped: IRepository<T, ID>,
+    tableName: string
+  ) {
+    this.wrapped = wrapped;
+    this.tableName = tableName;
+  }
 
   private async logAudit(
     recordId: string,
@@ -81,7 +87,7 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
   async save(entity: T): Promise<ID> {
     const isNew = !entity.id;
     const id = await this.wrapped.save(entity);
-    
+
     await this.logAudit(
       String(id),
       'CREATE',
@@ -89,13 +95,16 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
       undefined,
       entity
     );
-    
+
     return id;
   }
 
   async saveMany(entities: T[]): Promise<ID[]> {
-    const ids = await this.wrapped!.saveMany(entities);
-    
+    if (!this.wrapped.saveMany) {
+      throw new Error('saveMany not supported by underlying repository');
+    }
+    const ids = await this.wrapped.saveMany(entities);
+
     for (let i = 0; i < entities.length; i++) {
       await this.logAudit(
         String(ids[i]),
@@ -105,26 +114,24 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
         entities[i]
       );
     }
-    
+
     return ids;
   }
 
   async update(id: ID, data: Partial<T>): Promise<void> {
-    // Obtener valor anterior
+    if (!this.wrapped.update) {
+      throw new Error('update not supported by underlying repository');
+    }
     const oldEntity = await this.wrapped.get(id);
-    
-    // Realizar update
-    await this.wrapped!.update(id, data);
-    
-    // Log de auditoría por campo cambiado
+    await this.wrapped.update(id, data);
     if (oldEntity) {
       const newEntity = { ...oldEntity, ...data };
       const changedFields = Object.keys(data) as (keyof T)[];
-      
+
       for (const field of changedFields) {
         const oldVal = oldEntity[field];
         const newVal = data[field];
-        
+
         // Solo log si realmente cambió
         if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
           await this.logAudit(
@@ -142,10 +149,10 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
   async delete(id: ID): Promise<void> {
     // Obtener valor antes de eliminar
     const entity = await this.wrapped.get(id);
-    
+
     // Eliminar
     await this.wrapped.delete(id);
-    
+
     // Log de auditoría
     if (entity) {
       await this.logAudit(
@@ -165,11 +172,18 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
   }
 
   async count(): Promise<number> {
+    if (!this.wrapped.count) {
+      return 0;
+    }
     return this.wrapped.count();
   }
 
   async exists(id: ID): Promise<boolean> {
-    return this.wrapped!.exists(id);
+    if (!this.wrapped.exists) {
+      const entity = await this.wrapped.get(id);
+      return entity !== null && entity !== undefined;
+    }
+    return this.wrapped.exists(id);
   }
 
   // Delegar métodos específicos del repositorio envuelto

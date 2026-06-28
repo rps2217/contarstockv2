@@ -105,7 +105,7 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
           reject(error);
         }
       },
-      error: (error) => {
+      error: (error: Error) => {
         reject(error);
       }
     });

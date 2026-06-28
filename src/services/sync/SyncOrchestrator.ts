@@ -42,6 +42,7 @@
  */
 
 import { genericSyncEngine } from '../cloud/GenericSyncEngine';
+import type { SyncResult as CommonSyncResult } from '../types/common';
 import { 
   getPendingUploadGroups, 
   filterGroupsByType,
@@ -77,8 +78,8 @@ import { withRetry } from '@/lib/errors/retry';
 // TIPOS EXPORTADOS
 // ============================================================================
 
-export interface SyncResult {
-  success: boolean;
+// Extended SyncResult for orchestrator - uses base from types/common.ts
+export type SyncResult = CommonSyncResult & {
   catalogSync?: {
     products?: number;
     providers?: number;
@@ -90,9 +91,9 @@ export interface SyncResult {
     uploaded: number;
   };
   ordersDownloaded?: number;
-  errors?: string[];
-}
+};
 
+// Extended SyncStatus for orchestrator - local interface
 export interface SyncStatus {
   isUploading: boolean;
   pendingCount: number;
@@ -361,7 +362,7 @@ class SyncOrchestrator {
       
       return { products, providers };
     } catch (error) {
-      logger.error('SYNC_ORCHESTRATOR', 'Error en importación inicial' as any, "" as any, error);
+      logger.error('SYNC_ORCHESTRATOR', 'Error en importación inicial', error);
       throw error;
     }
   }

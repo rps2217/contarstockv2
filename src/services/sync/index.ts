@@ -1,36 +1,75 @@
 /**
  * Sync Services - Módulos para sincronización
+ *
+ * ARQUITECTURA CONSOLIDADA:
  * 
- * Exporta las funciones principales de sincronización.
- * 
- * ARQUITECTURA:
- * 
- *   SyncOrchestrator (NUEVO - Punto de entrada recomendado)
- *       ├── GenericSyncEngine → Catálogos bidireccionales
- *       └── BatchUploader → Datos operativos ERP
- * 
+ *   ┌──────────────────────────────────────────────────────────────┐
+ *   │                    UNIFIED SYNC ENGINE                        │
+ *   │  (Nuevo punto de entrada único - 1 motor para todo)          │
+ *   │                                                               │
+ *   │  Combina:                                                    │
+ *   │  • GenericSyncEngine (catálogos)                            │
+ *   │  • BatchSyncService (operaciones batch)                     │
+ *   │  • RealtimeSyncService (tiempo real)                        │
+ *   │  • SyncQueueService (cola offline)                          │
+ *   └──────────────────────────────────────────────────────────────┘
+ *
  * Para código NUEVO, usar:
+ *   import { unifiedSyncEngine } from './unified';
+ *
+ * Para código LEGACY, usar:
  *   import { syncOrchestrator } from './SyncOrchestrator';
- * 
- * Para código LEGACY, los exports mantienen compatibilidad.
  */
 
 // =============================================================================
-// SYNC ORCHESTRATOR (NUEVO)
+// UNIFIED SYNC ENGINE (NUEVO - RECOMENDADO)
+// =============================================================================
+export {
+  unifiedSyncEngine,
+  syncAll,
+  syncCatalogs,
+  syncBatches,
+  enqueueSync,
+  processQueue,
+  startRealtimeSync,
+  stopRealtimeSync,
+  getSyncStats,
+  addSyncListener,
+  getSyncState,
+  syncRegistry,
+  CATALOG_TABLES,
+  uploadBatch,
+  resetSyncLock,
+} from './unified';
+
+export type {
+  SyncResult,
+  SyncState,
+  SyncStatus,
+  QueuedSyncItem,
+  QueueProcessResult,
+  TableSyncResult,
+  SyncConflict,
+  SyncStats,
+  SyncEngineConfig,
+  TableSyncMeta,
+  SyncEventType,
+  SyncEventPayload,
+  SyncEventListener,
+} from './unified';
+
+// =============================================================================
+// SYNC ORCHESTRATOR (COMPATIBILIDAD LEGACY)
 // =============================================================================
 export {
   syncOrchestrator,
-  syncAll,
+  syncAll as syncAllLegacy,
   syncCatalogsOnly,
   syncBatchesOnly,
-  getPendingGroups,
-  uploadBatch,
-  resetSyncLock,
-  CATALOG_TABLES,
   registryToSync,
-} from './SyncOrchestrator';
+} from './SyncOrchestrator.compat';
 
-export type { SyncResult, SyncStatus } from './SyncOrchestrator';
+export type { SyncResult as SyncResultLegacy, SyncStatus as SyncStatusLegacy } from './SyncOrchestrator.compat';
 
 // =============================================================================
 // UPLOAD GROUPING UTILITIES
@@ -58,7 +97,7 @@ export {
 // CATALOG IMPORTER
 // =============================================================================
 export {
-  syncCatalogs,
+  syncCatalogs as syncCatalogsImporter,
   importProductsFromCloud,
   importProvidersFromCloud,
   importCustomersAndTemplatesFromCloud,
@@ -73,8 +112,15 @@ export {
 } from './Reconciliation';
 
 // =============================================================================
-// FSM PARA CONTROL DE FLUJO
+// FSM PARA CONTROL DE FLUJO (PARA CÓDIGO LEGACY)
 // =============================================================================
 export { syncFSM } from './fsm';
 export { useSyncFSM } from './fsm/useSyncFSM';
-export type { SyncState, SyncEvent, SyncContext } from './fsm/types';
+export type { SyncState as FSMSyncState, SyncEvent, SyncContext } from './fsm/types';
+
+// =============================================================================
+// LEGACY COMPATIBILITY
+// =============================================================================
+export { uploadGroupCompat } from './uploadBatchCompat';
+export { getPendingGroups } from './SyncOrchestrator.compat';
+

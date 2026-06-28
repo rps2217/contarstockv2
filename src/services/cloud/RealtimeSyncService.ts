@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../logger';
 
 // Tipos
-type SupabaseRow = Record<string, unknown>;
+import type { SupabaseRow } from '../types/common';
 
 export interface LocalTableRepository {
   get?: (id: string) => Promise<SupabaseRow | undefined>;
@@ -131,4 +131,3 @@ export function startFilteredRealtimeSync(
 }
 
 // Exportar tipo para uso externo
-export type { SupabaseRow };
