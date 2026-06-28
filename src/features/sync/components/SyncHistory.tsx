@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
-import { Clock, CheckCircle2, AlertCircle, Database } from 'lucide-react';
+import { Clock, Database } from 'lucide-react';
 import { SyncStatusBadge } from './SyncStatusBadge';
+import { formatTimeAgo } from '@/lib/date';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -27,21 +28,10 @@ export const SyncHistory: React.FC<SyncHistoryProps> = ({
   lastSyncTime,
   className = '',
 }) => {
-  const formatDate = (timestamp?: number | null): string => {
+  // Formateador específico para el historial con formato localized
+  const formatSyncDate = (timestamp?: number | null): string => {
     if (!timestamp) return 'Nunca';
     return format(new Date(timestamp), "dd 'de' MMM, HH:mm", { locale: es });
-  };
-
-  const getTimeSince = (timestamp?: number | null): string => {
-    if (!timestamp) return '';
-    const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    
-    if (minutes < 1) return 'Hace un momento';
-    if (minutes < 60) return `Hace ${minutes} min`;
-    if (hours < 24) return `Hace ${hours} horas`;
-    return '';
   };
 
   return (
@@ -57,7 +47,7 @@ export const SyncHistory: React.FC<SyncHistoryProps> = ({
               Última sincronización general
             </p>
             <p className="font-medium text-gray-900 dark:text-white">
-              {formatDate(lastSyncTime)}
+              {formatSyncDate(lastSyncTime)}
             </p>
           </div>
           <div className="ml-auto">
@@ -67,9 +57,9 @@ export const SyncHistory: React.FC<SyncHistoryProps> = ({
             />
           </div>
         </div>
-        {getTimeSince(lastSyncTime) && (
+        {lastSyncTime && (
           <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-            {getTimeSince(lastSyncTime)}
+            {formatTimeAgo(lastSyncTime)}
           </p>
         )}
       </div>
@@ -108,7 +98,7 @@ export const SyncHistory: React.FC<SyncHistoryProps> = ({
                 )}
                 <div className="flex items-center gap-1 text-xs text-gray-400">
                   <Clock className="w-3 h-3" />
-                  <span>{formatDate(table.lastSync)}</span>
+                  <span>{formatSyncDate(table.lastSync)}</span>
                 </div>
               </div>
             </div>

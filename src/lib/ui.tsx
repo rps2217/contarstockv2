@@ -41,6 +41,25 @@ export function formatDate(
 }
 
 /**
+ * Formatea timestamp para modales de detalle (formato completo)
+ * Ejemplo: "27 Jun 2024, 14:30"
+ */
+export function formatDetailDate(timestamp?: number | string | null): string {
+  if (!timestamp) return 'N/A';
+  
+  const date = new Date(typeof timestamp === 'string' ? timestamp : timestamp);
+  if (isNaN(date.getTime())) return 'N/A';
+  
+  return date.toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+/**
  * Formatea timestamp a fecha con hora
  * Ejemplo: "27 Jun 2024, 14:30"
  */

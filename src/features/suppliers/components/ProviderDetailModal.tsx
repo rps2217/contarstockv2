@@ -4,12 +4,11 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Truck, Building2, Phone, Mail, MapPin, Calendar, Package, FileText } from 'lucide-react';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import { useAudit } from '@/hooks/useAudit';
 import { Provider } from '@/types';
+import { formatDetailDate } from '@/lib/ui';
 
 interface ProviderDetailModalProps {
   isOpen: boolean;
@@ -29,11 +28,6 @@ export const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
   const { getRecordHistory } = useAudit();
 
   if (!provider) return null;
-
-  const formatDate = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
-  };
 
   // Construir secciones
   const sections = [
@@ -71,15 +65,15 @@ export const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
       title: 'Fechas',
       icon: <Calendar className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Creación', value: formatDate(provider.createdAt) },
-        { label: 'Última Actualización', value: formatDate(provider.updatedAt) },
+        { label: 'Fecha Creación', value: formatDetailDate(provider.createdAt) },
+        { label: 'Última Actualización', value: formatDetailDate(provider.updatedAt) },
       ]
     }
   ];
 
   // Metadata
   const metadata = [
-    { label: 'Creado', value: formatDate(provider.createdAt), icon: <Calendar className="w-3 h-3" /> },
+    { label: 'Creado', value: formatDetailDate(provider.createdAt), icon: <Calendar className="w-3 h-3" /> },
   ];
 
   return (

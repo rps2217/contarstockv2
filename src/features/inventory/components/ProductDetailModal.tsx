@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Package, Barcode, Tag, Factory, Calendar, TrendingDown, RefreshCw } from 'lucide-react';
+import { formatDetailDate } from '@/lib/ui';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import { useAudit } from '@/hooks/useAudit';
 import { Product } from '@/types';
@@ -32,10 +33,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   if (!product) return null;
 
-  const formatDate = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
-  };
 
   // Determinar estado de sync
   const syncStatus = product.syncStatus === 'synced' ? 'success' 
@@ -81,8 +78,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       title: 'Fechas',
       icon: <Calendar className="w-4 h-4" />,
       rows: [
-        { label: 'Última Actualización', value: formatDate(product.updatedAt) },
-        { label: 'Fecha Creación', value: formatDate(product.createdAt) },
+        { label: 'Última Actualización', value: formatDetailDate(product.updatedAt) },
+        { label: 'Fecha Creación', value: formatDetailDate(product.createdAt) },
       ]
     }
   ];
@@ -90,7 +87,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   // Metadata
   const metadata = [
     { label: 'Sync', value: syncLabel, icon: <RefreshCw className="w-3 h-3" /> },
-    { label: 'Última Actualización', value: formatDate(product.updatedAt), icon: <Calendar className="w-3 h-3" /> },
+    { label: 'Última Actualización', value: formatDetailDate(product.updatedAt), icon: <Calendar className="w-3 h-3" /> },
   ];
 
   return (

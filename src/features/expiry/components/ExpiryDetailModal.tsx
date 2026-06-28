@@ -22,6 +22,7 @@ import {
   Trash2,
   Pencil
 } from 'lucide-react';
+import { formatDetailDate } from '@/lib/ui';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import type { ExpiryRecord } from '../hooks/useExpiry';
 import { getStatusLabel } from '../hooks/useExpiry';
@@ -48,10 +49,6 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
   const isWarning = record.daysLeft <= 90;
   const isExpired = record.daysLeft <= 0;
   
-  const formatDate = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
-  };
 
   const formatMonth = (mm: number, yyyy: number) => {
     const date = new Date(yyyy, mm - 1, 1);
@@ -104,7 +101,7 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Captura',
       icon: <Clock className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Captura', value: formatDate(record.timestamp) },
+        { label: 'Fecha Captura', value: formatDetailDate(record.timestamp) },
         { label: 'Ubicación', value: record.location || 'N/A' },
         { label: 'Cantidad', value: `${record.quantity} unidades` },
         { label: 'Observaciones', value: record.observaciones || 'Sin observaciones' },
@@ -132,7 +129,7 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
 
   // Metadata
   const metadata = [
-    { label: 'Creado', value: formatDate(record.timestamp), icon: <Clock className="w-3 h-3" /> },
+    { label: 'Creado', value: formatDetailDate(record.timestamp), icon: <Clock className="w-3 h-3" /> },
     { 
       label: 'Sync', 
       value: record.syncStatus === 'synced' ? 'Sincronizado' : record.syncStatus === 'pending' ? 'Pendiente' : 'Error', 

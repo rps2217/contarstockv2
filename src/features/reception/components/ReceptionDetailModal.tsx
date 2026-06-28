@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Truck, Package, Calendar, Clock, CheckCircle, Image } from 'lucide-react';
+import { formatDetailDate } from '@/lib/ui';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import { useAudit } from '@/hooks/useAudit';
 
@@ -42,10 +43,6 @@ export const ReceptionDetailModal: React.FC<ReceptionDetailModalProps> = ({
 
   if (!item) return null;
 
-  const formatDate = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
-  };
 
   // Determinar estado
   const isSynced = !!item.lastSyncTimestamp;
@@ -80,8 +77,8 @@ export const ReceptionDetailModal: React.FC<ReceptionDetailModalProps> = ({
       title: 'Fechas',
       icon: <Calendar className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Creación', value: formatDate(item.createdAt) },
-        { label: 'Última Sync', value: formatDate(item.lastSyncTimestamp) },
+        { label: 'Fecha Creación', value: formatDetailDate(item.createdAt) },
+        { label: 'Última Sync', value: formatDetailDate(item.lastSyncTimestamp) },
       ]
     }
   ];
@@ -89,7 +86,7 @@ export const ReceptionDetailModal: React.FC<ReceptionDetailModalProps> = ({
   // Metadata
   const metadata = [
     { label: 'Sync', value: isSynced ? 'Sincronizado' : 'Pendiente', icon: <Clock className="w-3 h-3" /> },
-    { label: 'Creado', value: formatDate(item.createdAt), icon: <Calendar className="w-3 h-3" /> },
+    { label: 'Creado', value: formatDetailDate(item.createdAt), icon: <Calendar className="w-3 h-3" /> },
   ];
 
   return (

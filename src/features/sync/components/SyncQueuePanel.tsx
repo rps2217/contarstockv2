@@ -44,14 +44,14 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
     );
   }
 
-  const getStatusStyle = (status: string) => {
+  const getQueueStatusStyle = (status: string) => {
     if (status === 'error') return 'error';
     if (status === 'pending_delete') return 'delete';
     return 'pending';
   };
 
   const renderItem = (item: SyncQueueItem) => {
-    const statusType = getStatusStyle(item.status);
+    const statusType = getQueueStatusStyle(item.status);
     const isExpanded = expandedId === item.id || selectedItem?.id === item.id;
     const dateStr = format(new Date(item.timestamp), 'HH:mm:ss (dd/MM)', { locale: es });
 

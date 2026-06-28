@@ -15,6 +15,7 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
+import { formatDetailDate } from '@/lib/ui';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import { useAudit } from '@/hooks/useAudit';
 import { ExpectedOrder } from '@/types';
@@ -38,10 +39,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   if (!order) return null;
 
-  const formatDate = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
-  };
 
   // Construir secciones
   const sections = [
@@ -69,15 +66,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       title: 'Fechas',
       icon: <Calendar className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Documento', value: order.metadata?.date || formatDate(order.importedAt) },
-        { label: 'Fecha Importación', value: formatDate(order.importedAt) },
+        { label: 'Fecha Documento', value: order.metadata?.date || formatDetailDate(order.importedAt) },
+        { label: 'Fecha Importación', value: formatDetailDate(order.importedAt) },
       ]
     }
   ];
 
   // Metadata
   const metadata = [
-    { label: 'Importado', value: formatDate(order.importedAt), icon: <Clock className="w-3 h-3" /> },
+    { label: 'Importado', value: formatDetailDate(order.importedAt), icon: <Clock className="w-3 h-3" /> },
   ];
 
   return (

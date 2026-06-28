@@ -18,6 +18,7 @@ import {
   Clock,
   Database
 } from 'lucide-react';
+import { formatDate } from '@/lib/ui';
 
 interface SyncIncident {
   table: string;
@@ -49,7 +50,8 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('logs');
 
-  const formatDate = (timestamp?: number | null): string => {
+  // Formateador específico con formato localized
+  const formatSyncDate = (timestamp?: number | null): string => {
     if (!timestamp) return 'Nunca';
     return format(new Date(timestamp), "dd 'de' MMM, HH:mm", { locale: es });
   };
@@ -67,7 +69,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
               Última Sincronización
             </p>
             <p className="text-sm font-black text-white">
-              {formatDate(lastSyncTime)}
+              {formatSyncDate(lastSyncTime)}
             </p>
           </div>
         </div>

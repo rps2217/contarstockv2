@@ -69,7 +69,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   if (!event) return null;
 
-  const formatDate = (ts?: number) => {
+  // Formateador específico con formato localized
+  const formatEventDate = (ts?: number) => {
     if (!ts) return 'N/A';
     return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
   };

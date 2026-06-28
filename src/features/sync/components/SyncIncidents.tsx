@@ -24,11 +24,12 @@ export const SyncIncidents: React.FC<SyncIncidentsProps> = ({
   onClear,
   className = '',
 }) => {
+  // Formateadores específicos para incidentes
   const formatTime = (timestamp: number): string => {
     return format(new Date(timestamp), 'HH:mm:ss', { locale: es });
   };
 
-  const formatDate = (timestamp: number): string => {
+  const formatIncidentDate = (timestamp: number): string => {
     return format(new Date(timestamp), 'dd MMM yyyy', { locale: es });
   };
 
@@ -79,7 +80,7 @@ export const SyncIncidents: React.FC<SyncIncidentsProps> = ({
                   {incident.error}
                 </p>
                 <p className="text-xs text-red-400/60 mt-1">
-                  {formatDate(incident.time)}
+                  {formatIncidentDate(incident.time)}
                 </p>
               </div>
             </div>
