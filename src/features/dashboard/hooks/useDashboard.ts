@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState, useEffect } from 'react';
 import { db } from '../../../db';
 import { ScanRepository } from '../../../repositories/ScanRepository';
-import { ProductRepository } from '../../../repositories/ProductRepository';
+import { productRepository } from '@/repositories/DexieProductRepository';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ExpiryRepository } from '../../../repositories/ExpiryRepository';
 import { AnalyticService } from '../../../services/analyticService';

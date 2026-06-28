@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { productRepository } from '@/repositories/ProductRepository';
+import { productRepository } from '@/repositories/DexieProductRepository';
 import { BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
 import { Trash2, Download } from 'lucide-react';
 

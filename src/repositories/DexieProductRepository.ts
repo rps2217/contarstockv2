@@ -1,4 +1,3 @@
-
 import { db } from '../db';
 import { Product } from '../types';
 import { IProductRepository } from './IProductRepository';
@@ -14,6 +13,11 @@ export class DexieProductRepository extends BaseDexieRepository<Product> impleme
     return await this.table.get(barcode);
   }
 
+  // Alias para getById (compatibilidad)
+  async get(barcode: string): Promise<Product | null> {
+    return (await this.table.get(barcode)) ?? null;
+  }
+
   override async save(product: Product): Promise<void> {
     const record = ProductSchema.parse({
       ...product,
@@ -22,12 +26,23 @@ export class DexieProductRepository extends BaseDexieRepository<Product> impleme
     await this.table.put(record);
   }
 
+  // Alias para save (compatibilidad)
+  async saveProduct(product: Product): Promise<string> {
+    await this.save(product);
+    return product.barcode;
+  }
+
   override async saveBatch(products: Product[]): Promise<void> {
     const records = products.map(p => ({
       ...p,
       syncStatus: p.syncStatus || 'pending'
     }));
     await this.table.bulkPut(records);
+  }
+
+  // Alias para saveBatch (compatibilidad)
+  async saveMany(products: Product[]): Promise<void> {
+    await this.saveBatch(products);
   }
 
   override async delete(barcode: string): Promise<void> {
@@ -39,6 +54,24 @@ export class DexieProductRepository extends BaseDexieRepository<Product> impleme
         await this.table.delete(barcode);
       }
     }
+  }
+
+  // Soft delete - marca como pending_delete
+  async softDelete(barcode: string): Promise<Product | null> {
+    const product = await this.table.get(barcode);
+    if (!product) return null;
+    await this.table.update(barcode, { syncStatus: 'pending_delete' });
+    return product;
+  }
+
+  // Restore desde soft delete
+  async restore(barcode: string): Promise<void> {
+    await this.table.update(barcode, { syncStatus: 'synced' });
+  }
+
+  // Eliminacion permanente
+  async permanentDelete(barcode: string): Promise<void> {
+    await this.table.delete(barcode);
   }
 
   override async deleteAll(): Promise<void> {
@@ -66,16 +99,21 @@ export class DexieProductRepository extends BaseDexieRepository<Product> impleme
     await this.table.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });
   }
 
-  // SMART SEARCH: Optimización de Joyería para catálogos masivos
+  // Alias para compatibilidad
+  async markSynced(barcode: string): Promise<void> {
+    await this.table.update(barcode, { syncStatus: 'synced' });
+  }
+
+  // SMART SEARCH: Optimizacion de Joyeria para catalogos masivos
   async search(query: string, limit: number = 200): Promise<Product[]> {
     const q = query.trim();
     if (!q) return this.getLimited(limit);
 
-    // 1. Prioridad: Búsqueda exacta por código de barras (Instantánea)
+    // 1. Prioridad: Busqueda exacta por codigo de barras (Instantanea)
     const exactMatch = await this.table.get(q);
     if (exactMatch) return [exactMatch];
 
-    // 2. Si es numérico, buscar por prefijo de código de barras
+    // 2. Si es numerico, buscar por prefijo de codigo de barras
     if (/^\d+$/.test(q)) {
       return await this.table
         .where('barcode')
@@ -84,12 +122,34 @@ export class DexieProductRepository extends BaseDexieRepository<Product> impleme
         .toArray();
     }
 
-    // 3. Búsqueda por prefijo de nombre (Usa el índice 'name')
+    // 3. Busqueda por prefijo de nombre (Usa el indice 'name')
     return await this.table
       .where('name')
       .startsWithIgnoreCase(q)
       .limit(limit)
       .toArray();
+  }
+
+  async count(): Promise<number> {
+    return await this.table.count();
+  }
+
+  async getByCategory(category: string): Promise<Product[]> {
+    return await this.table.where('category').equals(category).toArray();
+  }
+
+  async getBySupplier(supplier: string): Promise<Product[]> {
+    return await this.table.where('supplier').equals(supplier).toArray();
+  }
+
+  async getCategories(): Promise<string[]> {
+    const products = await this.table.toArray();
+    return [...new Set(products.map(p => p.category).filter(Boolean))];
+  }
+
+  async getSuppliers(): Promise<string[]> {
+    const products = await this.table.toArray();
+    return [...new Set(products.map(p => p.supplier).filter(Boolean) as string[])];
   }
 
   // OPTIMIZED STATS: Evitar toArray() masivo
@@ -98,11 +158,8 @@ export class DexieProductRepository extends BaseDexieRepository<Product> impleme
     if (total === 0) return { total: 0, trained: 0, synced: 0 };
 
     const synced = await this.table.where('syncStatus').equals('synced').count();
-    // Nota: El filtrado de 'trained' requiere recorrer o tener un índice de embeddings
-    // Por ahora, usaremos una aproximación o un límite si no hay índice
     return { total, synced };
   }
 }
 
 export const productRepository = new DexieProductRepository();
-

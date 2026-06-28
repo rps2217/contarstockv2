@@ -1,9 +1,8 @@
 // Base Repository Pattern
 export * from './base';
 
-// Product Repositories
-export { ProductRepository, productRepository } from './ProductRepository';
-export { DexieProductRepository } from './DexieProductRepository';
+// Product Repository (Usar DexieProductRepository)
+export { DexieProductRepository, productRepository } from './DexieProductRepository';
 
 // Session Repositories
 export { SessionRepository, sessionRepository } from './SessionRepository';
