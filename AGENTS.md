@@ -2,6 +2,36 @@
 
 ---
 
+## Refactorización: Eliminación de Funciones Duplicadas (2026-06-27)
+
+### Archivos Centralizados
+```
+src/lib/
+├── ui.tsx       # Helpers UI: getSessionStatusBadge, getSyncLogStatusBadge, getStatusColor
+├── date.ts      # Helpers fecha: formatTimeAgo, formatSyncDate, formatDuration
+└── utils.ts     # cn() - combinación de clases
+```
+
+### Funciones Centralizadas
+| Función | Ubicación | Uso |
+|---------|-----------|-----|
+| `formatSyncDate()` | `lib/date.ts` | SyncHistory, SyncActivity |
+| `getSessionStatusBadge()` | `lib/ui.tsx` | CountingKanbanView |
+| `getSyncLogStatusBadge()` | `lib/ui.tsx` | SyncLogsModal |
+| `DesignStatusBadge` | `design-system/StatusBadge.tsx` | RecordDetailView |
+
+### Commits de Refactorización:
+- `2dc2793c` - refactor: Unificar funciones duplicadas de status y fechas
+- `249d6505` - refactor: Eliminar formatEventDate duplicado
+- `214e78e6` - refactor: Usar cn() centralizado y mejorar formatTimeAgo
+- `08737412` - refactor: Extraer getMetricColorClasses a lib/ui.tsx
+- `113fb949` - refactor: Unificar formatDate en DetailModals
+- `d89e93cb` - refactor: Crear src/lib/ui.tsx con helpers centralizados
+- `78301e5b` - refactor: Unificar formatCurrency y normalizeSku
+- `f58125f2` - refactor: Unificar utilerías y componentes redundantes
+
+---
+
 ## ThemeCustomizer - Personalizacion Avanzada (2026-06-24)...
 
 ### Componente
