@@ -1,8 +1,8 @@
 /**
  * Counting Hooks - Exports centralizados
- * 
- * @deprecated useProductivity y useTurboMode ahora están en @/shared/hooks
- * Este archivo re-exporta para compatibilidad hacia atrás.
+ *
+ * Los hooks useProductivity y useTurboMode se han movido a @/shared/hooks
+ * para evitar duplicación.
  */
 
 export { useCountingLogic } from './useCountingLogic';
@@ -10,6 +10,6 @@ export { useCountingSync } from './useCountingSync';
 export { useCountingQueries } from './useCountingQueries';
 export { useCountingAI } from './useCountingAI';
 
-// Re-export desde shared para compatibilidad hacia atrás
-export { useProductivity } from '@/shared/hooks';
-export { useTurboMode } from '@/shared/hooks';
+// Re-exports desde shared/hooks para compatibilidad
+export { useProductivity, type ProductivityStats } from '@/shared/hooks';
+export { useTurboMode, type TurboState, type UseTurboModeReturn } from '@/shared/hooks';

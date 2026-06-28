@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { Zap, TrendingUp, TrendingDown, Minus, Clock, Timer, Trophy, Battery } from 'lucide-react';
-import { ProductivityStats } from '../hooks/useProductivity';
+import { ProductivityStats } from '@/shared/hooks/useProductivity';
 
 interface ProductivityDashboardProps {
   stats: ProductivityStats;
