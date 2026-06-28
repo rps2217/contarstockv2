@@ -3,4 +3,3 @@
  */
 
 export { useExpectedOrders } from './useExpectedOrders';
-export { useExpectedOrdersV2 } from './useExpectedOrdersV2';
