@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SyncLog } from '../../../db';
 import { toast } from 'sonner';
 import { syncLogRepository } from '../../../repositories/SyncLogRepository';
+import { getSyncLogStatusBadge } from '@/lib/ui';
 
 interface Props {
   isOpen: boolean;
@@ -88,19 +89,6 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
     const stringified = typeof text === 'string' ? text : safeStringify(text);
     navigator.clipboard.writeText(stringified);
     toast.success('Copiado al portapapeles');
-  };
-
-  const getStatusBadge = (status: string) => {
-    if (status === 'success') {
-      return {
-        bg: isHighContrast ? 'bg-green-500/20 text-green-400' : isLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/20 text-emerald-500',
-        icon: <CheckCircle2 className="w-5 h-5" />
-      };
-    }
-    return {
-      bg: isHighContrast ? 'bg-red-500/20 text-red-400' : isLight ? 'bg-rose-100 text-rose-600' : 'bg-rose-500/20 text-rose-500',
-      icon: <AlertCircle className="w-5 h-5" />
-    };
   };
 
   const getDetailBg = (status: string) => {
@@ -204,7 +192,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
             </div>
           ) : (
             logs.map((log) => {
-              const status = getStatusBadge(log.status);
+              const status = getSyncLogStatusBadge(log.status, { isHighContrast, isLight });
               return (
                 <div 
                   key={log.id} 

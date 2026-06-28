@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getSessionStatusBadge } from '@/lib/ui';
 
 interface Session {
   id: string;
@@ -55,21 +56,7 @@ const SessionCard: React.FC<{
   const isDark = theme === 'dark';
   const isHighContrast = theme === 'high-contrast';
 
-  const getStatusBadge = () => {
-    switch (session.status) {
-      case 'completed':
-      case 'closed':
-        return { label: 'Completada', color: 'bg-emerald-500', textColor: 'text-emerald-400' };
-      case 'in_progress':
-        return { label: 'En Progreso', color: 'bg-blue-500', textColor: 'text-blue-400' };
-      case 'paused':
-        return { label: 'Pausada', color: 'bg-amber-500', textColor: 'text-amber-400' };
-      default:
-        return { label: 'Activa', color: 'bg-slate-500', textColor: 'text-slate-400' };
-    }
-  };
-
-  const statusBadge = getStatusBadge();
+  const statusBadge = getSessionStatusBadge(session.status);
   const dateStr = format(session.createdAt, 'dd MMM HH:mm', { locale: es });
 
   return (

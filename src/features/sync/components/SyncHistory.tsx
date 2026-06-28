@@ -5,9 +5,7 @@
 import React from 'react';
 import { Clock, Database } from 'lucide-react';
 import { SyncStatusBadge } from './SyncStatusBadge';
-import { formatTimeAgo } from '@/lib/date';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatSyncDate } from '@/lib/date';
 
 interface TableSyncInfo {
   tableName: string;
@@ -28,12 +26,6 @@ export const SyncHistory: React.FC<SyncHistoryProps> = ({
   lastSyncTime,
   className = '',
 }) => {
-  // Formateador específico para el historial con formato localized
-  const formatSyncDate = (timestamp?: number | null): string => {
-    if (!timestamp) return 'Nunca';
-    return format(new Date(timestamp), "dd 'de' MMM, HH:mm", { locale: es });
-  };
-
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Resumen general */}

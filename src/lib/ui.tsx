@@ -236,6 +236,59 @@ export function getStatusStyle(status: string): { color: string; bg: string } {
 }
 
 // ============================================
+// HELPERS PARA BADGES DE STATUS
+// ============================================
+
+export interface SessionStatusBadge {
+  label: string;
+  color: string;
+  textColor: string;
+}
+
+/**
+ * Obtiene configuración de badge para estado de sesión de conteo
+ */
+export function getSessionStatusBadge(status: string): SessionStatusBadge {
+  const badges: Record<string, SessionStatusBadge> = {
+    completed: { label: 'Completada', color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+    closed: { label: 'Completada', color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+    in_progress: { label: 'En Progreso', color: 'bg-blue-500', textColor: 'text-blue-400' },
+    paused: { label: 'Pausada', color: 'bg-amber-500', textColor: 'text-amber-400' },
+    active: { label: 'Activa', color: 'bg-slate-500', textColor: 'text-slate-400' },
+  };
+  
+  return badges[status] || badges.active;
+}
+
+export interface SyncLogStatusBadge {
+  bg: string;
+  icon: React.ReactNode;
+}
+
+/**
+ * Obtiene configuración de badge para log de sincronización
+ */
+export function getSyncLogStatusBadge(
+  status: string,
+  options?: { isHighContrast?: boolean; isLight?: boolean }
+): SyncLogStatusBadge {
+  const isHighContrast = options?.isHighContrast ?? false;
+  const isLight = options?.isLight ?? false;
+  
+  if (status === 'success') {
+    return {
+      bg: isHighContrast ? 'bg-green-500/20 text-green-400' : isLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/20 text-emerald-500',
+      icon: <CheckCircle2 className="w-5 h-5" />
+    };
+  }
+  
+  return {
+    bg: isHighContrast ? 'bg-red-500/20 text-red-400' : isLight ? 'bg-rose-100 text-rose-600' : 'bg-rose-500/20 text-rose-500',
+    icon: <AlertCircle className="w-5 h-5" />
+  };
+}
+
+// ============================================
 // HELPERS PARA MÉTRICAS
 // ============================================
 

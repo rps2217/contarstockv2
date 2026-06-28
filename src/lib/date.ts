@@ -3,6 +3,9 @@
  * Unifica formatTimeAgo y formatRelativeTime en una sola función
  */
 
+import { format, isToday, isYesterday, isThisWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 interface FormatTimeAgoOptions {
   locale?: string;
   lessThanOneMinute?: string;
@@ -41,6 +44,24 @@ export function formatTimeAgo(timestamp: number, options: FormatTimeAgoOptions |
  * Alias para formatTimeAgo - mantiene compatibilidad con código existente
  */
 export const formatRelativeTime = formatTimeAgo;
+
+/**
+ * Formatea un timestamp a fecha completa con formato localized
+ * Ejemplos: "27 de jun, 14:30" o "Nunca" si no hay timestamp
+ */
+export function formatSyncDate(timestamp?: number | null, defaultValue = 'Nunca'): string {
+  if (!timestamp) return defaultValue;
+  return format(new Date(timestamp), "dd 'de' MMM, HH:mm", { locale: es });
+}
+
+/**
+ * Formatea un timestamp a formato de detalle
+ * Ejemplos: "27 jun 2026, 14:30"
+ */
+export function formatDetailDateTime(timestamp?: number | null): string {
+  if (!timestamp) return 'N/A';
+  return format(new Date(timestamp), "dd MMM yyyy, HH:mm", { locale: es });
+}
 
 /**
  * Formatea segundos a texto legible

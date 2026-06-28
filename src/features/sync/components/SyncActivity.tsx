@@ -6,8 +6,6 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { 
   History, 
   AlertCircle, 
@@ -18,7 +16,7 @@ import {
   Clock,
   Database
 } from 'lucide-react';
-import { formatDate } from '@/lib/ui';
+import { formatSyncDate } from '@/lib/date';
 
 interface SyncIncident {
   table: string;
@@ -49,12 +47,6 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
   onClearIncidents,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('logs');
-
-  // Formateador específico con formato localized
-  const formatSyncDate = (timestamp?: number | null): string => {
-    if (!timestamp) return 'Nunca';
-    return format(new Date(timestamp), "dd 'de' MMM, HH:mm", { locale: es });
-  };
 
   return (
     <div className="space-y-4">

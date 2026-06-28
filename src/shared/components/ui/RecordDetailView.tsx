@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { AuditPanel } from './AuditPanel';
 import { useAudit } from '@/hooks/useAudit';
+import { StatusBadge as DesignStatusBadge } from './design-system/StatusBadge';
 
 export interface InfoRow {
   label: string;
@@ -203,27 +204,6 @@ const CollapsibleSection: React.FC<Section & { children?: React.ReactNode }> = (
   );
 };
 
-// Badge de estado
-const StatusBadge: React.FC<{ status: 'success' | 'warning' | 'error' | 'info' | 'default'; label?: string }> = ({ 
-  status, 
-  label 
-}) => {
-  const config = {
-    success: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-    warning: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
-    error: { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' },
-    info: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
-    default: { bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/20' },
-  };
-  const c = config[status];
-
-  return label ? (
-    <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full border ${c.bg} ${c.text} ${c.border}`}>
-      {label}
-    </span>
-  ) : null;
-};
-
 export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
   title,
   subtitle,
@@ -248,6 +228,16 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
   const [activeTab, setActiveTab] = useState<'detail' | 'history' | 'actions'>(defaultTab);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const { getTableHistory } = useAudit();
+
+  // Mapear status de RecordDetailView a DesignStatusBadge
+  const statusMap: Record<string, 'synced' | 'pending' | 'error' | 'expired'> = {
+    success: 'synced',
+    warning: 'pending',
+    error: 'error',
+    info: 'pending',
+    default: 'error',
+  };
+  const mappedStatus = statusMap[status] || 'error';
 
   // Reset tab when recordId changes
   useEffect(() => {
@@ -300,7 +290,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                 <h1 className="text-lg font-black text-white uppercase tracking-tight">
                   {title}
                 </h1>
-                <StatusBadge status={status} label={statusLabel} />
+                {statusLabel && <DesignStatusBadge status={mappedStatus} label={statusLabel} />}
               </div>
               {subtitle && (
                 <p className="text-sm text-slate-400 ml-0">{subtitle}</p>
