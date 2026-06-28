@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale/es';
 import { Product, Provider } from '../../../types';
 import { ExpiryItem } from '@/stores';
 import { normalizeSku, normalizeIdentity } from '../../../services/utils';
-import { evaluateExpiry, ExpiryPolicy } from '../domain/expiryEngine';
+import { evaluateExpiry, ExpiryPolicy } from '../domain/expiryDomain';
 
 export const processExpiryItem = (
   item: any, 
