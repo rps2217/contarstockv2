@@ -42,12 +42,12 @@ export const ModulePage: React.FC<ModulePageProps> = ({
   const handleBack = onBack || (() => navigate(-1));
 
   return (
-    <div className={`h-full flex flex-col ${isDark ? 'bg-neutral-950' : 'bg-neutral-50'} ${className}`}>
+    <div className={`h-full flex flex-col ${isDark ? 'bg-base' : 'bg-neutral-50'} ${className}`}>
       {/* Header */}
       <header className={`
         px-4 py-4 shrink-0 border-b
         ${isDark 
-          ? 'bg-neutral-950 border-neutral-800' 
+          ? 'bg-base border-subtle' 
           : 'bg-white border-neutral-200'
         }
       `}>
@@ -60,7 +60,7 @@ export const ModulePage: React.FC<ModulePageProps> = ({
                 className={`
                   p-2.5 rounded-xl transition-all active:scale-95
                   ${isDark 
-                    ? 'bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' 
+                    ? 'bg-surface text-muted hover:text-white hover:bg-elevated' 
                     : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200'
                   }
                 `}
@@ -73,7 +73,7 @@ export const ModulePage: React.FC<ModulePageProps> = ({
             {icon && (
               <div className={`
                 p-2.5 rounded-xl
-                ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}
+                ${isDark ? 'bg-surface' : 'bg-neutral-100'}
               `}>
                 {icon}
               </div>
@@ -107,7 +107,7 @@ export const ModulePage: React.FC<ModulePageProps> = ({
                 className={`
                   p-2.5 rounded-xl transition-all active:scale-95
                   ${isDark 
-                    ? 'bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' 
+                    ? 'bg-surface text-muted hover:text-white hover:bg-elevated' 
                     : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200'
                   }
                   ${isLoading ? 'animate-spin' : ''}
@@ -156,7 +156,7 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
   isDark = true,
 }) => {
   return (
-    <header className={`px-4 py-4 ${isDark ? 'bg-neutral-950' : 'bg-white'}`}>
+    <header className={`px-4 py-4 ${isDark ? 'bg-base' : 'bg-white'}`}>
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div>
           <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-neutral-900'}`}>

@@ -29,12 +29,12 @@ export function ExpectedOrdersPage() {
   };
 
   return (
-    <div className={`h-full w-full ${isDark ? "bg-neutral-950 selection:bg-blue-500/30" : "bg-neutral-50 selection:bg-blue-500/20"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
+    <div className={`h-full w-full ${isDark ? "bg-base selection:bg-blue-500/30" : "bg-neutral-50 selection:bg-blue-500/20"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
       {/* BACKGROUND DECORATIVE GRADIENTS */}
       <div className={`absolute top-0 right-0 w-[500px] h-[500px] ${isDark ? "bg-blue-600/5" : "bg-blue-500/2"} rounded-full blur-[120px] pointer-events-none`} />
 
       {/* HEADER SECTION */}
-      <header className={`px-4 md:px-6 pt-10 md:pt-16 pb-8 md:pb-12 ${isDark ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200/80 shadow-sm"} border-b relative overflow-hidden shrink-0`}>
+      <header className={`px-4 md:px-6 pt-10 md:pt-16 pb-8 md:pb-12 ${isDark ? "bg-surface border-subtle" : "bg-white border-neutral-200/80 shadow-sm"} border-b relative overflow-hidden shrink-0`}>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
@@ -50,7 +50,7 @@ export function ExpectedOrdersPage() {
                 }}
                 className={`p-3 rounded-xl md:rounded-2xl flex items-center justify-center transition-all active:scale-95 border ${
                   isDark 
-                    ? "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800" 
+                    ? "bg-base text-muted border-subtle hover:text-white hover:bg-elevated" 
                     : "bg-neutral-100 hover:bg-neutral-200 text-slate-600 hover:text-slate-900 border-neutral-200"
                 }`}
               >
@@ -60,7 +60,7 @@ export function ExpectedOrdersPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <FileSpreadsheet className="w-4 h-4 text-blue-500" />
-                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>Auditorías & Picking</span>
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDark ? 'text-neutral-500' : 'text-muted'}`}>Auditorías & Picking</span>
                 </div>
                 <h1 className={`text-2xl md:text-3.5xl font-black tracking-tight leading-none uppercase ${isDark ? 'text-white' : 'text-slate-800'}`}>
                   CARGAS <span className="text-gradient-blue">TEÓRICAS</span>
@@ -70,7 +70,7 @@ export function ExpectedOrdersPage() {
 
             {/* Quick Context Tip */}
             <div className={`hidden lg:flex items-center gap-3 p-4 rounded-2xl border max-w-sm ${
-              isDark ? 'bg-neutral-950/40 border-neutral-800 text-neutral-400' : 'bg-neutral-50 border-slate-100 text-neutral-500'
+              isDark ? 'bg-base/40 border-subtle text-muted' : 'bg-neutral-50 border-slate-100 text-neutral-500'
             }`}>
               <BookOpen className="w-6 h-6 text-blue-500 shrink-0" />
               <p className="text-[10px] font-semibold leading-normal">
@@ -111,11 +111,11 @@ export function ExpectedOrdersPage() {
             >
               {/* Stepper Wizard / Header of import section */}
               <div className={`p-6 rounded-[2rem] border flex items-center justify-between gap-4 flex-wrap ${
-                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200/80 shadow-sm'
+                isDark ? 'bg-surface border-subtle' : 'bg-white border-neutral-200/80 shadow-sm'
               }`}>
                 <div className="space-y-1">
                   <h3 className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>Asistente de Importación</h3>
-                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>Paso 1 de 2: Carga y Mapeo de Columnas</p>
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-neutral-500' : 'text-muted'}`}>Paso 1 de 2: Carga y Mapeo de Columnas</p>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ export function ExpectedOrdersPage() {
                     }}
                     className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl border transition-all ${
                       isDark 
-                        ? 'border-neutral-800 text-neutral-400 hover:bg-white/5 hover:text-white' 
+                        ? 'border-subtle text-muted hover:bg-white/5 hover:text-white' 
                         : 'border-neutral-200 text-slate-600 hover:bg-neutral-100'
                     }`}
                   >
@@ -140,10 +140,10 @@ export function ExpectedOrdersPage() {
 
               {/* Instant parsed items preview */}
               {state.previewItems.length > 0 && (
-                <div className="space-y-4 pt-4 border-t border-neutral-800 animate-in fade-in zoom-in-95 duration-250">
+                <div className="space-y-4 pt-4 border-t border-subtle animate-in fade-in zoom-in-95 duration-250">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-gradient-blue animate-pulse" />
-                    <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                    <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] ${isDark ? 'text-muted' : 'text-neutral-500'}`}>
                       Previsualización de Carga a Almacenar
                     </h3>
                   </div>

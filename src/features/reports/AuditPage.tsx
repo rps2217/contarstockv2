@@ -122,13 +122,13 @@ export const AuditPage: React.FC = () => {
 
   return (
     <div className={`flex flex-col h-full w-full px-4 pt-4 pb-24 md:pb-6 overflow-y-auto ${
-      isDark ? 'bg-neutral-950 text-white' : 'bg-neutral-50 text-neutral-900'
+      isDark ? 'bg-base text-white' : 'bg-neutral-50 text-neutral-900'
     }`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
-            <FileText className={`w-5 h-5 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
+          <div className={`p-2.5 rounded-xl ${isDark ? 'bg-surface' : 'bg-neutral-100'}`}>
+            <FileText className={`w-5 h-5 ${isDark ? 'text-muted' : 'text-neutral-600'}`} />
           </div>
           <div>
             <h1 className={`text-lg font-bold tracking-tight ${
@@ -152,7 +152,7 @@ export const AuditPage: React.FC = () => {
               disabled={filteredLiveConsolidated.length === 0}
               className={`p-2.5 rounded-xl border text-xs font-medium ${
                 isDark 
-                  ? "border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-neutral-300" 
+                  ? "border-subtle bg-surface hover:bg-elevated text-secondary" 
                   : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700"
               } disabled:opacity-50`}
             >
@@ -165,7 +165,7 @@ export const AuditPage: React.FC = () => {
             disabled={state.isPulling || state.isLiveLoading}
             className={`p-2.5 rounded-xl border ${
               isDark 
-                ? "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200" 
+                ? "border-subtle bg-surface text-muted hover:text-primary" 
                 : "border-neutral-200 bg-white text-neutral-600 hover:text-neutral-900"
             } ${state.isPulling || state.isLiveLoading ? "animate-spin opacity-50" : ""}`}
           >
@@ -180,7 +180,7 @@ export const AuditPage: React.FC = () => {
           onClick={actions.handleCleanSynced}
           disabled={state.isCleaning}
           className={`border font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
-            isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-200 text-neutral-700'
+            isDark ? 'bg-surface border-subtle text-secondary' : 'bg-white border-neutral-200 text-neutral-700'
           }`}
         >
           <Eraser className="w-4 h-4" />
@@ -192,7 +192,7 @@ export const AuditPage: React.FC = () => {
         <button
           onClick={() => actions.setIsStartModalOpen(true)}
           className={`font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
-            isDark ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-900 text-white'
+            isDark ? 'bg-neutral-100 text-neutral-900' : 'bg-surface text-white'
           }`}
         >
           <Plus className="w-4 h-4" />
@@ -202,7 +202,7 @@ export const AuditPage: React.FC = () => {
 
       {/* Tabs */}
       <div className={`p-1 rounded-xl flex items-center gap-1 border mb-4 ${
-        isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-100 border-neutral-200'
+        isDark ? 'bg-surface border-subtle' : 'bg-neutral-100 border-neutral-200'
       }`}>
         <button
           onClick={() => {
@@ -212,9 +212,9 @@ export const AuditPage: React.FC = () => {
           className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
             activeTab === 'live'
               ? isDark 
-                ? 'bg-neutral-800 text-white' 
+                ? 'bg-elevated text-white' 
                 : 'bg-white text-neutral-900 shadow-sm'
-              : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
+              : isDark ? 'text-neutral-500 hover:text-secondary' : 'text-neutral-500 hover:text-neutral-700'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
@@ -225,9 +225,9 @@ export const AuditPage: React.FC = () => {
           className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
             activeTab === 'sessions'
               ? isDark 
-                ? 'bg-neutral-800 text-white' 
+                ? 'bg-elevated text-white' 
                 : 'bg-white text-neutral-900 shadow-sm'
-              : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
+              : isDark ? 'text-neutral-500 hover:text-secondary' : 'text-neutral-500 hover:text-neutral-700'
           }`}
         >
           <History className="w-4 h-4" />
@@ -240,16 +240,16 @@ export const AuditPage: React.FC = () => {
         <button
           onClick={() => navigate("/sync")}
           className={`w-full mb-4 p-3 rounded-xl flex items-center justify-between border transition-colors ${
-            isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'
+            isDark ? 'bg-surface border-subtle' : 'bg-white border-neutral-200'
           }`}
         >
           <div className="flex items-center gap-3">
-            <WifiOff className={`w-4 h-4 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
-            <span className={`text-xs ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
+            <WifiOff className={`w-4 h-4 ${isDark ? 'text-muted' : 'text-neutral-600'}`} />
+            <span className={`text-xs ${isDark ? 'text-secondary' : 'text-neutral-700'}`}>
               {state.pendingSyncCount} registros pendientes de sync
             </span>
           </div>
-          <ArrowRight className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
+          <ArrowRight className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-muted'}`} />
         </button>
       )}
 
@@ -284,11 +284,11 @@ export const AuditPage: React.FC = () => {
           <CountingMetricsCards sessions={state.sessions || []} theme={theme} />
           
           <div className="flex justify-end mb-3">
-            <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
+            <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-surface' : 'bg-neutral-100'}`}>
               <button
                 onClick={() => setViewMode('list')}
                 className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'list' ? (isDark ? 'bg-neutral-800 text-white' : 'bg-white text-neutral-900') : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
+                  viewMode === 'list' ? (isDark ? 'bg-elevated text-white' : 'bg-white text-neutral-900') : isDark ? 'text-neutral-500 hover:text-secondary' : 'text-neutral-500 hover:text-neutral-700'
                 }`}
               >
                 <List className="w-4 h-4" />
@@ -296,7 +296,7 @@ export const AuditPage: React.FC = () => {
               <button
                 onClick={() => setViewMode('kanban')}
                 className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'kanban' ? (isDark ? 'bg-neutral-800 text-white' : 'bg-white text-neutral-900') : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
+                  viewMode === 'kanban' ? (isDark ? 'bg-elevated text-white' : 'bg-white text-neutral-900') : isDark ? 'text-neutral-500 hover:text-secondary' : 'text-neutral-500 hover:text-neutral-700'
                 }`}
               >
                 <LayoutGrid className="w-4 h-4" />

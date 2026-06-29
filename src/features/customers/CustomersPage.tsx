@@ -90,14 +90,14 @@ export const CustomersPage: React.FC = () => {
     }`}>
       {/* HEADER */}
       <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        theme === 'dark' ? 'bg-neutral-950/40 border-neutral-800' : 'bg-stone-50/80 border-stone-200 shadow-sm'
+        theme === 'dark' ? 'bg-base/40 border-subtle' : 'bg-stone-50/80 border-stone-200 shadow-sm'
       }`}>
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/dashboard')}
               className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${
-                theme === 'dark' ? 'bg-white/5 border-neutral-800 text-neutral-400 hover:bg-white/10' : 'bg-neutral-100 border-neutral-200 text-slate-600 hover:bg-neutral-200'
+                theme === 'dark' ? 'bg-white/5 border-subtle text-muted hover:bg-white/10' : 'bg-neutral-100 border-neutral-200 text-slate-600 hover:bg-neutral-200'
               }`}
             >
               <ChevronLeft className="w-6 h-6" />
@@ -108,7 +108,7 @@ export const CustomersPage: React.FC = () => {
                 Directorio de Clientes
               </h1>
               <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'
+                theme === 'dark' ? 'text-neutral-500' : 'text-muted'
               }`}>
                 Gestión de contactos y notificaciones
               </p>
@@ -119,7 +119,7 @@ export const CustomersPage: React.FC = () => {
             onClick={() => setIsTemplateManagerOpen(true)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors border ${
               theme === 'dark' 
-                ? 'bg-white/5 border-neutral-800 hover:bg-white/10 text-neutral-300' 
+                ? 'bg-white/5 border-subtle hover:bg-white/10 text-secondary' 
                 : 'bg-white border-neutral-200 hover:bg-neutral-50 text-slate-600 shadow-sm'
             }`}
           >
@@ -170,7 +170,7 @@ export const CustomersPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className={`p-5 rounded-2xl border transition-all relative overflow-hidden h-full ${
                     theme === 'dark' 
-                      ? 'bg-neutral-900/50 border-neutral-800 hover:border-blue-500/50' 
+                      ? 'bg-surface/50 border-subtle hover:border-blue-500/50' 
                       : 'bg-white border-neutral-200 hover:border-blue-500/50 shadow-sm'
                   }`}
                 >
@@ -194,14 +194,14 @@ export const CustomersPage: React.FC = () => {
                         <h3 className="font-bold text-lg leading-tight">
                           {customer.firstName} {customer.lastName}
                         </h3>
-                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-muted' : 'text-neutral-500'}`}>
                           {customer.phone}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-neutral-800">
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-subtle">
                     <button
                       onClick={() => handleOpenSendMessage(customer)}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
@@ -212,7 +212,7 @@ export const CustomersPage: React.FC = () => {
                     <button
                       onClick={() => handleEdit(customer)}
                       className={`p-2 rounded-xl transition-colors ${
-                        theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-neutral-300' : 'bg-neutral-100 hover:bg-neutral-200 text-slate-600'
+                        theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-secondary' : 'bg-neutral-100 hover:bg-neutral-200 text-slate-600'
                       }`}
                       title="Editar"
                     >
@@ -238,10 +238,10 @@ export const CustomersPage: React.FC = () => {
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
                 theme === 'dark' ? 'bg-white/5' : 'bg-neutral-100'
               }`}>
-                <Users className={`w-8 h-8 ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`} />
+                <Users className={`w-8 h-8 ${theme === 'dark' ? 'text-neutral-500' : 'text-muted'}`} />
               </div>
               <h3 className="text-lg font-bold mb-1">No hay clientes</h3>
-              <p className={`text-sm max-w-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
+              <p className={`text-sm max-w-sm ${theme === 'dark' ? 'text-muted' : 'text-neutral-500'}`}>
                 {searchQuery ? 'No se encontraron clientes que coincidan con tu búsqueda.' : 'Agrega tu primer cliente para comenzar a enviar notificaciones de retiro.'}
               </p>
               {!searchQuery && (
