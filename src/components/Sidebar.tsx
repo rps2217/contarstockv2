@@ -43,13 +43,13 @@ const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, b
             transition={{ duration: 0.15 }}
             className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 pointer-events-none"
           >
-            <div className="bg-slate-800 dark:bg-slate-700 text-white text-xs font-medium px-3 py-2 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+            <div className="bg-surface text-primary text-xs font-medium px-3 py-2 rounded-lg shadow-xl whitespace-nowrap border border-subtle">
               <span className="font-semibold">{label}</span>
               {description && (
-                <span className="text-slate-400 ml-2">— {description}</span>
+                <span className="text-muted ml-2">— {description}</span>
               )}
               {/* Flechita */}
-              <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-slate-800 dark:border-r-slate-700" />
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-surface" />
             </div>
           </motion.div>
         )}
@@ -59,10 +59,10 @@ const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, b
         onClick={() => onNavigate(path)}
         onMouseEnter={() => isCollapsed && setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-300 group relative ${
+        className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl transition-all duration-300 group relative ${
           isActive 
-            ? 'bg-blue-600/15 text-blue-400' 
-            : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+            ? 'bg-blue-500/10 text-blue-500' 
+            : 'text-secondary hover:bg-surface hover:text-primary'
         }`}
         aria-label={isCollapsed ? label : undefined}
       >
@@ -79,18 +79,12 @@ const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, b
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-0 bg-blue-400 rounded-full"
-            />
-          </motion.div>
+            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full"
+          />
         )}
 
         <div className="relative">
-          <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-600 group-hover:text-slate-400'}`} />
+          <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-blue-500' : 'text-muted group-hover:text-secondary'}`} />
           
           {/* Badge - Siempre visible */}
           {(badge || 0) > 0 && (
@@ -134,13 +128,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
   const { pendingItems, isSyncing, isSupabaseConnected } = useSyncStore();
 
   return (
-    <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-slate-950 dark:bg-stone-50 border-r border-white/5 dark:border-stone-200 z-50 overflow-hidden transition-all duration-500 ease-[0.23,1,0.32,1]`}>
+    <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-base border-r border-subtle z-50 overflow-hidden transition-all duration-500 ease-[0.23,1,0.32,1]`}>
       {/* Logo */}
-      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} h-20 border-b border-white/5`}>
+      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} h-20 border-b border-subtle`}>
         <motion.div 
           whileHover={{ scale: 1.05, rotate: 5 }}
           whileTap={{ scale: 0.95 }}
-          className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30 shrink-0"
+          className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0"
         >
           <DatabaseIcon className="w-6 h-6 text-white" />
         </motion.div>
@@ -148,10 +142,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="overflow-hidden"
+            className="flex flex-col overflow-hidden whitespace-nowrap"
           >
-            <h1 className="text-stone-900 dark:text-white font-black text-lg leading-none uppercase tracking-tighter italic">LOGI<span className="text-blue-500">COUNT</span></h1>
-            <p className="text-stone-500 dark:text-slate-600 text-[8px] font-bold uppercase tracking-[0.3em] mt-1">E-EDITION v3.2</p>
+            <span className="font-bold text-primary tracking-tight leading-tight">ContarStock</span>
+            <span className="text-[10px] font-medium text-muted uppercase tracking-widest">Inventario</span>
           </motion.div>
         )}
       </div>
@@ -162,9 +156,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4"
+            className="text-[9px] font-black text-muted uppercase tracking-[0.3em] px-4 mb-4"
           >
-            Navegación
+            Menú
           </motion.div>
         )}
         
@@ -192,7 +186,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onToggle}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 mt-4 rounded-xl transition-all duration-300 text-slate-600 hover:bg-white/5 hover:text-slate-400`}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 mt-4 rounded-xl transition-all duration-300 text-muted hover:bg-surface hover:text-secondary`}
         >
           {isCollapsed ? (
             <motion.div
