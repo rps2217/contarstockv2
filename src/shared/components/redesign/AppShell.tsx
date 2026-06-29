@@ -31,8 +31,13 @@ import { RedesignHammerPage } from './pages/HammerPage';
 import { RedesignEventsPage } from './pages/EventsPage';
 import { RedesignCustomersPage } from './pages/CustomersPage';
 import { RedesignSuppliersPage } from './pages/SuppliersPage';
+import { RedesignCountingPage } from './pages/CountingPage';
+import { RedesignExpectedOrdersPage } from './pages/ExpectedOrdersPage';
+import { RedesignReceptionPage } from './pages/ReceptionPage';
+import { RedesignDynamicPage } from './pages/DynamicPage';
+import { RedesignSlicesPage } from './pages/SlicesPage';
 
-type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events' | 'customers' | 'suppliers';
+type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events' | 'customers' | 'suppliers' | 'counting' | 'expected-orders' | 'reception' | 'dynamic' | 'slices';
 
 interface NavItem {
   id: ViewId;
@@ -57,9 +62,14 @@ const DESKTOP_NAV: NavItem[] = [
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
   { id: 'sync', label: 'Sync', icon: RefreshCw, badge: 3 },
   { id: 'hammer', label: 'Hammer', icon: Zap },
+  { id: 'counting', label: 'Conteo', icon: ClipboardList },
+  { id: 'expected-orders', label: 'Órdenes', icon: Package },
+  { id: 'reception', label: 'Recepciones', icon: Truck },
   { id: 'events', label: 'Eventos', icon: Bell },
   { id: 'customers', label: 'Clientes', icon: Users },
-  { id: 'suppliers', label: 'Proveedores', icon: Truck },
+  { id: 'suppliers', label: 'Proveedores', icon: Building2 },
+  { id: 'dynamic', label: 'Dinámico', icon: Database },
+  { id: 'slices', label: 'Cortes', icon: Scissors },
   { id: 'settings', label: 'Ajustes', icon: Settings },
 ];
 
@@ -104,6 +114,16 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         return <RedesignCustomersPage />;
       case 'suppliers':
         return <RedesignSuppliersPage />;
+      case 'counting':
+        return <RedesignCountingPage />;
+      case 'expected-orders':
+        return <RedesignExpectedOrdersPage />;
+      case 'reception':
+        return <RedesignReceptionPage />;
+      case 'dynamic':
+        return <RedesignDynamicPage />;
+      case 'slices':
+        return <RedesignSlicesPage />;
       default:
         return <RedesignDashboard />;
     }
