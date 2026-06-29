@@ -30,3 +30,6 @@ export const useRedesignTheme = () => {
   }
   return context;
 };
+
+// Alias para compatibilidad con componentes del rediseño original
+export const useTheme = useRedesignTheme;
