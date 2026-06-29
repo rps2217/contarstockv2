@@ -7,6 +7,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import type { Product } from '@/types'
 
 // ============================================================================
 // Tipos y constantes
