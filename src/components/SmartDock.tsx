@@ -65,8 +65,8 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
   return (
     <nav className={`md:hidden z-[100] relative ${
       isGlobal 
-        ? 'fixed bottom-0 left-0 right-0 bg-slate-950/95 border-t border-white/10 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2.5 shadow-[0_-15px_40px_rgba(0,0,0,0.65)]'
-        : 'flex items-center bg-brand-surface/95 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden'
+        ? 'fixed bottom-0 left-0 right-0 bg-base/95 border-t border-subtle px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2.5 shadow-[0_-15px_40px_rgba(0,0,0,0.65)]'
+        : 'flex items-center bg-brand-surface/95 backdrop-blur-3xl border border-subtle px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden'
     }`}>
       {/* Scrollable Indicator - Left Edge Gradient */}
       {isGlobal && showLeft && (
@@ -105,7 +105,7 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
                 } ${
                   isActive 
                     ? (item.activeColor || (isGlobal ? 'text-blue-400' : 'text-blue-400 scale-110'))
-                    : 'text-slate-500 hover:text-slate-400'
+                    : 'text-muted hover:text-secondary'
                 }`}
               >
                 <div className={`p-2 rounded-2xl transition-all duration-300 ${
@@ -116,7 +116,7 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
                 
                 {isGlobal && item.label && (
                   <span className={`text-[7.5px] font-black tracking-widest uppercase leading-none transition-opacity ${
-                    isActive ? 'opacity-100 text-blue-400' : 'opacity-40 text-slate-400'
+                    isActive ? 'opacity-100 text-blue-400' : 'opacity-40 text-secondary'
                   }`}>
                     {item.label}
                   </span>
