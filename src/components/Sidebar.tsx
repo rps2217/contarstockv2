@@ -117,6 +117,7 @@ interface SidebarProps {
 const MAIN_NAV_ITEMS = [
   { key: 'dashboard', label: 'Panel', icon: Home, path: '/', description: 'Vista general' },
   { key: 'capture', label: 'Capturar', icon: Scan, path: '/capture', description: 'Escaneo y conteo' },
+  { key: 'expiry', label: 'Vencimientos', icon: CalendarClock, path: '/expiry', description: 'Control de vencimientos' },
   { key: 'data', label: 'Datos', icon: Database, path: '/data', description: 'Inventario y catálogo' },
   { key: 'reports', label: 'Reportes', icon: History, path: '/reports', description: 'Informes' },
   { key: 'sync', label: 'Sync', icon: Cloud, path: '/sync', description: 'Sincronización' },

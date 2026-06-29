@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Scan, Database, History, Cloud, Settings } from 'lucide-react';
+import { Home, Scan, Database, History, Cloud, Settings, CalendarClock } from 'lucide-react';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
@@ -14,9 +14,8 @@ import { SmartDock, SmartDockItem } from './SmartDock';
 const MOBILE_NAV = [
   { id: 'dashboard', label: 'Panel', icon: Home, path: '/' },
   { id: 'capture', label: 'Capturar', icon: Scan, path: '/capture' },
+  { id: 'expiry', label: 'Vencim.', icon: CalendarClock, path: '/expiry' },
   { id: 'data', label: 'Datos', icon: Database, path: '/data' },
-  { id: 'reports', label: 'Reportes', icon: History, path: '/reports' },
-  { id: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
   { id: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
 ];
 
@@ -44,6 +43,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
     if (path.startsWith('/capture')) return 'capture';
     if (path.startsWith('/data')) return 'data';
     if (path.startsWith('/reports')) return 'reports';
+    if (path.startsWith('/expiry')) return 'expiry';
     if (path.startsWith('/sync')) return 'sync';
     if (path.startsWith('/settings')) return 'settings';
     return 'dashboard';

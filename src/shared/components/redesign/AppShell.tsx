@@ -292,6 +292,8 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
 
 // Componente wrapper que envuelve con RedesignThemeProvider
 export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) => {
+  const { error } = useDbReady();
+  
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
@@ -303,6 +305,8 @@ export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) 
 
 // Exportar también el componente principal para uso directo si ya se tiene un provider
 export const RedesignAppShellWithProvider: React.FC<RedesignAppShellProps> = (props) => {
+  const { error } = useDbReady();
+  
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
