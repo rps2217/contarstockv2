@@ -1,23 +1,26 @@
-import React, { useState, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  ScanLine, 
-  Database, 
-  CalendarClock, 
-  BarChart3, 
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  LayoutDashboard,
+  ScanLine,
+  Database,
+  CalendarClock,
+  BarChart3,
   RefreshCw,
   Settings,
   Package2,
   Plus,
   Wifi,
   WifiOff,
+  Zap,
+  ClipboardList,
+  Package,
+  Truck,
+  Bell,
+  Users,
+  Building2,
+  Scissors,
 } from 'lucide-react';
-import { cn } from './utils';
-import { useRedesignTheme, RedesignThemeProvider } from './ThemeContext';
-import { useDbReady } from './hooks/useDbReady';
-import { DbLoader, DbError } from './components/DbLoader';
-import { ToastContainer } from './components/ToastContainer';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
