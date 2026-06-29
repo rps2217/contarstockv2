@@ -9,7 +9,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Package
+  Package,
+  CalendarClock,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from './utils';
@@ -25,7 +26,8 @@ const NAV_ITEMS = [
   { id: 'capture', label: 'Capturar', icon: Scan, path: '/capture' },
   { id: 'data', label: 'Datos', icon: Database, path: '/data' },
   { id: 'reports', label: 'Reportes', icon: History, path: '/reports' },
-  { id: 'sync', label: 'Sync', icon: Cloud, path: '/sync', badge: 3 },
+  { id: 'expiry', label: 'Vencimientos', icon: CalendarClock, path: '/expiry' },
+  { id: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
   { id: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
 ];
 
