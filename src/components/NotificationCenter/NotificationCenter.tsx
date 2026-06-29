@@ -147,7 +147,7 @@ export function NotificationCenterProvider({ children }: { children: ReactNode }
     }}>
       {children}
       <NotificationPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
-      <NotificationBell />
+      
     </NotificationCenterContext.Provider>
   );
 }

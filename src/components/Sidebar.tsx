@@ -10,7 +10,8 @@ import {
   Settings, 
   ChevronLeft, 
   ChevronRight,
-  Database as DatabaseIcon
+  Database as DatabaseIcon,
+  CalendarClock
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings } from '../types';
