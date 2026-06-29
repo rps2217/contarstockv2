@@ -1,4 +1,4 @@
-import React, { useEffect, createContext, useContext } from 'react';
+import React, { useEffect, createContext, useContext, useState } from 'react';
 import { useSettingsStore } from '@/stores';
 
 type Theme = 'dark' | 'light' | 'gray';
@@ -8,7 +8,13 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Valor por defecto cuando no hay provider (para evitar crashes)
+const defaultContext: ThemeContextType = {
+  theme: 'dark',
+  setTheme: () => {},
+};
+
+const ThemeContext = createContext<ThemeContextType>(defaultContext);
 
 export const RedesignThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { settings, updateSetting } = useSettingsStore();
@@ -32,12 +38,9 @@ export const RedesignThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useRedesignTheme = () => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useRedesignTheme must be used within a RedesignThemeProvider');
-  }
-  return context;
+export const useRedesignTheme = (): ThemeContextType => {
+  // Siempre retorna el contexto, usando el default si no hay provider
+  return useContext(ThemeContext);
 };
 
 // Alias para compatibilidad con componentes del rediseño original
