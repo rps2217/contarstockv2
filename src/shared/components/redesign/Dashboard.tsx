@@ -38,30 +38,56 @@ interface StatCardProps {
   trend?: string;
   icon: React.ElementType;
   colorClass: string;
+  onClick?: () => void;
+  linkTo?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, trend, icon: Icon, colorClass }) => (
-  <div className="bg-surface border border-subtle rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden group">
-    <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
+const StatCard: React.FC<StatCardProps> = ({ title, value, trend, icon: Icon, colorClass, onClick, linkTo }) => {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (linkTo) {
+      navigate(linkTo);
+    }
+  };
 
-    <div className="flex justify-between items-start">
-      <div className={cn('p-2.5 rounded-xl', colorClass)}>
-        <Icon className="w-5 h-5" />
-      </div>
-      {trend && (
-        <div className="flex items-center gap-1 text-emerald-500 text-xs font-medium bg-emerald-500/10 px-2 py-1 rounded-full">
-          <TrendingUp className="w-3 h-3" />
-          {trend}
-        </div>
+  const isClickable = !!(onClick || linkTo);
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={!isClickable}
+      className={cn(
+        'bg-surface border border-subtle rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden transition-all duration-200',
+        isClickable && 'hover:bg-elevated hover:border-blue-500/30 cursor-pointer group'
       )}
-    </div>
+    >
+      <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
 
-    <div>
-      <h3 className="text-secondary text-sm font-medium mb-1">{title}</h3>
-      <p className="text-2xl font-bold text-primary">{value}</p>
-    </div>
-  </div>
-);
+      <div className="flex justify-between items-start">
+        <div className={cn('p-2.5 rounded-xl', colorClass)}>
+          <Icon className="w-5 h-5" />
+        </div>
+        {trend && (
+          <div className="flex items-center gap-1 text-emerald-500 text-xs font-medium bg-emerald-500/10 px-2 py-1 rounded-full">
+            <TrendingUp className="w-3 h-3" />
+            {trend}
+          </div>
+        )}
+        {isClickable && (
+          <ArrowRight className="w-4 h-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
+      </div>
+
+      <div className="text-left">
+        <h3 className="text-secondary text-sm font-medium mb-1">{title}</h3>
+        <p className="text-2xl font-bold text-primary">{value}</p>
+      </div>
+    </button>
+  );
+};
 
 interface ActionCardProps {
   title: string;
@@ -280,6 +306,7 @@ export const RedesignDashboard: React.FC = () => {
             value={formatNumber(metrics.productCount || 0)}
             icon={Box}
             colorClass="bg-blue-500/10 text-blue-500"
+            linkTo="/data"
           />
 
           <StatCard
@@ -287,6 +314,7 @@ export const RedesignDashboard: React.FC = () => {
             value={metrics.customerCount || 0}
             icon={Users}
             colorClass="bg-purple-500/10 text-purple-500"
+            linkTo="/customers"
           />
 
           <StatCard
@@ -294,6 +322,7 @@ export const RedesignDashboard: React.FC = () => {
             value={metrics.providerCount || 0}
             icon={Truck}
             colorClass="bg-amber-500/10 text-amber-500"
+            linkTo="/suppliers"
           />
 
           <StatCard
@@ -301,6 +330,7 @@ export const RedesignDashboard: React.FC = () => {
             value={metrics.sessionCount || 0}
             icon={History}
             colorClass="bg-emerald-500/10 text-emerald-500"
+            linkTo="/data"
           />
 
           <StatCard
@@ -308,6 +338,7 @@ export const RedesignDashboard: React.FC = () => {
             value={metrics.todaySessions || 0}
             icon={CheckCircle2}
             colorClass="bg-cyan-500/10 text-cyan-500"
+            linkTo="/dashboard"
           />
 
           <StatCard
@@ -315,6 +346,7 @@ export const RedesignDashboard: React.FC = () => {
             value={formatNumber(metrics.scanCount || 0)}
             icon={Scan}
             colorClass="bg-pink-500/10 text-pink-500"
+            linkTo="/capture"
           />
         </div>
 
