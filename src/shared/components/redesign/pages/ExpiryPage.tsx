@@ -1,28 +1,29 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarClock, Plus, Search, ChevronRight, Skull, AlertTriangle,
-  PackageX, Clock, ShieldCheck, MapPin, Download, AlertCircle, Package,
+  PackageX, Clock, ShieldCheck, MapPin, RefreshCw, Package, AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
-import type { Product } from '@/types'
+import { toast } from 'sonner'
 
-// ============================================================================
-// Tipos y constantes
-// ============================================================================
-type ExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe'
+// IMPORTAR HOOK FUNCIONAL DE features/expiry
+import { useExpiry, ExpiryRecord, ExpiryStatus } from '@/features/expiry/hooks/useExpiry'
 
-interface ExpiryRecord {
-  id: string; product: string; barcode: string; sku?: string
-  location: string; month: number; year: number; expiryDate: Date
-  quantity: number; daysLeft: number; createdAt?: number; source?: string
+// Tipos y constantes de UI
+type UxExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe'
+
+const mapStatus = (status: ExpiryStatus): UxExpiryStatus => {
+  switch (status) {
+    case ExpiryStatus.EXPIRED: return 'expired'
+    case ExpiryStatus.CRITICAL: return 'critical'
+    case ExpiryStatus.WITHDRAWAL: return 'withdrawal'
+    case ExpiryStatus.NEXT_EXPIRY: return 'next'
+    default: return 'safe'
+  }
 }
 
-const STATUS_META: Record<ExpiryStatus, {
-  label: string; icon: React.ElementType; text: string; bg: string; border: string; dot: string
-}> = {
+const STATUS_META: Record<UxExpiryStatus, { label: string; icon: React.ElementType; text: string; bg: string; border: string; dot: string }> = {
   expired: { label: 'Vencido', icon: Skull, text: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/30', dot: 'bg-rose-500' },
   critical: { label: 'Crítico', icon: AlertTriangle, text: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' },
   withdrawal: { label: 'A retirar', icon: PackageX, text: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/30', dot: 'bg-orange-500' },
@@ -30,25 +31,23 @@ const STATUS_META: Record<ExpiryStatus, {
   safe: { label: 'Vigente', icon: ShieldCheck, text: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
 }
 
-const STATUS_ORDER: ExpiryStatus[] = ['expired', 'critical', 'withdrawal', 'next', 'safe']
+const STATUS_ORDER: UxExpiryStatus[] = ['expired', 'critical', 'withdrawal', 'next', 'safe']
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-const classify = (daysLeft: number): ExpiryStatus => {
-  if (daysLeft < 0) return 'expired'
-  if (daysLeft <= 15) return 'critical'
-  if (daysLeft <= 30) return 'withdrawal'
-  if (daysLeft <= 120) return 'next'
-  return 'safe'
-}
+const FILTERS = [
+  { value: 'all' as const, label: 'Todos' },
+  { value: 'expired' as const, label: 'Vencidos' },
+  { value: 'critical' as const, label: 'Críticos' },
+  { value: 'withdrawal' as const, label: 'A retirar' },
+  { value: 'next' as const, label: 'Próximos' },
+  { value: 'safe' as const, label: 'Vigentes' },
+]
 
-// ============================================================================
-// Componentes
-// ============================================================================
-const SummaryCard = ({ status, count, total }: { status: ExpiryStatus; count: number; total: number }) => {
+// Componentes de UI
+const SummaryCard = ({ status, count, total }: { status: UxExpiryStatus; count: number; total: number }) => {
   const meta = STATUS_META[status]
   const Icon = meta.icon
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0
-  
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
       className={cn('bg-surface border border-subtle rounded-2xl p-4 flex flex-col gap-3 min-w-[140px]')}>
@@ -67,26 +66,28 @@ const SummaryCard = ({ status, count, total }: { status: ExpiryStatus; count: nu
 }
 
 const RecordRow = ({ record }: { record: ExpiryRecord }) => {
-  const status = classify(record.daysLeft)
+  const status = mapStatus(record.status)
   const meta = STATUS_META[status]
   const daysText = record.daysLeft < 0 ? `Venció hace ${Math.abs(record.daysLeft)} días` : record.daysLeft === 0 ? 'Vence hoy' : `Faltan ${record.daysLeft} días`
-
+  const expiryMonth = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm
+  const expiryYear = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-3 p-3 hover:bg-elevated transition-colors group rounded-xl">
+      className="flex items-center gap-3 p-3 hover:bg-elevated transition-colors group rounded-xl cursor-pointer"
+      onClick={() => toast.info('Ver detalle del producto')}>
       <div className={cn('w-1.5 h-12 rounded-full shrink-0', meta.dot)} />
       <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center shrink-0">
         <Package className="w-5 h-5 text-muted" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-primary truncate">{record.product || 'Producto sin nombre'}</p>
+        <p className="text-sm font-semibold text-primary truncate">{record.productName || 'Producto sin nombre'}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-          <span className="text-xs text-muted font-mono">{record.barcode || record.sku || 'Sin código'}</span>
+          <span className="text-xs text-muted font-mono">{record.barcode || 'Sin código'}</span>
           {record.location && <span className="text-xs text-secondary flex items-center gap-1"><MapPin className="w-3 h-3" />{record.location}</span>}
         </div>
       </div>
       <div className="text-right shrink-0 hidden sm:block">
-        <p className="text-sm font-semibold text-primary">{MONTHS[record.month - 1]} {record.year}</p>
+        <p className="text-sm font-semibold text-primary">{MONTHS[expiryMonth - 1]} {expiryYear}</p>
         <p className="text-xs text-muted">{record.quantity} un.</p>
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1 w-28">
@@ -97,10 +98,9 @@ const RecordRow = ({ record }: { record: ExpiryRecord }) => {
   )
 }
 
-const Section = ({ status, records, isOpen, onToggle }: { status: ExpiryStatus; records: ExpiryRecord[]; isOpen: boolean; onToggle: () => void }) => {
+const Section = ({ status, records, isOpen, onToggle }: { status: UxExpiryStatus; records: ExpiryRecord[]; isOpen: boolean; onToggle: () => void }) => {
   const meta = STATUS_META[status]
   const Icon = meta.icon
-  
   return (
     <div className={cn('bg-surface border border-subtle rounded-2xl overflow-hidden', records.length === 0 && 'opacity-60')}>
       <button onClick={onToggle} disabled={records.length === 0}
@@ -134,92 +134,70 @@ const Section = ({ status, records, isOpen, onToggle }: { status: ExpiryStatus; 
   )
 }
 
-// ============================================================================
-// Componente principal
-// ============================================================================
-const FILTERS = [
-  { value: 'all' as const, label: 'Todos' },
-  { value: 'expired' as const, label: 'Vencidos' },
-  { value: 'critical' as const, label: 'Críticos' },
-  { value: 'withdrawal' as const, label: 'A retirar' },
-  { value: 'next' as const, label: 'Próximos' },
-  { value: 'safe' as const, label: 'Vigentes' },
-]
-
+// Componente principal - USA useExpiry DE features/expiry
 export const RedesignExpiryPage: React.FC = () => {
-  const [filter, setFilter] = useState<'all' | ExpiryStatus>('all')
-  const [query, setQuery] = useState('')
-  const [openSections, setOpenSections] = useState<Record<ExpiryStatus, boolean>>({
+  const [filter, setFilter] = useState<'all' | UxExpiryStatus>('all')
+  const [openSections, setOpenSections] = useState<Record<UxExpiryStatus, boolean>>({
     expired: true, critical: true, withdrawal: true, next: false, safe: false,
   })
 
-  // Datos de vencimientos
-  const expiryRecords = useLiveQuery(async (): Promise<ExpiryRecord[]> => {
-    const now = new Date()
-    try {
-      const dynamicRecords = await db.dynamic_data.where('tableName').equals('VENCIMIENTOS').toArray()
-      if (dynamicRecords.length > 0) {
-        return dynamicRecords.map((r) => {
-          const data = r.data || {}
-          const mm = data.mm || data.month || 1
-          const yyyy = data.yyyy || data.year || now.getFullYear()
-          const expiryDate = new Date(yyyy, mm - 1)
-          const daysLeft = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-          return {
-            id: r.id?.toString() || Math.random().toString(),
-            product: data.producto || data.product || data.name || 'Producto sin nombre',
-            barcode: data.codigo || data.barcode || '',
-            sku: data.sku,
-            location: data.ubicacion || data.location || '',
-            month: mm, year: yyyy, expiryDate, quantity: data.cantidad || data.quantity || 0, daysLeft,
-            createdAt: r.timestamp, source: 'dynamic_data',
-          }
-        })
-      }
-    } catch {}
-    
-    // Demo data
-    const demoProducts = [
-      { name: 'Leche La Serenisima 1L', barcode: '7791234567890' },
-      { name: 'Yogur Danone Frutilla', barcode: '7790987654321' },
-      { name: 'Queso Cremoso Ilolay 500g', barcode: '7794567890123' },
-      { name: 'Jamon Cocido Paladini 200g', barcode: '7793216549870' },
-      { name: 'Manteca Chantiproy 250g', barcode: '7796543210987' },
-    ]
-    const locations = ['Góndola A', 'Góndola B', 'Depósito', 'Refrigerador 1']
-    return demoProducts.map((p, idx) => {
-      const daysOffset = Math.floor(Math.random() * 200) - 30
-      const expiryDate = new Date(now)
-      expiryDate.setDate(expiryDate.getDate() + daysOffset)
-      return {
-        id: `demo-${idx}`, product: p.name, barcode: p.barcode,
-        location: locations[idx % locations.length],
-        month: expiryDate.getMonth() + 1, year: expiryDate.getFullYear(),
-        expiryDate, quantity: Math.floor(Math.random() * 50) + 1, daysLeft: daysOffset, source: 'demo',
-      }
-    })
-  }, [], [] as ExpiryRecord[])
+  // USAR HOOK FUNCIONAL DE features/expiry
+  const { records: allRecords, filteredRecords, stats, isLoading, isSyncing, actions } = useExpiry()
 
-  const counts = useMemo(() => {
-    const c: Record<ExpiryStatus, number> = { expired: 0, critical: 0, withdrawal: 0, next: 0, safe: 0 }
-    expiryRecords.forEach((r) => { c[classify(r.daysLeft)]++ })
-    return c
-  }, [expiryRecords])
+  // Calcular estadísticas
+  const counts = useMemo(() => ({
+    expired: stats.expired,
+    critical: stats.critical,
+    withdrawal: stats.withdrawal,
+    next: stats.nextExpiry,
+    safe: stats.safe,
+  }), [stats])
 
+  // Agrupar por estado
   const grouped = useMemo(() => {
-    const g: Record<ExpiryStatus, ExpiryRecord[]> = { expired: [], critical: [], withdrawal: [], next: [], safe: [] }
-    expiryRecords.filter((r) => {
-      const matchesQuery = !query || r.product.toLowerCase().includes(query.toLowerCase()) || r.barcode.includes(query) || r.location.toLowerCase().includes(query.toLowerCase())
-      const status = classify(r.daysLeft)
-      return matchesQuery && (filter === 'all' || filter === status)
-    }).forEach((r) => { g[classify(r.daysLeft)].push(r) })
-    Object.keys(g).forEach((key) => { g[key as ExpiryStatus].sort((a, b) => a.daysLeft - b.daysLeft) })
+    const g: Record<UxExpiryStatus, ExpiryRecord[]> = { expired: [], critical: [], withdrawal: [], next: [], safe: [] }
+    filteredRecords.forEach((r) => {
+      const status = mapStatus(r.status)
+      g[status].push(r)
+    })
+    Object.keys(g).forEach((key) => {
+      g[key as UxExpiryStatus].sort((a, b) => a.daysLeft - b.daysLeft)
+    })
     return g
-  }, [filter, query, expiryRecords])
+  }, [filteredRecords])
 
-  const totalRecords = expiryRecords.length
+  const totalRecords = allRecords.length
   const urgentCount = counts.expired + counts.critical + counts.withdrawal
-  const visibleStatuses = filter === 'all' ? STATUS_ORDER : [filter as ExpiryStatus]
+  const visibleStatuses = filter === 'all' ? STATUS_ORDER : [filter as UxExpiryStatus]
+
+  const handleFilterClick = (value: string) => {
+    if (value === 'all') {
+      actions.setSelectedStatuses([])
+      setFilter('all')
+    } else {
+      const statusMap: Record<string, ExpiryStatus> = {
+        'expired': ExpiryStatus.EXPIRED,
+        'critical': ExpiryStatus.CRITICAL,
+        'withdrawal': ExpiryStatus.WITHDRAWAL,
+        'next': ExpiryStatus.NEXT_EXPIRY,
+        'safe': ExpiryStatus.SAFE,
+      }
+      const mappedStatus = statusMap[value]
+      if (mappedStatus) {
+        actions.setSelectedStatuses([mappedStatus])
+        setFilter(value as UxExpiryStatus)
+      }
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-base">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted mt-4">Cargando vencimientos...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col bg-base">
@@ -239,8 +217,10 @@ export const RedesignExpiryPage: React.FC = () => {
             <p className="text-secondary text-sm mt-2">Controla la caducidad de tus productos y planifica retiros.</p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <button className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors">
-              <Download className="w-4 h-4" /><span className="hidden sm:inline">Exportar</span>
+            <button onClick={actions.syncRecords} disabled={isSyncing}
+              className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50">
+              <RefreshCw className={cn('w-4 h-4', isSyncing && 'animate-spin')} />
+              <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
             </button>
             <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
               <Plus className="w-4 h-4" /><span className="hidden sm:inline">Registrar</span>
@@ -258,13 +238,13 @@ export const RedesignExpiryPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+              <input type="text" value={actions.filters.searchQuery} onChange={(e) => actions.setSearchQuery(e.target.value)}
                 placeholder="Buscar por producto, código o ubicación..."
                 className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500 transition-all" />
             </div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
               {FILTERS.map((f) => (
-                <button key={f.value} onClick={() => setFilter(f.value)}
+                <button key={f.value} onClick={() => handleFilterClick(f.value)}
                   className={cn('px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors shrink-0',
                     filter === f.value ? 'bg-blue-600 text-white' : 'bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle')}>
                   {f.label}
@@ -301,7 +281,7 @@ export const RedesignExpiryPage: React.FC = () => {
             </div>
           </div>
 
-          {expiryRecords.length === 0 ? (
+          {allRecords.length === 0 ? (
             <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
               <CalendarClock className="w-12 h-12 text-muted mx-auto mb-4" />
               <p className="text-sm text-muted">No hay registros de vencimientos</p>
