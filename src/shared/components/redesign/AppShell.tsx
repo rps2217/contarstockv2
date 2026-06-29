@@ -318,7 +318,7 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
       <main className="flex-1 relative overflow-hidden">
         {renderView()}
       </main>
-      <BottomDockComponent />
+      {/* BottomDock eliminado - navegación solo desktop via sidebar */}
       <ToastContainer />
     </div>
   );
