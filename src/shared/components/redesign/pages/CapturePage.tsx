@@ -288,9 +288,19 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
           <div className="bg-surface border border-subtle rounded-3xl overflow-hidden relative flex flex-col items-center justify-center min-h-[200px]">
             {inputMode === 'camera' ? (
               <>
-                <div className="absolute inset-0 bg-black/20" />
+                {/* Video del scanner - CRÍTICO para que funcione html5-qrcode */}
+                <video
+                  ref={videoRef}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  playsInline
+                  muted
+                />
+                {/* Div para html5-qrcode fallback */}
+                <div id={scannerId} className="absolute inset-0 w-full h-full" />
+                {/* Overlay del marco del scanner */}
+                <div className="absolute inset-0 bg-black/30" />
                 {/* Scanner Frame */}
-                <div className="relative w-64 h-40 border-2 border-blue-500/50 rounded-2xl flex items-center justify-center">
+                <div className="relative z-10 w-64 h-40 border-2 border-blue-500/50 rounded-2xl flex items-center justify-center">
                   <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
                   <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
                   <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
@@ -302,12 +312,17 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
                     className="w-full h-0.5 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.8)]"
                   />
                 </div>
-                <p className="absolute bottom-4 text-secondary text-sm font-medium">
+                {scanError && (
+                  <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center z-20">
+                    <p className="text-rose-400 text-sm text-center px-4">{scanError}</p>
+                  </div>
+                )}
+                <p className="absolute bottom-4 text-white text-sm font-medium z-10">
                   Apunta al código de barras
                 </p>
                 <button
                   onClick={handleNewCount}
-                  className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+                  className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-xl flex items-center gap-2 transition-colors z-10"
                 >
                   <Plus className="w-4 h-4" />
                   Nuevo

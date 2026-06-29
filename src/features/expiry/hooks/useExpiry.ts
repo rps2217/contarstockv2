@@ -136,7 +136,6 @@ export const useExpiry = (): UseExpiryReturn => {
   const tableName = settings?.cloudConfig?.expiryTableName || 'VENCIMIENTOS';
 
   const [records, setRecords] = useState<ExpiryRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -497,7 +496,7 @@ export const useExpiry = (): UseExpiryReturn => {
     filteredRecords,
     stats,
     filters,
-    isLoading,
+    isLoading: isCacheLoading,
     isSyncing,
     selectedIds,
     isDetailModalOpen,
