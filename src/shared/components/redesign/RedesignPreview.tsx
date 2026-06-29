@@ -17,7 +17,7 @@ import {
   Settings,
   Check,
 } from 'lucide-react';
-import { RedesignAppShell } from './AppShell';
+import { RedesignAppShellWrapper } from './AppShell';
 import { RedesignThemeProvider } from './ThemeContext';
 import { cn } from './utils';
 
@@ -46,9 +46,7 @@ export const RedesignPreview: React.FC<RedesignPreviewProps> = ({
   // Si está embebido, mostrar solo el shell
   if (embedded) {
     return (
-      <RedesignThemeProvider>
-        <RedesignAppShell />
-      </RedesignThemeProvider>
+      <RedesignAppShellWrapper />
     );
   }
 
@@ -139,7 +137,7 @@ export const RedesignPreview: React.FC<RedesignPreviewProps> = ({
                     title="Redesign Shell Preview"
                   />
                 ) : (
-                  <RedesignAppShell 
+                  <RedesignAppShellWrapper 
                     syncPending={3}
                     userName="Preview User"
                     isOnline={true}
