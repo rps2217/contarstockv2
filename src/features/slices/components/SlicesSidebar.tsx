@@ -30,10 +30,10 @@ export const SlicesSidebar: React.FC<Props> = ({
     ? 'bg-white border-slate-200' 
     : isHighContrast 
     ? 'bg-black border-yellow-400' 
-    : 'bg-slate-950/40 border-slate-900';
+    : 'bg-base/40 border-slate-900';
 
   const headerTextClass = isLight ? 'text-slate-500' : isHighContrast ? 'text-yellow-400' : 'text-slate-500';
-  const iconClass = isLight ? 'text-slate-400' : isHighContrast ? 'text-yellow-400' : 'text-slate-600';
+  const iconClass = isLight ? 'text-muted' : isHighContrast ? 'text-yellow-400' : 'text-slate-600';
   
   const itemActiveClass = isLight 
     ? 'bg-blue-50 border-blue-200 text-slate-900' 
@@ -45,16 +45,16 @@ export const SlicesSidebar: React.FC<Props> = ({
     ? 'border-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900' 
     : isHighContrast 
     ? 'border-transparent hover:bg-yellow-900/10 text-yellow-500 hover:text-yellow-300' 
-    : 'border-transparent hover:bg-white/5 text-slate-400 hover:text-white';
+    : 'border-transparent hover:bg-white/5 text-muted hover:text-white';
   
   const iconBgActiveClass = isLight ? 'bg-blue-100 text-blue-600' : isHighContrast ? 'bg-yellow-900/30 text-yellow-400' : 'bg-blue-500/20 text-blue-400';
-  const iconBgInactiveClass = isLight ? 'bg-slate-100 text-slate-400' : isHighContrast ? 'bg-yellow-900/20 text-yellow-600' : 'bg-slate-900/60 text-slate-500';
+  const iconBgInactiveClass = isLight ? 'bg-slate-100 text-muted' : isHighContrast ? 'bg-yellow-900/20 text-yellow-600' : 'bg-surface/60 text-slate-500';
   
   const sliceNameClass = isLight ? 'text-slate-800' : isHighContrast ? 'text-yellow-300' : 'text-white';
   const subtitleClass = isLight ? 'text-slate-500' : isHighContrast ? 'text-yellow-600' : 'text-slate-500';
   
   const helpBgClass = isLight ? 'bg-blue-50 border-blue-200' : isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : 'bg-blue-500/5 border-blue-500/10';
-  const helpTextClass = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-500' : 'text-slate-400';
+  const helpTextClass = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-500' : 'text-muted';
 
   return (
     <div className={`${containerClass} border rounded-3xl p-4 space-y-4`}>
@@ -101,7 +101,7 @@ export const SlicesSidebar: React.FC<Props> = ({
                     onDelete(slice.id);
                   }}
                   className={`p-1.5 rounded-lg transition-transform hover:scale-115 shrink-0 opacity-0 group-hover:opacity-100 ${
-                    isLight ? 'text-slate-400 hover:text-rose-500' : isHighContrast ? 'text-yellow-600 hover:text-yellow-300' : 'text-slate-600 hover:text-rose-400'
+                    isLight ? 'text-muted hover:text-rose-500' : isHighContrast ? 'text-yellow-600 hover:text-yellow-300' : 'text-slate-600 hover:text-rose-400'
                   }`}
                   title="Eliminar Slice"
                 >

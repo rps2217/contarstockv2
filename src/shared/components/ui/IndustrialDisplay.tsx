@@ -23,7 +23,7 @@ export const IndustrialDisplay: React.FC<IndustrialDisplayProps> = memo(({
 }) => {
  if (!barcode) {
  return (
- <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 border-b-4 border-black group">
+ <div className="h-full w-full flex flex-col items-center justify-center bg-base border-b-4 border-black group">
  <div className="relative">
  <Target className="w-24 h-24 mb-6 text-slate-800 animate-pulse group-active:text-blue-500 transition-colors" />
  <div className="absolute inset-0 bg-blue-500/5 blur-3xl rounded-full"></div>

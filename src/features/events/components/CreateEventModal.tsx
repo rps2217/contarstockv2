@@ -121,12 +121,12 @@ export const CreateEventModal: React.FC<Props> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`relative w-full max-w-3xl rounded-[2rem] shadow-2xl overflow-hidden border-4 ${
-            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            isDark ? 'bg-surface border-subtle' : 'bg-white border-slate-200'
           }`}
           style={{ maxHeight: '90vh' }}
         >
           {/* HEADER */}
-          <div className={`p-6 border-b-4 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+          <div className={`p-6 border-b-4 ${isDark ? 'border-subtle' : 'border-slate-200'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -138,7 +138,7 @@ export const CreateEventModal: React.FC<Props> = ({
                   <h2 className={`text-lg font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {editingItem ? 'Editar Evento' : 'Nuevo Evento'}
                   </h2>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-muted'}`}>
                     registrar producto(s) con evento
                   </p>
                 </div>
@@ -147,7 +147,7 @@ export const CreateEventModal: React.FC<Props> = ({
                 onClick={onClose}
                 className={`p-3 rounded-xl transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
               >
-                <X className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                <X className={`w-5 h-5 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
               </button>
             </div>
           </div>
@@ -156,7 +156,7 @@ export const CreateEventModal: React.FC<Props> = ({
           <div className={`overflow-y-auto p-6 space-y-6`} style={{ maxHeight: 'calc(90vh - 200px)' }}>
             
             {/* DOCUMENT INFO */}
-            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-elevated/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
               <div className="flex items-center gap-2 mb-4">
                 <FileText className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                 <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -194,7 +194,7 @@ export const CreateEventModal: React.FC<Props> = ({
             </div>
 
             {/* PRODUCTO */}
-            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-elevated/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
               <div className="flex items-center gap-2 mb-4">
                 <Package className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
                 <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -235,7 +235,7 @@ export const CreateEventModal: React.FC<Props> = ({
 
             {/* LISTA DE PRODUCTOS */}
             {items.length > 0 && (
-              <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/30 border-white/5' : 'bg-white border-slate-200'}`}>
+              <div className={`p-4 rounded-2xl border ${isDark ? 'bg-elevated/30 border-white/5' : 'bg-white border-slate-200'}`}>
                 <ItemList
                   items={items.map(i => ({
                     barcode: i.barcode,
@@ -254,7 +254,7 @@ export const CreateEventModal: React.FC<Props> = ({
             )}
 
             {/* DESTINO Y TRASPASO */}
-            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-elevated/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
               <div className="flex items-center gap-2 mb-4">
                 <Truck className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                 <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -283,13 +283,13 @@ export const CreateEventModal: React.FC<Props> = ({
             </div>
 
             {/* OBSERVACIONES */}
-            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-elevated/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
               <FormField
                 label="Observaciones"
                 placeholder="Ej. Producto en mal estado por humedad..."
                 value={observaciones}
                 onChange={setObservaciones}
-                icon={<FileText className={`w-4 h-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />}
+                icon={<FileText className={`w-4 h-4 ${isDark ? 'text-muted' : 'text-slate-500'}`} />}
                 type="textarea"
                 rows={3}
                 theme={theme}
@@ -298,14 +298,14 @@ export const CreateEventModal: React.FC<Props> = ({
           </div>
 
           {/* FOOTER */}
-          <div className={`p-6 border-t-4 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+          <div className={`p-6 border-t-4 ${isDark ? 'border-subtle' : 'border-slate-200'}`}>
             <div className="flex items-center gap-4">
               <button
                 type="button"
                 onClick={onClose}
                 className={`flex-1 py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-colors ${
                   isDark 
-                    ? 'bg-white/5 hover:bg-white/10 text-slate-400' 
+                    ? 'bg-white/5 hover:bg-white/10 text-muted' 
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                 }`}
               >

@@ -29,7 +29,7 @@ const ExpandedItemRow: React.FC<{ index: number; item: ExpectedItem; data: any; 
     >
       <div className="flex items-center gap-3 truncate min-w-0">
         <span className={`text-[9px] font-mono leading-none border px-1.5 py-0.5 rounded ${
-          isDark ? 'border-white/10 text-slate-500 bg-slate-900' : 'border-slate-200 text-slate-400 bg-slate-50'
+          isDark ? 'border-white/10 text-slate-500 bg-surface' : 'border-slate-200 text-muted bg-slate-50'
         }`}>
           {index + 1}
         </span>
@@ -150,7 +150,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
             onChange={(e) => setSearchTerm(e.target.value)}
             className={`w-full pl-10 pr-4 py-3 rounded-2xl text-xs font-bold transition-all border ${
               isDark 
-                ? 'bg-slate-900 border-white/5 text-white focus:border-blue-500' 
+                ? 'bg-surface border-white/5 text-white focus:border-blue-500' 
                 : 'bg-white border-slate-200 text-slate-800 shadow-sm focus:border-blue-600'
             }`}
           />
@@ -165,7 +165,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
               ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-400/30' 
               : isLight 
                 ? 'bg-slate-100 text-slate-500 border border-slate-200' 
-                : 'bg-slate-800 text-slate-400 border border-white/5'
+                : 'bg-elevated text-muted border border-white/5'
           }`}>
             <Cloud className="w-4 h-4" />
             <span>{lastSyncLabel}</span>
@@ -225,11 +225,11 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
       {/* ORDERS LISTGRID */}
       {filteredOrders.length === 0 ? (
         <div className={`p-12 md:p-16 rounded-[2.5rem] border text-center ${
-          isDark ? 'bg-slate-900/50 border-white/5' : 'bg-white border-slate-200/80 shadow-sm'
+          isDark ? 'bg-surface/50 border-white/5' : 'bg-white border-slate-200/80 shadow-sm'
         }`}>
           <FileText className="w-10 h-10 text-slate-600 mx-auto mb-3 opacity-40" />
-          <h4 className={`text-sm font-black ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>No hay cargas teóricas guardadas</h4>
-          <p className={`text-[11px] font-semibold max-w-sm mx-auto leading-normal mt-1 block ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+          <h4 className={`text-sm font-black ${isDark ? 'text-muted' : 'text-slate-700'}`}>No hay cargas teóricas guardadas</h4>
+          <p className={`text-[11px] font-semibold max-w-sm mx-auto leading-normal mt-1 block ${isDark ? 'text-slate-600' : 'text-muted'}`}>
             {searchTerm ? 'No se encontraron resultados para tu criterio de búsqueda.' : 'Importa remisiones o facturas de productos para que sirvan de control cruzado en tus auditorías.'}
           </p>
         </div>
@@ -243,8 +243,8 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                 key={order.id}
                 className={`rounded-[2rem] border overflow-hidden transition-all duration-300 ${
                   isExpanded
-                    ? (isDark ? 'bg-slate-900 border-blue-500/30 shadow-2xl shadow-blue-900/10' : 'bg-white border-blue-400 shadow-md')
-                    : (isDark ? 'bg-slate-900/80 border-white/5 hover:bg-slate-900 hover:border-white/10' : 'bg-white border-slate-200 hover:border-slate-350 shadow-sm hover:shadow-md')
+                    ? (isDark ? 'bg-surface border-blue-500/30 shadow-2xl shadow-blue-900/10' : 'bg-white border-blue-400 shadow-md')
+                    : (isDark ? 'bg-surface/80 border-white/5 hover:bg-surface hover:border-white/10' : 'bg-white border-slate-200 hover:border-slate-350 shadow-sm hover:shadow-md')
                 }`}
               >
                 {/* Header Information */}
@@ -256,7 +256,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                       isExpanded 
                         ? (isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-100 text-blue-600')
-                        : (isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500')
+                        : (isDark ? 'bg-elevated text-muted' : 'bg-slate-100 text-slate-500')
                     }`}>
                       <FileText className="w-6 h-6" />
                     </div>
@@ -267,13 +267,13 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                           {order.id}
                         </h4>
                         <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                          isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'
+                          isDark ? 'bg-elevated text-muted' : 'bg-slate-100 text-slate-600'
                         }`}>
                           {order.metadata?.documentType || 'Picking'}
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-3 mt-1 text-[10px] font-semibold text-slate-400 flex-wrap">
+                      <div className="flex items-center gap-3 mt-1 text-[10px] font-semibold text-muted flex-wrap">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3 text-slate-500" />
                           Importado: {order.metadata?.date || new Date(order.importedAt).toLocaleDateString()}
@@ -295,11 +295,11 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                   <div className="flex items-center justify-between md:justify-end gap-6 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-white/5">
                     <div className="flex items-center gap-6">
                       <div className="text-left md:text-right">
-                        <span className={`text-[9px] font-black uppercase tracking-wider block ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>SKUs Únicos</span>
+                        <span className={`text-[9px] font-black uppercase tracking-wider block ${isDark ? 'text-slate-500' : 'text-muted'}`}>SKUs Únicos</span>
                         <span className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>{order.totalExpectedSKUs}</span>
                       </div>
                       <div className="text-left md:text-right">
-                        <span className={`text-[9px] font-black uppercase tracking-wider block ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Unidades Totales</span>
+                        <span className={`text-[9px] font-black uppercase tracking-wider block ${isDark ? 'text-slate-500' : 'text-muted'}`}>Unidades Totales</span>
                         <span className={`text-base font-black ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{order.totalExpectedUnits}</span>
                       </div>
                     </div>
@@ -314,7 +314,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                         title="Imprimir ticket de carga teórica"
                         className={`p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 ${
                           isDark 
-                            ? 'border-white/5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/5' 
+                            ? 'border-white/5 text-muted hover:text-emerald-400 hover:bg-emerald-500/5' 
                             : 'border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50'
                         }`}
                       >
@@ -370,14 +370,14 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                         className={`p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 ${
                           isDark 
                             ? 'border-white/5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/5' 
-                            : 'border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                            : 'border-slate-200 text-muted hover:text-rose-600 hover:bg-rose-50'
                         }`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
 
                       <div className={`p-2 rounded-xl border ${
-                        isDark ? 'border-white/5 text-slate-500' : 'border-slate-200 text-slate-400'
+                        isDark ? 'border-white/5 text-slate-500' : 'border-slate-200 text-muted'
                       }`}>
                         {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5 animate-pulse" />}
                       </div>
@@ -395,11 +395,11 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                       transition={{ duration: 0.25, ease: "easeInOut" }}
                     >
                       <div className={`px-6 md:px-8 pb-8 pt-2 border-t flex flex-col ${
-                        isDark ? 'bg-slate-950/40 border-white/5' : 'bg-slate-50/50 border-slate-100'
+                        isDark ? 'bg-base/40 border-white/5' : 'bg-slate-50/50 border-slate-100'
                       }`}>
                         {/* Subheader Search */}
                         <div className="flex items-center justify-between pb-4 border-b flex-wrap gap-2 pt-2 mb-4">
-                          <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-muted' : 'text-slate-500'}`}>
                             Desglose de SKUs en Documento
                           </span>
                           <div className="flex items-center gap-2 max-w-md w-full md:w-auto justify-end">
@@ -427,7 +427,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                                 onChange={(e) => setItemQuery(e.target.value)}
                                 className={`w-full pl-8 pr-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
                                   isDark 
-                                    ? 'bg-slate-900 border-white/5 text-white' 
+                                    ? 'bg-surface border-white/5 text-white' 
                                     : 'bg-white border-slate-200 text-slate-700 shadow-sm'
                                 }`}
                               />
@@ -438,7 +438,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
 
                         {/* SKUs List */}
                         <div className={`rounded-2xl overflow-hidden border h-64 relative ${
-                          isDark ? 'bg-slate-900/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                          isDark ? 'bg-surface/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
                         }`}>
                           <VirtualList
                             items={filteredExpandedItems}
@@ -448,7 +448,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                             emptyState={
                               <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center">
                                 <Package className="w-6 h-6 text-slate-500 mb-2 opacity-50" />
-                                <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">No se encontraron artículos</span>
+                                <span className="text-[10px] uppercase font-black text-muted tracking-wider">No se encontraron artículos</span>
                               </div>
                             }
                           />

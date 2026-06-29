@@ -157,11 +157,11 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const bgClass = theme === 'dark' ? 'bg-slate-900' : 'bg-white';
-  const borderClass = theme === 'dark' ? 'border-slate-700' : 'border-slate-200';
+  const bgClass = theme === 'dark' ? 'bg-surface' : 'bg-white';
+  const borderClass = theme === 'dark' ? 'border-subtle' : 'border-slate-200';
   const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
-  const inputBgClass = theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100';
+  const mutedClass = theme === 'dark' ? 'text-muted' : 'text-slate-500';
+  const inputBgClass = theme === 'dark' ? 'bg-elevated' : 'bg-slate-100';
 
   return (
     <AnimatePresence>
@@ -211,7 +211,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                           onClick={() => { navigate(result.url); onClose(); }}
                           onMouseEnter={() => setSelectedIndex(index)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-left ${
-                            index === selectedIndex ? (theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100') : ''
+                            index === selectedIndex ? (theme === 'dark' ? 'bg-elevated' : 'bg-slate-100') : ''
                           }`}
                         >
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}>

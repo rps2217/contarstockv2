@@ -311,7 +311,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
           className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
-            theme === 'dark' ? 'bg-slate-900 border border-white/10' : 'bg-white border border-slate-200'
+            theme === 'dark' ? 'bg-surface border border-white/10' : 'bg-white border border-slate-200'
           }`}
         >
           {/* Header */}
@@ -334,7 +334,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
             <button 
               onClick={onClose}
               className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+                theme === 'dark' ? 'bg-white/5 text-muted hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
               <X className="w-6 h-6" />
@@ -348,7 +348,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
             <div className="space-y-6 flex flex-col">
               <div>
                 <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                  theme === 'dark' ? 'text-muted' : 'text-slate-500'
                 }`}>Plantilla</label>
                 <div className="flex gap-3">
                   <select
@@ -378,7 +378,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
 
               <div>
                 <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                  theme === 'dark' ? 'text-muted' : 'text-slate-500'
                 }`}>Para (Destinatario)</label>
                 <input
                   type="email"
@@ -395,7 +395,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
 
               <div>
                 <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                  theme === 'dark' ? 'text-muted' : 'text-slate-500'
                 }`}>Asunto</label>
                 <input
                   type="text"
@@ -412,7 +412,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
               <div className="flex-1 flex flex-col min-h-[250px]">
                 <div className="flex items-center justify-between mb-3">
                   <label className={`block text-xs font-black uppercase tracking-widest ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    theme === 'dark' ? 'text-muted' : 'text-slate-500'
                   }`}>Mensaje</label>
                   <span className="text-[10px] text-indigo-500 font-bold bg-indigo-500/10 px-3 py-1 rounded-full">Usa [TABLA_PRODUCTOS] para insertar la tabla</span>
                 </div>
@@ -468,7 +468,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
                     </button>
                     <button
                       onClick={() => setIsEditingTemplate(false)}
-                      className="px-4 py-3 rounded-xl bg-slate-500/20 text-slate-400 hover:text-slate-300 transition-colors"
+                      className="px-4 py-3 rounded-xl bg-slate-500/20 text-muted hover:text-secondary transition-colors"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -480,15 +480,15 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
             {/* Right Column: Preview */}
             <div className="flex flex-col h-full">
               <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>Vista Previa del Correo</label>
               
               <div className={`flex-1 rounded-3xl border overflow-hidden flex flex-col shadow-inner ${
                 theme === 'dark' ? 'bg-white border-white/10' : 'bg-white border-slate-200'
               }`}>
                 <div className="bg-slate-100 border-b border-slate-200 p-5 text-sm text-slate-600 font-medium shrink-0">
-                  <div className="flex items-center"><span className="text-slate-400 w-16 inline-block">Para:</span> {to || '(Sin destinatario)'}</div>
-                  <div className="mt-2 flex items-start"><span className="text-slate-400 w-16 inline-block shrink-0">Asunto:</span> <span className="font-bold text-slate-800">{processText(subject) || '(Sin asunto)'}</span></div>
+                  <div className="flex items-center"><span className="text-muted w-16 inline-block">Para:</span> {to || '(Sin destinatario)'}</div>
+                  <div className="mt-2 flex items-start"><span className="text-muted w-16 inline-block shrink-0">Asunto:</span> <span className="font-bold text-slate-800">{processText(subject) || '(Sin asunto)'}</span></div>
                 </div>
                 <div 
                   className="p-6 overflow-y-auto text-sm text-slate-800"

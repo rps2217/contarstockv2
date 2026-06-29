@@ -52,7 +52,7 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
 
  return (
  <div 
- className="fixed inset-0 z-[1000] bg-slate-950/95 flex flex-col items-center justify-center select-none touch-none animate-in fade-in duration-300"
+ className="fixed inset-0 z-[1000] bg-base/95 flex flex-col items-center justify-center select-none touch-none animate-in fade-in duration-300"
  onPointerDown={() => setIsHolding(true)}
  onPointerUp={() => setIsHolding(false)}
  onPointerLeave={() => setIsHolding(false)}
@@ -78,7 +78,7 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
 
  {/* ICONO CENTRAL RUGERIZADO */}
  <div className="absolute inset-0 flex items-center justify-center">
- <div className={`p-12 rounded-full transition-all duration-300 ${isHolding ? 'bg-blue-600 scale-90 shadow-[0_0_80px_rgba(59,130,246,0.6)] border-4 border-white' : 'bg-slate-900 shadow-2xl border-4 border-white/10'}`}>
+ <div className={`p-12 rounded-full transition-all duration-300 ${isHolding ? 'bg-blue-600 scale-90 shadow-[0_0_80px_rgba(59,130,246,0.6)] border-4 border-white' : 'bg-surface shadow-2xl border-4 border-white/10'}`}>
  {progress >= 100 ? (
  <Unlock className="w-20 h-20 text-white animate-pulse" strokeWidth={3} />
  ) : (

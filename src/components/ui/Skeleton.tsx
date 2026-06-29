@@ -44,7 +44,7 @@ export const SkeletonCard: React.FC<{ lines?: number }> = ({ lines = 3 }) => (
 
 export const SkeletonTable: React.FC<{ rows?: number; cols?: number }> = ({ rows = 5, cols = 4 }) => (
   <div className="space-y-3">
-    <div className="flex gap-4 pb-2 border-b border-slate-800">
+    <div className="flex gap-4 pb-2 border-b border-subtle">
       {Array.from({ length: cols }).map((_, i) => (
         <Skeleton key={i} className={`h-4 ${i === 0 ? 'w-1/4' : 'flex-1'}`} />
       ))}

@@ -72,7 +72,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
   if (hasError) {
     return (
-      <div className={`flex items-center justify-center bg-slate-800 ${placeholderClassName} ${className}`}>
+      <div className={`flex items-center justify-center bg-elevated ${placeholderClassName} ${className}`}>
         {fallback || (
           <div className="flex flex-col items-center text-slate-500">
             <ImageOff className="w-8 h-8" />
@@ -87,7 +87,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     <div ref={containerRef} className={`relative overflow-hidden ${className}`}>
       {/* Placeholder con blur */}
       <div
-        className={`absolute inset-0 bg-slate-800 transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-elevated transition-opacity duration-300 ${
           isLoaded ? 'opacity-0' : 'opacity-100'
         } ${placeholderClassName}`}
         style={{

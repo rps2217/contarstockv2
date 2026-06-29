@@ -81,7 +81,7 @@ export const ItemList: React.FC<ItemListProps> = ({
       <div className={`p-6 rounded-2xl border border-dashed ${
         isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'
       }`}>
-        <p className={`text-center text-xs font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+        <p className={`text-center text-xs font-bold ${isDark ? 'text-slate-500' : 'text-muted'}`}>
           {emptyText}
         </p>
       </div>
@@ -92,7 +92,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+        <h3 className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-muted' : 'text-slate-500'}`}>
           {title}
         </h3>
         <span className={`text-[10px] font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -117,7 +117,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           >
             {/* Index badge */}
             <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black shrink-0 ${
-              isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-500'
+              isDark ? 'bg-white/10 text-muted' : 'bg-slate-100 text-slate-500'
             }`}>
               {index + 1}
             </span>
@@ -151,7 +151,7 @@ export const ItemList: React.FC<ItemListProps> = ({
                     onChange={(e) => setEditQty(parseInt(e.target.value) || 0)}
                     className={`w-16 px-2 py-1 rounded-lg text-center text-sm font-black ${
                       isDark 
-                        ? 'bg-slate-900 border border-white/10 text-white' 
+                        ? 'bg-surface border border-white/10 text-white' 
                         : 'bg-slate-50 border border-slate-200 text-slate-800'
                     }`}
                     autoFocus
@@ -184,7 +184,7 @@ export const ItemList: React.FC<ItemListProps> = ({
                       onClick={() => startEdit(index, item.quantity)}
                       className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Edit3 className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                      <Edit3 className={`w-3.5 h-3.5 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
                     </button>
                   )}
                 </div>

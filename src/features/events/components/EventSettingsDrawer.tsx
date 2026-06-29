@@ -45,7 +45,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={`fixed top-0 right-0 h-full w-80 z-[90] shadow-2xl border-l flex flex-col ${
-              theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              theme === 'dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
             }`}
           >
             <div className="p-6 flex items-center justify-between border-b border-white/5">
@@ -63,7 +63,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
               <button
                 onClick={onClose}
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                  theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                  theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
                 }`}
               >
                 <X className="w-4 h-4" />
@@ -87,7 +87,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                 <div className="flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 text-blue-500" />
                   <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    theme === 'dark' ? 'text-muted' : 'text-slate-500'
                   }`}>Mantenimiento</h5>
                 </div>
                 <button
@@ -114,7 +114,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                 <div className="flex items-center gap-2">
                   <Layout className="w-4 h-4 text-blue-500" />
                   <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    theme === 'dark' ? 'text-muted' : 'text-slate-500'
                   }`}>Visualización</h5>
                 </div>
                 <div 

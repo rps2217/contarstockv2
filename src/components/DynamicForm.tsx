@@ -128,7 +128,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                   className={`h-12 rounded-xl text-sm font-black transition-all border ${
                     values[key] === opt
                       ? 'bg-amber-500 border-amber-500 text-black'
-                      : theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      : theme === 'dark' ? 'bg-white/5 border-white/10 text-muted' : 'bg-slate-50 border-slate-200 text-slate-600'
                   }`}
                 >
                   {opt}
@@ -202,7 +202,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(schema.columns).filter(([_, col]) => col.visible !== false).map(([key, col]) => (
           <div key={key} className="space-y-2">
-            <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+            <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' ? 'text-slate-500' : 'text-muted'}`}>
               {col.label}
               {col.required && <span className="text-rose-500">*</span>}
             </label>

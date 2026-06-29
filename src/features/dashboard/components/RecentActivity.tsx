@@ -45,10 +45,10 @@ export const RecentActivity: React.FC<RecentActivityProps> = memo(({
   const displayItems = items.slice(0, maxItems);
 
   return (
-    <div className="bg-slate-900/30 border border-slate-800/60 rounded-2xl overflow-hidden">
+    <div className="bg-surface/30 border border-subtle/60 rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-4 border-b border-slate-800/60">
-        <h2 className="text-lg font-semibold text-slate-200">
+      <div className="px-4 py-4 border-b border-subtle/60">
+        <h2 className="text-lg font-semibold text-primary">
           {title}
         </h2>
       </div>
@@ -63,11 +63,11 @@ export const RecentActivity: React.FC<RecentActivityProps> = memo(({
           displayItems.map((item, index) => (
             <motion.div
               key={item.id}
-              className="flex items-center justify-between p-4 border-b border-slate-800/60 last:border-0 hover:bg-slate-800/20 transition-colors"
+              className="flex items-center justify-between p-4 border-b border-subtle/60 last:border-0 hover:bg-elevated/20 transition-colors"
             >
               <div className="flex items-center gap-4">
                 {/* Avatar circular */}
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-elevated flex items-center justify-center">
                   <span className={cn(
                     "text-xs font-bold",
                     getIconColorClass(item.iconColor, isDark)
@@ -78,7 +78,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = memo(({
 
                 {/* Content */}
                 <div>
-                  <p className="text-sm font-medium text-slate-200">
+                  <p className="text-sm font-medium text-primary">
                     {item.title}
                   </p>
                   <p className="text-xs text-slate-500">
@@ -91,7 +91,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = memo(({
               {/* Count Badge */}
               {item.count !== undefined && (
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-slate-300">
+                  <p className="text-sm font-semibold text-secondary">
                     {item.count}
                   </p>
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider">

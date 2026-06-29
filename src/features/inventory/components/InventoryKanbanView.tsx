@@ -48,7 +48,7 @@ const KanbanCard: React.FC<{
   return (
     <button
       onClick={onClick}
-      className="w-full p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-slate-600 transition-colors text-left active:scale-[0.98]"
+      className="w-full p-2 rounded-lg bg-elevated/50 border border-subtle/50 hover:border-slate-600 transition-colors text-left active:scale-[0.98]"
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] font-bold text-white truncate max-w-[120px]">
@@ -60,7 +60,7 @@ const KanbanCard: React.FC<{
       </div>
       <div className="mt-1 flex items-center gap-2">
         {product.category && (
-          <span className="text-[7px] font-medium px-1 py-0.5 rounded bg-slate-700/50 text-slate-400">
+          <span className="text-[7px] font-medium px-1 py-0.5 rounded bg-slate-700/50 text-muted">
             {product.category.slice(0, 8)}
           </span>
         )}
@@ -178,7 +178,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
       {/* Controls */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-bold text-slate-400">
+          <span className="text-sm font-bold text-muted">
             Total: <span className="text-white">{products.length}</span>
           </span>
         </div>
@@ -194,7 +194,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
               className={`px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-colors ${
                 groupBy === opt.id 
                   ? 'bg-indigo-600 text-white' 
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  : 'bg-elevated text-muted hover:bg-slate-700'
               }`}
             >
               {opt.label}
@@ -224,7 +224,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
                   <span className={`text-[10px] font-black uppercase tracking-wider ${colors.color}`}>
                     {String(col.title).slice(0, 12)}
                   </span>
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full bg-slate-800 text-white`}>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full bg-elevated text-white`}>
                     {(col as any).items?.length || 0}
                   </span>
                 </div>

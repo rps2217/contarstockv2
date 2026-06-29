@@ -90,7 +90,7 @@ const IndustrialItemRow = memo(({
         relative flex items-center gap-4 px-4 py-3 cursor-pointer transition-all duration-150
         ${isActive 
           ? 'bg-blue-500/10 border-l-4 border-l-blue-400' 
-          : 'bg-slate-900 hover:bg-slate-800 border-l-4 border-l-transparent'
+          : 'bg-surface hover:bg-elevated border-l-4 border-l-transparent'
         }
       `}
     >
@@ -100,7 +100,7 @@ const IndustrialItemRow = memo(({
           ? 'bg-blue-500/20 text-blue-400' 
           : hasVariance 
             ? variance.bgColor + ' ' + variance.color
-            : 'bg-slate-800 text-slate-400'
+            : 'bg-elevated text-muted'
       }`}>
         {hasVariance ? variance.icon : <Barcode className="w-4 h-4" />}
       </div>
@@ -108,7 +108,7 @@ const IndustrialItemRow = memo(({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-bold truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>
+          <span className={`text-sm font-bold truncate ${isActive ? 'text-white' : 'text-secondary'}`}>
             {item.name}
           </span>
           {hasVariance && (
@@ -145,9 +145,9 @@ const IndustrialItemRow = memo(({
           e.stopPropagation();
           onEdit();
         }}
-        className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
+        className="w-8 h-8 rounded-lg bg-elevated hover:bg-slate-700 flex items-center justify-center transition-colors"
       >
-        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+        <Edit3 className="w-3.5 h-3.5 text-muted" />
       </button>
     </div>
   );
@@ -174,10 +174,10 @@ export const IndustrialScannerList: React.FC<IndustrialScannerListProps> = memo(
 
   const renderEmptyState = useCallback(() => (
     <div className="flex-1 flex flex-col items-center justify-center py-20">
-      <div className="w-20 h-20 rounded-2xl bg-slate-800/50 flex items-center justify-center mb-4">
+      <div className="w-20 h-20 rounded-2xl bg-elevated/50 flex items-center justify-center mb-4">
         <Barcode className="w-10 h-10 text-slate-600" />
       </div>
-      <p className="text-sm font-bold text-slate-400 mb-1">
+      <p className="text-sm font-bold text-muted mb-1">
         {searchQuery ? 'Sin resultados' : 'Sin escaneos'}
       </p>
       <p className="text-xs text-slate-500">
@@ -187,9 +187,9 @@ export const IndustrialScannerList: React.FC<IndustrialScannerListProps> = memo(
   ), [searchQuery]);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-slate-950">
+    <div className="flex-1 min-h-0 flex flex-col bg-base">
       {/* Header Stats */}
-      <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-800">
+      <div className="px-4 py-3 bg-surface/50 border-b border-subtle">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">

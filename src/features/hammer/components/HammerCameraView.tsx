@@ -70,7 +70,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  
  // Mini productivity bar
  const productivityBar = stats ? (
-   <div className="h-12 bg-slate-900/90 border-b border-white/10 flex items-center px-4 gap-4">
+   <div className="h-12 bg-surface/90 border-b border-white/10 flex items-center px-4 gap-4">
      <div className="flex items-center gap-1.5">
        <Zap className="w-3.5 h-3.5 text-emerald-400" />
        <span className="text-xs font-bold text-emerald-400">{stats.itemsPerMinute.toFixed(1)}</span>
@@ -84,8 +84,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
      </div>
      <div className="w-px h-6 bg-white/10" />
      <div className="flex items-center gap-1.5">
-       <Clock className="w-3.5 h-3.5 text-slate-400" />
-       <span className="text-xs font-bold text-slate-300">{formattedDuration || '00:00'}</span>
+       <Clock className="w-3.5 h-3.5 text-muted" />
+       <span className="text-xs font-bold text-secondary">{formattedDuration || '00:00'}</span>
      </div>
      {stats.expectedItems !== undefined && (
        <>
@@ -109,7 +109,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
 
  // Footer with edit mode indicator + sync status
  const bottomContent = (
-   <div className="absolute bottom-0 left-0 right-0 bg-slate-900 border-t border-white/10 flex flex-col z-50">
+   <div className="absolute bottom-0 left-0 right-0 bg-surface border-t border-white/10 flex flex-col z-50">
      {/* Sync Status Bar */}
      {(pendingWrites > 0 || hasSyncError) && (
        <div className={`h-10 flex items-center px-4 justify-between ${hasSyncError ? 'bg-red-900/30 border-b border-red-500/30' : 'border-b border-white/5'}`}>
@@ -140,7 +140,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
      <div className="h-14 flex items-center px-4 justify-between border-b border-white/5">
        <div className="flex items-center gap-2">
          <Edit3 className="w-4 h-4 text-blue-400" />
-         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Modo Edición</span>
+         <span className="text-[10px] font-black uppercase tracking-widest text-muted">Modo Edición</span>
        </div>
        <span className="text-xs text-slate-500">Toca item para editar</span>
      </div>

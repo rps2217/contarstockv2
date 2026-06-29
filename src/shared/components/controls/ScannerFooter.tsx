@@ -21,7 +21,7 @@ export const ScannerFooter: React.FC<ScannerFooterProps> = ({
  multiplier, unitsPerBox, isTriggerActive, onMultiplierChange, onOpenManual, onTriggerStart, onTriggerEnd, onOpenMenu 
 }) => {
  return (
- <div className="h-28 shrink-0 bg-slate-950 border-t-2 border-white/5 flex items-center px-4 gap-3 pb-safe-area shadow-[0_-20px_50px_rgba(0,0,0,0.8)] z-50 relative">
+ <div className="h-28 shrink-0 bg-base border-t-2 border-white/5 flex items-center px-4 gap-3 pb-safe-area shadow-[0_-20px_50px_rgba(0,0,0,0.8)] z-50 relative">
  
  {/* SELECTOR DE MODO / MULTIPLICADOR */}
  <div className="flex flex-col gap-2">
@@ -33,7 +33,7 @@ export const ScannerFooter: React.FC<ScannerFooterProps> = ({
  </button>
  <button 
  onClick={onOpenManual}
- className="h-12 w-14 bg-slate-800 text-white rounded-2xl flex items-center justify-center active:bg-slate-700 transition-colors border border-white/5"
+ className="h-12 w-14 bg-elevated text-white rounded-2xl flex items-center justify-center active:bg-slate-700 transition-colors border border-white/5"
  >
  <Keyboard className="w-5 h-5" />
  </button>
@@ -72,14 +72,14 @@ export const ScannerFooter: React.FC<ScannerFooterProps> = ({
  BOX {unitsPerBox}
  </button>
  ) : (
- <div className="h-12 w-14 bg-slate-900/50 rounded-2xl flex items-center justify-center opacity-20 border border-white/5">
+ <div className="h-12 w-14 bg-surface/50 rounded-2xl flex items-center justify-center opacity-20 border border-white/5">
  <Package className="w-5 h-5 text-white" />
  </div>
  )}
  
  <button 
  onClick={onOpenMenu}
- className={`h-12 w-14 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center active:bg-slate-800 transition-all ${onOpenMenu ? 'text-blue-500' : 'text-slate-500'}`}
+ className={`h-12 w-14 bg-surface border border-white/10 rounded-2xl flex items-center justify-center active:bg-elevated transition-all ${onOpenMenu ? 'text-blue-500' : 'text-slate-500'}`}
  >
  <MoreHorizontal className="w-5 h-5" />
  </button>

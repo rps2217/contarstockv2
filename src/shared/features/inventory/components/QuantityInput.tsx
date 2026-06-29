@@ -74,7 +74,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
     <div className={`space-y-2 ${className}`}>
       {label && (
         <label className={`text-[10px] font-black uppercase tracking-widest ${
-          isDark ? 'text-slate-400' : 'text-slate-500'
+          isDark ? 'text-muted' : 'text-slate-500'
         }`}>
           {label}
         </label>
@@ -90,7 +90,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
             value <= min 
               ? 'text-slate-600' 
               : isDark 
-                ? 'text-slate-400' 
+                ? 'text-muted' 
                 : 'text-slate-600'
           }`}
         >
@@ -129,7 +129,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
             value >= max 
               ? 'text-slate-600' 
               : isDark 
-                ? 'text-slate-400' 
+                ? 'text-muted' 
                 : 'text-slate-600'
           }`}
         >
@@ -139,7 +139,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
 
       {/* Range indicator */}
       <p className={`text-[9px] text-center font-mono ${
-        isDark ? 'text-slate-500' : 'text-slate-400'
+        isDark ? 'text-slate-500' : 'text-muted'
       }`}>
         {min !== 1 && `Mín: ${min}`}
         {min !== 1 && max !== 99999 && ' • '}

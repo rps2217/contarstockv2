@@ -23,7 +23,7 @@ export const SyncStatusCards: React.FC<Props> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Connection status */}
-      <div className="bg-slate-900/40 border border-slate-800/80 p-4.5 rounded-2xl flex items-center justify-between">
+      <div className="bg-surface/40 border border-subtle/80 p-4.5 rounded-2xl flex items-center justify-between">
         <div>
           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">Estado del Dispositivo</span>
           <span className="text-sm font-black uppercase mt-1 block flex items-center gap-1.5">
@@ -42,16 +42,16 @@ export const SyncStatusCards: React.FC<Props> = ({
       </div>
 
       {/* Sync Queue Badge */}
-      <div className="bg-slate-900/40 border border-slate-800/80 p-4.5 rounded-2xl">
+      <div className="bg-surface/40 border border-subtle/80 p-4.5 rounded-2xl">
         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">Pendientes en Cola</span>
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-2xl font-black text-white">{totalPending}</span>
-          <span className="text-[10px] text-slate-400 font-mono">Modificados</span>
+          <span className="text-[10px] text-muted font-mono">Modificados</span>
         </div>
       </div>
 
       {/* Database Health */}
-      <div className="bg-slate-900/40 border border-slate-800/80 p-4.5 rounded-2xl">
+      <div className="bg-surface/40 border border-subtle/80 p-4.5 rounded-2xl">
         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">Canal Cloud</span>
         <span className="text-sm font-black uppercase mt-1 block flex items-center gap-1.5">
           {isSupabaseConnected ? (
@@ -63,9 +63,9 @@ export const SyncStatusCards: React.FC<Props> = ({
       </div>
 
       {/* Last Sync */}
-      <div className="bg-slate-900/40 border border-slate-800/80 p-4.5 rounded-2xl">
+      <div className="bg-surface/40 border border-subtle/80 p-4.5 rounded-2xl">
         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">Última Reconciliación</span>
-        <span className="text-xs font-bold text-slate-400 font-mono mt-1.5 block">
+        <span className="text-xs font-bold text-muted font-mono mt-1.5 block">
           {lastSyncTime ? format(new Date(lastSyncTime), 'HH:mm:ss dd/MM', { locale: es }) : 'Nunca'}
         </span>
       </div>

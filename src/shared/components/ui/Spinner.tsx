@@ -46,10 +46,10 @@ export const FullPageLoader = memo(({
 }: {
   message?: string;
 }) => (
-  <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/90 z-50">
+  <div className="fixed inset-0 flex flex-col items-center justify-center bg-base/90 z-50">
     <Spinner size="xl" color="primary" />
     {message && (
-      <p className="mt-4 text-sm font-medium text-slate-400 uppercase tracking-widest">
+      <p className="mt-4 text-sm font-medium text-muted uppercase tracking-widest">
         {message}
       </p>
     )}

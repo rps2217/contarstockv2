@@ -71,7 +71,7 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
             <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">SKU</div>
             <div className="text-xl font-black text-white font-mono tracking-wider">{barcode}</div>
-            <div className="text-sm text-slate-400 mt-1 uppercase truncate">{productName}</div>
+            <div className="text-sm text-muted mt-1 uppercase truncate">{productName}</div>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
             CONFIRMAR
           </button>
           <p className="text-center text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-            Presiona <span className="text-slate-400">ENTER</span> para confirmar
+            Presiona <span className="text-muted">ENTER</span> para confirmar
           </p>
         </div>
       </motion.div>

@@ -16,7 +16,7 @@ export const SyncGroupCard: React.FC<Props> = ({ group, uiStatus, progress }) =>
   const tableName = group.tableName || (group.sessionIds.length > 0 ? `Bulto ${group.sessionIds[0]}` : 'N/A');
   
   return (
-    <div className={`bg-white dark:bg-slate-900 md:hover:shadow-md md:hover:scale-[1.01] p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all ${
+    <div className={`bg-white dark:bg-surface md:hover:shadow-md md:hover:scale-[1.01] p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all ${
       isOrphan ? 'border-amber-200 bg-amber-50/30' : 
       isDynamic ? 'border-indigo-100 dark:border-indigo-900/30' :
       (isHammer ? 'border-blue-100 dark:border-blue-900/30' : 'border-slate-100 dark:border-white/5')
@@ -42,7 +42,7 @@ export const SyncGroupCard: React.FC<Props> = ({ group, uiStatus, progress }) =>
             {isDynamic && <span className="shrink-0 text-[8px] font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase">Dinámico</span>}
           </div>
           
-          <div className="flex items-center text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium uppercase truncate">
+          <div className="flex items-center text-[10px] md:text-xs text-slate-500 dark:text-muted font-medium uppercase truncate">
             {isOrphan ? 'Picks sin bulto asignado' : 
              isDynamic ? `Tabla: ${tableName}` :
              <span className="flex items-center gap-1.5">

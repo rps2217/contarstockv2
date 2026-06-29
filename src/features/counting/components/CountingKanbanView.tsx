@@ -66,7 +66,7 @@ const SessionCard: React.FC<{
         isHighContrast 
           ? 'bg-black border-yellow-400/30 hover:border-yellow-400' 
           : isDark 
-            ? 'bg-slate-800/50 border-white/10 hover:border-white/20' 
+            ? 'bg-elevated/50 border-white/10 hover:border-white/20' 
             : 'bg-white border-slate-200 hover:border-slate-300'
       }`}
     >
@@ -86,13 +86,13 @@ const SessionCard: React.FC<{
       <div className="flex items-center gap-3 text-[10px]">
         <div className="flex items-center gap-1">
           <Package className={`w-3 h-3 ${isHighContrast ? 'text-yellow-500' : 'text-slate-500'}`} />
-          <span className={isHighContrast ? 'text-yellow-400' : isDark ? 'text-slate-400' : 'text-slate-600'}>
+          <span className={isHighContrast ? 'text-yellow-400' : isDark ? 'text-muted' : 'text-slate-600'}>
             {session.totalScans || 0}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <Zap className={`w-3 h-3 ${isHighContrast ? 'text-yellow-500' : 'text-slate-500'}`} />
-          <span className={isHighContrast ? 'text-yellow-400' : isDark ? 'text-slate-400' : 'text-slate-600'}>
+          <span className={isHighContrast ? 'text-yellow-400' : isDark ? 'text-muted' : 'text-slate-600'}>
             {session.totalQuantity || 0}
           </span>
         </div>
@@ -188,7 +188,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
       closed: { color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
       in_progress: { color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30' },
       paused: { color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30' },
-      active: { color: 'text-slate-400', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/30' },
+      active: { color: 'text-muted', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/30' },
       sync_synced: { color: 'text-cyan-400', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/30' },
       sync_pending: { color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30' },
       sync_error: { color: 'text-rose-400', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/30' },
@@ -203,7 +203,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
         title: data.title,
         icon: data.icon,
         sessions: data.sessions,
-        ...(colorMap[key] || { color: 'text-slate-400', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/30' }),
+        ...(colorMap[key] || { color: 'text-muted', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/30' }),
       }))
       .sort((a, b) => b.sessions.length - a.sessions.length);
   }, [sessions, groupBy]);
@@ -213,7 +213,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
       {/* Controls */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span className={`text-sm font-bold ${isHighContrast ? 'text-yellow-400' : isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <span className={`text-sm font-bold ${isHighContrast ? 'text-yellow-400' : isDark ? 'text-muted' : 'text-slate-600'}`}>
             Total: <span className={isHighContrast ? 'text-yellow-300' : isDark ? 'text-white' : 'text-slate-900'}>{sessions.length}</span>
           </span>
         </div>
@@ -230,7 +230,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
                 groupBy === opt.id 
                   ? 'bg-indigo-600 text-white' 
                   : isDark 
-                    ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' 
+                    ? 'bg-elevated text-muted hover:bg-slate-700' 
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -260,7 +260,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
                   <span className={`text-[10px] font-black uppercase tracking-wider ${col.color}`}>
                     {col.title}
                   </span>
-                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-white`}>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full bg-elevated text-white`}>
                     {col.sessions.length}
                   </span>
                 </div>

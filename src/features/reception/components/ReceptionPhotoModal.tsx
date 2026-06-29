@@ -27,7 +27,7 @@ export const ReceptionPhotoModal: React.FC<ReceptionPhotoModalProps> = ({
             </button>
           </div>
           
-          <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg bg-surface rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-white/5 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Etiqueta Logística</span>

@@ -26,12 +26,12 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting, t
   };
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-100' : 'bg-slate-900 border-white/5';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-100' : 'bg-surface border-white/5';
   const cardText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-800' : 'text-white';
-  const cardSubtext = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-400';
+  const cardSubtext = isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-muted';
   const cardHover = isHighContrast ? 'hover:border-yellow-300' : isLight ? 'hover:border-blue-500/50' : 'hover:border-blue-500/50';
   const iconBg = isHighContrast ? 'bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-blue-50 text-blue-500' : 'bg-blue-500/10 text-blue-500';
-  const arrowBg = isHighContrast ? 'bg-yellow-900/20 text-yellow-400' : isLight ? 'bg-slate-100 text-slate-400' : 'bg-slate-800 text-slate-400';
+  const arrowBg = isHighContrast ? 'bg-yellow-900/20 text-yellow-400' : isLight ? 'bg-slate-100 text-muted' : 'bg-elevated text-muted';
   const inputUnitBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-100' : 'bg-black/40 border-white/5';
 
   return (

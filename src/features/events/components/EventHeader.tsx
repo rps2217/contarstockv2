@@ -23,7 +23,7 @@ export const EventHeader: React.FC<EventHeaderProps> = memo(({
 }) => {
   return (
     <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-      theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-white/80 border-slate-200 shadow-sm'
+      theme === 'dark' ? 'bg-base/40 border-white/5' : 'bg-white/80 border-slate-200 shadow-sm'
     }`}>
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
@@ -35,7 +35,7 @@ export const EventHeader: React.FC<EventHeaderProps> = memo(({
           <div>
             <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none">Control de Eventos</h1>
             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-              theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+              theme === 'dark' ? 'text-slate-500' : 'text-muted'
             }`}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               {totalCount} Registros Totales

@@ -33,7 +33,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
     secondary: {
       dark: 'bg-brand-dark hover:bg-brand-dark/80 text-white border-white/5',
       light: 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm',
-      icon: 'text-slate-400'
+      icon: 'text-muted'
     },
     danger: {
       dark: 'bg-rose-500 hover:bg-rose-400 text-white border-rose-500/20 shadow-lg shadow-rose-500/20',
@@ -56,9 +56,9 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
       icon: 'text-blue-500'
     },
     ghost: {
-      dark: 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10',
+      dark: 'bg-white/5 border-white/10 text-muted hover:text-white hover:bg-white/10',
       light: 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200',
-      icon: 'text-slate-400'
+      icon: 'text-muted'
     }
   };
 
@@ -89,7 +89,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
             <button
               onClick={onClearSelection}
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               <X className="w-4 h-4" />
@@ -101,7 +101,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
               theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                theme === 'dark' ? 'text-slate-500' : 'text-muted'
               }`}>Operaciones Disponibles</p>
               
               <div className="space-y-2">

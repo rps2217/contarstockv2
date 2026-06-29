@@ -111,7 +111,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
             onChange={(e) => setSearch(e.target.value)}
             className={`w-full pl-12 pr-12 py-3.5 rounded-2xl text-base font-bold border transition-all outline-none shadow-md ${
               theme === 'dark' 
-                ? 'bg-slate-900/60 border-white/5 text-white placeholder-stone-500 focus:bg-slate-900/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20' 
+                ? 'bg-surface/60 border-white/5 text-white placeholder-stone-500 focus:bg-surface/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20' 
                 : 'bg-stone-50 border-stone-200 text-stone-900 placeholder-stone-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10'
             }`}
           />
@@ -133,7 +133,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
             isPanelOpen
               ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
               : (theme === 'dark'
-                ? 'bg-slate-900/60 border-white/5 text-stone-300 hover:bg-slate-900/90 hover:text-indigo-400'
+                ? 'bg-surface/60 border-white/5 text-stone-300 hover:bg-surface/90 hover:text-indigo-400'
                 : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200 hover:text-stone-950')
           }`}
           title="Ver filtros y opciones avanzadas"
@@ -167,7 +167,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className={`overflow-hidden rounded-2xl border ${
               theme === 'dark'
-                ? 'bg-slate-900/70 border-white/5 shadow-2xl backdrop-blur-md'
+                ? 'bg-surface/70 border-white/5 shadow-2xl backdrop-blur-md'
                 : 'bg-stone-50 border-stone-200 shadow-md'
             }`}
           >

@@ -38,11 +38,11 @@ export const SupabaseAuditorModal: React.FC<Props> = ({ isOpen, onClose, theme =
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/10';
-  const overlayBg = isHighContrast ? 'bg-yellow-950/80' : 'bg-slate-950/80';
+  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-surface border-white/10';
+  const overlayBg = isHighContrast ? 'bg-yellow-950/80' : 'bg-base/80';
   const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-200' : 'border-white/5';
   const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const subtitleText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-400';
+  const subtitleText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted';
   const accentBg = isHighContrast ? 'bg-yellow-900/30 border-yellow-400/50' : isLight ? 'bg-indigo-50 border-indigo-200' : 'bg-indigo-500/10 border-indigo-500/30';
   const accentIcon = isHighContrast ? 'text-yellow-400' : isLight ? 'text-indigo-500' : 'text-indigo-400';
   const bannerBg = isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-indigo-50 border-indigo-200' : 'bg-gradient-to-r from-indigo-950/40 to-slate-950 border-white/5';
@@ -119,14 +119,14 @@ const ModalHeader: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'h
           <h2 className={`text-xl md:text-2xl font-black italic uppercase tracking-tighter ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white'}`}>
             Auditor de Tablas <span className={isHighContrast ? 'text-yellow-300' : 'text-gradient-blue'}>Supabase</span>
           </h2>
-          <p className={`text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1 ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1 ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted'}`}>
             Herramienta de Diagnóstico, Depuración y Limpieza para Postgres
           </p>
         </div>
       </div>
       <button 
         onClick={onClose}
-        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isHighContrast ? 'bg-yellow-900/20 hover:bg-yellow-900/30 border border-yellow-400/30 text-yellow-400 hover:text-yellow-300' : isLight ? 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500' : 'bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white'}`}
+        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isHighContrast ? 'bg-yellow-900/20 hover:bg-yellow-900/30 border border-yellow-400/30 text-yellow-400 hover:text-yellow-300' : isLight ? 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500' : 'bg-white/5 hover:bg-white/10 border border-white/5 text-muted hover:text-white'}`}
       >
         <X className="w-5 h-5" />
       </button>
@@ -142,7 +142,7 @@ const AuditBanner: React.FC<{ onAudit: () => void; theme?: 'dark' | 'light' | 'h
     <div className={`p-6 rounded-[2rem] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${isHighContrast ? 'bg-yellow-950/20 border border-yellow-400/30' : isLight ? 'bg-indigo-50 border border-indigo-200' : 'bg-gradient-to-r from-indigo-950/40 to-slate-950 border border-white/5'}`}>
       <div className="space-y-2">
         <h3 className={`text-lg font-black italic uppercase tracking-tight ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white'}`}>¿Cómo funciona esta auditoría?</h3>
-        <p className={`text-xs max-w-xl leading-relaxed ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+        <p className={`text-xs max-w-xl leading-relaxed ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-muted'}`}>
           Esta herramienta ejecuta consultas de baja prioridad directamente contra tu servidor de Supabase para comprobar de forma interactiva la integridad de los esquemas, contar el número de registros cargados y detectar tablas descontinuadas o innecesarias.
         </p>
       </div>
@@ -177,7 +177,7 @@ const SystemTablesList: React.FC<{
           return (
             <div 
               key={table.name}
-              className={`p-4 rounded-2xl border flex items-center justify-between hover:border-white/10 transition-colors ${isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-white/5'}`}
+              className={`p-4 rounded-2xl border flex items-center justify-between hover:border-white/10 transition-colors ${isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-base border-white/5'}`}
             >
               <div className="space-y-1">
                 <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-slate-100'}`}>
@@ -228,7 +228,7 @@ const LegacyTablesList: React.FC<{
             value={customTable}
             onChange={(e) => onCustomTableChange(e.target.value)}
             placeholder="Ej: DETALLE_COMPRAS"
-            className={`px-3 py-1.5 rounded-xl text-xs uppercase focus:outline-none ${isHighContrast ? 'bg-yellow-950 border border-yellow-400/30 text-yellow-400 placeholder:text-yellow-600' : isLight ? 'bg-slate-100 border border-slate-200 text-slate-900 placeholder:text-slate-400' : 'bg-slate-950 border border-white/10 text-white placeholder:text-slate-600'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs uppercase focus:outline-none ${isHighContrast ? 'bg-yellow-950 border border-yellow-400/30 text-yellow-400 placeholder:text-yellow-600' : isLight ? 'bg-slate-100 border border-slate-200 text-slate-900 placeholder:text-muted' : 'bg-base border border-white/10 text-white placeholder:text-slate-600'}`}
           />
           <button 
             onClick={onAddTable}
@@ -249,7 +249,7 @@ const LegacyTablesList: React.FC<{
               className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
                 status?.exists === true 
                   ? (isHighContrast ? 'bg-red-500/10 border-red-500/30' : isLight ? 'bg-rose-50 border-rose-200' : 'bg-rose-500/5 border-rose-500/20')
-                  : (isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-white/5')
+                  : (isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-base/60 border-white/5')
               }`}
             >
               <div className="flex items-center gap-3">
@@ -258,11 +258,11 @@ const LegacyTablesList: React.FC<{
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggleSelection(table)}
-                    className={`w-4 h-4 border rounded focus:ring-indigo-500 shrink-0 cursor-pointer ${isHighContrast ? 'bg-yellow-950 border-yellow-400 text-yellow-400' : isLight ? 'bg-white border-slate-300 text-indigo-600' : 'bg-slate-950 border-white/10 text-indigo-600'}`}
+                    className={`w-4 h-4 border rounded focus:ring-indigo-500 shrink-0 cursor-pointer ${isHighContrast ? 'bg-yellow-950 border-yellow-400 text-yellow-400' : isLight ? 'bg-white border-slate-300 text-indigo-600' : 'bg-base border-white/10 text-indigo-600'}`}
                   />
                 )}
                 <div className="space-y-1">
-                  <span className={`text-xs font-black uppercase tracking-wider ${status?.exists === true ? (isHighContrast ? 'text-red-400' : isLight ? 'text-rose-600' : 'text-rose-400') : (isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-500')}`}>
+                  <span className={`text-xs font-black uppercase tracking-wider ${status?.exists === true ? (isHighContrast ? 'text-red-400' : isLight ? 'text-rose-600' : 'text-rose-400') : (isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-slate-500')}`}>
                     {table}
                   </span>
                   <p className={`text-[10px] leading-none ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-500'}`}>
@@ -298,7 +298,7 @@ const TableStatus: React.FC<{
   if (status?.exists === true) {
     return (
       <div className="flex items-center gap-2">
-        <span className={`text-[10px] font-bold rounded border px-2 py-0.5 ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400 border-yellow-400/30' : isLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-slate-400 border-white/5'}`}>
+        <span className={`text-[10px] font-bold rounded border px-2 py-0.5 ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400 border-yellow-400/30' : isLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-muted border-white/5'}`}>
           {status.count === 0 ? '0 filas' : `${status.count} fila(s)`}
         </span>
         {showExtra ? (
@@ -325,7 +325,7 @@ const TableStatus: React.FC<{
   return (
     <button 
       onClick={onTest}
-      className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-colors ${isHighContrast ? 'bg-yellow-900/20 hover:bg-yellow-900/30 border border-yellow-400/30 text-yellow-400' : isLight ? 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600' : 'bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white'}`}
+      className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-colors ${isHighContrast ? 'bg-yellow-900/20 hover:bg-yellow-900/30 border border-yellow-400/30 text-yellow-400' : isLight ? 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600' : 'bg-white/5 hover:bg-white/10 border border-white/5 text-muted hover:text-white'}`}
     >
       Test
     </button>
@@ -343,31 +343,31 @@ const SQLGeneratorPanel: React.FC<{
   const isLight = theme === 'light';
   
   return (
-    <div className={`p-6 rounded-[2.5rem] flex flex-col justify-between h-full space-y-6 ${isHighContrast ? 'bg-yellow-950 border border-yellow-400/30' : isLight ? 'bg-slate-100 border border-slate-200' : 'bg-slate-950 border border-white/5'}`}>
+    <div className={`p-6 rounded-[2.5rem] flex flex-col justify-between h-full space-y-6 ${isHighContrast ? 'bg-yellow-950 border border-yellow-400/30' : isLight ? 'bg-slate-100 border border-slate-200' : 'bg-base border border-white/5'}`}>
       <div>
         <div className={`flex items-center gap-2.5 mb-2 ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white'}`}>
           <Terminal className={`w-5 h-5 ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-indigo-500' : 'text-indigo-400'}`} />
           <h4 className={`text-sm font-black uppercase italic tracking-tight ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white'}`}>SQL Terminal Clean Up</h4>
         </div>
         
-        <p className={`text-xs leading-relaxed ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+        <p className={`text-xs leading-relaxed ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-muted'}`}>
           Las políticas de seguridad nativas de Postgres de Supabase previenen que clientes web anónimos ejecuten comandos directos de manipulación de tablas (DDL) sin autenticación de superusuario. 
         </p>
 
         <div className={`mt-4 p-4.5 rounded-2xl border space-y-2.5 ${isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-indigo-50 border-indigo-200' : 'bg-indigo-500/5 border-indigo-500/10'}`}>
           <h5 className={`text-[10px] uppercase font-black tracking-widest ${isHighContrast ? 'text-yellow-400' : isLight ? 'text-indigo-600' : 'text-indigo-400'}`}>Instrucciones de Limpieza de Tablas:</h5>
-          <ol className={`text-[11px] space-y-2 leading-relaxed list-decimal list-inside ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          <ol className={`text-[11px] space-y-2 leading-relaxed list-decimal list-inside ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-muted'}`}>
             <li>Inicia sesión en tu cuenta de <strong className={isHighContrast ? 'text-yellow-300' : isLight ? 'text-indigo-600' : 'text-indigo-300'}>Supabase</strong>.</li>
             <li>Haz clic en la pestaña <strong className={isHighContrast ? 'text-yellow-300' : isLight ? 'text-indigo-600' : 'text-indigo-300'}>"SQL Editor"</strong> en el panel izquierdo.</li>
             <li>Selecciona las tablas recomendadas para eliminación a la izquierda.</li>
             <li>Presiona el botón <strong className={isHighContrast ? 'text-yellow-300' : isLight ? 'text-indigo-600' : 'text-indigo-300'}>"Copiar Script de Limpieza"</strong> abajo.</li>
-            <li>Pega el código en el editor SQL de Supabase y haz clic en <strong className={`px-2 py-0.5 rounded font-bold ${isHighContrast ? 'bg-yellow-950 text-yellow-400 border border-yellow-400/30' : isLight ? 'bg-white border border-slate-200 text-slate-900' : 'bg-slate-900 border border-white/10 text-white'}`}>"Run"</strong>.</li>
+            <li>Pega el código en el editor SQL de Supabase y haz clic en <strong className={`px-2 py-0.5 rounded font-bold ${isHighContrast ? 'bg-yellow-950 text-yellow-400 border border-yellow-400/30' : isLight ? 'bg-white border border-slate-200 text-slate-900' : 'bg-surface border border-white/10 text-white'}`}>"Run"</strong>.</li>
           </ol>
         </div>
 
         {/* Generated Code Window */}
-        <div className={`mt-5 rounded-2xl overflow-hidden border shadow-lg select-all ${isHighContrast ? 'bg-yellow-950/50 border-yellow-400/30' : isLight ? 'bg-slate-200 border-slate-200' : 'bg-slate-900/50 border-white/10'}`}>
-          <div className={`h-9 flex items-center justify-between px-4 border-b ${isHighContrast ? 'bg-yellow-900/30 border-yellow-400/30' : isLight ? 'bg-slate-200 border-slate-200' : 'bg-slate-900 border-white/5'}`}>
+        <div className={`mt-5 rounded-2xl overflow-hidden border shadow-lg select-all ${isHighContrast ? 'bg-yellow-950/50 border-yellow-400/30' : isLight ? 'bg-slate-200 border-slate-200' : 'bg-surface/50 border-white/10'}`}>
+          <div className={`h-9 flex items-center justify-between px-4 border-b ${isHighContrast ? 'bg-yellow-900/30 border-yellow-400/30' : isLight ? 'bg-slate-200 border-slate-200' : 'bg-surface border-white/5'}`}>
             <span className={`text-[9px] font-bold uppercase tracking-wider ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-500'}`}>SQL Editor Snippet</span>
             <ShieldCheck className={`w-3.5 h-3.5 ${isHighContrast ? 'text-green-400' : isLight ? 'text-emerald-500' : 'text-emerald-400'}`} />
           </div>
@@ -384,7 +384,7 @@ const SQLGeneratorPanel: React.FC<{
           className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
             hasSelection
               ? (isHighContrast ? 'bg-yellow-400 text-black hover:bg-yellow-300 shadow-yellow-400/15 active:scale-95' : isLight ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/15 active:scale-95' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/15 active:scale-95')
-              : (isHighContrast ? 'bg-yellow-900/20 text-yellow-500 cursor-not-allowed border border-yellow-400/30' : isLight ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300' : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5 shadow-none')
+              : (isHighContrast ? 'bg-yellow-900/20 text-yellow-500 cursor-not-allowed border border-yellow-400/30' : isLight ? 'bg-slate-200 text-muted cursor-not-allowed border border-slate-300' : 'bg-elevated text-slate-500 cursor-not-allowed border border-white/5 shadow-none')
           }`}
         >
           <Copy className="w-4 h-4" />
@@ -400,14 +400,14 @@ const ModalFooter: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'h
   const isLight = theme === 'light';
   
   return (
-    <div className={`p-6 md:p-8 border-t flex items-center justify-between shrink-0 rounded-b-[2.5rem] ${isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-white/5'}`}>
+    <div className={`p-6 md:p-8 border-t flex items-center justify-between shrink-0 rounded-b-[2.5rem] ${isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-base border-white/5'}`}>
       <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider ${isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-500'}`}>
         <HelpCircle className="w-4 h-4" />
         Las operaciones DROP TABLE son destructivas e irreversibles. Úsalas con precaución.
       </div>
       <button
         onClick={onClose}
-        className={`px-5 py-2.5 font-extrabold uppercase text-[10px] tracking-wider rounded-xl transition-all ${isHighContrast ? 'bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-400 border border-yellow-400/30' : isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 border border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-white border border-white/5'}`}
+        className={`px-5 py-2.5 font-extrabold uppercase text-[10px] tracking-wider rounded-xl transition-all ${isHighContrast ? 'bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-400 border border-yellow-400/30' : isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 border border-slate-300' : 'bg-elevated hover:bg-slate-700 text-white border border-white/5'}`}
       >
         Cerrar Auditor
       </button>

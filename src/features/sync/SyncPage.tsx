@@ -449,7 +449,7 @@ const ActionButton: React.FC<{
   <button
     onClick={onClick}
     disabled={disabled}
-    className="p-4 bg-elevated/50 hover:bg-elevated border border-slate-700 rounded-2xl flex flex-col items-center gap-2 text-center transition-colors disabled:opacity-50"
+    className="p-4 bg-elevated/50 hover:bg-elevated border border-subtle rounded-2xl flex flex-col items-center gap-2 text-center transition-colors disabled:opacity-50"
   >
     <div className="text-blue-400">{icon}</div>
     <span className="text-xs font-bold">{label}</span>

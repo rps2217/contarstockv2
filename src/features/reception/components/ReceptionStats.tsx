@@ -16,7 +16,7 @@ export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {
   const isDark = theme === 'dark';
 
   const cardClasses = isDark
-    ? 'bg-slate-900 border-white/5 shadow-2xl relative overflow-hidden group hover:border-white/10 transition-all p-5 rounded-[2rem] border'
+    ? 'bg-surface border-white/5 shadow-2xl relative overflow-hidden group hover:border-white/10 transition-all p-5 rounded-[2rem] border'
     : 'bg-white border-slate-200/60 shadow-md relative overflow-hidden group hover:border-blue-500/10 transition-all p-5 rounded-[2rem] border';
 
   return (
@@ -37,7 +37,7 @@ export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {
           <h4 className={`text-2xl md:text-3xl font-black italic tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {stats.total}
           </h4>
-          <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Total Bultos</p>
+          <p className="text-[10px] font-bold uppercase text-muted mt-1">Total Bultos</p>
         </div>
         <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
           <Box className="w-24 h-24" />
@@ -61,7 +61,7 @@ export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {
           <h4 className={`text-2xl md:text-3xl font-black italic tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {stats.synced}
           </h4>
-          <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">En la Nube</p>
+          <p className="text-[10px] font-bold uppercase text-muted mt-1">En la Nube</p>
         </div>
         <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
           <Cloud className="w-24 h-24" />
@@ -85,7 +85,7 @@ export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {
           <h4 className={`text-2xl md:text-3xl font-black italic tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {stats.pending}
           </h4>
-          <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Borradores</p>
+          <p className="text-[10px] font-bold uppercase text-muted mt-1">Borradores</p>
         </div>
         <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
           <Clock className="w-24 h-24" />
@@ -107,7 +107,7 @@ export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {
           <h4 className={`text-2xl md:text-3xl font-black italic tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {stats.today}
           </h4>
-          <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Arribó Hoy</p>
+          <p className="text-[10px] font-bold uppercase text-muted mt-1">Arribó Hoy</p>
         </div>
         <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
           <CheckCircle2 className="w-24 h-24" />

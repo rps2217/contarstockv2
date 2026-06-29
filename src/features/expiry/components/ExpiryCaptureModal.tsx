@@ -159,12 +159,12 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
             exit={{ x: "100%" }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={`relative z-10 w-full sm:w-[480px] h-full overflow-hidden flex flex-col pointer-events-auto ${
-              isDark ? 'bg-slate-950 border-white/10' : 'bg-white border-slate-200'
+              isDark ? 'bg-base border-white/10' : 'bg-white border-slate-200'
             } shadow-[-20px_0_60px_rgba(0,0,0,0.8)]`}
           >
             {/* HEADER */}
             <div className={`p-4 border-b flex items-center justify-between ${
-              isDark ? 'border-white/5 bg-slate-900/50' : 'border-slate-200 bg-slate-50'
+              isDark ? 'border-white/5 bg-surface/50' : 'border-slate-200 bg-slate-50'
             }`}>
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${
@@ -193,7 +193,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   <div className={`px-2 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 ${
                     productFound
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                      : 'bg-slate-500/10 text-muted border-slate-500/30'
                   }`}>
                     {productFound ? (
                       <>
@@ -223,7 +223,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   onClick={onClose}
                   className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
                     isDark 
-                      ? 'bg-white/5 text-slate-400 active:bg-white/10' 
+                      ? 'bg-white/5 text-muted active:bg-white/10' 
                       : 'bg-slate-200 text-slate-500 active:bg-slate-300'
                   }`}
                 >
@@ -398,7 +398,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
 
             {/* FOOTER */}
             <div className={`p-5 border-t ${
-              isDark ? 'border-white/5 bg-slate-900/50' : 'border-slate-200 bg-slate-50'
+              isDark ? 'border-white/5 bg-surface/50' : 'border-slate-200 bg-slate-50'
             }`}>
               <button
                 disabled={!canSubmit}
@@ -410,7 +410,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                       ? 'bg-white text-black hover:bg-blue-50 active:bg-blue-100 shadow-blue-500/20'
                       : isDark
                         ? 'bg-white/5 text-slate-600 cursor-not-allowed'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        : 'bg-slate-200 text-muted cursor-not-allowed'
                 }`}
               >
                 {isSubmitting ? (

@@ -116,7 +116,7 @@ const InfoRow: React.FC<InfoRow & { index: number }> = ({ label, value, icon, co
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="flex items-start justify-between py-3 border-b border-slate-800 last:border-0"
+      className="flex items-start justify-between py-3 border-b border-subtle last:border-0"
     >
       <div className="flex items-center gap-2 min-w-[120px]">
         {icon && <span className="text-slate-500">{icon}</span>}
@@ -130,7 +130,7 @@ const InfoRow: React.FC<InfoRow & { index: number }> = ({ label, value, icon, co
         }`}
         onClick={handleCopy}
       >
-        <span className="text-slate-200">{value}</span>
+        <span className="text-primary">{value}</span>
         {copyable && (
           <span className="ml-2">
             {copied ? (
@@ -158,17 +158,17 @@ const CollapsibleSection: React.FC<Section & { children?: React.ReactNode }> = (
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
+    <div className="bg-surface/50 rounded-2xl border border-subtle overflow-hidden">
       {/* Header */}
       <button
         onClick={() => collapsible && setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-          collapsible ? 'hover:bg-slate-800/30 cursor-pointer' : ''
+          collapsible ? 'hover:bg-elevated/30 cursor-pointer' : ''
         }`}
       >
         <div className="flex items-center gap-2">
           {icon && <span className="text-blue-400">{icon}</span>}
-          <span className="text-xs font-black text-slate-300 uppercase tracking-wider">
+          <span className="text-xs font-black text-secondary uppercase tracking-wider">
             {title}
           </span>
         </div>
@@ -271,15 +271,15 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-950">
+    <div className="h-full flex flex-col bg-base">
       {/* Header */}
-      <div className="bg-slate-900/80 border-b border-slate-800 p-4 shrink-0">
+      <div className="bg-surface/80 border-b border-subtle p-4 shrink-0">
         <div className="flex items-start justify-between gap-4">
           {/* Left: Back + Title */}
           <div className="flex items-start gap-3">
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted hover:text-white transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -293,7 +293,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                 {statusLabel && <DesignStatusBadge status={mappedStatus} label={statusLabel} />}
               </div>
               {subtitle && (
-                <p className="text-sm text-slate-400 ml-0">{subtitle}</p>
+                <p className="text-sm text-muted ml-0">{subtitle}</p>
               )}
             </div>
           </div>
@@ -303,7 +303,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted hover:text-white transition-colors"
                 title="Actualizar"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -313,7 +313,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowActionsMenu(!showActionsMenu)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted hover:text-white transition-colors"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -324,12 +324,12 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-48 bg-surface border border-subtle rounded-xl shadow-xl z-50 overflow-hidden"
                   >
                     {onEdit && (
                       <button
                         onClick={() => { onEdit(); setShowActionsMenu(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-secondary hover:bg-elevated transition-colors"
                       >
                         <Pencil className="w-4 h-4 text-blue-400" />
                         Editar
@@ -338,7 +338,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                     {onDelete && (
                       <button
                         onClick={() => { onDelete(); setShowActionsMenu(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-400 hover:bg-slate-800 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-400 hover:bg-elevated transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                         Eliminar
@@ -349,8 +349,8 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                         key={action.id}
                         onClick={() => { action.onClick(); setShowActionsMenu(false); }}
                         disabled={action.loading}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-800 transition-colors ${
-                          action.variant === 'danger' ? 'text-rose-400' : 'text-slate-300'
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-elevated transition-colors ${
+                          action.variant === 'danger' ? 'text-rose-400' : 'text-secondary'
                         } ${action.loading ? 'opacity-50' : ''}`}
                       >
                         {action.icon && (
@@ -384,7 +384,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-800 bg-slate-950/50 p-1 shrink-0">
+      <div className="flex border-b border-subtle bg-base/50 p-1 shrink-0">
         {tabs.map(tab => (
           <button
             key={tab}
@@ -392,7 +392,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
             className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 ${
               activeTab === tab
                 ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                : 'text-slate-500 hover:text-slate-300'
+                : 'text-slate-500 hover:text-secondary'
             }`}
           >
             {tab === 'detail' && <FileText className="w-3.5 h-3.5" />}
@@ -435,9 +435,9 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                   limit={50}
                 />
               ) : (
-                <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-8 text-center">
+                <div className="bg-surface/50 rounded-2xl border border-subtle p-8 text-center">
                   <Clock className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-muted">
                     Historial no disponible
                   </p>
                   <p className="text-[11px] text-slate-500 mt-1">
@@ -466,11 +466,11 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                       ? 'bg-blue-600/10 border-blue-500/30 text-blue-400 hover:bg-blue-600/20'
                       : action.variant === 'danger'
                       ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
-                      : 'bg-slate-900/50 border-slate-800 text-slate-300 hover:bg-slate-900 hover:border-slate-700'
+                      : 'bg-surface/50 border-subtle text-secondary hover:bg-surface hover:border-subtle'
                   } ${action.loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {action.icon && (
-                    <span className={action.variant === 'primary' ? 'text-blue-400' : action.variant === 'danger' ? 'text-rose-400' : 'text-slate-400'}>
+                    <span className={action.variant === 'primary' ? 'text-blue-400' : action.variant === 'danger' ? 'text-rose-400' : 'text-muted'}>
                       {action.icon}
                     </span>
                   )}
@@ -481,9 +481,9 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
               ))}
 
               {actions.length === 0 && (
-                <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-8 text-center">
+                <div className="bg-surface/50 rounded-2xl border border-subtle p-8 text-center">
                   <Zap className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-muted">
                     No hay acciones disponibles
                   </p>
                 </div>
@@ -495,13 +495,13 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
 
       {/* Footer: Metadata */}
       {metadata.length > 0 && (
-        <div className="border-t border-slate-800 p-4 bg-slate-900/30 shrink-0">
+        <div className="border-t border-subtle p-4 bg-surface/30 shrink-0">
           <div className="grid grid-cols-2 gap-4 text-[10px]">
             {metadata.map((item, i) => (
               <div key={i} className="flex items-center gap-2">
                 {item.icon && <span className="text-slate-500">{item.icon}</span>}
                 <span className="text-slate-500">{item.label}:</span>
-                <span className="text-slate-400 font-medium">{item.value}</span>
+                <span className="text-muted font-medium">{item.value}</span>
               </div>
             ))}
           </div>

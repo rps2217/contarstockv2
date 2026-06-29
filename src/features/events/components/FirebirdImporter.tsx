@@ -87,7 +87,7 @@ export const FirebirdImporter: React.FC<FirebirdImporterProps> = ({
           <h3 className="text-lg font-black uppercase tracking-tighter italic">Rehacer Migración Firebird</h3>
         </div>
         
-        <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+        <p className="text-sm text-muted mb-6 leading-relaxed">
           Usa esta herramienta para cargar registros desde CSV. 
           <span className="text-rose-400 font-bold block mt-1 underline decoration-rose-500/30">Se recomienda limpiar la base de datos antes de una nueva migración.</span>
         </p>
@@ -194,7 +194,7 @@ export const FirebirdImporter: React.FC<FirebirdImporterProps> = ({
                   {preview.slice(0, 5).map((row, i) => (
                     <tr key={i} className="hover:bg-white/5 transition-colors">
                       {Object.values(row).slice(0, 5).map((val: any, j) => (
-                        <td key={j} className="px-4 py-2 text-xs font-mono text-slate-400 truncate max-w-[150px]">{String(val)}</td>
+                        <td key={j} className="px-4 py-2 text-xs font-mono text-muted truncate max-w-[150px]">{String(val)}</td>
                       ))}
                       <td className="px-4 py-2 text-xs text-slate-600">...</td>
                     </tr>

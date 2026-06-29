@@ -56,7 +56,7 @@ export const SessionHistoryList: React.FC<Props> = ({
   const containerBorder = isHighContrast ? 'border-yellow-400' : isLight ? 'border-slate-200' : 'border-white/5';
   const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-50' : 'bg-brand-dark/50';
   const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-100' : 'border-white/5';
-  const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-500' : 'text-slate-400';
+  const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-500' : 'text-muted';
 
   const getPillActiveClass = () => {
     if (isHighContrast) return 'bg-yellow-400 text-black border-yellow-400';
@@ -67,7 +67,7 @@ export const SessionHistoryList: React.FC<Props> = ({
   const getPillInactiveClass = () => {
     if (isHighContrast) return 'bg-yellow-900/20 border-yellow-400/30 text-yellow-400 hover:bg-yellow-900/30';
     if (isLight) return 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200';
-    return 'bg-white/5 border-white/5 text-slate-400 hover:text-white';
+    return 'bg-white/5 border-white/5 text-muted hover:text-white';
   };
 
   const rowData = {

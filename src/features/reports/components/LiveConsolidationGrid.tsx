@@ -36,8 +36,8 @@ export const LiveConsolidationGrid: React.FC<Props> = ({
   const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-50' : 'bg-brand-dark/50';
   const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-100' : 'border-white/5';
   const textPrimary = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const textSecondary = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-slate-400';
-  const textMuted = isHighContrast ? 'text-yellow-600' : isLight ? 'text-slate-400' : 'text-slate-500';
+  const textSecondary = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-muted';
+  const textMuted = isHighContrast ? 'text-yellow-600' : isLight ? 'text-muted' : 'text-slate-500';
   const rowHover = isHighContrast ? 'hover:bg-yellow-900/10' : isLight ? 'hover:bg-slate-50' : 'hover:bg-white/5';
   const divider = isHighContrast ? 'divide-yellow-400/20' : isLight ? 'divide-slate-100' : 'divide-slate-500/10';
 

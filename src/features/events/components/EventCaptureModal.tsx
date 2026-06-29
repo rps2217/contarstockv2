@@ -55,9 +55,9 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
   const isLight = theme === 'light';
 
   // Clases según tema
-  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-white/10';
+  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-base border-white/10';
   const overlayBg = isHighContrast ? 'bg-yellow-950/60' : 'bg-black/60';
-  const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-50' : 'bg-slate-900/50';
+  const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-50' : 'bg-surface/50';
   const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-200' : 'border-white/5';
   const handleBg = isHighContrast ? 'bg-yellow-400' : isLight ? 'bg-slate-300' : 'bg-white/10';
   const accentText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-blue-600' : 'text-blue-500';
@@ -72,8 +72,8 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
   const btnInactive = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30 text-yellow-500 hover:bg-yellow-900/30' : isLight ? 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200' : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10';
   const qtyBtn = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30 text-yellow-400' : isLight ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-white/5 border-white/5 text-white';
   const qtyDisplay = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30 text-yellow-400' : isLight ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-white/5 border-white/5 text-white';
-  const submitEnabled = isHighContrast ? 'bg-yellow-400 text-black hover:bg-yellow-300' : isLight ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-black hover:bg-blue-50';
-  const submitDisabled = isHighContrast ? 'bg-yellow-900/20 text-yellow-600 cursor-not-allowed' : isLight ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-slate-800 text-slate-600 cursor-not-allowed';
+  const submitEnabled = isHighContrast ? 'bg-yellow-400 text-black hover:bg-yellow-300' : isLight ? 'bg-surface text-white hover:bg-elevated' : 'bg-white text-black hover:bg-blue-50';
+  const submitDisabled = isHighContrast ? 'bg-yellow-900/20 text-yellow-600 cursor-not-allowed' : isLight ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-elevated text-slate-600 cursor-not-allowed';
   const destRequired = isHighContrast ? 'border-red-500/30 bg-red-500/10 text-red-400' : isLight ? 'border-rose-500/30 bg-rose-50 text-rose-600' : 'border-rose-500/50 bg-rose-950/10 text-rose-400';
   const traspasoActive = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-indigo-500/30' : 'border-indigo-500/30';
 
@@ -170,7 +170,7 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
               </div>
               <button 
                 onClick={onClose}
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400' : isLight ? 'bg-slate-100 text-slate-500' : 'bg-white/5 text-slate-400'}`}
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400' : isLight ? 'bg-slate-100 text-slate-500' : 'bg-white/5 text-muted'}`}
               >
                 <X className="w-6 h-6" />
               </button>

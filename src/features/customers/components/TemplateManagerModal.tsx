@@ -99,7 +99,7 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border flex flex-col max-h-[85vh] ${
-            theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+            theme === 'dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
           }`}
         >
           <div className={`p-4 border-b flex items-center justify-between shrink-0 ${
@@ -114,7 +114,7 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
             <button
               onClick={onClose}
               className={`p-2 rounded-xl transition-colors ${
-                theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               <X className="w-5 h-5" />
@@ -124,10 +124,10 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
           <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
             {/* LISTA DE PLANTILLAS */}
             <div className={`w-full md:w-1/2 border-b md:border-b-0 md:border-r overflow-y-auto p-4 space-y-3 ${
-              theme === 'dark' ? 'border-white/10 bg-slate-950/30' : 'border-slate-200 bg-slate-50/50'
+              theme === 'dark' ? 'border-white/10 bg-base/30' : 'border-slate-200 bg-slate-50/50'
             }`}>
               <h3 className={`text-xs font-bold uppercase tracking-widest mb-4 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Tus Plantillas ({templates.length})
               </h3>
@@ -155,14 +155,14 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <p className={`text-xs mt-1 line-clamp-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <p className={`text-xs mt-1 line-clamp-2 ${theme === 'dark' ? 'text-muted' : 'text-slate-500'}`}>
                     {template.content}
                   </p>
                 </div>
               ))}
 
               {templates.length === 0 && (
-                <div className={`text-center py-8 text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                <div className={`text-center py-8 text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-muted'}`}>
                   No hay plantillas guardadas.
                 </div>
               )}
@@ -173,7 +173,7 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className={`text-xs font-bold uppercase tracking-widest ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    theme === 'dark' ? 'text-muted' : 'text-slate-500'
                   }`}>
                     {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
                   </h3>
@@ -190,7 +190,7 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
 
                 <div>
                   <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    theme === 'dark' ? 'text-muted' : 'text-slate-500'
                   }`}>
                     Nombre de la Plantilla
                   </label>
@@ -210,7 +210,7 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
 
                 <div>
                   <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    theme === 'dark' ? 'text-muted' : 'text-slate-500'
                   }`}>
                     Mensaje
                   </label>

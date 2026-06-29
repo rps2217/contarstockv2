@@ -45,7 +45,7 @@ export const EventCard: React.FC<EventCardProps> = memo(({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${config.color}`} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">
             {statusLabel}
           </span>
         </div>
@@ -63,7 +63,7 @@ export const EventCard: React.FC<EventCardProps> = memo(({
             <p className="text-sm font-black uppercase tracking-tight truncate">
               {record.productName || 'Sin producto'}
             </p>
-            <p className="text-xs font-mono text-slate-400">
+            <p className="text-xs font-mono text-muted">
               {record.barcode}
             </p>
           </div>

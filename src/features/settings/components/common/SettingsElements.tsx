@@ -36,7 +36,7 @@ export const SettingsCard = ({ children, className = "", theme = 'dark' }: any) 
         ? 'bg-black border-yellow-400 shadow-yellow-400/10' 
         : isLight 
           ? 'bg-white border-slate-100 shadow-slate-200/50' 
-          : 'bg-slate-900 border-white/5 shadow-none'
+          : 'bg-surface border-white/5 shadow-none'
     } ${className}`}>
       {children}
     </div>
@@ -77,26 +77,26 @@ export const SettingsToggle = ({ active, label, description, icon: Icon, onClick
       className={`w-full p-5 rounded-[2rem] border-4 transition-all duration-300 flex items-center justify-between active:scale-[0.97] group relative overflow-hidden ${
         active 
           ? (isHighContrast ? 'bg-yellow-400 border-yellow-300 text-black shadow-lg shadow-yellow-400/30' : 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-900/30')
-          : (isHighContrast ? 'bg-black border-yellow-400/30 text-yellow-400' : isLight ? 'bg-white border-slate-100 text-slate-500' : 'bg-slate-900 border-white/5 text-slate-500')
+          : (isHighContrast ? 'bg-black border-yellow-400/30 text-yellow-400' : isLight ? 'bg-white border-slate-100 text-slate-500' : 'bg-surface border-white/5 text-slate-500')
       }`}
     >
       <div className="flex items-center gap-4 relative z-10">
         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
           active 
             ? 'bg-white/20 text-white rotate-3 shadow-inner' 
-            : (isHighContrast ? 'bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-slate-50 text-slate-400 group-hover:text-blue-500' : 'bg-white/5 text-slate-400 group-hover:text-blue-500')
+            : (isHighContrast ? 'bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-slate-50 text-muted group-hover:text-blue-500' : 'bg-white/5 text-muted group-hover:text-blue-500')
         }`}>
           <Icon className="w-7 h-7 stroke-[2.5px]" />
         </div>
     
         <div className="text-left">
           <div className={`font-black uppercase tracking-tight text-[13px] leading-none mb-1.5 ${
-            active ? 'text-white' : (isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-slate-200')
+            active ? 'text-white' : (isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-primary')
           }`}>
             {label}
           </div>
           <div className={`text-[9px] font-bold uppercase tracking-widest leading-none ${
-            active ? 'text-blue-100/70' : (isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-600')
+            active ? 'text-blue-100/70' : (isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-slate-600')
           }`}>
             {description}
           </div>
@@ -132,7 +132,7 @@ export const SettingsInput = ({ value, onChange, placeholder, className = "", th
           isHighContrast 
             ? 'bg-black border-yellow-400 text-yellow-400 placeholder:text-yellow-600' 
             : isLight 
-              ? 'bg-slate-50 border-slate-100 text-slate-900 placeholder:text-slate-300' 
+              ? 'bg-slate-50 border-slate-100 text-slate-900 placeholder:text-secondary' 
               : 'bg-black/40 border-white/5 text-white placeholder:text-slate-800'
         } ${className}`}
         {...props}
@@ -159,13 +159,13 @@ export const SettingsButton = ({ onClick, label, icon: Icon, variant = 'primary'
     dark: isHighContrast 
       ? "bg-yellow-400 text-black border-yellow-600" 
       : isLight 
-        ? "bg-slate-900 text-white border-black" 
+        ? "bg-surface text-white border-black" 
         : "bg-black text-white border-white/10",
     outline: isHighContrast 
       ? "bg-black border-yellow-400 text-yellow-400 hover:bg-yellow-900/20" 
       : isLight 
         ? "bg-white border-slate-100 text-slate-600 hover:bg-slate-50" 
-        : "bg-slate-900 border-white/10 text-slate-600 hover:bg-white/5"
+        : "bg-surface border-white/10 text-slate-600 hover:bg-white/5"
   };
 
   return (

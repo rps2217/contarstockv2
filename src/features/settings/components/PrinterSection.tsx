@@ -20,20 +20,20 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting, theme
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-black' : 'bg-slate-900 border-white/5';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-black' : 'bg-surface border-white/5';
   const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const subtitleText = isHighContrast ? 'text-yellow-500' : 'text-slate-400';
+  const subtitleText = isHighContrast ? 'text-yellow-500' : 'text-muted';
   const dotConnected = isHighContrast ? 'bg-yellow-400' : 'bg-emerald-500';
   const dotDisconnected = 'bg-rose-500';
   const successBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-emerald-50 border-emerald-100' : 'bg-emerald-500/10 border-emerald-500/20';
   const successText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-emerald-800' : 'text-emerald-400';
   const successSubtext = isHighContrast ? 'text-yellow-500' : isLight ? 'text-emerald-600' : 'text-emerald-500';
   const btnPrimary = isHighContrast ? 'bg-yellow-400 text-black hover:bg-yellow-300' : isLight ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white';
-  const btnSecondary = isHighContrast ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-400/30' : isLight ? 'bg-slate-900 text-white' : 'bg-slate-900 text-white';
+  const btnSecondary = isHighContrast ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-400/30' : isLight ? 'bg-surface text-white' : 'bg-surface text-white';
   const errorBg = isHighContrast ? 'bg-red-500/20 border-red-500/30' : isLight ? 'bg-rose-50 border-rose-100' : 'bg-rose-500/10 border-rose-500/20';
   const errorText = isHighContrast ? 'text-red-400' : isLight ? 'text-rose-800' : 'text-rose-400';
   const errorSubtext = isHighContrast ? 'text-red-500' : isLight ? 'text-rose-600' : 'text-rose-500';
-  const noteText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-400';
+  const noteText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-muted';
   const infoBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-blue-50 border-blue-100' : 'bg-blue-500/10 border-blue-500/20';
   const infoText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-blue-800' : 'text-blue-400';
 

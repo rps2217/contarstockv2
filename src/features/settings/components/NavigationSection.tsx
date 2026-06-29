@@ -45,7 +45,7 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting, th
       ? 'bg-yellow-900/20 border-transparent text-yellow-400 hover:bg-yellow-900/30' 
       : isLight 
         ? 'bg-slate-50 border-transparent text-slate-600' 
-        : 'bg-slate-800 border-transparent text-slate-400';
+        : 'bg-elevated border-transparent text-muted';
   };
 
   return (

@@ -59,7 +59,7 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
         exit={{ y: 100, opacity: 0 }}
         className={`fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-2xl shadow-2xl flex items-center gap-4 border ${
           theme === 'dark' 
-            ? 'bg-slate-800 border-slate-700' 
+            ? 'bg-elevated border-subtle' 
             : 'bg-white border-stone-200'
         }`}
       >
@@ -100,7 +100,7 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
           onClick={onClear} 
           className={`p-2 rounded-xl transition-all ${
             theme === 'dark' 
-              ? 'text-slate-400 hover:text-white hover:bg-white/5' 
+              ? 'text-muted hover:text-white hover:bg-white/5' 
               : 'text-stone-400 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >

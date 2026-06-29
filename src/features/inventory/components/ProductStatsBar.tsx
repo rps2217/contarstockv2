@@ -109,7 +109,7 @@ export const ProductStatsBar: React.FC<ProductStatsBarProps> = ({
             </div>
           )}
           {stats.missingPolicy > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-500/10 text-slate-400 text-xs">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-500/10 text-muted text-xs">
               <span>Sin política</span>
             </div>
           )}

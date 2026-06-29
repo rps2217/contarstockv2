@@ -40,12 +40,12 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 bg-slate-900/95 border border-white/10 rounded-2xl p-4 shadow-2xl z-50 min-w-[280px] animate-in slide-in-from-bottom-2">
+    <div className="fixed bottom-20 right-4 bg-surface/95 border border-white/10 rounded-2xl p-4 shadow-2xl z-50 min-w-[280px] animate-in slide-in-from-bottom-2">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Keyboard className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <Keyboard className="w-4 h-4 text-muted" />
+          <span className="text-xs font-bold uppercase tracking-wider text-muted">
             Atajos
           </span>
         </div>
@@ -65,7 +65,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
           <div key={index} className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               {shortcut.icon}
-              <span className="text-xs text-slate-300">
+              <span className="text-xs text-secondary">
                 {shortcut.description}
               </span>
             </div>
@@ -75,7 +75,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
                   {keyIndex > 0 && (
                     <span className="text-slate-600 text-xs">+</span>
                   )}
-                  <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-mono text-slate-300 border border-white/10">
+                  <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-mono text-secondary border border-white/10">
                     {key}
                   </kbd>
                 </React.Fragment>

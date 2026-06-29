@@ -154,12 +154,12 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
         key={entry.id}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/30"
+        className="border border-subtle rounded-2xl overflow-hidden bg-base/30"
       >
         {/* Header */}
         <div
           onClick={() => setExpandedId(isExpanded ? null : entry.id!)}
-          className="p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-900/30 transition-colors"
+          className="p-4 flex items-center gap-3 cursor-pointer hover:bg-surface/30 transition-colors"
         >
           {/* Action Badge */}
           <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1.5 border ${COLOR_MAP[config.color]}`}>
@@ -170,7 +170,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-300 uppercase">
+              <span className="text-xs font-bold text-secondary uppercase">
                 {entry.tableName}
               </span>
               {entry.fieldName && (
@@ -217,7 +217,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
                     <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest">
                       ID Registro
                     </span>
-                    <p className="text-xs font-mono text-slate-300 bg-slate-900 px-2.5 py-1.5 rounded-lg mt-1">
+                    <p className="text-xs font-mono text-secondary bg-surface px-2.5 py-1.5 rounded-lg mt-1">
                       {entry.recordId}
                     </p>
                   </div>
@@ -259,7 +259,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
                     <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest">
                       Dispositivo
                     </span>
-                    <p className="text-[10px] font-mono text-slate-400 mt-1">
+                    <p className="text-[10px] font-mono text-muted mt-1">
                       {entry.deviceInfo}
                     </p>
                   </div>
@@ -276,7 +276,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-black text-slate-300 flex items-center gap-2">
+        <h3 className="text-sm font-black text-secondary flex items-center gap-2">
           <History className="w-4 h-4 text-blue-400" />
           {title}
           {pendingCount > 0 && (
@@ -291,7 +291,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
             <select
               value={filterTable}
               onChange={(e) => setFilterTable(e.target.value)}
-              className="text-[10px] bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-400 focus:border-blue-500 outline-none"
+              className="text-[10px] bg-surface border border-subtle rounded-lg px-2 py-1.5 text-muted focus:border-blue-500 outline-none"
             >
               <option value="">Todas las tablas</option>
               {tables.map(t => (
@@ -307,7 +307,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
               className={`p-1.5 rounded-lg transition-colors ${
                 pendingCount > 0 
                   ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
-                  : 'bg-slate-900 text-slate-500 cursor-not-allowed'
+                  : 'bg-surface text-slate-500 cursor-not-allowed'
               }`}
               title="Sincronizar a la nube"
             >
@@ -317,7 +317,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           
           <button
             onClick={() => fetchHistory()}
-            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors"
+            className="p-1.5 rounded-lg bg-surface hover:bg-elevated text-muted transition-colors"
             title="Actualizar"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -327,7 +327,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
 
       {/* Toggle View */}
       {!recordId && (
-        <div className="flex bg-slate-950 rounded-xl p-1 gap-1">
+        <div className="flex bg-base rounded-xl p-1 gap-1">
           <button
             onClick={() => setShowAll(true)}
             className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 ${
@@ -362,9 +362,9 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           <RefreshCw className="w-6 h-6 text-blue-400 animate-spin" />
         </div>
       ) : entries.length === 0 ? (
-        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-8 text-center">
+        <div className="bg-base/40 border border-slate-900 rounded-2xl p-8 text-center">
           <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-          <p className="text-sm text-slate-400">Sin historial de cambios</p>
+          <p className="text-sm text-muted">Sin historial de cambios</p>
           <p className="text-[10px] text-slate-500 mt-1">
             Los cambios aparecerán aquí
           </p>

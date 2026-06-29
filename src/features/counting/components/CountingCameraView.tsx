@@ -119,19 +119,19 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   } : null;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-slate-950 font-sans overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-base font-sans overflow-hidden">
       {/* FEEDBACK OVERLAY */}
       <ScannerFeedbackOverlay feedback={feedback} />
 
       {/* ==================== TOP HEADER ==================== */}
-      <header className="h-14 px-4 flex items-center justify-between shrink-0 bg-slate-900 border-b border-slate-800">
+      <header className="h-14 px-4 flex items-center justify-between shrink-0 bg-surface border-b border-subtle">
         {/* LEFT: Back + Title */}
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-elevated hover:bg-slate-700 border border-subtle transition-all"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-400" />
+            <ArrowLeft className="w-5 h-5 text-muted" />
           </button>
           
           <div className="flex items-center gap-3">
@@ -160,7 +160,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
         {/* CENTER: Location */}
         <button
           onClick={onChangeLocation}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-elevated hover:bg-slate-700 rounded-xl border border-subtle transition-all"
         >
           <MapPin className="w-4 h-4 text-emerald-400" />
           <span className="text-sm font-bold text-white font-mono">{location}</span>
@@ -174,36 +174,36 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
             className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${
               isSyncing 
                 ? 'bg-blue-500/10 border-blue-500/30' 
-                : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
+                : 'bg-elevated border-subtle hover:bg-slate-700'
             }`}
           >
             {isSyncing ? (
               <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Cloud className="w-4 h-4 text-slate-400" />
+              <Cloud className="w-4 h-4 text-muted" />
             )}
           </button>
 
           {/* Lock */}
           <button
             onClick={safeOnLock}
-            className="w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all"
+            className="w-10 h-10 flex items-center justify-center bg-elevated hover:bg-slate-700 rounded-xl border border-subtle transition-all"
           >
-            <Unlock className="w-4 h-4 text-slate-400" />
+            <Unlock className="w-4 h-4 text-muted" />
           </button>
 
           {/* Settings */}
           <button
             onClick={onOpenTools}
-            className="w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all"
+            className="w-10 h-10 flex items-center justify-center bg-elevated hover:bg-slate-700 rounded-xl border border-subtle transition-all"
           >
-            <Settings className="w-4 h-4 text-slate-400" />
+            <Settings className="w-4 h-4 text-muted" />
           </button>
         </div>
       </header>
 
       {/* ==================== STATS BAR ==================== */}
-      <div className="h-12 px-4 flex items-center justify-between shrink-0 bg-slate-900/50 border-b border-slate-800">
+      <div className="h-12 px-4 flex items-center justify-between shrink-0 bg-surface/50 border-b border-subtle">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-blue-500/10 rounded-lg flex items-center justify-center">
@@ -243,7 +243,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
         <div className="absolute top-2 right-2 z-30">
           <button
             onClick={onToggleManualMode}
-            className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-slate-700 active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-surface/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-subtle active:scale-95 transition-all"
           >
             {isManualMode ? (
               <>
@@ -277,7 +277,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
                       handleManualSubmit(manualInput);
                     }
                   }}
-                  className="w-full bg-black border-2 border-slate-700 rounded-2xl py-5 pl-14 pr-6 text-2xl font-black focus:outline-none focus:border-blue-500 text-white tracking-wider"
+                  className="w-full bg-black border-2 border-subtle rounded-2xl py-5 pl-14 pr-6 text-2xl font-black focus:outline-none focus:border-blue-500 text-white tracking-wider"
                   placeholder="INGRESAR SKU"
                   autoComplete="off"
                   autoCorrect="off"
@@ -290,7 +290,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
                 className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-wider transition-all flex items-center justify-center gap-3 ${
                   manualInput.trim()
                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.98]'
-                    : 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                    : 'bg-elevated text-slate-600 cursor-not-allowed'
                 }`}
               >
                 <Check className="w-5 h-5" />
@@ -310,19 +310,19 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
       </div>
 
       {/* ==================== SEARCH BAR ==================== */}
-      <div className="px-4 py-2 bg-slate-900/50 border-b border-slate-800 shrink-0">
+      <div className="px-4 py-2 bg-surface/50 border-b border-subtle shrink-0">
         <input
           type="text"
           placeholder="Buscar producto..."
-          className="w-full h-10 px-4 bg-slate-800 rounded-xl border border-slate-700 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+          className="w-full h-10 px-4 bg-elevated rounded-xl border border-subtle text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
         />
       </div>
 
       {/* ==================== EXPECTED ORDER LIST (ONLY IN TEST MODE) ==================== */}
       {isTestMode && expectedItems.length > 0 && (
-        <div className="shrink-0 max-h-[35vh] md:max-h-[30vh] flex flex-col bg-slate-900 border-b border-amber-500/20 overflow-hidden">
+        <div className="shrink-0 max-h-[35vh] md:max-h-[30vh] flex flex-col bg-surface border-b border-amber-500/20 overflow-hidden">
           {/* Header */}
-          <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-slate-950/80 border-b border-white/5">
+          <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-base/80 border-b border-white/5">
             <div className="flex items-center gap-2">
               <List className="w-4 h-4 text-amber-400" />
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">CARGA TEÓRICA</span>
@@ -348,7 +348,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border shrink-0 md:w-72 ${
                       isScanned 
                         ? 'bg-emerald-500/10 border-emerald-500/20' 
-                        : 'bg-slate-800/50 border-white/5 hover:bg-slate-800'
+                        : 'bg-elevated/50 border-white/5 hover:bg-elevated'
                     }`}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -367,7 +367,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
                       <div className="text-[9px] text-slate-500 font-mono truncate">{item.barcode}</div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className={`text-sm font-black ${isScanned ? 'text-emerald-400' : 'text-slate-400'}`}>
+                      <div className={`text-sm font-black ${isScanned ? 'text-emerald-400' : 'text-muted'}`}>
                         {scannedQty > 0 ? scannedQty : 0} / {item.expectedQty}
                       </div>
                     </div>
@@ -399,7 +399,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    item.barcode === activeBarcode ? 'bg-blue-500/20' : 'bg-slate-800'
+                    item.barcode === activeBarcode ? 'bg-blue-500/20' : 'bg-elevated'
                   }`}>
                     <Barcode className={`w-5 h-5 ${item.barcode === activeBarcode ? 'text-blue-400' : 'text-slate-500'}`} />
                   </div>
@@ -421,10 +421,10 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
       )}
 
       {/* ==================== FOOTER ==================== */}
-      <footer className="shrink-0 bg-slate-900 border-t border-slate-800">
+      <footer className="shrink-0 bg-surface border-t border-subtle">
         <div className="h-14 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Multiplicador</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted">Multiplicador</span>
           </div>
           <div className="flex items-center gap-2">
             {[1, 6, 12, 24].map(m => (
@@ -434,7 +434,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
                 className={`w-12 h-10 rounded-xl font-black text-sm transition-all ${
                   multiplier === m 
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
-                    : 'bg-slate-800 text-slate-400 active:bg-slate-700'
+                    : 'bg-elevated text-muted active:bg-slate-700'
                 }`}
               >
                 x{m}

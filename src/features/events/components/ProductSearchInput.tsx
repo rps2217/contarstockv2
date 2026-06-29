@@ -61,7 +61,7 @@ export const ProductSearchInput: React.FC<Props> = ({
               {isSearching ? (
                 <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
               ) : (
-                <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
+                <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-muted'}`} />
               )}
             </div>
           </div>
@@ -91,7 +91,7 @@ export const ProductSearchInput: React.FC<Props> = ({
               className={`w-full h-full flex items-center justify-center rounded-2xl transition-all ${
                 !product || disabled
                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
-                  : 'bg-black text-white hover:bg-slate-800 active:scale-95'
+                  : 'bg-black text-white hover:bg-elevated active:scale-95'
               }`}
             >
               <Plus className="w-6 h-6" />

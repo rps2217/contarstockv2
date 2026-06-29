@@ -75,7 +75,7 @@ export const CsvImporter: React.FC = () => {
         </div>
         <div>
           <h3 className="font-black text-slate-900 leading-tight">Importador CSV</h3>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maestro de Productos</p>
+          <p className="text-[10px] font-black text-muted uppercase tracking-widest">Maestro de Productos</p>
         </div>
       </div>
 
@@ -97,13 +97,13 @@ export const CsvImporter: React.FC = () => {
           <div className="flex flex-col items-center">
             <CheckCircle className="text-emerald-500 mb-2" size={32} />
             <span className="font-black text-slate-900 text-sm mb-1">{file.name}</span>
-            <span className="text-[10px] text-slate-400 uppercase font-black">{(file.size / 1024).toFixed(1)} KB</span>
+            <span className="text-[10px] text-muted uppercase font-black">{(file.size / 1024).toFixed(1)} KB</span>
           </div>
         ) : (
           <label htmlFor="csv-input" className="flex flex-col items-center cursor-pointer">
-            <FileText className="text-slate-300 mb-2" size={32} />
-            <span className="font-black text-slate-400 text-sm">Selecciona o arrastra tu archivo CSV</span>
-            <span className="text-[10px] text-slate-300 uppercase font-black mt-1">Headers requeridos: barcode, name</span>
+            <FileText className="text-secondary mb-2" size={32} />
+            <span className="font-black text-muted text-sm">Selecciona o arrastra tu archivo CSV</span>
+            <span className="text-[10px] text-secondary uppercase font-black mt-1">Headers requeridos: barcode, name</span>
           </label>
         )}
       </div>
@@ -113,7 +113,7 @@ export const CsvImporter: React.FC = () => {
         disabled={!file || isImporting}
         className={`w-full mt-6 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 ${
           !file || isImporting 
-            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+            ? 'bg-slate-100 text-muted cursor-not-allowed' 
             : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-95'
         }`}
       >

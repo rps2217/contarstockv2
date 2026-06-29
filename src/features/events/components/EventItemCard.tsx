@@ -102,7 +102,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               <span className={`font-black uppercase tracking-[0.2em] ${
                 isExpanded ? 'text-xs' : 'text-[10px]'
               } ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                theme === 'dark' ? 'text-slate-500' : 'text-muted'
               }`}>Descripción del Producto</span>
               <h3 className={`font-black uppercase tracking-tighter italic leading-tight ${
                 isExpanded ? 'text-lg' : 'text-base'
@@ -152,7 +152,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 className={`font-bold uppercase flex items-center gap-1 transition-all active:scale-95 ${
                   isExpanded ? 'text-sm' : 'text-xs'
                 } ${
-                  theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+                  theme === 'dark' ? 'text-secondary' : 'text-slate-700'
                 }`}
               >
                 {item.barcode || 'N/A'}
@@ -182,7 +182,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 } ${!item.traspaso ? 'col-span-2' : ''}`}>
                   <span className="font-black text-slate-500 uppercase tracking-widest block mb-0.5 text-[8px] md:text-[9px]">Notas Observadas</span>
                   <p className={`font-bold uppercase truncate text-xs ${
-                    theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                    theme === 'dark' ? 'text-secondary' : 'text-slate-600'
                   }`}>
                     {item.observaciones}
                   </p>
@@ -231,7 +231,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           <span className={`font-black uppercase tracking-[0.15em] whitespace-nowrap ${
             isExpanded ? 'text-xs' : 'text-[10px]'
           } ${
-            theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+            theme === 'dark' ? 'text-slate-500' : 'text-muted'
           }`}>Producto</span>
           {item.syncStatus === 'synced' && <Cloud className="w-3 h-3 text-emerald-500/70 shrink-0" />}
           {item.syncStatus === 'pending' && <RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin shrink-0" />}
@@ -267,7 +267,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               className={`font-bold uppercase flex items-center gap-1 transition-all hover:text-blue-500 active:scale-95 ${
                 isExpanded ? 'text-sm' : 'text-xs'
               } ${
-                theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+                theme === 'dark' ? 'text-secondary' : 'text-slate-700'
               }`}
             >
               <span className="truncate">{item.barcode || 'N/A'}</span>
@@ -291,7 +291,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           <span className={`font-black uppercase tracking-[0.15em] ${
             isExpanded ? 'text-xs' : 'text-[10px]'
           } ${
-            theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+            theme === 'dark' ? 'text-slate-500' : 'text-muted'
           }`}>Folio FRC</span>
           {item.event && (
             <span className={`font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md w-fit truncate ${
@@ -321,7 +321,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </button>
         ) : (
           <div className={`px-2 py-1.5 rounded-xl border-2 border-dashed flex items-center justify-center w-fit ${
-            theme === 'dark' ? 'border-white/10 text-slate-600' : 'border-slate-200 text-slate-400'
+            theme === 'dark' ? 'border-white/10 text-slate-600' : 'border-slate-200 text-muted'
           }`}>
             <span className="text-[9px] font-black uppercase tracking-widest italic">N/A</span>
           </div>
@@ -333,7 +333,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         <div className="flex items-center gap-1.5">
           <Package className={`shrink-0 ${
             isExpanded ? 'w-4 h-4' : 'w-3.5 h-3.5'
-          } ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+          } ${theme === 'dark' ? 'text-slate-500' : 'text-muted'}`} />
           <span className={`font-black whitespace-nowrap ${
             isExpanded ? 'text-lg' : 'text-sm'
           } ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>

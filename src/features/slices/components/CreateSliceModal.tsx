@@ -50,13 +50,13 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const modalBg = isLight ? 'bg-white' : isHighContrast ? 'bg-black' : 'bg-slate-950';
+  const modalBg = isLight ? 'bg-white' : isHighContrast ? 'bg-black' : 'bg-base';
   const modalBorder = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400' : 'border-slate-900';
   const textPrimary = isLight ? 'text-slate-900' : isHighContrast ? 'text-yellow-400' : 'text-white';
-  const textSecondary = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-500' : 'text-slate-400';
+  const textSecondary = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-500' : 'text-muted';
   const textMuted = isLight ? 'text-slate-500' : isHighContrast ? 'text-yellow-600' : 'text-slate-500';
-  const inputBg = isLight ? 'bg-slate-50' : isHighContrast ? 'bg-black' : 'bg-slate-900';
-  const inputBorder = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400' : 'border-slate-800';
+  const inputBg = isLight ? 'bg-slate-50' : isHighContrast ? 'bg-black' : 'bg-surface';
+  const inputBorder = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400' : 'border-subtle';
   const accentBlue = isLight ? 'text-blue-600' : isHighContrast ? 'text-yellow-400' : 'text-blue-500';
   const accentBlueBg = isLight ? 'bg-blue-50 border-blue-200' : isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : 'bg-blue-500/5 border-blue-500/10';
 
@@ -207,7 +207,7 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
                   <select
                     value={filterField}
                     onChange={(e) => setFilterField(e.target.value)}
-                    className={`w-full ${isLight ? 'bg-white' : 'bg-slate-950'} border ${inputBorder} rounded-xl px-2.5 py-2 ${textPrimary} focus:outline-none focus:border-blue-500 block font-mono`}
+                    className={`w-full ${isLight ? 'bg-white' : 'bg-base'} border ${inputBorder} rounded-xl px-2.5 py-2 ${textPrimary} focus:outline-none focus:border-blue-500 block font-mono`}
                   >
                     {availableFields.map(col => (
                       <option key={col} value={col}>{col}</option>
@@ -222,7 +222,7 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
                   <select
                     value={filterOperator}
                     onChange={(e) => setFilterOperator(e.target.value as FilterOperator)}
-                    className={`w-full ${isLight ? 'bg-white' : 'bg-slate-950'} border ${inputBorder} rounded-xl px-2.5 py-2 ${textPrimary} focus:outline-none focus:border-blue-500 block font-mono`}
+                    className={`w-full ${isLight ? 'bg-white' : 'bg-base'} border ${inputBorder} rounded-xl px-2.5 py-2 ${textPrimary} focus:outline-none focus:border-blue-500 block font-mono`}
                   >
                     {FILTER_OPERATORS.map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -240,7 +240,7 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
                     disabled={['isEmpty', 'isNotEmpty'].includes(filterOperator)}
                     onChange={(e) => setFilterValue(e.target.value)}
                     placeholder="Ej: error"
-                    className={`w-full ${isLight ? 'bg-white' : 'bg-slate-950'} border ${inputBorder} rounded-xl px-2.5 py-2 ${textPrimary} focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50`}
+                    className={`w-full ${isLight ? 'bg-white' : 'bg-base'} border ${inputBorder} rounded-xl px-2.5 py-2 ${textPrimary} focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50`}
                   />
                 </div>
               </div>
@@ -251,16 +251,16 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
               <label className={`${textSecondary} font-black uppercase tracking-wider block`}>
                 Columnas Visibles en Tabla
               </label>
-              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : isHighContrast ? 'bg-yellow-950/10 border-yellow-400/20' : 'bg-slate-900/40 border-slate-900'}`}>
+              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : isHighContrast ? 'bg-yellow-950/10 border-yellow-400/20' : 'bg-surface/40 border-slate-900'}`}>
                 {availableFields.map((col) => {
                   const isChecked = selectedColumns.includes(col);
                   return (
-                    <label key={col} className={`flex items-center gap-2 cursor-pointer select-none py-1 px-1 text-[11px] font-mono ${isLight ? 'text-slate-700' : isHighContrast ? 'text-yellow-300' : 'text-slate-300'}`}>
+                    <label key={col} className={`flex items-center gap-2 cursor-pointer select-none py-1 px-1 text-[11px] font-mono ${isLight ? 'text-slate-700' : isHighContrast ? 'text-yellow-300' : 'text-secondary'}`}>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => toggleColumn(col)}
-                        className={`rounded border-${isLight ? 'slate-300' : 'slate-800'} text-blue-600 focus:ring-blue-500 ${isLight ? 'bg-white' : 'bg-slate-950'} w-3.5 h-3.5`}
+                        className={`rounded border-${isLight ? 'slate-300' : 'slate-800'} text-blue-600 focus:ring-blue-500 ${isLight ? 'bg-white' : 'bg-base'} w-3.5 h-3.5`}
                       />
                       {col}
                     </label>
@@ -271,29 +271,29 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
 
             {/* Permissions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <div className={`flex items-center justify-between p-3.5 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : isHighContrast ? 'bg-yellow-950/10 border-yellow-400/20' : 'bg-slate-900/30 border-slate-900'}`}>
+              <div className={`flex items-center justify-between p-3.5 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : isHighContrast ? 'bg-yellow-950/10 border-yellow-400/20' : 'bg-surface/30 border-slate-900'}`}>
                 <div>
-                  <span className={`font-extrabold uppercase block tracking-wide ${isLight ? 'text-slate-800' : isHighContrast ? 'text-yellow-300' : 'text-slate-300'}`}>Permitir Edición</span>
+                  <span className={`font-extrabold uppercase block tracking-wide ${isLight ? 'text-slate-800' : isHighContrast ? 'text-yellow-300' : 'text-secondary'}`}>Permitir Edición</span>
                   <span className={`text-[9px] ${textMuted}`}>Acceso a Alterar valores localmente</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={allowEdits}
                   onChange={(e) => setAllowEdits(e.target.checked)}
-                  className={`w-4 h-4 rounded text-blue-600 ${isLight ? 'bg-white border-slate-300' : 'bg-slate-950 border-slate-800'}`}
+                  className={`w-4 h-4 rounded text-blue-600 ${isLight ? 'bg-white border-slate-300' : 'bg-base border-subtle'}`}
                 />
               </div>
 
-              <div className={`flex items-center justify-between p-3.5 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : isHighContrast ? 'bg-yellow-950/10 border-yellow-400/20' : 'bg-slate-900/30 border-slate-900'}`}>
+              <div className={`flex items-center justify-between p-3.5 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : isHighContrast ? 'bg-yellow-950/10 border-yellow-400/20' : 'bg-surface/30 border-slate-900'}`}>
                 <div>
-                  <span className={`font-extrabold uppercase block tracking-wide ${isLight ? 'text-slate-800' : isHighContrast ? 'text-yellow-300' : 'text-slate-300'}`}>Permitir Eliminación</span>
+                  <span className={`font-extrabold uppercase block tracking-wide ${isLight ? 'text-slate-800' : isHighContrast ? 'text-yellow-300' : 'text-secondary'}`}>Permitir Eliminación</span>
                   <span className={`text-[9px] ${textMuted}`}>Acceso de purga en este slice</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={allowDeletes}
                   onChange={(e) => setAllowDeletes(e.target.checked)}
-                  className={`w-4 h-4 rounded text-blue-600 ${isLight ? 'bg-white border-slate-300' : 'bg-slate-950 border-slate-800'}`}
+                  className={`w-4 h-4 rounded text-blue-600 ${isLight ? 'bg-white border-slate-300' : 'bg-base border-subtle'}`}
                 />
               </div>
             </div>

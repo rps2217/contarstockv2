@@ -33,7 +33,7 @@ export const PhotoViewerModal: React.FC<Props> = ({ item, onClose, theme }) => {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+          className="w-full max-w-2xl bg-surface border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
           {/* Top Panel Detail */}
@@ -46,7 +46,7 @@ export const PhotoViewerModal: React.FC<Props> = ({ item, onClose, theme }) => {
             </div>
             
             <div className="text-right">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+              <span className="text-[10px] font-bold text-muted uppercase block">
                 {format(item.createdAt, 'dd/MM/yyyy')}
               </span>
               <span className="text-[10px] font-bold text-slate-500 uppercase block mt-1">
@@ -56,7 +56,7 @@ export const PhotoViewerModal: React.FC<Props> = ({ item, onClose, theme }) => {
           </div>
 
           {/* Photo Display Frame */}
-          <div className="aspect-square w-full bg-slate-950 flex items-center justify-center relative overflow-hidden">
+          <div className="aspect-square w-full bg-base flex items-center justify-center relative overflow-hidden">
             <img 
               src={item.photoUrl || item.labelPhoto} 
               alt="Etiqueta Logística" 
@@ -68,12 +68,12 @@ export const PhotoViewerModal: React.FC<Props> = ({ item, onClose, theme }) => {
           </div>
 
           {/* Metadata information block */}
-          <div className="p-6 bg-slate-950/80 border-t border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="p-6 bg-base/80 border-t border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Orden Vinculada: </span>
               <div className="flex items-center gap-2">
                 <Tag className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-xs font-black text-slate-300 uppercase">
+                <span className="text-xs font-black text-secondary uppercase">
                   {item.erpOrder && item.erpOrder !== 'RECEPCION_BORRADOR' ? item.erpOrder : 'SIN ERP (BORRADOR}'}
                 </span>
               </div>

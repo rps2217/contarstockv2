@@ -49,7 +49,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
     },
     [ProductPolicyStatus.NO_INFO]: {
       icon: <Minus className="w-4 h-4" />,
-      color: 'text-slate-400',
+      color: 'text-muted',
       bg: 'bg-slate-500/10'
     }
   };
@@ -111,7 +111,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
                 ${stockStatus === 'NORMAL' ? 'bg-emerald-500/10 text-emerald-400' :
                   stockStatus === 'LOW' ? 'bg-amber-500/10 text-amber-400' :
                   stockStatus === 'CRITICAL' ? 'bg-rose-500/10 text-rose-400' :
-                  'bg-slate-500/10 text-slate-400'}
+                  'bg-slate-500/10 text-muted'}
               `}>
                 Stock: {product.stock}
               </span>

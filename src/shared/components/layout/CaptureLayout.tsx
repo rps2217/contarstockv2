@@ -62,7 +62,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   }, []);
 
   return (
-    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-base text-white' : 'bg-slate-50 text-slate-900'}`}>
       {header}
 
       {/* COMPORTAMIENTO CLÁSICO DE APPSHEET: NUBE DE ESTADO FLOTANTE */}
@@ -125,7 +125,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
           </div>
         )}
         {/* INPUT SECTION */}
-        <div className="p-3 md:p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
+        <div className="p-3 md:p-6 border-b border-white/5 bg-base/50 backdrop-blur-md sticky top-0 z-10">
           {/* ... existing input code remains same ... */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
@@ -145,7 +145,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
               {onCameraToggle && (
                 <button 
                   onClick={onCameraToggle}
-                  className="h-full px-4 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 transition-all active:scale-95"
+                  className="h-full px-4 bg-white/5 hover:bg-white/10 rounded-2xl text-muted transition-all active:scale-95"
                 >
                   <Camera className="w-6 h-6" />
                 </button>

@@ -111,7 +111,7 @@ export const SliceEditor: React.FC<Props> = ({
               isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'
             }`}
           >
-            <X className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+            <X className={`w-5 h-5 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
           </button>
         </div>
 
@@ -120,7 +120,7 @@ export const SliceEditor: React.FC<Props> = ({
           {/* Name */}
           <div>
             <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+              isDark ? 'text-muted' : 'text-slate-500'
             }`}>
               Nombre
             </label>
@@ -132,7 +132,7 @@ export const SliceEditor: React.FC<Props> = ({
               className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-colors ${
                 isDark 
                   ? 'bg-white/5 text-white placeholder:text-slate-500 border border-white/10 focus:border-indigo-500' 
-                  : 'bg-slate-100 text-slate-800 placeholder:text-slate-400 border border-slate-200 focus:border-indigo-500'
+                  : 'bg-slate-100 text-slate-800 placeholder:text-muted border border-slate-200 focus:border-indigo-500'
               }`}
             />
           </div>
@@ -140,7 +140,7 @@ export const SliceEditor: React.FC<Props> = ({
           {/* Description */}
           <div>
             <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+              isDark ? 'text-muted' : 'text-slate-500'
             }`}>
               Descripción
             </label>
@@ -152,7 +152,7 @@ export const SliceEditor: React.FC<Props> = ({
               className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-colors resize-none ${
                 isDark 
                   ? 'bg-white/5 text-white placeholder:text-slate-500 border border-white/10 focus:border-indigo-500' 
-                  : 'bg-slate-100 text-slate-800 placeholder:text-slate-400 border border-slate-200 focus:border-indigo-500'
+                  : 'bg-slate-100 text-slate-800 placeholder:text-muted border border-slate-200 focus:border-indigo-500'
               }`}
             />
           </div>
@@ -160,7 +160,7 @@ export const SliceEditor: React.FC<Props> = ({
           {/* Source Table */}
           <div>
             <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+              isDark ? 'text-muted' : 'text-slate-500'
             }`}>
               Tabla de Origen
             </label>
@@ -187,7 +187,7 @@ export const SliceEditor: React.FC<Props> = ({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-slate-400' : 'text-slate-500'
+                isDark ? 'text-muted' : 'text-slate-500'
               }`}>
                 Campo
               </label>
@@ -207,7 +207,7 @@ export const SliceEditor: React.FC<Props> = ({
             </div>
             <div>
               <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-slate-400' : 'text-slate-500'
+                isDark ? 'text-muted' : 'text-slate-500'
               }`}>
                 Operador
               </label>
@@ -227,7 +227,7 @@ export const SliceEditor: React.FC<Props> = ({
             </div>
             <div>
               <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-slate-400' : 'text-slate-500'
+                isDark ? 'text-muted' : 'text-slate-500'
               }`}>
                 Valor
               </label>
@@ -247,7 +247,7 @@ export const SliceEditor: React.FC<Props> = ({
           {/* Columns */}
           <div>
             <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+              isDark ? 'text-muted' : 'text-slate-500'
             }`}>
               Columnas a Mostrar ({selectedColumns.length})
             </label>
@@ -266,7 +266,7 @@ export const SliceEditor: React.FC<Props> = ({
                           ? 'bg-indigo-500 text-white'
                           : 'bg-indigo-600 text-white'
                         : isDark
-                          ? 'bg-white/10 text-slate-400 hover:bg-white/20'
+                          ? 'bg-white/10 text-muted hover:bg-white/20'
                           : 'bg-white text-slate-600 hover:bg-slate-200'
                     }`}
                   >

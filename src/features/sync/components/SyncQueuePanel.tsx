@@ -33,7 +33,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
   // Empty state
   if (!items || items.length === 0) {
     return (
-      <div className="bg-slate-950/40 border border-slate-900 rounded-3xl p-12 text-center">
+      <div className="bg-base/40 border border-slate-900 rounded-3xl p-12 text-center">
         <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-4 animate-pulse" />
         <h3 className="text-md font-black text-white uppercase">¡Bandeja de Salida Limpia!</h3>
         <p className="text-xs text-slate-500 mt-2 max-w-sm mx-auto">
@@ -70,7 +70,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
                 ? 'bg-rose-950/10 border-rose-900/50 hover:bg-rose-950/20'
                 : statusType === 'delete'
                   ? 'bg-amber-950/10 border-amber-900/50 hover:bg-amber-950/20'
-                  : 'bg-slate-900/30 border-slate-800 hover:bg-slate-900/50'
+                  : 'bg-surface/30 border-subtle hover:bg-surface/50'
           }`}
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -79,7 +79,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
               statusType === 'delete' ? 'bg-amber-500' : 'bg-blue-500'
             }`} />
             <div className="min-w-0 flex-1">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-wide block">
+              <span className="text-xs font-black text-muted uppercase tracking-wide block">
                 {item.key.toUpperCase()} • <span className="text-[10px] font-mono lowercase">
                   {item.displayName.substring(0, 30)}
                 </span>
@@ -115,7 +115,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+              <div className="bg-base/40 border border-slate-900 rounded-2xl p-4 space-y-3">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-2 border-b border-slate-900">
                   <h4 className="text-[10px] font-black text-white uppercase flex items-center gap-1.5">
@@ -127,7 +127,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
                       setExpandedId(null);
                       onSelectItem(null);
                     }}
-                    className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black"
+                    className="text-[10px] text-slate-500 hover:text-secondary uppercase font-black"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -143,7 +143,7 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
                   </div>
                   <div>
                     <span className="text-slate-500 font-bold uppercase block mb-1">Primary Key</span>
-                    <span className="font-mono text-slate-300 bg-slate-900 px-2 py-1 rounded">
+                    <span className="font-mono text-secondary bg-surface px-2 py-1 rounded">
                       {item.primaryKey}
                     </span>
                   </div>
@@ -154,13 +154,13 @@ export const SyncQueuePanel: React.FC<SyncQueuePanelProps> = ({
                   <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest block mb-1.5">
                     Datos ({Object.keys(item.rawData || {}).length} campos)
                   </span>
-                  <div className="bg-slate-950 p-2 rounded-xl text-[9px] font-mono text-slate-400 max-h-24 overflow-y-auto custom-scrollbar">
+                  <div className="bg-base p-2 rounded-xl text-[9px] font-mono text-muted max-h-24 overflow-y-auto custom-scrollbar">
                     {item.rawData && Object.entries(item.rawData).slice(0, 8).map(([key, value]) => {
                       if (['syncStatus', 'lastSyncTimestamp', 'tableName'].includes(key)) return null;
                       return (
                         <div key={key} className="flex justify-between gap-4 border-b border-white/5 py-1 last:border-0">
                           <span className="text-slate-500 font-bold">{key}:</span>
-                          <span className="text-slate-300 break-all">
+                          <span className="text-secondary break-all">
                             {typeof value === 'string' ? value.substring(0, 40) : JSON.stringify(value).substring(0, 40)}
                           </span>
                         </div>

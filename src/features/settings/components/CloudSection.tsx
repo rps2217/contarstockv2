@@ -27,11 +27,11 @@ export const CloudSection: React.FC<Props> = ({ settings, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-indigo-200' : 'bg-slate-900 border-indigo-500/30';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-indigo-200' : 'bg-surface border-indigo-500/30';
   const cardText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
   const accentBg = isHighContrast ? 'bg-yellow-900/30' : isLight ? 'bg-indigo-50' : 'bg-indigo-600';
-  const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-700' : 'text-slate-400';
-  const subText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-400';
+  const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-700' : 'text-muted';
+  const subText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted';
   
   const subCardBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/5';
   const subCardBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-100' : 'border-white/5';
@@ -176,7 +176,7 @@ export const CloudSection: React.FC<Props> = ({ settings, theme = 'dark' }) => {
                 icon={Activity}
                 variant="outline"
                 theme={theme}
-                className={`${isHighContrast ? 'bg-yellow-900/20 border-yellow-400/50 text-yellow-400' : isLight ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-800 border-indigo-500/10 text-indigo-400'} h-14`}
+                className={`${isHighContrast ? 'bg-yellow-900/20 border-yellow-400/50 text-yellow-400' : isLight ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-elevated border-indigo-500/10 text-indigo-400'} h-14`}
               />
               <SettingsButton 
                 onClick={() => setShowAuditor(true)}

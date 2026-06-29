@@ -84,7 +84,7 @@ export const ExpiryStatsBar = memo<ExpiryStatsBarProps>(({
     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
       {/* Total */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 shrink-0">
-        <Package className="w-4 h-4 text-slate-400" />
+        <Package className="w-4 h-4 text-muted" />
         <span className="text-sm font-black text-white">{stats.total}</span>
       </div>
 
@@ -106,7 +106,7 @@ export const ExpiryStatsBar = memo<ExpiryStatsBarProps>(({
             `}
           >
             <Icon className={`w-4 h-4 ${selected ? color : 'text-slate-500'}`} />
-            <span className={`text-xs font-bold ${selected ? color : 'text-slate-400'}`}>
+            <span className={`text-xs font-bold ${selected ? color : 'text-muted'}`}>
               {count}
             </span>
             <span className={`text-[10px] font-medium ${selected ? color : 'text-slate-500'}`}>

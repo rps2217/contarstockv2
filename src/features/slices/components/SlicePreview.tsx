@@ -26,13 +26,13 @@ export const SlicePreview: React.FC<Props> = ({
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const tableBg = isLight ? 'bg-white' : isHighContrast ? 'bg-black' : 'bg-slate-950';
+  const tableBg = isLight ? 'bg-white' : isHighContrast ? 'bg-black' : 'bg-base';
   const tableBorder = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400' : 'border-slate-900';
-  const theadBg = isLight ? 'bg-slate-100' : isHighContrast ? 'bg-yellow-950/30' : 'bg-slate-900/40';
+  const theadBg = isLight ? 'bg-slate-100' : isHighContrast ? 'bg-yellow-950/30' : 'bg-surface/40';
   const theadText = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-400' : 'text-slate-500';
   const rowDivider = isLight ? 'divide-slate-200' : isHighContrast ? 'divide-yellow-400/20' : 'divide-slate-900';
-  const rowHover = isLight ? 'hover:bg-slate-50' : isHighContrast ? 'hover:bg-yellow-900/10' : 'hover:bg-slate-900/10';
-  const cellText = isLight ? 'text-slate-700' : isHighContrast ? 'text-yellow-300' : 'text-slate-300';
+  const rowHover = isLight ? 'hover:bg-slate-50' : isHighContrast ? 'hover:bg-yellow-900/10' : 'hover:bg-surface/10';
+  const cellText = isLight ? 'text-slate-700' : isHighContrast ? 'text-yellow-300' : 'text-secondary';
 
   const handleEditRow = (rowId: string, rowData: any) => {
     if (!activeSlice.allowEdits) return;
@@ -90,7 +90,7 @@ export const SlicePreview: React.FC<Props> = ({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className={`animate-pulse ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Cargando datos...</div>
+        <div className={`animate-pulse ${isLight ? 'text-muted' : 'text-slate-500'}`}>Cargando datos...</div>
       </div>
     );
   }
@@ -112,8 +112,8 @@ export const SlicePreview: React.FC<Props> = ({
         <tbody className={`divide-y ${rowDivider}`}>
           {filteredRows.length === 0 ? (
             <tr>
-              <td colSpan={activeSlice.selectedColumns.length + 1} className={`p-8 text-center font-sans ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                <BookOpen className={`w-10 h-10 mx-auto mb-3 ${isLight ? 'text-slate-300' : 'text-slate-800'}`} />
+              <td colSpan={activeSlice.selectedColumns.length + 1} className={`p-8 text-center font-sans ${isLight ? 'text-muted' : 'text-slate-500'}`}>
+                <BookOpen className={`w-10 h-10 mx-auto mb-3 ${isLight ? 'text-secondary' : 'text-slate-800'}`} />
                 Ningún registro cumple con los criterios de este Slice o la búsqueda actual.
               </td>
             </tr>

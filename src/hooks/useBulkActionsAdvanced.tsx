@@ -655,13 +655,13 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  const bgClass = theme === 'dark' ? 'bg-slate-900' : 'bg-white';
+  const bgClass = theme === 'dark' ? 'bg-surface' : 'bg-white';
   const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
+  const mutedClass = theme === 'dark' ? 'text-muted' : 'text-slate-500';
 
   if (history.length === 0) {
     return (
-      <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+      <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-elevated' : 'bg-slate-100'}`}>
         <div className="flex items-center gap-2 mb-2">
           <Clock className={`w-4 h-4 ${mutedClass}`} />
           <span className={`text-sm font-bold ${mutedClass}`}>Sin historial</span>
@@ -671,15 +671,15 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
   }
 
   return (
-    <div className={`rounded-xl overflow-hidden border ${theme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
-      <div className={`p-3 flex items-center justify-between border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+    <div className={`rounded-xl overflow-hidden border ${theme === 'dark' ? 'bg-surface border-subtle' : 'bg-white border-slate-200'}`}>
+      <div className={`p-3 flex items-center justify-between border-b ${theme === 'dark' ? 'border-subtle' : 'border-slate-200'}`}>
         <div className="flex items-center gap-2">
           <Clock className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
           <span className={`text-sm font-bold ${textClass}`}>Historial de Acciones</span>
         </div>
         <button
           onClick={onClear}
-          className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+          className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-muted hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
         >
           Limpiar
         </button>
@@ -689,7 +689,7 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
         {history.slice(0, 10).map(entry => (
           <div
             key={entry.id}
-            className={`p-3 flex items-center justify-between border-b last:border-b-0 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}
+            className={`p-3 flex items-center justify-between border-b last:border-b-0 ${theme === 'dark' ? 'border-subtle' : 'border-slate-100'}`}
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -748,9 +748,9 @@ export const DryRunModal: React.FC<DryRunModalProps> = ({
 }) => {
   if (!isOpen || !results) return null;
 
-  const bgClass = theme === 'dark' ? 'bg-slate-900' : 'bg-white';
+  const bgClass = theme === 'dark' ? 'bg-surface' : 'bg-white';
   const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
+  const mutedClass = theme === 'dark' ? 'text-muted' : 'text-slate-500';
   const inputBgClass = theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
 
   return (
@@ -869,9 +869,9 @@ export const ViewPreferencesToolbar: React.FC<ViewPreferencesToolbarProps> = ({
   onToggleSortOrder,
   theme = 'dark'
 }) => {
-  const bgClass = theme === 'dark' ? 'bg-slate-800' : 'bg-white';
+  const bgClass = theme === 'dark' ? 'bg-elevated' : 'bg-white';
   const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
+  const mutedClass = theme === 'dark' ? 'text-muted' : 'text-slate-500';
   const activeClass = theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600';
 
   const sortOptions: { value: ViewPreferences['sortBy']; label: string }[] = [
@@ -905,7 +905,7 @@ export const ViewPreferencesToolbar: React.FC<ViewPreferencesToolbarProps> = ({
           className={`text-xs font-bold bg-transparent border-none outline-none cursor-pointer ${textClass}`}
         >
           {sortOptions.map(opt => (
-            <option key={opt.value} value={opt.value} className={theme === 'dark' ? 'bg-slate-800' : 'bg-white'}>
+            <option key={opt.value} value={opt.value} className={theme === 'dark' ? 'bg-elevated' : 'bg-white'}>
               {opt.label}
             </option>
           ))}

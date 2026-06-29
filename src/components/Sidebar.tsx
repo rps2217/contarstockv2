@@ -210,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
       </nav>
 
       {/* Status Footer */}
-      <div className={`p-4 mt-auto border-t border-white/5 bg-slate-900/20 backdrop-blur-md`}>
+      <div className={`p-4 mt-auto border-t border-white/5 bg-surface/20 backdrop-blur-md`}>
         {isCollapsed ? (
           // Indicador compacto cuando colapsado
           <motion.div 
@@ -240,7 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
             className="px-4 py-3 bg-white/5 rounded-xl border border-white/5"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Estado Nube</span>
+              <span className="text-[8px] font-bold text-muted uppercase tracking-widest">Estado Nube</span>
               <div className="flex items-center gap-2">
                 {isSyncing && (
                   <motion.div

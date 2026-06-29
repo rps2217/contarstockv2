@@ -57,7 +57,7 @@ export const SliceList: React.FC<Props> = ({
         <div className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl ${
           isDark ? 'bg-white/5' : 'bg-slate-100'
         }`}>
-          <Search className={`w-4 h-4 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+          <Search className={`w-4 h-4 shrink-0 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
           <input
             type="text"
             placeholder="Buscar slices..."
@@ -113,12 +113,12 @@ export const SliceList: React.FC<Props> = ({
                     )}
                   </div>
                   <p className={`text-[10px] mt-1 line-clamp-2 ${
-                    isDark ? 'text-slate-400' : 'text-slate-500'
+                    isDark ? 'text-muted' : 'text-slate-500'
                   }`}>
                     {slice.description}
                   </p>
                   <div className={`flex items-center gap-3 mt-2 text-[9px] font-bold uppercase tracking-wide ${
-                    isDark ? 'text-slate-500' : 'text-slate-400'
+                    isDark ? 'text-slate-500' : 'text-muted'
                   }`}>
                     <span>{slice.sourceTable}</span>
                     <span>•</span>
@@ -128,7 +128,7 @@ export const SliceList: React.FC<Props> = ({
 
                 <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${
                   isActive ? 'rotate-90' : ''
-                } ${isDark ? 'text-slate-600' : 'text-slate-400'}`} />
+                } ${isDark ? 'text-slate-600' : 'text-muted'}`} />
               </div>
 
               {/* Actions */}

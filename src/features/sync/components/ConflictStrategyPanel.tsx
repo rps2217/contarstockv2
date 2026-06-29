@@ -87,16 +87,16 @@ export const ConflictStrategyPanel: React.FC<ConflictStrategyPanelProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg z-50"
           >
-            <div className="bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden">
+            <div className="bg-surface rounded-3xl border border-subtle shadow-2xl overflow-hidden">
               {/* Header */}
-              <div className="p-6 border-b border-slate-800">
+              <div className="p-6 border-b border-subtle">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-amber-500/10 rounded-2xl">
                     <Shield className="w-6 h-6 text-amber-500" />
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-white">Resolución de Conflictos</h2>
-                    <p className="text-sm text-slate-400 mt-0.5">
+                    <p className="text-sm text-muted mt-0.5">
                       Configura cómo resolver conflictos de sincronización
                     </p>
                   </div>
@@ -118,7 +118,7 @@ export const ConflictStrategyPanel: React.FC<ConflictStrategyPanelProps> = ({
                       className={`w-full p-4 rounded-2xl border transition-all text-left ${
                         isSelected
                           ? 'bg-blue-500/10 border-blue-500/40 ring-2 ring-blue-500/20'
-                          : 'bg-slate-800/50 border-slate-700/50 hover:border-slate-600'
+                          : 'bg-elevated/50 border-subtle/50 hover:border-slate-600'
                       }`}
                     >
                       <div className="flex items-start gap-4">
@@ -126,7 +126,7 @@ export const ConflictStrategyPanel: React.FC<ConflictStrategyPanelProps> = ({
                           isSelected ? 'bg-blue-500/20' : 'bg-slate-700/50'
                         }`}>
                           <Icon className={`w-5 h-5 ${
-                            isSelected ? 'text-blue-400' : 'text-slate-400'
+                            isSelected ? 'text-blue-400' : 'text-muted'
                           }`} />
                         </div>
                         
@@ -139,7 +139,7 @@ export const ConflictStrategyPanel: React.FC<ConflictStrategyPanelProps> = ({
                               </div>
                             )}
                           </div>
-                          <p className="text-sm text-slate-400 mt-1">
+                          <p className="text-sm text-muted mt-1">
                             {config.description}
                           </p>
                         </div>
@@ -160,10 +160,10 @@ export const ConflictStrategyPanel: React.FC<ConflictStrategyPanelProps> = ({
               </div>
 
               {/* Footer */}
-              <div className="p-4 border-t border-slate-800 flex gap-3">
+              <div className="p-4 border-t border-subtle flex gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-sm hover:bg-slate-700 transition-colors"
+                  className="flex-1 py-3 rounded-xl bg-elevated text-secondary font-bold text-sm hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>

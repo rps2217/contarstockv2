@@ -103,7 +103,7 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
   }, [sessions]);
 
   const textColor = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const subtextColor = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-400';
+  const subtextColor = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted';
 
   const cards = [
     {
@@ -147,7 +147,7 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
       icon: CloudOff,
       color: metrics.pendingSync > 0 
         ? (isHighContrast ? 'text-yellow-400' : isLight ? 'text-rose-600' : 'text-rose-400')
-        : (isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-600' : 'text-slate-400'),
+        : (isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-600' : 'text-muted'),
       bgColor: metrics.pendingSync > 0
         ? (isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-rose-50' : 'bg-rose-500/10')
         : (isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50' : 'bg-slate-500/10'),

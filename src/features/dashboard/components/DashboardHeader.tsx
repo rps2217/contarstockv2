@@ -42,7 +42,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = memo(({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-slate-400 text-sm"
+            className="text-muted text-sm"
           >
             Esto es lo que pasa hoy en tu almacén.
           </motion.p>
@@ -52,7 +52,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = memo(({
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-900/50 border border-slate-800/60 px-3 py-1.5 rounded-full"
+          className="hidden sm:flex items-center gap-2 text-xs font-medium text-muted bg-surface/50 border border-subtle/60 px-3 py-1.5 rounded-full"
         >
           <div className={cn(
             "w-2 h-2 rounded-full animate-pulse",

@@ -30,7 +30,7 @@ export const EventMainFields: React.FC<Props> = ({
       {/* Folio FRC */}
       <div className="space-y-2">
         <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-          theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+          theme === 'dark' ? 'text-muted' : 'text-slate-500'
         }`}>
           <FileText className="w-3 h-3" /> Folio FRC
         </label>
@@ -51,7 +51,7 @@ export const EventMainFields: React.FC<Props> = ({
       {/* Guía */}
       <div className="space-y-2">
         <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-          theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+          theme === 'dark' ? 'text-muted' : 'text-slate-500'
         }`}>
           <Truck className="w-3 h-3" /> Guía
         </label>

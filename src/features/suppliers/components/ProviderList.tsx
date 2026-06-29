@@ -32,9 +32,9 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
 
   if (!providers || providers.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 md:p-12 text-center h-full flex flex-col items-center justify-center">
-        <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-none">
-          <Truck className="w-8 h-8 md:w-10 md:h-10 text-slate-300 dark:text-slate-600" />
+      <div className="bg-white dark:bg-surface border-2 border-dashed border-slate-200 dark:border-subtle rounded-3xl p-10 md:p-12 text-center h-full flex flex-col items-center justify-center">
+        <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 dark:bg-elevated rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-none">
+          <Truck className="w-8 h-8 md:w-10 md:h-10 text-secondary dark:text-slate-600" />
         </div>
         <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-base md:text-lg">
           {hasFilter ? 'No hay resultados' : 'Sin Proveedores'}
@@ -49,14 +49,14 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
   }
 
   return (
-    <div className="h-full flex flex-col bg-transparent md:bg-white md:dark:bg-slate-900 md:rounded-3xl md:border md:border-slate-200 md:dark:border-white/5 overflow-hidden md:shadow-sm">
+    <div className="h-full flex flex-col bg-transparent md:bg-white md:dark:bg-surface md:rounded-3xl md:border md:border-slate-200 md:dark:border-white/5 overflow-hidden md:shadow-sm">
       {/* Table Header ONLY on Desktop */}
-      <div className="hidden md:flex bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 px-6 py-4 shrink-0 items-center sticky top-0 z-10">
-        <div className="w-48 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RUT</div>
-        <div className="flex-1 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nombre / Razón Social</div>
-        <div className="w-40 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Estado Canje</div>
-        <div className="w-56 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Política de Retiro</div>
-        <div className="w-24 text-right text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pr-4">Acción</div>
+      <div className="hidden md:flex bg-slate-50/80 dark:bg-surface/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 px-6 py-4 shrink-0 items-center sticky top-0 z-10">
+        <div className="w-48 text-[9px] md:text-[10px] font-black text-muted dark:text-slate-500 uppercase tracking-widest">RUT</div>
+        <div className="flex-1 text-[9px] md:text-[10px] font-black text-muted dark:text-slate-500 uppercase tracking-widest">Nombre / Razón Social</div>
+        <div className="w-40 text-[9px] md:text-[10px] font-black text-muted dark:text-slate-500 uppercase tracking-widest">Estado Canje</div>
+        <div className="w-56 text-[9px] md:text-[10px] font-black text-muted dark:text-slate-500 uppercase tracking-widest">Política de Retiro</div>
+        <div className="w-24 text-right text-[9px] md:text-[10px] font-black text-muted dark:text-slate-500 uppercase tracking-widest pr-4">Acción</div>
       </div>
 
       {/* Main List Container */}
@@ -66,7 +66,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
             // HIGH DENSITY MOBILE CARD DESIGN
             return (
               <div key={p.rut} className="px-3 py-1.5 h-auto w-full">
-                <div className={`flex items-stretch bg-white dark:bg-slate-900 border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 ${
+                <div className={`flex items-stretch bg-white dark:bg-surface border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 ${
                   theme === 'dark' ? 'border-white/10' : 'border-slate-200'
                 }`}>
                   {/* Left accent color indicator representing hasExchange */}
@@ -99,11 +99,11 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                     <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight uppercase truncate">
                       {p.name}
                     </h3>
-                    <div className="mt-0.5 font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-tight">
+                    <div className="mt-0.5 font-mono text-[11px] font-bold text-slate-500 dark:text-muted tracking-tight">
                       RUT: {p.rut}
                     </div>
                     {p.exchangePolicy && (
-                      <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500 truncate italic">
+                      <p className="mt-1 text-[10px] text-muted dark:text-slate-500 truncate italic">
                         « {p.exchangePolicy} »
                       </p>
                     )}
@@ -158,7 +158,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                 }`}
               >
                 {/* RUT Column */}
-                <div className="w-48 shrink-0 flex items-center gap-3 font-mono font-bold text-slate-600 dark:text-slate-400">
+                <div className="w-48 shrink-0 flex items-center gap-3 font-mono font-bold text-slate-600 dark:text-muted">
                   <div className={`w-2 h-2 rounded-full shadow-sm ${
                     p.hasExchange ? 'bg-emerald-500' : 'bg-rose-500'
                   }`} />
@@ -166,7 +166,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                 </div>
 
                 {/* Name / Razón Social */}
-                <div className="flex-1 min-w-0 font-bold text-slate-800 dark:text-slate-200 truncate pr-6 uppercase">
+                <div className="flex-1 min-w-0 font-bold text-slate-800 dark:text-primary truncate pr-6 uppercase">
                   {p.name}
                 </div>
 
@@ -197,7 +197,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                     }`}>
                       {p.withdrawalDays || 0} Días de Ant.
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 max-w-[200px] truncate leading-tight">
+                    <span className="text-[10px] font-bold text-muted dark:text-slate-500 max-w-[200px] truncate leading-tight">
                       {p.exchangePolicy || 'Anticipación Estándar'}
                     </span>
                   </div>

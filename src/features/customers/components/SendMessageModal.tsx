@@ -83,7 +83,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border ${
-            theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+            theme === 'dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
           }`}
         >
           <div className={`p-4 border-b flex items-center justify-between ${
@@ -98,7 +98,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
             <button
               onClick={onClose}
               className={`p-2 rounded-xl transition-colors ${
-                theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               <X className="w-5 h-5" />
@@ -118,7 +118,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
                 <p className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                   {customer.firstName} {customer.lastName}
                 </p>
-                <p className={`text-xs font-mono ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-xs font-mono ${theme === 'dark' ? 'text-muted' : 'text-slate-500'}`}>
                   {customer.phone}
                 </p>
               </div>
@@ -126,7 +126,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
 
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Seleccionar Plantilla
               </label>
@@ -147,7 +147,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
 
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Mensaje a Enviar (Puedes editarlo)
               </label>

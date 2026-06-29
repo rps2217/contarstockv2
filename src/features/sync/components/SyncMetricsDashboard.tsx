@@ -97,9 +97,9 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+    <div className="bg-surface rounded-2xl border border-subtle overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+      <div className="p-4 border-b border-subtle flex items-center justify-between bg-surface/50">
         <div className="flex items-center gap-3">
           <Activity className="w-5 h-5 text-blue-400" />
           <h3 className="font-bold text-white text-sm">Métricas de Sincronización</h3>
@@ -113,17 +113,17 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
               setHealth(healthData);
               onRefresh?.();
             }}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-elevated rounded-lg transition-colors"
             title="Actualizar"
           >
-            <RefreshCw className="w-4 h-4 text-slate-400" />
+            <RefreshCw className="w-4 h-4 text-muted" />
           </button>
         </div>
       </div>
 
       {isLoading ? (
         <div className="p-8 flex items-center justify-center">
-          <RefreshCw className="w-6 h-6 text-slate-400 animate-spin" />
+          <RefreshCw className="w-6 h-6 text-muted animate-spin" />
         </div>
       ) : (
         <div className="p-4 space-y-4">
@@ -139,7 +139,7 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
                   </div>
                   <div>
                     <p className="font-bold text-white">Salud del Sync</p>
-                    <p className="text-xs text-slate-400">{getHealthLabel(health.score)}</p>
+                    <p className="text-xs text-muted">{getHealthLabel(health.score)}</p>
                   </div>
                 </div>
                 {health.issues.length > 0 && (
@@ -166,8 +166,8 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {/* Total Syncs */}
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/30">
-                <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <div className="p-3 rounded-xl bg-elevated/50 border border-subtle/30">
+                <div className="flex items-center gap-2 text-muted mb-2">
                   <Zap className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase">Total</span>
                 </div>
@@ -212,8 +212,8 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
               </div>
 
               {/* Records Pushed */}
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/30">
-                <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <div className="p-3 rounded-xl bg-elevated/50 border border-subtle/30">
+                <div className="flex items-center gap-2 text-muted mb-2">
                   <ArrowUpCircle className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase">Subidos</span>
                 </div>
@@ -222,8 +222,8 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
               </div>
 
               {/* Records Pulled */}
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/30">
-                <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <div className="p-3 rounded-xl bg-elevated/50 border border-subtle/30">
+                <div className="flex items-center gap-2 text-muted mb-2">
                   <ArrowDownCircle className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase">Descargados</span>
                 </div>
@@ -232,8 +232,8 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
               </div>
 
               {/* Last Sync */}
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/30 col-span-2">
-                <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <div className="p-3 rounded-xl bg-elevated/50 border border-subtle/30 col-span-2">
+                <div className="flex items-center gap-2 text-muted mb-2">
                   <RefreshCw className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase">Última Sync</span>
                 </div>
@@ -252,7 +252,7 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
           {/* Per-Table Stats */}
           {stats && Object.keys(stats.tables).length > 0 && (
             <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 Por Tabla
               </h4>
@@ -260,9 +260,9 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
                 {Object.entries(stats.tables).map(([table, tableStats]) => (
                   <div 
                     key={table}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-800/30 border border-slate-700/20"
+                    className="flex items-center justify-between p-2 rounded-lg bg-elevated/30 border border-subtle/20"
                   >
-                    <span className="text-sm font-medium text-slate-300 capitalize">{table}</span>
+                    <span className="text-sm font-medium text-secondary capitalize">{table}</span>
                     <div className="flex items-center gap-4 text-xs">
                       <span className="text-emerald-400">
                         ↑{tableStats.recordsPushed}

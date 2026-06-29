@@ -18,10 +18,10 @@ export const MaintenanceCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-100' : 'bg-slate-900 border-white/5';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-100' : 'bg-surface border-white/5';
   const cardText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
   const statBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-100' : 'bg-black/40 border-white/5';
-  const statLabel = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-400';
+  const statLabel = isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-muted';
   const statValue = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
   const badgeHealthy = isHighContrast ? 'bg-yellow-400/20 text-yellow-400' : isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-100 text-emerald-700';
   const badgeAlert = isHighContrast ? 'bg-yellow-400/20 text-yellow-400' : isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-100 text-amber-700';

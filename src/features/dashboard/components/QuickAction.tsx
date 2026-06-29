@@ -38,14 +38,14 @@ export const QuickAction: React.FC<QuickActionProps> = memo(({
         'text-left p-5 rounded-2xl border transition-all duration-200 flex flex-col gap-3 h-full',
         primary
           ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 shadow-lg shadow-blue-900/20'
-          : 'bg-slate-900/40 hover:bg-slate-800/60 border-slate-800/60 hover:border-slate-700'
+          : 'bg-surface/40 hover:bg-elevated/60 border-subtle/60 hover:border-subtle'
       )}
     >
       {/* Icon */}
       <div
         className={cn(
           'w-10 h-10 rounded-xl flex items-center justify-center',
-          primary ? 'bg-white/20 text-white' : 'bg-slate-800 text-blue-400'
+          primary ? 'bg-white/20 text-white' : 'bg-elevated text-blue-400'
         )}
       >
         {icon}
@@ -56,7 +56,7 @@ export const QuickAction: React.FC<QuickActionProps> = memo(({
         <h4
           className={cn(
             'font-semibold mb-1',
-            primary ? 'text-white' : 'text-slate-200'
+            primary ? 'text-white' : 'text-primary'
           )}
         >
           {title}

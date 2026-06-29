@@ -25,7 +25,7 @@ export const EventTypeSelector: React.FC<Props> = ({ value, onChange, theme }) =
   return (
     <div className="space-y-2">
       <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+        theme === 'dark' ? 'text-muted' : 'text-slate-500'
       }`}>
         <FileText className="w-3 h-3" /> Evento
       </label>

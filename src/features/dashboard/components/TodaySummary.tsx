@@ -52,7 +52,7 @@ export const TodaySummary: React.FC<TodaySummaryProps> = memo(({
   ];
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800/60 rounded-2xl p-5">
+    <div className="bg-surface/50 border border-subtle/60 rounded-2xl p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -124,10 +124,10 @@ export const TodaySummary: React.FC<TodaySummaryProps> = memo(({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-center gap-2"
+          className="mt-6 pt-4 border-t border-subtle/60 flex items-center justify-center gap-2"
         >
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted">
             {sessionsCompleted} sesión{sessionsCompleted !== 1 ? 'es' : ''} completada{sessionsCompleted !== 1 ? 's' : ''} hoy
           </span>
         </motion.div>

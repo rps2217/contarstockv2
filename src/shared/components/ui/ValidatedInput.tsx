@@ -161,7 +161,7 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = ({
         };
       default:
         return {
-          border: 'border-slate-700 focus:border-blue-500',
+          border: 'border-subtle focus:border-blue-500',
           icon: null,
           textColor: ''
         };
@@ -184,7 +184,7 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = ({
           maxLength={maxLength}
           className={`
             w-full px-4 py-3 rounded-xl
-            bg-slate-800 text-white
+            bg-elevated text-white
             border-2 ${styles.border}
             placeholder-slate-500
             transition-colors duration-200

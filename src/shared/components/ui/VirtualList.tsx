@@ -107,7 +107,7 @@ export const VirtualList = <T,>({
 
  if (items.length === 0) {
  return (
- <div className={`h-full w-full flex flex-col items-center justify-center text-slate-300 ${className}`}>
+ <div className={`h-full w-full flex flex-col items-center justify-center text-secondary ${className}`}>
  {emptyState || (
  <>
  <Package className="w-12 h-12 mb-3 opacity-20" />

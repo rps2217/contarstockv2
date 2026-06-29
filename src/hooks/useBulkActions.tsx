@@ -188,9 +188,9 @@ export function BulkActionBar<T = any>({
 }: BulkActionBarProps<T>) {
   if (selectedCount === 0) return null;
 
-  const bgClass = theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-white' : 'bg-black';
+  const bgClass = theme === 'dark' ? 'bg-elevated' : theme === 'light' ? 'bg-white' : 'bg-black';
   const textClass = theme === 'dark' ? 'text-white' : theme === 'light' ? 'text-slate-900' : 'text-yellow-400';
-  const borderClass = theme === 'dark' ? 'border-slate-700' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
+  const borderClass = theme === 'dark' ? 'border-subtle' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgClass} border-t-4 ${borderClass} ${className}`}>
@@ -284,7 +284,7 @@ export function BulkEditModal<T = any>({
 
   if (!isOpen) return null;
 
-  const bgClass = theme === 'dark' ? 'bg-slate-900' : 'bg-white';
+  const bgClass = theme === 'dark' ? 'bg-surface' : 'bg-white';
   const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const inputBgClass = theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
 
@@ -321,7 +321,7 @@ export function BulkEditModal<T = any>({
 
             return (
               <div key={field.key} className="space-y-2">
-                <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-muted' : 'text-slate-500'}`}>
                   {field.label} {field.required && <span className="text-rose-500">*</span>}
                 </label>
 

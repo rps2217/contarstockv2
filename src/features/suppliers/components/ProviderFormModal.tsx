@@ -43,7 +43,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] bg-surface/60 backdrop-blur-sm flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -70,7 +70,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
             </div>
           </div>
           <button onClick={onClose} className={`p-2 rounded-full transition-colors ${
-            theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-400'
+            theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-muted'
           }`}>
             <X className="w-5 h-5" />
           </button>
@@ -96,7 +96,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 }`}
               />
               {!initialData && (
-                <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                <p className="text-[10px] text-muted mt-1 flex items-center gap-1">
                   <Info className="w-3 h-3" /> El RUT es el identificador único y no se puede cambiar después.
                 </p>
               )}
@@ -163,7 +163,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                       : 'bg-white border-slate-200 focus:border-indigo-500 text-slate-900'
                   }`}
                 />
-                <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Días antes de la fecha de caducidad</span>
+                <span className={`text-sm font-bold ${theme === 'dark' ? 'text-muted' : 'text-slate-600'}`}>Días antes de la fecha de caducidad</span>
               </div>
             </div>
 
@@ -190,7 +190,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
               type="button"
               onClick={onClose}
               className={`flex-1 px-4 py-3 font-bold rounded-xl transition-colors ${
-                theme === 'dark' ? 'bg-brand-dark text-slate-400 hover:bg-brand-dark/80' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                theme === 'dark' ? 'bg-brand-dark text-muted hover:bg-brand-dark/80' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               Cancelar

@@ -35,7 +35,7 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  <button
  disabled={disabled || loading}
  onClick={() => { onClick(); if(!loading) onClose(); }}
- className={`flex flex-col items-center justify-center p-4 bg-slate-900 rounded-2xl border border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
+ className={`flex flex-col items-center justify-center p-4 bg-surface rounded-2xl border border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
  >
  <Icon className={`w-6 h-6 mb-2 ${loading ? 'animate-spin' : ''}`} />
  <span className="text-[9px] font-black uppercase tracking-widest text-center leading-tight">{loading ? 'Sincronizando...' : label}</span>
@@ -52,7 +52,7 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  isOpen={isOpen} 
  onClose={onClose} 
  variant="bottom-sheet" 
- className="bg-black border-t-2 border-slate-800"
+ className="bg-black border-t-2 border-subtle"
  showCloseButton={false}
  >
  <div className="p-6 pb-8 bg-black text-white">
@@ -61,13 +61,13 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  <h2 className="text-lg font-black uppercase italic tracking-tight text-white">Acciones de Auditoría</h2>
  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Modo Martillo v4.5</p>
  </div>
- <button onClick={onClose} className="p-2 bg-white/5 rounded-full text-slate-400">
+ <button onClick={onClose} className="p-2 bg-white/5 rounded-full text-muted">
  <X className="w-5 h-5" />
  </button>
  </div>
 
  {onToggleAutoSync && (
- <div className="mb-6 p-4 bg-slate-900 border border-white/5 rounded-2xl flex items-center justify-between">
+ <div className="mb-6 p-4 bg-surface border border-white/5 rounded-2xl flex items-center justify-between">
  <div className="flex flex-col pr-4">
  <span className="text-xs font-black uppercase text-indigo-400 tracking-wider">Autosincronizar al instante</span>
  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sube cada escaneo a la nube en tiempo real</span>
@@ -90,11 +90,11 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] disabled:opacity-30 ${
  hasManifestItems 
  ? 'bg-purple-600/20 border-2 border-purple-500/40 hover:bg-purple-600/30' 
- : 'bg-slate-900 border border-white/5'
+ : 'bg-surface border border-white/5'
  }`}
  >
  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
- hasManifestItems ? 'bg-purple-500/20' : 'bg-slate-800'
+ hasManifestItems ? 'bg-purple-500/20' : 'bg-elevated'
  }`}>
  <FlaskConical className={`w-6 h-6 ${hasManifestItems ? 'text-purple-400' : 'text-slate-600'}`} />
  </div>
@@ -125,7 +125,7 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  onClick={onToggleVoice} 
  icon={isVoiceEnabled ? Volume2 : VolumeX} 
  label={isVoiceEnabled ? "Voz Activada" : "Voz Desactivada"} 
- color={isVoiceEnabled ? "text-blue-400 border-blue-500/20" : "text-slate-400 border-slate-500/20"} 
+ color={isVoiceEnabled ? "text-blue-400 border-blue-500/20" : "text-muted border-slate-500/20"} 
  />
  )}
  {onSync && (

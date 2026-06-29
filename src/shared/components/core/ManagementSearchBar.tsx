@@ -120,7 +120,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
         >
           {/* Quiet Search Icon */}
           <Search className={`w-4 h-4 transition-colors duration-300 shrink-0 ${
-            isFocused ? colors.text : 'text-slate-400 dark:text-slate-500'
+            isFocused ? colors.text : 'text-muted dark:text-slate-500'
           }`} />
           
           <input 
@@ -148,7 +148,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
                     setLocalQuery('');
                     setSearchQuery('');
                   }}
-                  className={`p-1.5 rounded-lg text-slate-400 transition-colors ${
+                  className={`p-1.5 rounded-lg text-muted transition-colors ${
                     isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-slate-200 text-slate-600'
                   }`}
                   title="Borrar búsqueda"
@@ -170,7 +170,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
                     ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                     : 'bg-amber-50 text-amber-800 border border-amber-200 shadow-sm'
                   : isDark
-                    ? 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                    ? 'text-muted hover:bg-white/5 hover:text-white border border-transparent'
                     : 'text-slate-600 hover:bg-slate-200 border border-transparent'
               }`}
               title="Filtrar datos"

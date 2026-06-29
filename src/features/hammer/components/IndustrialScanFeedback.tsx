@@ -100,7 +100,7 @@ export const IndustrialScanFeedback: React.FC<IndustrialScanFeedbackProps> = mem
       `}>
         <div className={`
           flex items-center gap-3 px-4 py-2.5 rounded-2xl
-          bg-slate-900/95 backdrop-blur-sm border border-slate-700
+          bg-surface/95 backdrop-blur-sm border border-subtle
           shadow-2xl shadow-black/50
         `}>
           {/* Icon */}
@@ -116,7 +116,7 @@ export const IndustrialScanFeedback: React.FC<IndustrialScanFeedbackProps> = mem
               {config.text}
             </span>
             {lastBarcode && (
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-muted font-mono">
                 {lastBarcode.slice(0, 12)}{lastBarcode.length > 12 ? '...' : ''}
               </span>
             )}

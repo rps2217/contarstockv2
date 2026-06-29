@@ -59,7 +59,7 @@ export const OnboardingOverlay: React.FC = () => {
   const current = steps[step];
 
   return (
-    <div className="fixed inset-0 z-[300] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[300] bg-base/90 backdrop-blur-xl flex items-center justify-center p-6">
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -86,7 +86,7 @@ export const OnboardingOverlay: React.FC = () => {
             <h2 className="text-2xl font-black tracking-tighter italic uppercase mb-4 dark:text-white">
               {current.title}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-10">
+            <p className="text-slate-500 dark:text-muted text-sm leading-relaxed mb-10">
               {current.description}
             </p>
           </motion.div>

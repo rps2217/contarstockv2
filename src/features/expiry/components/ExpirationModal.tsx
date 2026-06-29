@@ -364,7 +364,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               )}
             </button>
             <p className="text-center text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-4">
-              Presiona <span className="text-slate-400">ENTER</span> para confirmar rápido
+              Presiona <span className="text-muted">ENTER</span> para confirmar rápido
             </p>
           </div>
 

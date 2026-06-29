@@ -29,13 +29,13 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   const handleBack = onBack || (() => navigate(-1));
 
   return (
-    <header className={`py-3 px-4 md:py-6 md:px-8 border-b ${theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-white border-slate-100'}`}>
+    <header className={`py-3 px-4 md:py-6 md:px-8 border-b ${theme === 'dark' ? 'bg-base border-white/5' : 'bg-white border-slate-100'}`}>
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
             onClick={handleBack}
             className={`p-3 rounded-2xl transition-all active:scale-90 ${
-              theme === 'dark' ? 'bg-white/5 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+              theme === 'dark' ? 'bg-white/5 text-muted hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
             } ${hideBackButtonOnMobile ? 'hidden md:flex' : ''}`}
           >
             <ChevronLeft className="w-6 h-6" />

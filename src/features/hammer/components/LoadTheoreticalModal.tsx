@@ -111,7 +111,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
       onClose={onClose}
       variant="center"
       title="Cargar Información Teórica"
-      className="bg-slate-950 border border-slate-800 text-white w-full max-w-lg rounded-3xl"
+      className="bg-base border border-subtle text-white w-full max-w-lg rounded-3xl"
     >
       <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto no-scrollbar">
         {error && (
@@ -126,7 +126,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
           <button
             disabled={!!actionLoading}
             onClick={handleGeneralImport}
-            className="w-full text-left bg-slate-900 hover:bg-slate-850 border border-white/5 hover:border-amber-500/30 p-4 rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] group disabled:opacity-50"
+            className="w-full text-left bg-surface hover:bg-slate-850 border border-white/5 hover:border-amber-500/30 p-4 rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] group disabled:opacity-50"
           >
             <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0 border border-amber-500/20">
               {actionLoading === 'general' ? (
@@ -137,7 +137,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">Stock Teórico General</h4>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5 tracking-tight">Utilizar última planilla de stock total (STOCK)</p>
+              <p className="text-[9px] font-bold text-muted uppercase mt-0.5 tracking-tight">Utilizar última planilla de stock total (STOCK)</p>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
           </button>
@@ -152,7 +152,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
             <button
               onClick={fetchLocalOrders}
               disabled={loadingLocal || !!actionLoading}
-              className="p-1 hover:bg-white/5 rounded-lg text-slate-400 active:scale-95 transition-all"
+              className="p-1 hover:bg-white/5 rounded-lg text-muted active:scale-95 transition-all"
               title="Actualizar listado local"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingLocal ? 'animate-spin text-emerald-400' : ''}`} />
@@ -166,7 +166,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
                 <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Buscando locales...</span>
               </div>
             ) : localOrders.length === 0 ? (
-              <div className="py-6 bg-slate-900/40 border border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">
+              <div className="py-6 bg-surface/40 border border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">
                 <HardDrive className="w-7 h-7 text-slate-700 mb-2" />
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Sin cargas locales guardadas</span>
                 <p className="text-[8px] font-bold text-slate-600 uppercase mt-1">Sube excel o pega en el panel de "Carga Teórica"</p>
@@ -216,7 +216,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
             <button
               onClick={fetchCloudOrders}
               disabled={loadingList || !!actionLoading}
-              className="p-1 hover:bg-white/5 rounded-lg text-slate-400 active:scale-95 transition-all"
+              className="p-1 hover:bg-white/5 rounded-lg text-muted active:scale-95 transition-all"
               title="Actualizar listado"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingList ? 'animate-spin text-indigo-400' : ''}`} />
@@ -230,7 +230,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Buscando en la nube...</span>
               </div>
             ) : orders.length === 0 ? (
-              <div className="py-8 bg-slate-900/50 border border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">
+              <div className="py-8 bg-surface/50 border border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">
                 <FileText className="w-8 h-8 text-slate-600 mb-2" />
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">No hay cargas en la nube</span>
                 <p className="text-[8px] font-bold text-slate-600 uppercase mt-1">Guarda listados teóricos en "Carga Teórica"</p>
@@ -241,7 +241,7 @@ export const LoadTheoreticalModal: React.FC<Props> = ({
                   key={order.id}
                   disabled={!!actionLoading}
                   onClick={() => handleOrderImport(order.id)}
-                  className="w-full text-left bg-slate-900/60 hover:bg-slate-900 border border-white/5 hover:border-indigo-500/20 p-3.5 rounded-xl flex items-center gap-3 transition-all active:scale-[0.98] group disabled:opacity-50"
+                  className="w-full text-left bg-surface/60 hover:bg-surface border border-white/5 hover:border-indigo-500/20 p-3.5 rounded-xl flex items-center gap-3 transition-all active:scale-[0.98] group disabled:opacity-50"
                 >
                   <div className="w-9 h-9 bg-indigo-500/10 rounded-lg flex items-center justify-center shrink-0 border border-indigo-500/10">
                     {actionLoading === order.id ? (

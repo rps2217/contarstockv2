@@ -23,7 +23,7 @@ export const TaskProgressIndicator: React.FC = () => {
             className={`p-4 rounded-xl border shadow-lg backdrop-blur-md flex flex-col gap-2 ${
               task.status === 'error' 
                 ? 'bg-red-500/10 border-red-500/20' 
-                : 'bg-slate-900/90 border-slate-700/50'
+                : 'bg-surface/90 border-subtle/50'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
@@ -37,12 +37,12 @@ export const TaskProgressIndicator: React.FC = () => {
                 onClick={() => removeTask(task.id)}
                 className="p-1 hover:bg-white/10 rounded-md transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-slate-400" />
+                <X className="w-3.5 h-3.5 text-muted" />
               </button>
             </div>
 
             {task.status === 'running' && (
-              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-elevated rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${task.progress}%` }}
@@ -61,7 +61,7 @@ export const TaskProgressIndicator: React.FC = () => {
       {completedTasks.length > 0 && activeTasks.length === 0 && (
         <button 
           onClick={clearCompleted}
-          className="text-xs text-slate-400 hover:text-white transition-colors text-right px-2"
+          className="text-xs text-muted hover:text-white transition-colors text-right px-2"
         >
           Limpiar completados
         </button>

@@ -24,7 +24,7 @@ export const PreferencesSection: React.FC<Props> = ({ settings, updateSetting, t
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-black' : 'bg-slate-900 border-white/5';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-black' : 'bg-surface border-white/5';
   const headerBg = isHighContrast ? 'bg-yellow-950/30 border-yellow-400' : isLight ? 'bg-slate-50 border-black' : 'bg-white/5 border-white/5';
   const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
   const divider = isHighContrast ? 'divide-yellow-400/20' : isLight ? 'divide-black/5' : 'divide-white/5';

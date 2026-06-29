@@ -14,10 +14,10 @@ export const ModulesSection: React.FC<Props> = ({ theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/10';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-surface border-white/10';
   const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-800' : 'text-white';
-  const rowBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-100' : 'bg-slate-800/50 border-slate-700';
-  const rowText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-700' : 'text-slate-200';
+  const rowBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-100' : 'bg-elevated/50 border-subtle';
+  const rowText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-700' : 'text-primary';
   const dotEnabled = isHighContrast ? 'bg-yellow-400' : 'bg-emerald-500';
   const dotDisabled = 'bg-slate-300';
   const btnActive = isHighContrast ? 'bg-yellow-400 text-black hover:bg-yellow-300' : isLight ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-indigo-600 text-white hover:bg-indigo-700';

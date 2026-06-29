@@ -35,7 +35,7 @@ export const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, onVi
             ? 'bg-blue-500/5 hover:bg-blue-500/10 border-blue-500/20 animate-pulse' 
             : 'bg-blue-50/40 hover:bg-blue-50 border-blue-200/60 shadow-sm'
           : isDark 
-            ? 'bg-slate-900 border-white/5 hover:border-slate-800' 
+            ? 'bg-surface border-white/5 hover:border-subtle' 
             : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm shadow-slate-100'
     }`}>
       <div className="flex items-center justify-between gap-4">
@@ -90,14 +90,14 @@ export const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, onVi
             </div>
             <div className="text-[10px] font-bold text-slate-500 uppercase mt-1.5 flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 opacity-60 text-slate-400" />
+                <Calendar className="w-3.5 h-3.5 opacity-60 text-muted" />
                 {format(item.createdAt, 'dd/MM/yyyy')}
               </span>
               <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
               <span>{format(item.createdAt, 'HH:mm:ss')}</span>
               <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
               <span className={`px-2 py-0.5 font-black rounded-md ${
-                isDraft ? 'bg-blue-500/10 text-blue-500' : 'bg-slate-500/10 text-slate-400'
+                isDraft ? 'bg-blue-500/10 text-blue-500' : 'bg-slate-500/10 text-muted'
               }`}>
                 {item.erpOrder && item.erpOrder !== 'RECEPCION_BORRADOR' ? `ERP: ${item.erpOrder}` : 'AUTÓNOMO'}
               </span>

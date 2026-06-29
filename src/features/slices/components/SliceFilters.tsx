@@ -32,19 +32,19 @@ export const SliceFilters: React.FC<Props> = ({
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const bgSecondary = isLight ? 'bg-slate-100' : isHighContrast ? 'bg-yellow-950/20' : 'bg-slate-900/30';
+  const bgSecondary = isLight ? 'bg-slate-100' : isHighContrast ? 'bg-yellow-950/20' : 'bg-surface/30';
   const borderSubtle = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400/30' : 'border-slate-900/80';
   const borderMain = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400' : 'border-slate-900';
   
   const textPrimary = isLight ? 'text-slate-900' : isHighContrast ? 'text-yellow-400' : 'text-white';
-  const textSecondary = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-500' : 'text-slate-400';
+  const textSecondary = isLight ? 'text-slate-600' : isHighContrast ? 'text-yellow-500' : 'text-muted';
   const textMuted = isLight ? 'text-slate-500' : isHighContrast ? 'text-yellow-600' : 'text-slate-500';
   
   const accentBlue = isLight ? 'text-blue-600 bg-blue-50 border-blue-200' : isHighContrast ? 'text-yellow-400 bg-yellow-900/20 border-yellow-400/30' : 'text-blue-400 bg-blue-500/10 border-blue-500/20';
   const accentGreen = isLight ? 'text-emerald-600' : isHighContrast ? 'text-yellow-400' : 'text-emerald-500';
   const accentGreenBg = isLight ? 'hover:bg-emerald-50' : isHighContrast ? 'hover:bg-yellow-900/10' : 'hover:bg-emerald-500/10';
   
-  const inputBg = isLight ? 'bg-white' : isHighContrast ? 'bg-black' : 'bg-slate-950';
+  const inputBg = isLight ? 'bg-white' : isHighContrast ? 'bg-black' : 'bg-base';
   const inputBorder = isLight ? 'border-slate-200' : isHighContrast ? 'border-yellow-400' : 'border-slate-900';
 
   return (

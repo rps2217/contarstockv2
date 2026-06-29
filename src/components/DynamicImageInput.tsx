@@ -124,7 +124,7 @@ export const DynamicImageInput: React.FC<DynamicImageInputProps> = ({
           disabled={isUploading}
           className={`w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all ${
             theme === 'dark'
-              ? 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 hover:text-white'
+              ? 'bg-white/5 border-white/10 hover:bg-white/10 text-muted hover:text-white'
               : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-700'
           } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >

@@ -20,24 +20,24 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dar
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800';
-  const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-100' : 'bg-slate-900/50';
-  const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-200' : 'border-slate-800';
+  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-base border-subtle';
+  const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-100' : 'bg-surface/50';
+  const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-200' : 'border-subtle';
   const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const subtitleText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-400';
-  const btnSecondary = isHighContrast ? 'bg-yellow-900/20 hover:bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-600' : 'bg-slate-800 hover:bg-slate-700 text-slate-300';
-  const filterBg = isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/30 border-slate-800';
+  const subtitleText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted';
+  const btnSecondary = isHighContrast ? 'bg-yellow-900/20 hover:bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-600' : 'bg-elevated hover:bg-slate-700 text-secondary';
+  const filterBg = isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-surface/30 border-subtle';
   const filterActive = isHighContrast ? 'bg-yellow-400 text-black' : isLight ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white';
-  const filterInactive = isHighContrast ? 'bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50' : isLight ? 'bg-slate-200 text-slate-500 hover:bg-slate-300' : 'bg-slate-800 text-slate-400 hover:bg-slate-700';
+  const filterInactive = isHighContrast ? 'bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50' : isLight ? 'bg-slate-200 text-slate-500 hover:bg-slate-300' : 'bg-elevated text-muted hover:bg-slate-700';
   const logBg = isHighContrast ? 'bg-yellow-950' : isLight ? 'bg-slate-50' : 'bg-[#0a0a0a]';
-  const emptyText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-600';
+  const emptyText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-slate-600';
 
   // Log entry colors
   const getLogBg = (level: string) => {
     if (level === 'error') return isHighContrast ? 'bg-red-500/20 border-red-500/50 text-red-300' : isLight ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-rose-950/30 border-rose-900/50 text-rose-200';
     if (level === 'warn') return isHighContrast ? 'bg-yellow-900/20 border-yellow-500/50 text-yellow-300' : isLight ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-950/30 border-amber-900/50 text-amber-200';
     if (level === 'success') return isHighContrast ? 'bg-green-500/20 border-green-500/50 text-green-300' : isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-200';
-    return isHighContrast ? 'bg-yellow-900/10 border-yellow-500/30 text-yellow-400' : isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900/50 border-slate-800 text-slate-300';
+    return isHighContrast ? 'bg-yellow-900/10 border-yellow-500/30 text-yellow-400' : isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-surface/50 border-subtle text-secondary';
   };
 
   const loadLogs = async () => {
@@ -186,7 +186,7 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dar
                     })() : String(log.message)}
                   </p>
                   {log.details && (
-                    <pre className={`mt-2 p-2 rounded-lg text-[10px] overflow-x-auto border ${isHighContrast ? 'bg-yellow-950/50 border-yellow-500/20 text-yellow-400' : isLight ? 'bg-slate-200 border-slate-200 text-slate-600' : 'bg-black/40 border-white/5 text-slate-400'}`}>
+                    <pre className={`mt-2 p-2 rounded-lg text-[10px] overflow-x-auto border ${isHighContrast ? 'bg-yellow-950/50 border-yellow-500/20 text-yellow-400' : isLight ? 'bg-slate-200 border-slate-200 text-slate-600' : 'bg-black/40 border-white/5 text-muted'}`}>
                       {typeof log.details === 'object' ? (() => {
                         const cache = new Set();
                         return JSON.stringify(log.details, (key, value) => {

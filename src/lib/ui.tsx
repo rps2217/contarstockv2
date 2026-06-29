@@ -128,7 +128,7 @@ export function getIconColorClass(
     rose: { light: 'bg-rose-100 text-rose-600', dark: 'bg-rose-500/10 text-rose-400' },
     purple: { light: 'bg-purple-100 text-purple-600', dark: 'bg-purple-500/10 text-purple-400' },
     indigo: { light: 'bg-indigo-100 text-indigo-600', dark: 'bg-indigo-500/10 text-indigo-400' },
-    slate: { light: 'bg-slate-100 text-slate-600', dark: 'bg-slate-500/10 text-slate-400' },
+    slate: { light: 'bg-slate-100 text-slate-600', dark: 'bg-slate-500/10 text-muted' },
   };
   
   const theme = isDark ? 'dark' : 'light';
@@ -160,7 +160,7 @@ export function getStatusColor(
     danger: { text: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/30' },
     expired: { text: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/30' },
     critical: { text: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
-    never: { text: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
+    never: { text: 'text-muted', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
     info: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
   };
   
@@ -191,7 +191,7 @@ export function getStatusIcon(status: SyncStatus | string): React.ReactNode {
     error: <XCircle className="w-4 h-4 text-rose-400" />,
     expired: <AlertCircle className="w-4 h-4 text-rose-400" />,
     critical: <AlertCircle className="w-4 h-4 text-orange-400" />,
-    never: <HelpCircle className="w-4 h-4 text-slate-400" />,
+    never: <HelpCircle className="w-4 h-4 text-muted" />,
     default: <TrendingUp className="w-4 h-4 text-blue-400" />,
   };
   
@@ -253,7 +253,7 @@ export function getSessionStatusBadge(status: string): SessionStatusBadge {
     closed: { label: 'Completada', color: 'bg-emerald-500', textColor: 'text-emerald-400' },
     in_progress: { label: 'En Progreso', color: 'bg-blue-500', textColor: 'text-blue-400' },
     paused: { label: 'Pausada', color: 'bg-amber-500', textColor: 'text-amber-400' },
-    active: { label: 'Activa', color: 'bg-slate-500', textColor: 'text-slate-400' },
+    active: { label: 'Activa', color: 'bg-slate-500', textColor: 'text-muted' },
   };
   
   return badges[status] || badges.active;
@@ -307,7 +307,7 @@ export function getMetricColorClasses(variant: MetricVariant = 'default'): Metri
     default: {
       bg: 'bg-blue-500/10',
       text: 'text-blue-400',
-      border: 'border-slate-800/60'
+      border: 'border-subtle/60'
     },
     warning: {
       bg: 'bg-amber-500/10',

@@ -14,7 +14,7 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-slate-700 text-slate-200',
+  default: 'bg-slate-700 text-primary',
   success: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
   warning: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
   danger: 'bg-rose-500/20 text-rose-400 border border-rose-500/30',

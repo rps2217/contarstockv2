@@ -53,7 +53,7 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-900/50 border border-slate-800/60 rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden group"
+      className="bg-surface/50 border border-subtle/60 rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden group"
     >
       {/* Glow effect */}
       <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
@@ -72,7 +72,7 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
       </div>
 
       <div>
-        <h3 className="text-slate-400 text-sm font-medium mb-1">{title}</h3>
+        <h3 className="text-muted text-sm font-medium mb-1">{title}</h3>
         <p className="text-2xl font-bold text-slate-100">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>

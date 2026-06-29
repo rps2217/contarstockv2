@@ -42,7 +42,7 @@ export const ProviderProductsModal: React.FC<ProviderProductsModalProps> = ({
       case 'high-contrast':
         return 'bg-black text-yellow-400';
       default:
-        return 'bg-slate-900 text-white';
+        return 'bg-surface text-white';
     }
   };
 
@@ -66,7 +66,7 @@ export const ProviderProductsModal: React.FC<ProviderProductsModalProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-black">Productos del Proveedor</h2>
-                <p className="text-sm text-slate-400">{providerName}</p>
+                <p className="text-sm text-muted">{providerName}</p>
                 <p className="text-xs text-slate-500 font-mono">{providerRut}</p>
               </div>
             </div>
@@ -81,13 +81,13 @@ export const ProviderProductsModal: React.FC<ProviderProductsModalProps> = ({
           {/* Stats */}
           <div className="flex gap-4 mt-4">
             <div className="flex items-center gap-2 text-sm">
-              <Package className="w-4 h-4 text-slate-400" />
-              <span className="text-slate-400">Total:</span>
+              <Package className="w-4 h-4 text-muted" />
+              <span className="text-muted">Total:</span>
               <span className="font-bold">{products.length}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Star className="w-4 h-4 text-yellow-400" />
-              <span className="text-slate-400">Principales:</span>
+              <span className="text-muted">Principales:</span>
               <span className="font-bold text-yellow-400">{primaryCount}</span>
             </div>
           </div>
@@ -102,7 +102,7 @@ export const ProviderProductsModal: React.FC<ProviderProductsModalProps> = ({
           ) : products.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 mx-auto text-slate-600 mb-4" />
-              <p className="text-slate-400">No hay productos asociados</p>
+              <p className="text-muted">No hay productos asociados</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -124,7 +124,7 @@ export const ProviderProductsModal: React.FC<ProviderProductsModalProps> = ({
                       </div>
 
                       {/* Barcode */}
-                      <div className="flex items-center gap-1 text-xs text-slate-400 mb-2">
+                      <div className="flex items-center gap-1 text-xs text-muted mb-2">
                         <Hash className="w-3 h-3" />
                         <code className="font-mono">{product.productBarcode}</code>
                       </div>
@@ -157,7 +157,7 @@ export const ProviderProductsModal: React.FC<ProviderProductsModalProps> = ({
                     {/* Policy Info */}
                     <div className="text-right shrink-0 ml-4">
                       {product.withdrawalDays !== null && product.withdrawalDays !== undefined && (
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-muted">
                           <span className="font-semibold text-white">{product.withdrawalDays}</span> días retiro
                         </div>
                       )}

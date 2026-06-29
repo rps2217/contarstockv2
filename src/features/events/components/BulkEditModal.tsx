@@ -64,7 +64,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`relative w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-black ${
-            theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+            theme === 'dark' ? 'bg-surface' : 'bg-white'
           }`}
         >
           <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
@@ -94,7 +94,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
             </div>
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
               </label>
@@ -114,7 +114,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
 
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 <Hash className="w-3 h-3" /> Número de Traspaso
               </label>
@@ -132,7 +132,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
 
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 <FileText className="w-3 h-3" /> Observaciones
               </label>

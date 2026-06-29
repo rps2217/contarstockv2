@@ -72,7 +72,7 @@ export const SystemOperationsDrawer: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setSystemHubOpen(false)}
-          className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm pointer-events-auto"
+          className="absolute inset-0 bg-base/60 backdrop-blur-sm pointer-events-auto"
         />
 
         {/* Drawer container body */}
@@ -84,7 +84,7 @@ export const SystemOperationsDrawer: React.FC = () => {
           className="relative w-full max-w-md h-full bg-white dark:bg-[#0d1117] border-l border-slate-200 dark:border-white/5 flex flex-col shadow-2xl pointer-events-auto overflow-hidden text-slate-800 dark:text-slate-100"
         >
           {/* Drawer Header */}
-          <div className="p-5 border-b border-slate-200 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-slate-900/40">
+          <div className="p-5 border-b border-slate-200 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-surface/40">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 dark:text-indigo-400">
                 <Cpu className="w-5 h-5 animate-pulse" />
@@ -93,7 +93,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                 <h2 className="text-sm font-black uppercase tracking-widest text-slate-950 dark:text-white leading-tight">
                   Dispositivo y Nube
                 </h2>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-muted dark:text-slate-500 uppercase tracking-wider">
                   Centro de Integridad Operativa
                 </p>
               </div>
@@ -110,7 +110,7 @@ export const SystemOperationsDrawer: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
             {/* SECTION 1: NETWORK & LATENCY */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-500">
                 <span>Canal de Transmisión</span>
                 <span className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
@@ -120,7 +120,7 @@ export const SystemOperationsDrawer: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="p-3.5 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/2">
-                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-muted">
                     {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-rose-500" />}
                     <span className="text-[9px] font-black uppercase tracking-wider">Red</span>
                   </div>
@@ -130,7 +130,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/2">
-                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-muted">
                     <Activity className="w-4 h-4 text-indigo-500" />
                     <span className="text-[9px] font-black uppercase tracking-wider">Latencia</span>
                   </div>
@@ -143,7 +143,7 @@ export const SystemOperationsDrawer: React.FC = () => {
 
             {/* SECTION 2: STORAGE CAPACITY */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-500">
                 <span>Espacio Local de Base de Datos</span>
                 <span>{usedMb} MB / {quotaMb} MB</span>
               </div>
@@ -152,7 +152,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                   <HardDrive className="w-4 h-4 text-amber-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-black uppercase block tracking-tight">Capacidad IndexedDB</span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Uso actual de almacenamiento persistente</span>
+                    <span className="text-[9px] font-bold text-muted uppercase tracking-widest block">Uso actual de almacenamiento persistente</span>
                   </div>
                 </div>
                 
@@ -163,7 +163,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                       style={{ width: `${usagePercent}%` }} 
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  <div className="flex justify-between text-[9px] font-bold text-muted dark:text-slate-500 uppercase tracking-widest">
                     <span>{usagePercent.toFixed(1)}% Usado</span>
                     <span>Disponible</span>
                   </div>
@@ -173,7 +173,7 @@ export const SystemOperationsDrawer: React.FC = () => {
 
             {/* SECTION 3: CLOUD SYNC OPERATIONS */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-500">
                 <span>Alineamiento con Servidor</span>
                 <span className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full text-[9px] font-black">
                   <Cloud className="w-3 h-3" /> RESPALDADO: {state.backedUpPercent}%
@@ -192,7 +192,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                         {state.pendingChangesCount}
                       </span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mt-0.5">
+                    <span className="text-[9px] font-bold text-muted dark:text-slate-500 uppercase tracking-widest block mt-0.5">
                       Registros locales modificados sin subir
                     </span>
                   </div>
@@ -244,7 +244,7 @@ export const SystemOperationsDrawer: React.FC = () => {
 
             {/* SECTION 4: INTELLIGENCE ENGINE & AI BRAIN */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-500">
                 <span>Cerebro Local & NLP Inteligente</span>
                 <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-500 dark:text-amber-400 px-2 py-0.5 rounded-full text-[9px] font-black">
                   <Sparkles className="w-3 h-3" /> VECTORES: {state.trainedPercent}%
@@ -265,14 +265,14 @@ export const SystemOperationsDrawer: React.FC = () => {
                         {isModelReady ? 'LISTO' : (isModelDownloading ? 'DESCARGANDO' : 'INACTIVO')}
                       </span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mt-0.5">
+                    <span className="text-[9px] font-bold text-muted dark:text-slate-500 uppercase tracking-widest block mt-0.5">
                       {isModelReady ? 'Modelo Transformers cargado en navegador' : 'Instale el motor IA de búsqueda inteligente'}
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-500">
                     <span>Estado del Modelo IA</span>
                     <span>{isModelReady ? '100%' : (isModelDownloading ? `${state.brainStatus?.progress || 0}%` : '0%')}</span>
                   </div>
@@ -307,7 +307,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                       className={`w-full flex items-center justify-center gap-2 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                         state.missingVectorsCount 
                           ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20 cursor-pointer' 
-                          : 'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-650 cursor-not-allowed border border-transparent'
+                          : 'bg-slate-200 dark:bg-white/5 text-muted dark:text-slate-650 cursor-not-allowed border border-transparent'
                       }`}
                     >
                       <BrainCircuit className="w-4 h-4" />
@@ -320,7 +320,7 @@ export const SystemOperationsDrawer: React.FC = () => {
 
             {/* SECTION 5: LOCAL MASSIVE ACTIONS */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-500">
                 <span>Mantenimiento Local (Acciones Masivas)</span>
                 <span className="flex items-center gap-1.5 bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full text-[9px] font-black">
                   <ShieldAlert className="w-3 h-3" /> ZONA CRÍTICA
@@ -333,7 +333,7 @@ export const SystemOperationsDrawer: React.FC = () => {
                   className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
                     settings.theme === 'high-contrast' 
                       ? 'bg-yellow-500/20 text-yellow-500' 
-                      : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                      : 'bg-slate-500/10 text-slate-600 dark:text-muted'
                   }`}
                 >
                   <Contrast className="w-4 h-4" />
@@ -427,7 +427,7 @@ export const SystemOperationsDrawer: React.FC = () => {
           </div>
 
           {/* Drawer Footer Status Area */}
-          <div className="p-4 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-900/40 text-center flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest select-none">
+          <div className="p-4 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-surface/40 text-center flex items-center justify-center gap-2 text-[10px] font-bold text-muted dark:text-slate-500 uppercase tracking-widest select-none">
             <Clock className="w-3.5 h-3.5" />
             <span>Último control: Hace instantes</span>
           </div>

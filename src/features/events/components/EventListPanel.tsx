@@ -94,7 +94,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
     <motion.div 
       layout
       className={`flex-1 flex flex-col overflow-hidden rounded-[2.5rem] border-4 border-black transition-all relative ${
-        theme === 'dark' ? 'bg-slate-950/60' : 'bg-stone-100/80'
+        theme === 'dark' ? 'bg-base/60' : 'bg-stone-100/80'
       }`}
     >
       <div className={`${bgColor} p-4 flex items-center justify-between border-b-4 border-black`}>

@@ -39,7 +39,7 @@ export const IndustrialButton: React.FC<IndustrialButtonProps> = memo(({
  danger: "bg-rose-50 hover:bg-rose-100 text-rose-600 border-2 border-rose-100",
  ghost: "bg-transparent hover:bg-slate-50 text-slate-500",
  outline: "bg-transparent border-2 border-slate-300 text-slate-600 hover:border-slate-900 hover:text-slate-900",
- black: "bg-slate-900 hover:bg-black text-white shadow-xl border-2 border-transparent"
+ black: "bg-surface hover:bg-black text-white shadow-xl border-2 border-transparent"
  };
 
  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {

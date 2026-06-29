@@ -170,7 +170,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   const bgColor = isDark ? 'bg-black/40' : 'bg-white';
   const textColor = isDark ? 'text-white' : 'text-slate-900';
   const placeholderColor = isDark ? 'placeholder-slate-500' : 'placeholder-slate-400';
-  const labelColor = isDark ? 'text-slate-400' : 'text-slate-500';
+  const labelColor = isDark ? 'text-muted' : 'text-slate-500';
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -208,7 +208,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
           ) : product ? (
             <Package className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
           ) : (
-            <Search className={`w-4 h-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+            <Search className={`w-4 h-4 ${isDark ? 'text-slate-500' : 'text-muted'}`} />
           )}
         </div>
 
@@ -218,7 +218,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             type="button"
             onClick={() => { onChange(''); setProduct(null); onProductFound?.(null); }}
             className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
-              isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-black/5 text-slate-400'
+              isDark ? 'hover:bg-white/10 text-muted' : 'hover:bg-black/5 text-muted'
             }`}
           >
             ×
@@ -238,7 +238,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
           <p className={`text-xs font-black truncate ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
             {product.name}
           </p>
-          <div className={`mt-1 flex items-center gap-3 text-[10px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className={`mt-1 flex items-center gap-3 text-[10px] font-mono ${isDark ? 'text-muted' : 'text-slate-500'}`}>
             <span>{product.category || 'N/A'}</span>
             <span>•</span>
             <span>{product.supplierName || 'Sin proveedor'}</span>
@@ -257,7 +257,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
               Producto no encontrado en catálogo
             </span>
           </div>
-          <p className={`mt-1 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`mt-1 text-[10px] ${isDark ? 'text-muted' : 'text-slate-500'}`}>
             Se registrará como nuevo: <span className="font-mono">{value}</span>
           </p>
         </div>

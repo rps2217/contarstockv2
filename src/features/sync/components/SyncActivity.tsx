@@ -51,7 +51,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
   return (
     <div className="space-y-4">
       {/* Header con última sync */}
-      <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex items-center justify-between">
+      <div className="bg-base/40 border border-slate-900 rounded-2xl p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-500/10 rounded-xl">
             <Database className="w-5 h-5 text-blue-400" />
@@ -74,13 +74,13 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-800 bg-slate-950/20 p-1 rounded-xl gap-1">
+      <div className="flex border-b border-subtle bg-base/20 p-1 rounded-xl gap-1">
         <button
           onClick={() => setActiveTab('logs')}
           className={`flex-1 py-2.5 text-center text-[11px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 ${
             activeTab === 'logs' 
               ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' 
-              : 'text-slate-500 hover:text-slate-300'
+              : 'text-slate-500 hover:text-secondary'
           }`}
         >
           <History className="w-4 h-4" />
@@ -91,7 +91,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
           className={`flex-1 py-2.5 text-center text-[11px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 ${
             activeTab === 'incidents' 
               ? 'bg-rose-600/20 text-rose-400 border border-rose-500/30' 
-              : 'text-slate-500 hover:text-slate-300'
+              : 'text-slate-500 hover:text-secondary'
           }`}
         >
           <AlertCircle className="w-4 h-4" />
@@ -111,16 +111,16 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
               exit={{ opacity: 0, y: -10 }}
             >
               {logs.length === 0 ? (
-                <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-8 text-center">
+                <div className="bg-base/40 border border-slate-900 rounded-2xl p-8 text-center">
                   <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 text-xs font-medium">Sin actividad reciente</p>
+                  <p className="text-muted text-xs font-medium">Sin actividad reciente</p>
                 </div>
               ) : (
-                <div className="bg-slate-950 rounded-2xl border border-slate-900 overflow-hidden">
+                <div className="bg-base rounded-2xl border border-slate-900 overflow-hidden">
                   {logs.map((log, i) => (
                     <div 
                       key={i} 
-                      className="p-3 flex items-center justify-between border-b border-slate-900 last:border-0 hover:bg-slate-900/30 transition-colors"
+                      className="p-3 flex items-center justify-between border-b border-slate-900 last:border-0 hover:bg-surface/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${
@@ -129,7 +129,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
                           'bg-blue-500 animate-pulse'
                         }`} />
                         <div>
-                          <span className="text-xs font-bold text-slate-300 capitalize">{log.table}</span>
+                          <span className="text-xs font-bold text-secondary capitalize">{log.table}</span>
                           <span className="text-[10px] text-slate-500 ml-2">{log.msg}</span>
                         </div>
                       </div>
@@ -157,7 +157,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
               exit={{ opacity: 0, y: -10 }}
             >
               {incidents.length === 0 ? (
-                <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-8 text-center">
+                <div className="bg-base/40 border border-slate-900 rounded-2xl p-8 text-center">
                   <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
                   <h3 className="text-sm font-black text-white uppercase">Cero Incidencias</h3>
                   <p className="text-slate-500 text-[10px] mt-1 max-w-xs mx-auto">
@@ -175,7 +175,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
                       Purgar Todos los Errores
                     </button>
                   )}
-                  <div className="bg-slate-950 rounded-2xl border border-slate-900 overflow-hidden divide-y divide-slate-900">
+                  <div className="bg-base rounded-2xl border border-slate-900 overflow-hidden divide-y divide-slate-900">
                     {incidents.map((inc, index) => {
                       const dateStr = formatTimeWithDate(inc.time);
                       return (
@@ -185,7 +185,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                              <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider">
                                 {inc.table}
                               </span>
                               <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">

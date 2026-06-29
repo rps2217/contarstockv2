@@ -16,12 +16,12 @@ export const DiagnosticsCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-blue-900/30';
+  const cardBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-base border-blue-900/30';
   const cardText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
   const btnRun = isHighContrast ? 'bg-yellow-400 hover:bg-yellow-300' : isLight ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-600 hover:bg-blue-500';
   const resultBg = isHighContrast ? 'bg-yellow-900/20' : isLight ? 'bg-slate-50' : 'bg-white/5';
-  const stepText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-slate-400';
-  const messageText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-700' : 'text-slate-300';
+  const stepText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-muted';
+  const messageText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-700' : 'text-secondary';
 
   const handleRunTests = async () => {
     setIsTesting(true);
@@ -42,7 +42,7 @@ export const DiagnosticsCard: React.FC<Props> = ({ theme = 'dark' }) => {
         <button
           onClick={handleRunTests}
           disabled={isTesting}
-          className={`p-3 rounded-xl transition-all ${isTesting ? (isHighContrast ? 'bg-yellow-900/20' : isLight ? 'bg-slate-200' : 'bg-slate-800') : btnRun}`}
+          className={`p-3 rounded-xl transition-all ${isTesting ? (isHighContrast ? 'bg-yellow-900/20' : isLight ? 'bg-slate-200' : 'bg-elevated') : btnRun}`}
         >
           <RefreshCw className={`w-5 h-5 ${isTesting ? '' : 'text-white'} ${isTesting ? (isHighContrast ? 'text-yellow-400' : 'text-white') : ''} ${isTesting ? 'animate-spin' : ''}`} />
         </button>

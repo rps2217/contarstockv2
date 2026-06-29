@@ -108,7 +108,7 @@ export function ConflictResolutionModal<T>({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-surface border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e: any) => e.stopPropagation()}
           >
             {/* Header */}
@@ -119,7 +119,7 @@ export function ConflictResolutionModal<T>({
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-white">Conflicto de Sincronización</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted mt-0.5">
                     {conflict.table} • ID: {conflict.id}
                   </p>
                 </div>
@@ -171,7 +171,7 @@ export function ConflictResolutionModal<T>({
 
               {/* Campos en conflicto */}
               <div className="space-y-2">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">
                   Campos en Conflicto ({conflict.conflictingFields.length})
                 </h3>
                 
@@ -229,7 +229,7 @@ export function ConflictResolutionModal<T>({
                               <Smartphone className="w-3 h-3 text-blue-400" />
                               <span className="text-[10px] font-bold text-blue-400 uppercase">Local</span>
                             </div>
-                            <p className="text-sm text-slate-300 font-mono">{String(localVal)}</p>
+                            <p className="text-sm text-secondary font-mono">{String(localVal)}</p>
                           </button>
 
                           {/* Valor Remoto */}
@@ -248,7 +248,7 @@ export function ConflictResolutionModal<T>({
                               <Monitor className="w-3 h-3 text-emerald-400" />
                               <span className="text-[10px] font-bold text-emerald-400 uppercase">Remoto</span>
                             </div>
-                            <p className="text-sm text-slate-300 font-mono">{String(remoteVal)}</p>
+                            <p className="text-sm text-secondary font-mono">{String(remoteVal)}</p>
                           </button>
                         </div>
                       )}
@@ -259,10 +259,10 @@ export function ConflictResolutionModal<T>({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-white/10 bg-slate-900/50 flex items-center justify-between gap-4">
+            <div className="px-6 py-4 border-t border-white/10 bg-surface/50 flex items-center justify-between gap-4">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-muted hover:text-white hover:bg-white/5 transition-colors"
               >
                 Cancelar
               </button>

@@ -99,8 +99,8 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
    theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
  }`}>
  <div className="flex items-center gap-3">
- <button onClick={onBack} className={`p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft className="w-5 h-5" /></button>
- <div><h2 className={`font-black leading-none uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{session?.erpOrder}</h2><span className="text-[10px] text-slate-400 font-bold uppercase">{session?.logisticsLabel}</span></div>
+ <button onClick={onBack} className={`p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/5 text-muted' : 'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft className="w-5 h-5" /></button>
+ <div><h2 className={`font-black leading-none uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{session?.erpOrder}</h2><span className="text-[10px] text-muted font-bold uppercase">{session?.logisticsLabel}</span></div>
  </div>
  <div className="flex gap-2">
  {session && !session.isVerifiedMode && (
@@ -112,7 +112,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  <Zap className={`w-5 h-5 ${isSearching ? 'animate-pulse' : ''}`} />
  </button>
  )}
- <button onClick={handleThermalPrint} disabled={isPrinting} className="p-2 bg-slate-900 text-white rounded-xl shadow-md">{isPrinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}</button>
+ <button onClick={handleThermalPrint} disabled={isPrinting} className="p-2 bg-surface text-white rounded-xl shadow-md">{isPrinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}</button>
  <button onClick={() => session && consolidation && exportToExcel(session, consolidation)} className="p-2 bg-green-50 text-green-700 rounded-xl border border-green-200"><FileSpreadsheet className="w-5 h-5" /></button>
  <button onClick={() => session && consolidation && exportToPDF(session, consolidation)} className="p-2 bg-rose-50 text-rose-700 rounded-xl border border-rose-200"><FileText className="w-5 h-5" /></button>
  </div>
@@ -152,7 +152,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  {match.matchScore.toFixed(0)}% Match
  </span>
  </div>
- <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+ <p className="text-[10px] text-muted font-bold uppercase mt-1">
  {match.semanticAffinities} vínculos semánticos detectados
  </p>
  </div>
@@ -187,7 +187,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
    theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
  }`}>
  <div className="flex items-center justify-between mb-2">
- <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Evidencia de Etiqueta</h3>
+ <h3 className="text-[10px] font-black uppercase tracking-widest text-muted">Evidencia de Etiqueta</h3>
  {session.photoUrl && (
  <a 
  href={session.photoUrl} 
@@ -230,7 +230,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  </div>
  <div className="flex items-center gap-4">
  <div className={`text-2xl font-black tabular-nums ${getStatusColorClasses(status, 'text')}`}>{item.totalQuantity}</div>
- <button onClick={() => sessionService.deleteSessionItem(sessionId, item.barcode)} className={`p-2 transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-rose-500' : 'text-slate-300 hover:text-rose-600'}`}><Trash2 className="w-5 h-5" /></button>
+ <button onClick={() => sessionService.deleteSessionItem(sessionId, item.barcode)} className={`p-2 transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-rose-500' : 'text-secondary hover:text-rose-600'}`}><Trash2 className="w-5 h-5" /></button>
  </div>
  </div>
  );

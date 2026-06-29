@@ -24,22 +24,22 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
   const isHighContrast = theme === 'high-contrast';
 
   // Clases según tema
-  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/10';
+  const modalBg = isHighContrast ? 'bg-black border-yellow-400' : isLight ? 'bg-white border-slate-200' : 'bg-surface border-white/10';
   const overlayBg = isHighContrast ? 'bg-yellow-950/80' : 'bg-black/90';
   const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-50' : 'bg-white/5';
   const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-200' : 'border-white/5';
   const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const subtitleText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-slate-400';
+  const subtitleText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted';
   const closeBtn = isHighContrast ? 'bg-yellow-900/20 text-yellow-400 hover:bg-yellow-900/30' : isLight ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' : 'bg-white/5 text-white/50 hover:text-white hover:bg-white/10';
   const toolbarBg = isHighContrast ? 'bg-yellow-950/20 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/20 border-white/5';
   const filterActive = isHighContrast ? 'bg-yellow-400 text-black' : isLight ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white';
-  const filterInactive = isHighContrast ? 'bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-slate-100 text-slate-400' : 'bg-white/5 text-slate-400';
+  const filterInactive = isHighContrast ? 'bg-yellow-900/30 text-yellow-400' : isLight ? 'bg-slate-100 text-muted' : 'bg-white/5 text-muted';
   const searchBg = isHighContrast ? 'bg-yellow-950 border-yellow-400/30' : isLight ? 'bg-slate-100 border-slate-200' : 'bg-black/40 border-white/10';
   const searchText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
   const logCardBg = isHighContrast ? 'bg-yellow-950 border-yellow-400/30' : isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/5';
   const logCardExpanded = isHighContrast ? 'border-yellow-400/50 shadow-lg' : isLight ? 'border-indigo-500 shadow-lg' : 'border-indigo-500/50 shadow-lg';
   const emptyStateBg = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-200' : 'border-white/5';
-  const emptyText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-400' : 'text-slate-600';
+  const emptyText = isHighContrast ? 'text-yellow-500' : isLight ? 'text-muted' : 'text-slate-600';
   const footerBg = isHighContrast ? 'bg-yellow-950/20' : isLight ? 'bg-slate-50' : 'bg-black/40';
 
   const loadLogs = async () => {
@@ -156,7 +156,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por tabla, acción o error..."
-              className={`w-full border rounded-xl pl-11 pr-4 py-2 text-xs focus:border-indigo-500 outline-none ${searchBg} ${searchText} ${isHighContrast ? 'placeholder:text-yellow-600' : isLight ? 'placeholder:text-slate-400' : 'placeholder:text-slate-500'}`}
+              className={`w-full border rounded-xl pl-11 pr-4 py-2 text-xs focus:border-indigo-500 outline-none ${searchBg} ${searchText} ${isHighContrast ? 'placeholder:text-yellow-600' : isLight ? 'placeholder:text-muted' : 'placeholder:text-slate-500'}`}
             />
           </div>
 
@@ -217,7 +217,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
                         {new Date(log.timestamp).toLocaleString()}
                         {log.errorMessage && (
                           <>
-                            <span className={`mx-1 ${isHighContrast ? 'text-yellow-700' : isLight ? 'text-slate-300' : 'text-slate-700'}`}>|</span>
+                            <span className={`mx-1 ${isHighContrast ? 'text-yellow-700' : isLight ? 'text-secondary' : 'text-slate-700'}`}>|</span>
                             <span className={`font-bold uppercase truncate ${isHighContrast ? 'text-red-400' : 'text-rose-400'}`}>{log.errorMessage}</span>
                           </>
                         )}
@@ -245,7 +245,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
                                 <Server className="w-4 h-4" />
                                 <span className={`text-[9px] font-black uppercase tracking-widest`}>Datos Enviados (Body)</span>
                               </div>
-                              <button onClick={() => copyToClipboard(log.payload)} className={`p-2 rounded-lg transition-colors ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400 hover:text-yellow-300' : isLight ? 'bg-slate-100 text-slate-400 hover:text-slate-600' : 'bg-white/5 text-slate-400 hover:text-white'}`}>
+                              <button onClick={() => copyToClipboard(log.payload)} className={`p-2 rounded-lg transition-colors ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400 hover:text-yellow-300' : isLight ? 'bg-slate-100 text-muted hover:text-slate-600' : 'bg-white/5 text-muted hover:text-white'}`}>
                                 <Copy className="w-4 h-4" />
                               </button>
                             </div>
@@ -270,7 +270,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
                                 <Database className="w-4 h-4" />
                                 <span className={`text-[9px] font-black uppercase tracking-widest`}>Respuesta del Servidor</span>
                               </div>
-                              <button onClick={() => copyToClipboard(log.response)} className={`p-2 rounded-lg transition-colors ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400 hover:text-yellow-300' : isLight ? 'bg-slate-100 text-slate-400 hover:text-slate-600' : 'bg-white/5 text-slate-400 hover:text-white'}`}>
+                              <button onClick={() => copyToClipboard(log.response)} className={`p-2 rounded-lg transition-colors ${isHighContrast ? 'bg-yellow-900/20 text-yellow-400 hover:text-yellow-300' : isLight ? 'bg-slate-100 text-muted hover:text-slate-600' : 'bg-white/5 text-muted hover:text-white'}`}>
                                 <Copy className="w-4 h-4" />
                               </button>
                             </div>

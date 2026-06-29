@@ -61,7 +61,7 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
                 e.stopPropagation();
                 onSelect(item.id);
               }}
-              className={`mt-1 shrink-0 transition-colors ${isSelected ? 'text-indigo-500' : (theme === 'dark' ? 'text-slate-600 hover:text-slate-400' : 'text-stone-300 hover:text-stone-500')}`}
+              className={`mt-1 shrink-0 transition-colors ${isSelected ? 'text-indigo-500' : (theme === 'dark' ? 'text-slate-600 hover:text-muted' : 'text-stone-300 hover:text-stone-500')}`}
             >
               {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
             </button>
@@ -75,7 +75,7 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
             <div className="flex items-center gap-2">
               {barcodeField && item[barcodeField] && (
                 <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-widest border w-fit ${
-                  theme === 'dark' ? 'bg-slate-800 text-slate-300 border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
+                  theme === 'dark' ? 'bg-elevated text-secondary border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
                 }`}>
                   {item[barcodeField]}
                 </span>
@@ -116,7 +116,7 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
                 {col.label}
               </span>
               <span className={`text-xs font-bold truncate ${
-                theme === 'dark' ? 'text-slate-300' : 'text-stone-700'
+                theme === 'dark' ? 'text-secondary' : 'text-stone-700'
               }`}>
                 {col.type === 'image' ? (
                   <div className="flex items-center gap-2 mt-1">

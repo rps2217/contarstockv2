@@ -29,21 +29,21 @@ export const SyncDiagnosticsPanel: React.FC<SyncDiagnosticsPanelProps> = ({ isOp
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-xl bg-slate-900 border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            className="relative w-full max-w-xl bg-surface border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
           >
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-800/50">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-elevated/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
                   <RefreshCw className="w-6 h-6" />
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-white uppercase tracking-tight">Diagnóstico de Red</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Estado de Sincronización</p>
+                  <p className="text-[10px] text-muted font-bold uppercase tracking-widest">Estado de Sincronización</p>
                 </div>
               </div>
               <button 
                 onClick={onClose}
-                className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-white/10"
+                className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-muted hover:bg-white/10"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -88,14 +88,14 @@ export const SyncDiagnosticsPanel: React.FC<SyncDiagnosticsPanelProps> = ({ isOp
                 </div>
 
                 {incidents.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-950/30 rounded-2xl border border-dashed border-white/5">
+                  <div className="p-8 text-center bg-base/30 rounded-2xl border border-dashed border-white/5">
                     <CheckCircle2 className="w-12 h-12 text-emerald-500/20 mx-auto mb-3" />
                     <p className="text-xs font-bold text-slate-500 uppercase">Sin errores registrados</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {incidents.map((incident, idx) => (
-                      <div key={idx} className="p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                      <div key={idx} className="p-4 rounded-xl bg-base/50 border border-white/5">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <span className="text-[9px] font-black text-rose-500 uppercase bg-rose-500/10 px-1.5 py-0.5 rounded">
@@ -116,7 +116,7 @@ export const SyncDiagnosticsPanel: React.FC<SyncDiagnosticsPanelProps> = ({ isOp
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/30 border-t border-white/5">
+            <div className="p-6 bg-elevated/30 border-t border-white/5">
               <button
                 onClick={onClose}
                 className="w-full py-4 rounded-xl bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors"

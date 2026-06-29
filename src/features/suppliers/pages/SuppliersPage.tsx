@@ -76,15 +76,15 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({
           </div>
           <div className="text-left">
             <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</span>
-            <span className="ml-2 text-[10px] font-mono text-slate-400">
+            <span className="ml-2 text-[10px] font-mono text-muted">
               {providers.length} proveedores
             </span>
           </div>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-slate-400" />
+          <ChevronUp className="w-4 h-4 text-muted" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <ChevronDown className="w-4 h-4 text-muted" />
         )}
       </button>
 
@@ -206,10 +206,10 @@ export const SuppliersPage: React.FC = () => {
   const totalCount = filteredSuppliers.length;
 
   return (
-    <div className={`h-full flex flex-col overflow-hidden ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-full flex flex-col overflow-hidden ${isDark ? 'bg-base text-white' : 'bg-slate-50 text-slate-900'}`}>
       {/* Header */}
       <div className={`border-b px-6 py-4 shrink-0 transition-colors ${
-        isDark ? 'bg-slate-950/50 border-white/5' : 'bg-white border-slate-200'
+        isDark ? 'bg-base/50 border-white/5' : 'bg-white border-slate-200'
       }`}>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -220,7 +220,7 @@ export const SuppliersPage: React.FC = () => {
               {settings.pharmacyName || 'Proveedores'}
             </h1>
             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-              isDark ? 'text-slate-500' : 'text-slate-400'
+              isDark ? 'text-slate-500' : 'text-muted'
             }`}>
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
               Políticas de Logística Inversa y Canjes
@@ -314,7 +314,7 @@ export const SuppliersPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
+            <RefreshCw className="w-8 h-8 animate-spin text-muted" />
           </div>
         ) : (
           <>

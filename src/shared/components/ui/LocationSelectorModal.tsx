@@ -58,7 +58,7 @@ export const LocationSelectorModal: React.FC<Props> = ({ isOpen, onClose, curren
  onClose={onClose} 
  title="Ubicación Física" 
  variant="bottom-sheet"
- className="bg-slate-900 border-t-4 border-blue-600/50"
+ className="bg-surface border-t-4 border-blue-600/50"
  >
  <div className="p-6 pb-12 space-y-6">
  {/* INPUT NUEVA UBICACIÓN */}
@@ -106,7 +106,7 @@ export const LocationSelectorModal: React.FC<Props> = ({ isOpen, onClose, curren
  className={`w-full p-5 rounded-[1.8rem] border-2 flex items-center justify-between transition-all active:scale-[0.98] ${
  isCurrent 
  ? 'bg-blue-600/20 border-blue-500 text-blue-400' 
- : 'bg-white/5 border-white/5 text-slate-400'
+ : 'bg-white/5 border-white/5 text-muted'
  }`}
  >
  <div className="flex items-center gap-4">

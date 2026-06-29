@@ -63,7 +63,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border ${
-            theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+            theme === 'dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
           }`}
         >
           <div className={`p-4 border-b flex items-center justify-between ${
@@ -78,7 +78,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             <button
               onClick={onClose}
               className={`p-2 rounded-xl transition-colors ${
-                theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               <X className="w-5 h-5" />
@@ -88,7 +88,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Nombre
               </label>
@@ -108,7 +108,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Apellido
               </label>
@@ -128,13 +128,13 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                theme === 'dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Teléfono (WhatsApp)
               </label>
               <div className="relative">
                 <Phone className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                  theme === 'dark' ? 'text-slate-500' : 'text-muted'
                 }`} />
                 <input
                   type="tel"
@@ -149,7 +149,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   placeholder="+56912345678"
                 />
               </div>
-              <p className={`text-[10px] mt-1.5 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`text-[10px] mt-1.5 ${theme === 'dark' ? 'text-slate-500' : 'text-muted'}`}>
                 Incluye el código de país (ej. +56 para Chile).
               </p>
             </div>

@@ -46,7 +46,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
       </div>
       <div>
         <h2 className="text-2xl font-black text-slate-900 leading-none tracking-tight">{title}</h2>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Ficha Maestra de Producto</p>
+        <p className="text-xs font-bold text-muted uppercase tracking-wider mt-1">Ficha Maestra de Producto</p>
       </div>
     </div>
     {initialData && !isDuplicating && (
@@ -65,29 +65,29 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  <form onSubmit={handleSave} className="px-8 pb-8 space-y-5">
  
  <div className="space-y-1.5">
- <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código de Barras</label>
+ <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Código de Barras</label>
  <div className="relative">
- <ScanLine className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+ <ScanLine className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary" />
  <input
  required
  disabled={!!initialData && !isDuplicating}
  value={formData.barcode}
  onChange={(e) => updateField('barcode', e.target.value)}
- className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300 disabled:opacity-60 disabled:bg-slate-100"
+ className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-secondary disabled:opacity-60 disabled:bg-slate-100"
  placeholder="EAN / SKU"
  />
  </div>
  </div>
 
  <div className="space-y-1.5">
- <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descripción</label>
+ <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Descripción</label>
  <div className="relative">
- <Box className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+ <Box className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary" />
  <input
  required
  value={formData.name}
  onChange={(e) => updateField('name', e.target.value)}
- className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+ className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-secondary"
  placeholder="Nombre del producto"
  />
  </div>
@@ -95,7 +95,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
 
  <div className="grid grid-cols-2 gap-4">
  <div className="space-y-1.5">
- <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mundo</label>
+ <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Mundo</label>
  <SettingsInput 
  value={formData.category} 
  onChange={(e: any) => updateField('category', e.target.value)} 
@@ -103,7 +103,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  />
  </div>
  <div className="space-y-1.5">
- <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Proveedor Maestro</label>
+ <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Proveedor Maestro</label>
  <select
    value={formData.supplierRut || ''}
    onChange={handleProviderSelect}
@@ -121,12 +121,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
 
  <div className="grid grid-cols-2 gap-4">
    <div className="space-y-1.5">
-    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RUT Proveedor</label>
+    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">RUT Proveedor</label>
     <div className="relative">
      <input
       value={formData.supplierRut || ''}
       onChange={(e) => updateField('supplierRut', e.target.value)}
-      className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+      className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-secondary"
       placeholder="Ej: 12345678-9"
      />
      <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -135,7 +135,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
     </div>
    </div>
    <div className="space-y-1.5">
-    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Razón Social</label>
+    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Razón Social</label>
     <SettingsInput 
      value={formData.supplier || ''}
      onChange={(e: any) => updateField('supplier', e.target.value)}
@@ -158,7 +158,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
      placeholder="Defecto (30)"
      value={(formData as any).withdrawalDays === '' ? '' : (formData as any).withdrawalDays}
      onChange={(e) => updateField('withdrawalDays', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
-     className="w-full h-11 px-4 bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-500/20 rounded-xl font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+     className="w-full h-11 px-4 bg-white dark:bg-base border border-indigo-200 dark:border-indigo-500/20 rounded-xl font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
     />
    </div>
    <div className="space-y-1.5 flex flex-col justify-center pt-5">
@@ -173,7 +173,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
        (formData as any).hasExchange ? 'left-7' : 'left-1'
       }`} />
      </div>
-     <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+     <span className="text-[10px] font-black text-slate-600 dark:text-muted uppercase tracking-widest">
       {(formData as any).hasExchange ? 'Tiene Canje' : 'Es Merma'}
      </span>
     </label>

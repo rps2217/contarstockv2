@@ -88,7 +88,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
           <button
             onClick={onClose}
             className={`p-1.5 rounded-lg transition-all ${
-              isDark ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+              isDark ? 'hover:bg-white/5 text-muted' : 'hover:bg-slate-100 text-slate-500'
             }`}
             title="Cerrar filtros"
           >
@@ -102,9 +102,9 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
         {/* Column 1: Accesos Rápidos */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Clock className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+            <Clock className={`w-3.5 h-3.5 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
             <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-              isDark ? 'text-slate-400' : 'text-slate-700'
+              isDark ? 'text-muted' : 'text-slate-700'
             }`}>Accesos Rápidos</h5>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -113,7 +113,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
               onClick={() => handleQuickDateFilter('this-month')}
               className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                 isDark
-                  ? 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                  ? 'bg-white/5 border-white/5 text-muted hover:bg-white/10 hover:text-white'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -124,7 +124,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
               onClick={() => handleQuickDateFilter('next-month')}
               className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                 isDark
-                  ? 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                  ? 'bg-white/5 border-white/5 text-muted hover:bg-white/10 hover:text-white'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -136,9 +136,9 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
         {/* Column 2: Rango de Fechas */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Calendar className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+            <Calendar className={`w-3.5 h-3.5 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
             <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-              isDark ? 'text-slate-400' : 'text-slate-700'
+              isDark ? 'text-muted' : 'text-slate-700'
             }`}>Rango de Fechas</h5>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -150,7 +150,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
                 onChange={(e) => onSetDateRange({ ...dateRange, start: e.target.value || null })}
                 className={`w-full px-3 py-2 rounded-xl text-xs font-bold outline-none border transition-all ${
                   isDark
-                    ? 'bg-slate-900 border-white/5 text-white focus:border-blue-500/50'
+                    ? 'bg-surface border-white/5 text-white focus:border-blue-500/50'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500/50'
                 }`}
               />
@@ -163,7 +163,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
                 onChange={(e) => onSetDateRange({ ...dateRange, end: e.target.value || null })}
                 className={`w-full px-3 py-2 rounded-xl text-xs font-bold outline-none border transition-all ${
                   isDark
-                    ? 'bg-slate-900 border-white/5 text-white focus:border-blue-500/50'
+                    ? 'bg-surface border-white/5 text-white focus:border-blue-500/50'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500/50'
                 }`}
               />
@@ -174,9 +174,9 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
         {/* Column 3: Tipos de Evento */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Tag className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+            <Tag className={`w-3.5 h-3.5 ${isDark ? 'text-muted' : 'text-slate-500'}`} />
             <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-              isDark ? 'text-slate-400' : 'text-slate-700'
+              isDark ? 'text-muted' : 'text-slate-700'
             }`}>Tipos de Evento</h5>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -191,7 +191,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
                     isSelected 
                       ? 'bg-blue-500 border-blue-400 text-white shadow-md' 
                       : isDark
-                        ? 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                        ? 'bg-white/5 border-white/5 text-muted hover:bg-white/10'
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -200,7 +200,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
               );
             })}
             {eventTypes.length === 0 && (
-              <p className={`text-[10px] italic ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`text-[10px] italic ${isDark ? 'text-slate-500' : 'text-muted'}`}>
                 No hay eventos disponibles
               </p>
             )}

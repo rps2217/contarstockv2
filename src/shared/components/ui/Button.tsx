@@ -24,9 +24,9 @@ export const Button = memo(({
   
   const variants = {
     primary: 'bg-brand-warning text-white hover:bg-brand-warning/90 shadow-lg shadow-brand-warning/20',
-    secondary: 'bg-brand-surface text-slate-300 hover:bg-brand-surface/80 border border-white/10',
+    secondary: 'bg-brand-surface text-secondary hover:bg-brand-surface/80 border border-white/10',
     danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-900/20',
-    ghost: 'bg-transparent text-slate-400 hover:bg-white/5',
+    ghost: 'bg-transparent text-muted hover:bg-white/5',
     outline: 'bg-transparent border-2 border-white/20 text-white hover:bg-white/5',
     accent: 'bg-brand-accent text-brand-dark hover:bg-brand-accent/90 shadow-lg shadow-brand-accent/10',
     info: 'bg-brand-info text-white hover:bg-brand-info/90 shadow-lg shadow-brand-info/20'

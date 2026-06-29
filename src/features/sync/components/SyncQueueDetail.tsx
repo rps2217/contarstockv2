@@ -30,7 +30,7 @@ export const SyncQueueDetail: React.FC<SyncQueueDetailProps> = ({
 }) => {
   if (!item) {
     return (
-      <div className="bg-slate-950/40 border border-slate-900 rounded-3xl p-5 text-center">
+      <div className="bg-base/40 border border-slate-900 rounded-3xl p-5 text-center">
         <p className="text-slate-500 text-xs font-bold">
           Selecciona un ítem para ver su detalle
         </p>
@@ -39,7 +39,7 @@ export const SyncQueueDetail: React.FC<SyncQueueDetailProps> = ({
   }
 
   return (
-    <div className="bg-slate-950/40 border border-slate-900 rounded-3xl p-5 space-y-4 h-fit">
+    <div className="bg-base/40 border border-slate-900 rounded-3xl p-5 space-y-4 h-fit">
       <div className="flex items-center justify-between pb-3 border-b border-slate-900">
         <h3 className="text-xs font-black text-white uppercase flex items-center gap-1.5">
           <FileText className="w-4 h-4 text-blue-400" /> Insccionar Operación
@@ -47,7 +47,7 @@ export const SyncQueueDetail: React.FC<SyncQueueDetailProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black"
+            className="text-[10px] text-slate-500 hover:text-secondary uppercase font-black"
           >
             Cerrar
           </button>
@@ -67,7 +67,7 @@ export const SyncQueueDetail: React.FC<SyncQueueDetailProps> = ({
         <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest block">
           ID Transaccional
         </span>
-        <span className="text-xs font-mono text-slate-300 font-bold block bg-slate-900 px-2.5 py-1.5 rounded truncate">
+        <span className="text-xs font-mono text-secondary font-bold block bg-surface px-2.5 py-1.5 rounded truncate">
           {item.id}
         </span>
       </div>
@@ -76,13 +76,13 @@ export const SyncQueueDetail: React.FC<SyncQueueDetailProps> = ({
         <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest block">
           Datos Contenidos
         </span>
-        <div className="bg-slate-950 p-3 rounded-2xl text-[10px] font-mono text-slate-400 overflow-x-auto max-h-48 custom-scrollbar space-y-1.5 border border-slate-900/50">
+        <div className="bg-base p-3 rounded-2xl text-[10px] font-mono text-muted overflow-x-auto max-h-48 custom-scrollbar space-y-1.5 border border-slate-900/50">
           {item.rawData && Object.entries(item.rawData).map(([key, value]) => {
             if (['syncStatus', 'lastSyncTimestamp', 'tableName'].includes(key)) return null;
             return (
               <div key={key} className="flex justify-between gap-4 border-b border-white/5 py-1 last:border-0">
                 <span className="text-slate-500 font-bold">{key}:</span>
-                <span className="text-slate-300 break-all text-right">
+                <span className="text-secondary break-all text-right">
                   {JSON.stringify(value)}
                 </span>
               </div>

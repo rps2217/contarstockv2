@@ -22,7 +22,7 @@ export const SessionRow = memo(({ index, style, data }: any) => {
   const containerBorder = isHighContrast ? 'border-yellow-400' : isLight ? (isMultiBulto ? 'border-indigo-100' : 'border-slate-100') : (isMultiBulto ? 'border-brand-info/30' : 'border-white/5');
   
   const textPrimary = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const textSecondary = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-slate-400';
+  const textSecondary = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-600' : 'text-muted';
   
   const badgeVerified = isHighContrast ? 'bg-yellow-400 text-black' : isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/10 text-emerald-400';
   const badgeIssue = isHighContrast ? 'bg-red-500 text-white' : isLight ? 'bg-rose-100 text-rose-700' : 'bg-rose-500/10 text-rose-400';

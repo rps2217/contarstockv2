@@ -27,7 +27,7 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  return (
  <Modal isOpen={isOpen} onClose={handleClose} className="md:max-w-md" showCloseButton={false}>
  <div className="relative p-8">
- <button onClick={handleClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 p-2 bg-slate-50 rounded-full transition-colors">
+ <button onClick={handleClose} className="absolute top-6 right-6 text-muted hover:text-slate-600 p-2 bg-slate-50 rounded-full transition-colors">
  <X className="w-5 h-5" />
  </button>
 
@@ -41,7 +41,7 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
  {state.status === 'success' ? '¡Importación Exitosa!' : 'Importar Productos'}
  </h2>
- <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-2">
+ <p className="text-xs font-bold text-muted uppercase tracking-wide mt-2">
  {state.status === 'loading' ? 'Procesando datos masivos...' : 
  state.status === 'success' ? `Se cargaron ${state.count} registros nuevos` : 
  'Actualización Masiva de Catálogo'}
@@ -49,7 +49,7 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  </div>
 
  {state.status === 'success' ? (
- <button onClick={handleClose} className="bg-slate-900 text-white w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">
+ <button onClick={handleClose} className="bg-surface text-white w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">
  Finalizar
  </button>
  ) : (
@@ -57,7 +57,7 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  
  {/* IMPORTAR ARCHIVO LOCAL */}
  <div className="relative group">
- <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2">Importar Archivo CSV</label>
+ <label className="text-[10px] font-black text-muted uppercase ml-1 block mb-2">Importar Archivo CSV</label>
  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-1 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-200 transition-colors">
  <input 
  type="file" 

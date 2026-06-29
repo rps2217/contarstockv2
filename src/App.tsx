@@ -113,20 +113,20 @@ const AppContent = () => {
     settings.theme === 'high-contrast' ? 'bg-black text-yellow-400' :
     settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 
     
-    'bg-slate-950 text-slate-100';
+    'bg-base text-slate-100';
 
   const isDarkMode = settings.theme === 'dark' || settings.theme === 'high-contrast' ;
   const isHighContrast = settings.theme === 'high-contrast';
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
-      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
+      <div className="h-screen w-full bg-base flex flex-col items-center justify-center text-white p-8">
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="relative mb-12"
         >
-          <div className="p-12 border border-white/5 rounded-[3.5rem] relative z-10 bg-slate-900/50 backdrop-blur-2xl shadow-2xl shadow-blue-500/10">
+          <div className="p-12 border border-white/5 rounded-[3.5rem] relative z-10 bg-surface/50 backdrop-blur-2xl shadow-2xl shadow-blue-500/10">
             {initStep === 'config' ? <Cpu className="w-16 h-16 text-blue-400 animate-pulse" /> : 
             initStep === 'database' ? <Database className="w-16 h-16 text-emerald-500 animate-bounce" /> :
             initStep === 'purging' ? <RefreshCw className="w-16 h-16 text-amber-500 animate-spin" /> :
