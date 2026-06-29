@@ -58,6 +58,10 @@ const ThemeDemo = lazyWithRetry(() => import('@/shared/components/ui/ThemeDemo')
 // Wrapper para ThemeDemo
 const ThemeDemoPage = () => <ThemeDemo />;
 
+// Redesign Preview - Lazy load
+const RedesignPreviewApp = lazyWithRetry(() => import('@/shared/components/redesign/AppShell').then(m => ({ default: m.RedesignAppShell })));
+const RedesignPreviewPage = () => <RedesignPreviewApp />;
+
 const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
   return isModuleEnabled(moduleKey) ? <React.Fragment>{element}</React.Fragment> : <Navigate to="/" replace />;
 };
@@ -235,6 +239,9 @@ const AppContent = () => {
 
                     {/* TEMA DEMO - Página de demostración del tema AppSheet */}
                     <Route path="/theme-demo" element={<ThemeDemoPage />} />
+
+                    {/* REDISEÑO - Preview del nuevo diseño de interfaz */}
+                    <Route path="/redesign" element={<RedesignPreviewPage />} />
 
                     {/* RUTAS LEGACY (redirigir a nuevas) */}
                     <Route path="/reception" element={<Navigate to="/capture" replace />} />

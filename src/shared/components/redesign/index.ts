@@ -4,6 +4,7 @@ export { RedesignSidebar } from './Sidebar';
 export { RedesignBottomDock } from './BottomDock';
 export { RedesignDashboard } from './Dashboard';
 export { RedesignThemeProvider, useRedesignTheme } from './ThemeContext';
+export { RedesignAppShell, RedesignAppShellWrapper } from './AppShell';
 export { cn } from './utils';
 
 // Páginas rediseñadas
