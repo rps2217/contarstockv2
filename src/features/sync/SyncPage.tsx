@@ -84,14 +84,14 @@ export const SyncPage: React.FC = () => {
   }, [getPendingSync]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-neutral-950 text-white font-sans">
+    <div className="h-full flex flex-col overflow-hidden bg-base text-white font-sans">
       {/* Header */}
-      <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-4 shrink-0">
+      <div className="bg-surface border-b border-subtle px-4 py-4 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate('/dashboard')} 
-              className="p-2 bg-white/5 rounded-xl text-neutral-400 hover:text-white transition-colors"
+              className="p-2 bg-white/5 rounded-xl text-muted hover:text-white transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -102,7 +102,7 @@ export const SyncPage: React.FC = () => {
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
-                <span className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">
+                <span className="text-[10px] text-muted font-medium uppercase tracking-wider">
                   {isOnline ? 'En línea' : 'Offline'}
                 </span>
               </div>
@@ -113,7 +113,7 @@ export const SyncPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMetricsOpen(true)}
-              className="p-2.5 bg-white/5 rounded-xl text-neutral-400 hover:text-white transition-colors"
+              className="p-2.5 bg-white/5 rounded-xl text-muted hover:text-white transition-colors"
               title="Métricas"
             >
               <Activity className="w-5 h-5" />
@@ -131,7 +131,7 @@ export const SyncPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-neutral-800 bg-neutral-900/50 p-1 gap-1 overflow-x-auto shrink-0">
+      <div className="flex border-b border-subtle bg-surface/50 p-1 gap-1 overflow-x-auto shrink-0">
         <TabButton 
           active={activeTab === 'upload'} 
           onClick={() => setActiveTab('upload')}
@@ -254,7 +254,7 @@ export const SyncPage: React.FC = () => {
 
               {/* Logs */}
               {state.logs.length > 0 && (
-                <div className="bg-neutral-900 rounded-2xl p-4 font-mono text-[10px] text-neutral-400 space-y-1 max-h-48 overflow-auto">
+                <div className="bg-surface rounded-2xl p-4 font-mono text-[10px] text-muted space-y-1 max-h-48 overflow-auto">
                   {state.logs.map((log, i) => (
                     <div key={i} className={log.type === 'error' ? 'text-rose-400' : log.type === 'success' ? 'text-emerald-400' : ''}>
                       [{log.time}] {log.msg}
@@ -286,7 +286,7 @@ export const SyncPage: React.FC = () => {
                   <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
                   <div>
                     <p className="text-xs font-bold text-amber-400">{conflicts} conflictos detectados</p>
-                    <p className="text-[10px] text-neutral-400 mt-1">Algunos registros fueron modificados localmente y remotamente.</p>
+                    <p className="text-[10px] text-muted mt-1">Algunos registros fueron modificados localmente y remotamente.</p>
                   </div>
                 </div>
               )}
@@ -311,19 +311,19 @@ export const SyncPage: React.FC = () => {
               exit={{ opacity: 0, y: -10 }}
               className="max-w-5xl mx-auto"
             >
-              <div className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden">
-                <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
-                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Esquemas</span>
+              <div className="bg-surface border border-subtle rounded-3xl overflow-hidden">
+                <div className="p-4 border-b border-subtle flex justify-between items-center">
+                  <span className="text-xs font-bold text-muted uppercase tracking-widest">Esquemas</span>
                   <span className="text-[10px] text-blue-400 font-mono">BIDIRECCIONAL</span>
                 </div>
                 <div className="divide-y divide-slate-800">
                   {Object.entries(syncRegistry).map(([key, meta]) => {
                     const tableStat = stats?.[key] || { total: 0, pending: 0 };
                     return (
-                      <div key={key} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-neutral-800/50">
+                      <div key={key} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-elevated/50">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-xl ${tableStat.pending > 0 ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-neutral-800'}`}>
-                            <Database className={`w-4 h-4 ${tableStat.pending > 0 ? 'text-amber-500' : 'text-neutral-400'}`} />
+                          <div className={`p-2.5 rounded-xl ${tableStat.pending > 0 ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-elevated'}`}>
+                            <Database className={`w-4 h-4 ${tableStat.pending > 0 ? 'text-amber-500' : 'text-muted'}`} />
                           </div>
                           <div>
                             <p className="font-bold text-sm capitalize">{key}</p>
@@ -340,7 +340,7 @@ export const SyncPage: React.FC = () => {
                           )}
                           <button
                             onClick={() => handleSingleTableSync(key)}
-                            className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-[10px] font-bold flex items-center gap-1.5"
+                            className="px-3 py-1.5 bg-elevated hover:bg-elevated rounded-lg text-[10px] font-bold flex items-center gap-1.5"
                           >
                             <Play className="w-3 h-3" /> Sync
                           </button>
@@ -426,13 +426,13 @@ const TabButton: React.FC<{
     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
       active 
         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
-        : 'text-neutral-400 hover:text-white hover:bg-white/5'
+        : 'text-muted hover:text-white hover:bg-white/5'
     }`}
   >
     {icon}
     {children}
     {badge !== undefined && badge > 0 && (
-      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${alert ? 'bg-rose-500 text-white' : 'bg-neutral-700'}`}>
+      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${alert ? 'bg-rose-500 text-white' : 'bg-elevated'}`}>
         {badge}
       </span>
     )}
@@ -449,7 +449,7 @@ const ActionButton: React.FC<{
   <button
     onClick={onClick}
     disabled={disabled}
-    className="p-4 bg-neutral-800/50 hover:bg-neutral-800 border border-slate-700 rounded-2xl flex flex-col items-center gap-2 text-center transition-colors disabled:opacity-50"
+    className="p-4 bg-elevated/50 hover:bg-elevated border border-slate-700 rounded-2xl flex flex-col items-center gap-2 text-center transition-colors disabled:opacity-50"
   >
     <div className="text-blue-400">{icon}</div>
     <span className="text-xs font-bold">{label}</span>

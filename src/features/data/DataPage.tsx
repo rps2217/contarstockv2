@@ -94,7 +94,7 @@ export const DataPage: React.FC = () => {
 
   const renderContent = () => {
     const fallback = (
-      <div className="h-full flex flex-col items-center justify-center text-neutral-500 p-4">
+      <div className="h-full flex flex-col items-center justify-center text-muted p-4">
         <p className="text-sm font-medium">Error cargando módulo</p>
         <button 
           onClick={() => setActiveTab(activeTab)}
@@ -118,9 +118,9 @@ export const DataPage: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-neutral-950 text-white overflow-hidden">
+    <div className="h-full flex flex-col bg-base text-white overflow-hidden">
       {/* Header - Compacto en móvil */}
-      <div className="px-3 pt-3 pb-2 shrink-0 bg-neutral-900/50">
+      <div className="px-3 pt-3 pb-2 shrink-0 bg-surface/50">
         <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
           <Database className="w-4 h-4 text-blue-400" />
           Datos
@@ -128,7 +128,7 @@ export const DataPage: React.FC = () => {
       </div>
 
       {/* Tabs - Compactos y scrollables */}
-      <div className="flex gap-1 px-2 py-2 overflow-x-auto no-scrollbar bg-neutral-900/30 border-b border-neutral-800 shrink-0">
+      <div className="flex gap-1 px-2 py-2 overflow-x-auto no-scrollbar bg-surface/30 border-b border-subtle shrink-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -140,7 +140,7 @@ export const DataPage: React.FC = () => {
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all shrink-0 ${
                 isActive
                   ? `${tab.activeBg} ${tab.color}`
-                  : 'text-neutral-400 hover:bg-white/5'
+                  : 'text-muted hover:bg-surface'
               }`}
             >
               <Icon className="w-3 h-3" />

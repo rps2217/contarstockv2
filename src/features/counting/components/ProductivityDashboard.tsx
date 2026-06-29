@@ -39,7 +39,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
     return (
       <button
         onClick={onToggle}
-        className="fixed top-20 right-4 z-[150] bg-slate-900/90 backdrop-blur-sm border border-white/10 rounded-2xl px-3 py-2 flex items-center gap-2 shadow-lg"
+        className="fixed top-20 right-4 z-[150] bg-surface/90 backdrop-blur-sm border border-white/10 rounded-2xl px-3 py-2 flex items-center gap-2 shadow-lg"
       >
         <Zap className="w-4 h-4 text-amber-400" />
         <span className="text-xs font-black text-white">
@@ -55,21 +55,21 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   
   const trendColor = stats.trend === 'increasing' ? 'text-emerald-400' 
     : stats.trend === 'decreasing' ? 'text-rose-400' 
-    : 'text-slate-400';
+    : 'text-muted';
 
   const trendArrow = stats.trend === 'increasing' ? '↑' 
     : stats.trend === 'decreasing' ? '↓' 
     : '→';
 
   return (
-    <div className="fixed top-20 right-4 z-[150] bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-3xl p-4 shadow-2xl min-w-[220px]">
+    <div className="fixed top-20 right-4 z-[150] bg-surface/95 backdrop-blur-md border border-white/10 rounded-3xl p-4 shadow-2xl min-w-[220px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="bg-amber-500/20 p-1.5 rounded-lg">
             <Zap className="w-4 h-4 text-amber-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">
             Productividad
           </span>
         </div>
@@ -87,7 +87,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
           <span className="text-3xl font-black text-white">
             {stats.itemsPerMinute.toFixed(1)}
           </span>
-          <span className="text-xs font-bold text-slate-400 uppercase">items/min</span>
+          <span className="text-xs font-bold text-muted uppercase">items/min</span>
         </div>
         <div className={`flex items-center gap-1 mt-1 ${trendColor}`}>
           <TrendIcon className="w-3 h-3" />
@@ -142,7 +142,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
       </div>
 
       {/* Trend bar */}
-      <div className="mt-3 pt-3 border-t border-white/5">
+      <div className="mt-3 pt-3 border-t border-subtle">
         <div className="flex items-center justify-between text-[10px]">
           <span className="text-slate-500 font-medium">Ritmo</span>
           <div className={`flex items-center gap-1 font-black ${trendColor}`}>
@@ -169,7 +169,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
       </div>
 
       {/* Best pace & Fatigue row */}
-      <div className="mt-3 pt-3 border-t border-white/5 flex gap-2">
+      <div className="mt-3 pt-3 border-t border-subtle flex gap-2">
         {/* Best pace */}
         <div className={`flex-1 ${fatigue.bg} rounded-xl p-2`}>
           <div className="flex items-center gap-1 mb-0.5">

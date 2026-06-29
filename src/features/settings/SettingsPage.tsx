@@ -56,15 +56,15 @@ export const Settings: React.FC = () => {
  ];
 
  return (
- <div className={`flex flex-col h-screen ${isDark ? 'bg-neutral-950' : 'bg-neutral-50'} overflow-hidden`}>
+ <div className={`flex flex-col h-screen ${isDark ? 'bg-base' : 'bg-base'} overflow-hidden`}>
  
  {/* HEADER */}
- <header className={`${isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'} border-b pt-6 pb-4 shrink-0`}>
+ <header className={`${isDark ? 'bg-base border-subtle' : 'bg-white border-subtle'} border-b pt-6 pb-4 shrink-0`}>
  <div className="flex items-center justify-between px-4 mb-6">
  <div className="flex items-center gap-3">
  <button 
  onClick={() => navigate('/dashboard')} 
- className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 hover:bg-neutral-800 text-neutral-400' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'}`}
+ className={`p-2.5 rounded-xl ${isDark ? 'bg-surface hover:bg-elevated text-muted' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'}`}
  >
  <ArrowLeft className="w-5 h-5" />
  </button>
@@ -75,7 +75,7 @@ export const Settings: React.FC = () => {
  </div>
  <button 
  onClick={handleShare}
- className={`p-2.5 rounded-xl border ${copied ? (isDark ? 'bg-neutral-700 border-neutral-600 text-neutral-200' : 'bg-neutral-200 border-neutral-300 text-neutral-800') : (isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-400' : 'bg-neutral-100 border-neutral-200 text-neutral-600')}`}
+ className={`p-2.5 rounded-xl border ${copied ? (isDark ? 'bg-elevated border-neutral-600 text-primary' : 'bg-neutral-200 border-neutral-300 text-neutral-800') : (isDark ? 'bg-surface border-subtle text-muted' : 'bg-neutral-100 border-subtle text-neutral-600')}`}
  >
  {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
  </button>
@@ -92,8 +92,8 @@ export const Settings: React.FC = () => {
  className={`
  flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all
  ${isActive 
- ? (isDark ? 'bg-neutral-800 text-white' : 'bg-neutral-900 text-white') 
- : (isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700')
+ ? (isDark ? 'bg-elevated text-white' : 'bg-surface text-white') 
+ : (isDark ? 'text-neutral-500 hover:text-secondary' : 'text-neutral-500 hover:text-neutral-700')
  }
  `}
  >
@@ -128,7 +128,7 @@ export const Settings: React.FC = () => {
 
  {/* Footer */}
  <div className="text-center py-12">
- <p className={`text-[10px] ${isDark ? 'text-neutral-600' : 'text-neutral-400'}`}>CountPro v5.7.5</p>
+ <p className={`text-[10px] ${isDark ? 'text-neutral-600' : 'text-muted'}`}>CountPro v5.7.5</p>
  </div>
  </div>
  </div>
