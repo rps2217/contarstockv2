@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Scan,
@@ -9,13 +9,28 @@ import {
   CalendarClock,
   AlertTriangle,
   TrendingUp,
+  TrendingDown,
   Box,
-  History
+  History,
+  Users,
+  Truck,
+  FileText,
+  Wifi,
+  WifiOff,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  BarChart3,
+  PieChart,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from './utils';
 import { useSyncStore, useAppStore } from '@/stores';
 import { useDashboard, type ActivityItem } from '@/features/dashboard/hooks/useDashboard';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/db';
+import { formatTimeAgo } from '@/lib/date';
 
 interface StatCardProps {
   title: string;
@@ -91,10 +106,45 @@ const ActionCard: React.FC<ActionCardProps> = ({ title, description, icon: Icon,
   </motion.button>
 );
 
+// Métricas adicionales desde IndexedDB
+const useDashboardMetrics = () => {
+  const productCount = useLiveQuery(() => db.products.count(), [], 0);
+  const customerCount = useLiveQuery(() => db.customers.count(), [], 0);
+  const providerCount = useLiveQuery(() => db.providers.count(), [], 0);
+  const sessionCount = useLiveQuery(() => db.sessions.count(), [], 0);
+  const scanCount = useLiveQuery(() => db.scans.count(), [], 0);
+  const syncQueueCount = useLiveQuery(() => db.syncQueue.count(), [], 0);
+  
+  // Sesiones de hoy
+  const todaySessions = useLiveQuery(async () => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const sessions = await db.sessions.where('createdAt').above(startOfDay.getTime()).toArray();
+    return sessions.filter(s => s.status === 'completed').length;
+  }, [], 0);
+  
+  // Acciones recientes de sync
+  const recentSyncLogs = useLiveQuery(async () => {
+    const logs = await db.sync_logs.orderBy('timestamp').reverse().limit(5).toArray();
+    return logs.map(log => ({
+      id: log.id,
+      status: log.status,
+      action: log.action,
+      table: log.tableName,
+      time: log.timestamp,
+      error: log.errorMessage
+    }));
+  }, [], []);
+  
+  return { productCount, customerCount, providerCount, sessionCount, scanCount, syncQueueCount, todaySessions, recentSyncLogs };
+};
+
 export const RedesignDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { pendingItems, isSupabaseConnected } = useSyncStore();
+  const { pendingItems, isSupabaseConnected, lastSyncTime, latencyMs } = useSyncStore();
   const { setStartSessionModalOpen } = useAppStore();
+  const metrics = useDashboardMetrics();
+  
   const {
     totalItems,
     pendingSyncCount,
@@ -149,37 +199,117 @@ export const RedesignDashboard: React.FC = () => {
           </div>
         </header>
 
+        {/* Sync Status Banner */}
+        <div className={cn(
+          'rounded-2xl p-4 mb-6 border',
+          isSupabaseConnected 
+            ? 'bg-emerald-500/10 border-emerald-500/30' 
+            : 'bg-rose-500/10 border-rose-500/30'
+        )}>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              {isSupabaseConnected ? (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-sm font-medium text-emerald-500">Conectado a la nube</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-rose-500 animate-pulse" />
+                  <span className="text-sm font-medium text-rose-500">Sin conexión</span>
+                </>
+              )}
+              {lastSyncTime && (
+                <span className="text-xs text-muted flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Última sync: {formatTimeAgo(lastSyncTime)}
+                </span>
+              )}
+              {latencyMs && (
+                <span className="text-xs text-muted flex items-center gap-1">
+                  {latencyMs}ms
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted">Pendiente:</span>
+                <span className={cn('font-bold', pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500')}>
+                  {pendingItems}
+                </span>
+              </div>
+              <button
+                onClick={() => navigate('/sync')}
+                className="text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1"
+              >
+                Ver detalles <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
           <StatCard
-            title="Total de ítems"
-            value={formatNumber(totalItems || 0)}
-            trend={todayStats?.trend ? `+${todayStats.trend.toFixed(1)}%` : undefined}
+            title="Productos"
+            value={formatNumber(metrics.productCount || 0)}
             icon={Box}
             colorClass="bg-blue-500/10 text-blue-500"
           />
 
           <StatCard
-            title="Sync pendiente"
-            value={pendingItems}
-            icon={RefreshCw}
+            title="Clientes"
+            value={metrics.customerCount || 0}
+            icon={Users}
+            colorClass="bg-purple-500/10 text-purple-500"
+          />
+
+          <StatCard
+            title="Proveedores"
+            value={metrics.providerCount || 0}
+            icon={Truck}
             colorClass="bg-amber-500/10 text-amber-500"
           />
 
           <StatCard
-            title="Por vencer"
-            value={expiringItems || 0}
-            icon={CalendarClock}
-            colorClass="bg-rose-500/10 text-rose-500"
+            title="Sesiones"
+            value={metrics.sessionCount || 0}
+            icon={History}
+            colorClass="bg-emerald-500/10 text-emerald-500"
           />
 
           <StatCard
-            title="Pendiente sync"
-            value={pendingSyncCount || 0}
-            icon={AlertTriangle}
-            colorClass="bg-purple-500/10 text-purple-500"
+            title="Hoy"
+            value={metrics.todaySessions || 0}
+            icon={CheckCircle2}
+            colorClass="bg-cyan-500/10 text-cyan-500"
+          />
+
+          <StatCard
+            title="Scans"
+            value={formatNumber(metrics.scanCount || 0)}
+            icon={Scan}
+            colorClass="bg-pink-500/10 text-pink-500"
           />
         </div>
+
+        {/* Alertas */}
+        {(expiringItems || 0) > 0 && (
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-500" />
+              <span className="text-sm font-medium text-rose-500">
+                {expiringItems} producto{expiringItems !== 1 ? 's' : ''} próximo{expiringItems !== 1 ? 's' : ''} a vencer
+              </span>
+            </div>
+            <button
+              onClick={() => navigate('/expiry')}
+              className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1"
+            >
+              Ver <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         {/* Quick Actions Grid */}
         <div className="mb-6">
