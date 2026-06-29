@@ -25,3 +25,5 @@ export { RedesignDataPage } from './pages/DataPage';
 export { RedesignSyncPage } from './pages/SyncPage';
 export { RedesignHammerPage } from './pages/HammerPage';
 export { RedesignEventsPage } from './pages/EventsPage';
+export { RedesignCustomersPage } from './pages/CustomersPage';
+export { RedesignSuppliersPage } from './pages/SuppliersPage';

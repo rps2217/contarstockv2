@@ -29,8 +29,10 @@ import { RedesignSettingsPage } from './pages/SettingsPage';
 import { RedesignSyncPage } from './pages/SyncPage';
 import { RedesignHammerPage } from './pages/HammerPage';
 import { RedesignEventsPage } from './pages/EventsPage';
+import { RedesignCustomersPage } from './pages/CustomersPage';
+import { RedesignSuppliersPage } from './pages/SuppliersPage';
 
-type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events';
+type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events' | 'customers' | 'suppliers';
 
 interface NavItem {
   id: ViewId;
@@ -56,6 +58,8 @@ const DESKTOP_NAV: NavItem[] = [
   { id: 'sync', label: 'Sync', icon: RefreshCw, badge: 3 },
   { id: 'hammer', label: 'Hammer', icon: Zap },
   { id: 'events', label: 'Eventos', icon: Bell },
+  { id: 'customers', label: 'Clientes', icon: Users },
+  { id: 'suppliers', label: 'Proveedores', icon: Truck },
   { id: 'settings', label: 'Ajustes', icon: Settings },
 ];
 
@@ -96,6 +100,10 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         return <RedesignHammerPage />;
       case 'events':
         return <RedesignEventsPage />;
+      case 'customers':
+        return <RedesignCustomersPage />;
+      case 'suppliers':
+        return <RedesignSuppliersPage />;
       default:
         return <RedesignDashboard />;
     }
