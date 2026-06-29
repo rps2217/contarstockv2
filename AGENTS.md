@@ -1,6 +1,42 @@
 
 ---
 
+## Rediseño de Interfaz - Migración de Estilos (2026-06-28)
+
+### Sistema de Variables CSS
+El rediseño implementa un sistema de tokens de diseño unificados:
+
+```css
+/* Tema Oscuro (Default) */
+--bg-base: #09090b      /* bg-base - Fondo principal */
+--bg-surface: #18181b    /* bg-surface - Cards, modales */
+--bg-elevated: #27272a   /* bg-elevated - Elementos elevados */
+--border-subtle: rgba(255,255,255,5%)  /* border-subtle */
+--text-primary: #f4f4f5 /* text-primary */
+--text-secondary: #a1a1aa/* text-secondary */
+--text-muted: #71717a   /* text-muted */
+--color-primary: #3b82f6/* Acento azul */
+```
+
+### Reemplazos Masivos Aplicados
+| Patrón Antiguo | Patrón Nuevo | Archivos |
+|---------------|--------------|----------|
+| bg-slate-950 | bg-base | 130 |
+| bg-slate-900 | bg-surface | 130 |
+| bg-slate-800 | bg-elevated | 130 |
+| bg-neutral-950 | bg-base | - |
+| bg-neutral-900 | bg-surface | - |
+| border-slate-800 | border-subtle | 130 |
+| text-slate-400 | text-muted | 130 |
+| text-slate-300 | text-secondary | 130 |
+| text-slate-200 | text-primary | 130 |
+
+### Commits de Rediseño
+- `384a428a` - refactor: Reemplazo masivo de estilos (130 archivos)
+- `825c28d9` - docs: Diagrama de funcionamiento
+
+---
+
 ## Optimización de Bundles y Performance (2026-06-27)
 
 ### Configuración de Chunks en vite.config.ts
