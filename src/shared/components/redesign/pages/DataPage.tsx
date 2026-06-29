@@ -62,7 +62,11 @@ export const RedesignDataPage: React.FC = () => {
 
   // Conteo de productos
   const productCount = useLiveQuery(async () => {
-    return await db.products.count()
+    try {
+      return await db?.products?.count() ?? 0
+    } catch {
+      return 0
+    }
   }, [], 0)
 
   // Renderizar contenido según tab activo

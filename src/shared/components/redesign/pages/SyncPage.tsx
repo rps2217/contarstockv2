@@ -61,12 +61,13 @@ export const RedesignSyncPage: React.FC = () => {
   // Estadísticas de tablas (usar nombres correctos)
   const tableStats = useLiveQuery(async () => {
     try {
+      if (!db?.products) return { products: 0, sessions: 0, customers: 0, providers: 0, scans: 0 }
       const [products, sessions, customers, providers, scans] = await Promise.all([
-        db.products.count(),
-        db.sessions.count(),
-        db.customers.count(),
-        db.providers.count(),
-        db.scans.count(),
+        db.products.count().catch(() => 0),
+        db.sessions.count().catch(() => 0),
+        db.customers.count().catch(() => 0),
+        db.providers.count().catch(() => 0),
+        db.scans.count().catch(() => 0),
       ])
       return { products, sessions, customers, providers, scans }
     } catch {
@@ -107,8 +108,10 @@ export const RedesignSyncPage: React.FC = () => {
   useEffect(() => {
     const updatePending = async () => {
       try {
-        const count = await db.syncQueue.count()
-        setPendingItems(count)
+        if (db?.syncQueue) {
+          const count = await db.syncQueue.count().catch(() => 0)
+          setPendingItems(count)
+        }
       } catch {}
     }
     updatePending()

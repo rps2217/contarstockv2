@@ -94,21 +94,33 @@ export const RedesignReportsPage: React.FC = () => {
 
   // Estadísticas de inventario
   const inventoryStats = useLiveQuery(async () => {
-    const [products, customers, providers] = await Promise.all([
-      db.products.count(), db.customers.count(), db.providers.count()
-    ])
-    const lowStock = await db.products.filter(p => (p.stock || 0) < 10).count()
-    const noStock = await db.products.filter(p => (p.stock || 0) === 0).count()
-    return { products, customers, providers, lowStock, noStock }
+    try {
+      if (!db?.products) return { products: 0, customers: 0, providers: 0, lowStock: 0, noStock: 0 }
+      const [products, customers, providers] = await Promise.all([
+        db.products.count().catch(() => 0), 
+        db.customers?.count().catch(() => 0) ?? 0, 
+        db.providers?.count().catch(() => 0) ?? 0
+      ])
+      const lowStock = await db.products.filter(p => (p.stock || 0) < 10).count().catch(() => 0)
+      const noStock = await db.products.filter(p => (p.stock || 0) === 0).count().catch(() => 0)
+      return { products, customers, providers, lowStock, noStock }
+    } catch {
+      return { products: 0, customers: 0, providers: 0, lowStock: 0, noStock: 0 }
+    }
   }, [])
 
   // Estadísticas de sincronización
   const syncStats = useLiveQuery(async () => {
-    const { startTime, endTime } = getDateRange(timePeriod)
-    const logs = await db.sync_logs.where('timestamp').between(startTime, endTime).toArray()
-    const successCount = logs.filter(l => l.status === 'success').length
-    const pendingCount = await db.syncQueue.count()
-    return { totalOps: logs.length, successCount, pendingCount, successRate: logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 100 }
+    try {
+      const { startTime, endTime } = getDateRange(timePeriod)
+      if (!db?.sync_logs || !db?.syncQueue) return { totalOps: 0, successCount: 0, pendingCount: 0, successRate: 100 }
+      const logs = await db.sync_logs.where('timestamp').between(startTime, endTime).toArray().catch(() => [])
+      const successCount = logs.filter(l => l.status === 'success').length
+      const pendingCount = await db.syncQueue.count().catch(() => 0)
+      return { totalOps: logs.length, successCount, pendingCount, successRate: logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 100 }
+    } catch {
+      return { totalOps: 0, successCount: 0, pendingCount: 0, successRate: 100 }
+    }
   }, [timePeriod])
 
   // Estadísticas de vencimientos

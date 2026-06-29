@@ -59,7 +59,11 @@ export const useDashboard = () => {
 
   // Total de items en inventario
   const totalItems = useLiveQuery(async () => {
-    return await db.products.count();
+    try {
+      return await db?.products?.count() ?? 0;
+    } catch {
+      return 0;
+    }
   }, [], 0);
 
   // Items próximos a vencer (próximos 7 días)
