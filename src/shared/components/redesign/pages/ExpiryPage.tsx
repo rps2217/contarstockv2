@@ -250,7 +250,7 @@ export const RedesignExpiryPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input type="text" value={filters.searchQuery} onChange={(e) => actions.setSearchQuery(e.target.value)}
+              <input type="text" value={filters?.searchQuery || ''} onChange={(e) => actions.setSearchQuery(e.target.value)}
                 placeholder="Buscar por producto, código o ubicación..."
                 className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500 transition-all" />
             </div>
