@@ -27,8 +27,10 @@ import { RedesignExpiryPage } from './pages/ExpiryPage';
 import { RedesignReportsPage } from './pages/ReportsPage';
 import { RedesignSettingsPage } from './pages/SettingsPage';
 import { RedesignSyncPage } from './pages/SyncPage';
+import { RedesignHammerPage } from './pages/HammerPage';
+import { RedesignEventsPage } from './pages/EventsPage';
 
-type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings';
+type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events';
 
 interface NavItem {
   id: ViewId;
@@ -52,8 +54,9 @@ const DESKTOP_NAV: NavItem[] = [
   { id: 'expiry', label: 'Vencimientos', icon: CalendarClock },
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
   { id: 'sync', label: 'Sync', icon: RefreshCw, badge: 3 },
+  { id: 'hammer', label: 'Hammer', icon: Zap },
+  { id: 'events', label: 'Eventos', icon: Bell },
   { id: 'settings', label: 'Ajustes', icon: Settings },
-  { id: 'expiry', label: 'Vencim.', icon: CalendarClock },
 ];
 
 // Mock props para demo - reemplazar con stores reales
@@ -89,6 +92,10 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         return <RedesignSyncPage />;
       case 'settings':
         return <RedesignSettingsPage />;
+      case 'hammer':
+        return <RedesignHammerPage />;
+      case 'events':
+        return <RedesignEventsPage />;
       default:
         return <RedesignDashboard />;
     }

@@ -23,3 +23,5 @@ export { RedesignExpiryPage } from './pages/ExpiryPage';
 export { RedesignReportsPage } from './pages/ReportsPage';
 export { RedesignDataPage } from './pages/DataPage';
 export { RedesignSyncPage } from './pages/SyncPage';
+export { RedesignHammerPage } from './pages/HammerPage';
+export { RedesignEventsPage } from './pages/EventsPage';
