@@ -174,7 +174,7 @@ export interface ConsolidatedItem {
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'providers' | 'customers' | 'compliance';
 // ThemeName (re-exportado desde useTheme)
-export type ThemeName = 'light' | 'dark' | 'high-contrast' | 'appsheet-dark';
+export type ThemeName = 'light' | 'dark' | 'gray' | 'high-contrast' | 'appsheet-dark';
 export type Theme = ThemeName;
 
 export interface VisualGuideItem {

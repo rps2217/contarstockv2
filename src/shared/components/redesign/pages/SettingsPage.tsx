@@ -108,13 +108,13 @@ const Toggle = ({
 )
 
 // ============================================================================
-// Selector Visual de Tema (Día, Noche, Alto Contraste)
+// Selector Visual de Tema (Día, Gris, Noche)
 // ============================================================================
 interface ThemeOption {
   id: ThemeName
   label: string
   bg: string
-  accent: string
+  border: string
   text: string
   icon: React.ElementType
 }
@@ -131,24 +131,24 @@ const ThemeVisualSelector = ({
       id: 'light', 
       label: 'Día', 
       bg: 'bg-white', 
-      accent: 'bg-amber-400', 
-      text: 'text-slate-900',
+      border: 'border-gray-200',
+      text: 'text-gray-900',
       icon: Sun 
+    },
+    { 
+      id: 'gray', 
+      label: 'Gris', 
+      bg: 'bg-[#242424]', 
+      border: 'border-gray-700',
+      text: 'text-gray-200',
+      icon: Moon 
     },
     { 
       id: 'dark', 
       label: 'Noche', 
-      bg: 'bg-[#0f1423]', 
-      accent: 'bg-blue-500', 
+      bg: 'bg-[#0f0f0f]', 
+      border: 'border-gray-800',
       text: 'text-white',
-      icon: Moon 
-    },
-    { 
-      id: 'high-contrast', 
-      label: 'Alto Contraste', 
-      bg: 'bg-black', 
-      accent: 'bg-yellow-400', 
-      text: 'text-yellow-400',
       icon: Contrast 
     },
   ]
@@ -165,17 +165,20 @@ const ThemeVisualSelector = ({
             className={cn(
               'relative p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all',
               isSelected 
-                ? `${t.bg} border-blue-500 shadow-lg` 
-                : `${t.bg} border-subtle opacity-70 hover:opacity-100`,
+                ? `${t.bg} ${t.border} ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent` 
+                : `${t.bg} ${t.border} opacity-60 hover:opacity-100`,
             )}
           >
-            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', t.accent)}>
-              <Icon className="w-4 h-4 text-white" />
+            {/* Preview del tema */}
+            <div className="w-full h-8 rounded-lg bg-inherit border border-inherit flex items-center justify-center gap-1">
+              <div className="w-4 h-4 rounded bg-blue-500" />
+              <div className="w-6 h-3 rounded bg-inherit" />
+              <div className="w-3 h-3 rounded-full bg-green-500" />
             </div>
             <span className={cn('text-[10px] font-medium', t.text)}>{t.label}</span>
             {isSelected && (
-              <div className="absolute top-1 right-1">
-                <Check className="w-3 h-3 text-blue-500" />
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
               </div>
             )}
           </button>
