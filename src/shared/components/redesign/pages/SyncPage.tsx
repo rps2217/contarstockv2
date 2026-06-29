@@ -20,6 +20,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { formatTimeAgo, formatDuration } from '@/lib/date'
 import { cn } from '@/lib/utils'
+import { useToastStore } from '@/store/useToastStore'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export const RedesignSyncPage: React.FC = () => {
@@ -39,6 +40,7 @@ export const RedesignSyncPage: React.FC = () => {
 
   const [syncDuration, setSyncDuration] = useState<number | null>(null)
   const [syncProgress, setSyncProgress] = useState(0)
+  const { addToast } = useToastStore()
 
   // Logs de sync (usar sync_logs - snake_case)
   const syncLogs = useLiveQuery(async () => {
@@ -140,6 +142,7 @@ export const RedesignSyncPage: React.FC = () => {
       setLastSyncTime(Date.now())
     } catch (error) {
       console.error('Sync error:', error)
+      addToast('Error en sincronizacion', 'error')
     } finally {
       setSyncing(false)
     }

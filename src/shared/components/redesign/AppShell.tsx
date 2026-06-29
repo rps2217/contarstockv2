@@ -17,6 +17,7 @@ import { cn } from './utils';
 import { useRedesignTheme, RedesignThemeProvider } from './ThemeContext';
 import { useDbReady } from './hooks/useDbReady';
 import { DbLoader, DbError } from './components/DbLoader';
+import { ToastContainer } from './components/ToastContainer';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
@@ -289,6 +290,7 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         {renderView()}
       </main>
       <BottomDockComponent />
+      <ToastContainer />
     </div>
   );
 };

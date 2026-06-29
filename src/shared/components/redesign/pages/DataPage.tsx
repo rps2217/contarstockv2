@@ -16,6 +16,7 @@ import { ProductForm } from '../components/forms/ProductForm'
 import { CustomerForm } from '../components/forms/CustomerForm'
 import { ProviderForm } from '../components/forms/ProviderForm'
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { useToastStore } from '@/store/useToastStore'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 
@@ -50,6 +51,7 @@ export const RedesignDataPage: React.FC = () => {
   const [showProviderForm, setShowProviderForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { addToast } = useToastStore()
 
   // Datos reales de productos desde IndexedDB
   const products = useLiveQuery(async () => {
@@ -81,6 +83,7 @@ export const RedesignDataPage: React.FC = () => {
       updatedAt: Date.now(),
       syncStatus: 'pending',
     })
+    addToast('Producto creado exitosamente', 'success')
   }
 
   // Actualizar producto
@@ -92,6 +95,7 @@ export const RedesignDataPage: React.FC = () => {
       syncStatus: 'pending',
     })
     setEditingProduct(null)
+    addToast('Producto actualizado', 'success')
   }
 
   // Eliminar producto
@@ -100,6 +104,9 @@ export const RedesignDataPage: React.FC = () => {
     setDeletingId(id)
     try {
       await db.products.delete(id)
+      addToast('Producto eliminado', 'info')
+    } catch (error) {
+      addToast('Error al eliminar producto', 'error')
     } finally {
       setDeletingId(null)
     }
