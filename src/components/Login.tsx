@@ -78,16 +78,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-1">
  LogiCount <span className="text-blue-600">Pro</span>
  </h1>
- <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Acceso Multi-Operario</p>
+ <p className="text-muted font-bold text-[10px] uppercase tracking-[0.3em]">Acceso Multi-Operario</p>
  </div>
 
  <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100">
  <form onSubmit={handleLogin} className="space-y-5">
  
  <div className="space-y-2">
- <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'user' ? 'text-blue-600' : 'text-slate-400'}`}>Nombre Operador</label>
+ <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'user' ? 'text-blue-600' : 'text-muted'}`}>Nombre Operador</label>
  <div className={`relative group transition-all duration-300 ${activeField === 'user' ? 'scale-[1.02]' : ''}`}>
- <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+ <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-muted'}`}>
  <User className="w-5 h-5" />
  </div>
  <input 
@@ -96,7 +96,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  onChange={(e) => setUsername(e.target.value)}
  onFocus={() => setActiveField('user')}
  onBlur={() => setActiveField(null)}
- className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-slate-300 text-slate-900 ${activeField === 'user' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
+ className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-secondary text-slate-900 ${activeField === 'user' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
  placeholder="Ej: JUAN PEREZ"
  autoComplete="username"
  />
@@ -104,9 +104,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  </div>
 
  <div className="space-y-2">
- <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'pass' ? 'text-blue-600' : 'text-slate-400'}`}>PIN de Terminal</label>
+ <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'pass' ? 'text-blue-600' : 'text-muted'}`}>PIN de Terminal</label>
  <div className={`relative group transition-all duration-300 ${activeField === 'pass' ? 'scale-[1.02]' : ''}`}>
- <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'pass' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+ <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'pass' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-muted'}`}>
  <Lock className="w-5 h-5" />
  </div>
  <input 
@@ -115,7 +115,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  onChange={(e) => setPassword(e.target.value)}
  onFocus={() => setActiveField('pass')}
  onBlur={() => setActiveField(null)}
- className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-slate-300 text-slate-900 ${activeField === 'pass' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
+ className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-secondary text-slate-900 ${activeField === 'pass' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
  placeholder="••••"
  autoComplete="current-password"
  />
@@ -132,7 +132,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  <button 
  type="submit" 
  disabled={isLoading}
- className="w-full h-16 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-70 mt-4"
+ className="w-full h-16 bg-surface hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-70 mt-4"
  >
  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Identificarse <ArrowRight className="w-5 h-5" /></>}
  </button>
@@ -140,7 +140,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
  <div className="relative my-4">
  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
- <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-white px-4 text-slate-300">O acceder como</span></div>
+ <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-white px-4 text-secondary">O acceder como</span></div>
  </div>
 
  <button 

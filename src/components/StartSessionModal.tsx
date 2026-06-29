@@ -108,7 +108,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       isOpen={isOpen} 
       onClose={onClose} 
       variant="bottom-sheet"
-      className="md:max-w-md bg-slate-950 text-white border-t-4 border-blue-600"
+      className="md:max-w-md bg-base text-white border-t-4 border-blue-600"
     >
       <div className="p-5 md:p-8 pb-10 md:pb-12">
         <div className="text-center mb-6">
@@ -129,7 +129,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         {step === 'enter_erp' && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
             <div className="text-center">
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Ingresa el numero de orden</p>
+              <p className="text-[10px] text-muted font-bold uppercase">Ingresa el numero de orden</p>
             </div>
 
             <div className="relative">
@@ -139,7 +139,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 onChange={(e) => { setErpOrder(e.target.value.toUpperCase()); setCloudOrder(null); setError(''); }}
                 autoFocus
                 placeholder="Numero de Orden / ERP"
-                className="w-full h-16 bg-slate-900 rounded-2xl px-5 font-mono font-black text-lg md:text-xl border-2 border-blue-500 text-white outline-none shadow-[0_0_20px_rgba(59,130,246,0.15)] focus:border-blue-400 transition-all text-center"
+                className="w-full h-16 bg-surface rounded-2xl px-5 font-mono font-black text-lg md:text-xl border-2 border-blue-500 text-white outline-none shadow-[0_0_20px_rgba(59,130,246,0.15)] focus:border-blue-400 transition-all text-center"
               />
             </div>
 
@@ -170,7 +170,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                           SoundFX.play('success');
                           setStep('confirm');
                         }}
-                        className="w-full text-left bg-slate-900/60 hover:bg-emerald-950/20 border border-white/5 hover:border-emerald-500/30 p-3 rounded-xl transition-all flex items-center justify-between text-xs font-mono font-bold active:scale-[0.98]"
+                        className="w-full text-left bg-surface/60 hover:bg-emerald-950/20 border border-white/5 hover:border-emerald-500/30 p-3 rounded-xl transition-all flex items-center justify-between text-xs font-mono font-bold active:scale-[0.98]"
                       >
                         <div className="flex flex-col min-w-0 flex-1">
                           <span className="text-white truncate">{dispName}</span>
@@ -195,7 +195,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Box className="w-8 h-8 text-emerald-400" />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Resumen</p>
+              <p className="text-[10px] text-muted font-bold uppercase">Resumen</p>
             </div>
 
             <div className="bg-white/5 rounded-2xl p-4 space-y-3 border border-white/10">
@@ -216,7 +216,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                   className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
                     isAutoLockEnabled 
                       ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
-                      : 'bg-slate-800/50 border-white/5 text-slate-400'
+                      : 'bg-elevated/50 border-white/5 text-muted'
                   }`}
                 >
                   <div className="flex items-center gap-3">

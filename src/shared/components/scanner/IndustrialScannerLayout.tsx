@@ -211,17 +211,17 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
       {/* MODAL DE PREVIEW DE ETIQUETA */}
       {isPreviewOpen && labelPhoto && (
         <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-6 animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-800">
+          <div className="w-full max-w-lg bg-surface rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-elevated">
               <h3 className="text-xs font-black uppercase tracking-widest text-white">Etiqueta Física</h3>
-              <button onClick={() => setIsPreviewOpen(false)} className="p-2 bg-white/5 rounded-full text-slate-400">
+              <button onClick={() => setIsPreviewOpen(false)} className="p-2 bg-white/5 rounded-full text-muted">
                 <Box className="w-5 h-5 rotate-45" />
               </button>
             </div>
             <div className="aspect-video bg-black">
               <img src={labelPhoto} alt="Label" className="w-full h-full object-contain" />
             </div>
-            <div className="p-4 bg-slate-800 text-center">
+            <div className="p-4 bg-elevated text-center">
               <button 
                 onClick={() => setIsPreviewOpen(false)}
                 className="w-full py-3 bg-white text-black font-black uppercase text-[10px] rounded-xl"
@@ -234,7 +234,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
       )}
 
       {/* PANEL DE LISTA (Resto del espacio) */}
-      <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t border-rose-500/30">
+      <div className="flex-1 min-h-0 bg-base flex flex-col relative z-10 border-t border-rose-500/30">
         <ScannerSearchBar 
           isSearchActive={isSearchActive}
           searchQuery={searchQuery}
@@ -256,7 +256,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
         )}
 
         {/* LISTA DE ITEMS */}
-        <div className={`flex-1 min-h-0 bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
+        <div className={`flex-1 min-h-0 bg-base ${bottomContent ? 'pb-36' : 'pb-20'}`}>
           <VirtualList
             items={filteredItems}
             itemHeight={86} // Larger, more readable row height (aligned with ScannedItemRow)
@@ -271,7 +271,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
             emptyState={
               <>
                 <Box className="w-16 h-16 mb-4 text-slate-500" />
-                <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                <span className="text-sm font-black uppercase tracking-widest text-muted">
                   {searchQuery ? 'No hay resultados' : 'Escanea para comenzar'}
                 </span>
               </>

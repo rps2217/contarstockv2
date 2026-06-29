@@ -29,7 +29,7 @@ export const ScannerHeader: React.FC<ScannerHeaderProps> = ({
   autoSyncEnabled = false
 }) => {
   return (
-    <div className="h-14 bg-slate-900 border-b border-white/10 flex items-center justify-between px-2 shrink-0 z-50">
+    <div className="h-14 bg-surface border-b border-white/10 flex items-center justify-between px-2 shrink-0 z-50">
       <div className="flex items-center gap-2">
         <button 
           onClick={onBack}

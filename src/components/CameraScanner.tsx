@@ -99,10 +99,10 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       <div className="flex-1 relative bg-black flex flex-col justify-center h-full">
         {feedbackStatus === 'success' && <div className="absolute inset-0 z-[60] bg-emerald-600/40 flex items-center justify-center animate-in fade-in duration-75"><CheckCircle2 className="w-20 h-20 text-white" /></div>}
         {error && (
-          <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+          <div className="absolute inset-0 z-50 bg-base flex flex-col items-center justify-center p-6 text-center">
             <AlertTriangle className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
             <h3 className="text-white font-black uppercase text-xs tracking-widest mb-1">Cámara no disponible</h3>
-            <p className="text-slate-400 text-xs max-w-xs mb-6 px-4">{error}</p>
+            <p className="text-muted text-xs max-w-xs mb-6 px-4">{error}</p>
             
             <form onSubmit={handleManualSubmit} className="w-full max-w-xs mb-8 pointer-events-auto">
               <label className="block text-slate-500 text-[9px] font-black uppercase tracking-widest mb-2 text-left">
@@ -126,7 +126,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               </div>
             </form>
 
-            <button onClick={onClose} className="bg-slate-900 hover:bg-slate-800 border border-white/10 text-white px-8 py-3 rounded-xl font-bold uppercase text-[10px] transition-colors pointer-events-auto">
+            <button onClick={onClose} className="bg-surface hover:bg-elevated border border-white/10 text-white px-8 py-3 rounded-xl font-bold uppercase text-[10px] transition-colors pointer-events-auto">
               Volver
             </button>
           </div>

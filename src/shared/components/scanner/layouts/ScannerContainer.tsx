@@ -187,7 +187,7 @@ export const ScannerContainer: React.FC<ScannerContainerProps> = ({
       <LabelPreviewModal labelPhoto={labelPhoto} onClose={() => setIsPreviewOpen(false)} />
 
       {/* LIST SECTION */}
-      <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t border-rose-500/30">
+      <div className="flex-1 min-h-0 bg-base flex flex-col relative z-10 border-t border-rose-500/30">
         <ScannerSearchBar 
           isSearchActive={isSearchActive}
           searchQuery={searchQuery}
@@ -208,7 +208,7 @@ export const ScannerContainer: React.FC<ScannerContainerProps> = ({
           />
         )}
 
-        <div className={`flex-1 min-h-0 bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
+        <div className={`flex-1 min-h-0 bg-base ${bottomContent ? 'pb-36' : 'pb-20'}`}>
           <VirtualList
             items={filteredItems}
             itemHeight={86}
@@ -217,7 +217,7 @@ export const ScannerContainer: React.FC<ScannerContainerProps> = ({
             emptyState={
               <>
                 <Box className="w-16 h-16 mb-4 text-slate-500" />
-                <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                <span className="text-sm font-black uppercase tracking-widest text-muted">
                   {searchQuery ? 'No hay resultados' : 'Escanea para comenzar'}
                 </span>
               </>

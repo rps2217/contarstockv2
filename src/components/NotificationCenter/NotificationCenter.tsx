@@ -235,10 +235,10 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed top-16 right-4 z-[191] w-full max-w-md bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden"
+            className="fixed top-16 right-4 z-[191] w-full max-w-md bg-surface rounded-2xl shadow-2xl border border-subtle overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-subtle">
               <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5 text-amber-400" />
                 <h2 className="font-bold text-white">Notificaciones</h2>
@@ -252,7 +252,7 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                    className="p-2 text-muted hover:text-white hover:bg-elevated rounded-lg transition-colors"
                     title="Marcar todas como leídas"
                   >
                     <CheckCheck className="w-4 h-4" />
@@ -260,14 +260,14 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                 )}
                 <button
                   onClick={clearAll}
-                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+                  className="p-2 text-muted hover:text-rose-400 hover:bg-elevated rounded-lg transition-colors"
                   title="Limpiar todas"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                  className="p-2 text-muted hover:text-white hover:bg-elevated rounded-lg transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -284,8 +284,8 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                   return (
                     <div
                       key={notification.id}
-                      className={`relative px-4 py-3 border-b border-slate-800 hover:bg-slate-800/50 transition-colors cursor-pointer ${
-                        !notification.read ? 'bg-slate-800/30' : ''
+                      className={`relative px-4 py-3 border-b border-subtle hover:bg-elevated/50 transition-colors cursor-pointer ${
+                        !notification.read ? 'bg-elevated/30' : ''
                       }`}
                       onClick={() => markAsRead(notification.id)}
                     >
@@ -301,14 +301,14 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <h3 className={`font-bold text-sm truncate ${notification.read ? 'text-slate-300' : 'text-white'}`}>
+                            <h3 className={`font-bold text-sm truncate ${notification.read ? 'text-secondary' : 'text-white'}`}>
                               {notification.title}
                             </h3>
                             <span className="text-[10px] text-slate-500 whitespace-nowrap">
                               {formatTimeAgo(notification.timestamp)}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 line-clamp-2 mt-0.5">
+                          <p className="text-xs text-muted line-clamp-2 mt-0.5">
                             {notification.message}
                           </p>
                           
@@ -341,7 +341,7 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
               ) : (
                 <div className="p-8 text-center">
                   <Bell className="w-12 h-12 mx-auto mb-3 text-slate-600" />
-                  <p className="text-sm font-bold text-slate-400">No hay notificaciones</p>
+                  <p className="text-sm font-bold text-muted">No hay notificaciones</p>
                   <p className="text-xs text-slate-500 mt-1">Las notificaciones aparecerán aquí</p>
                 </div>
               )}
@@ -360,7 +360,7 @@ function NotificationBell() {
     <button
       id="notification-bell"
       onClick={open}
-      className="relative p-2 text-slate-400 hover:text-white transition-colors"
+      className="relative p-2 text-muted hover:text-white transition-colors"
     >
       <Bell className="w-6 h-6" />
       {unreadCount > 0 && (

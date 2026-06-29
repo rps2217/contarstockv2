@@ -164,7 +164,7 @@ const SystemStatusInner: React.FC = () => {
   if (isOnline && isSupabaseConnected && latencyMs !== null) {
     const latencyColor = latencyMs < 150 ? 'text-emerald-400' : latencyMs < 400 ? 'text-amber-400' : 'text-rose-400';
     alerts.push(
-      <div key="latency" className="bg-slate-900/60 backdrop-blur-md text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-3 rounded-lg border border-white/5">
+      <div key="latency" className="bg-surface/60 backdrop-blur-md text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-3 rounded-lg border border-white/5">
         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/20 rounded-md">
           <Activity className={`w-3 h-3 ${latencyColor}`} />
           <span className="uppercase tracking-wider">LAT: <span className={latencyColor}>{latencyMs}MS</span></span>

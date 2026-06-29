@@ -15,7 +15,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   inputRef
 }) => {
   return (
-    <div className="p-6 bg-slate-900 border-b border-white/10 flex flex-col items-center justify-center pt-8 pb-10">
+    <div className="p-6 bg-surface border-b border-white/10 flex flex-col items-center justify-center pt-8 pb-10">
       <form 
         onSubmit={(e) => {
           e.preventDefault();
@@ -42,7 +42,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
             <button 
               type="button"
               onClick={() => setManualInput('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition-all"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-elevated rounded-full flex items-center justify-center text-muted hover:text-white active:scale-90 transition-all"
             >
               <X className="w-6 h-6" />
             </button>
