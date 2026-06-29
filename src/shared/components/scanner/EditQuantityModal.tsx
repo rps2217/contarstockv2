@@ -21,7 +21,7 @@ export const EditQuantityModal: React.FC<EditQuantityModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-3xl w-full max-w-xs overflow-hidden shadow-2xl border-2 border-slate-800 animate-in zoom-in-95 duration-200">
+      <div className="bg-surface rounded-3xl w-full max-w-xs overflow-hidden shadow-2xl border-2 border-subtle animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="bg-rose-600 px-4 py-3 flex items-center justify-center gap-2 border-b-2 border-rose-700">
           <Box className="w-5 h-5 text-white" />
@@ -29,7 +29,7 @@ export const EditQuantityModal: React.FC<EditQuantityModalProps> = ({
         </div>
         
         {/* Body */}
-        <div className="p-6 flex flex-col items-center gap-4 bg-slate-800">
+        <div className="p-6 flex flex-col items-center gap-4 bg-elevated">
           <button 
             onClick={() => setEditQty(q => q + 1)}
             className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center active:bg-emerald-500/30 active:scale-95 transition-all cursor-pointer"
@@ -50,7 +50,7 @@ export const EditQuantityModal: React.FC<EditQuantityModalProps> = ({
                   setEditQty(val);
                 }
               }}
-              className="w-full bg-black/40 rounded-2xl py-4 border-2 border-slate-700 text-center text-5xl font-mono font-black text-white tracking-tighter shadow-inner focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-colors"
+              className="w-full bg-black/40 rounded-2xl py-4 border-2 border-subtle text-center text-5xl font-mono font-black text-white tracking-tighter shadow-inner focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-colors"
             />
             <span className="absolute right-3 bottom-1.5 text-[8px] font-black tracking-widest text-slate-500 uppercase pointer-events-none group-focus-within:text-rose-500 transition-colors">
               EDITABLE
@@ -66,7 +66,7 @@ export const EditQuantityModal: React.FC<EditQuantityModalProps> = ({
         </div>
         
         {/* Footer */}
-        <div className="p-4 flex gap-3 bg-slate-900 border-t-2 border-slate-800">
+        <div className="p-4 flex gap-3 bg-surface border-t-2 border-subtle">
           <button 
             onClick={onClose}
             className="flex-1 py-3 bg-slate-700 text-white font-black rounded-xl active:bg-slate-600 active:scale-95 transition-all text-sm tracking-widest"

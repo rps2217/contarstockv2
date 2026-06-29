@@ -39,7 +39,7 @@ export const ScannedItemRow: React.FC<ScannedItemRowProps> = memo(({
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.9)] animate-pulse" />
           )}
         </div>
-        <span className="text-xs font-semibold text-slate-400 uppercase leading-none line-clamp-1 tracking-wider">
+        <span className="text-xs font-semibold text-muted uppercase leading-none line-clamp-1 tracking-wider">
           {item.name || 'SIN DESCRIPCIÓN'}
         </span>
       </div>
@@ -57,10 +57,10 @@ export const ScannedItemRow: React.FC<ScannedItemRowProps> = memo(({
           </div>
         )}
         
-        <div className="flex items-center bg-slate-900 border border-white/10 rounded-2xl p-1 gap-1.5">
+        <div className="flex items-center bg-surface border border-white/10 rounded-2xl p-1 gap-1.5">
           <button 
             onClick={() => onScan(item.barcode, -1)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:text-white hover:bg-white/10 transition-all active:scale-90"
             title="Restar 1"
           >
             <Minus className="w-5 h-5" />
@@ -76,7 +76,7 @@ export const ScannedItemRow: React.FC<ScannedItemRowProps> = memo(({
           
           <button 
             onClick={() => onScan(item.barcode, 1)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:text-white hover:bg-white/10 transition-all active:scale-90"
             title="Sumar 1"
           >
             <Plus className="w-5 h-5" />
