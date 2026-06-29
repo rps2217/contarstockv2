@@ -28,16 +28,18 @@ const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ defa
 const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
 // Vistas principales (AppSheet-style) - Carga diferida
-const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
-const CapturePage = lazyWithRetry(() => import('./features/capture/CapturePage'));
-const DataPage = lazyWithRetry(() => import('./features/data/DataPage'));
-const SyncPage = lazyWithRetry(() => import('./features/sync/SyncPage'));
-const SettingsPage = lazyWithRetry(() => import('./features/settings/SettingsPage'));
+// REDISEÑO: Usando páginas del rediseño
+const Dashboard = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDashboard })));
+const CapturePage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCapturePage })));
+const DataPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDataPage })));
+const SyncPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSyncPage })));
+const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage })));
 
 // Vistas legacy - Carga solo cuando se accede (no en bundle inicial)
-const ReportsLegacy = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
+// REDISEÑO: Usando páginas del rediseño
+const ReportsLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage })));
+const ExpiryLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
 const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
-const ExpiryLegacy = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
 const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
 const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
 const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
