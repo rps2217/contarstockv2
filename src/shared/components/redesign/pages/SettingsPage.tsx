@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores'
-import { ThemeName } from '@/types'
+import { useTheme } from '../ThemeContext'
 
 // ============================================================================
 // Componentes base
@@ -110,8 +110,10 @@ const Toggle = ({
 // ============================================================================
 // Selector Visual de Tema (Día, Gris, Noche)
 // ============================================================================
+type ThemeType = 'dark' | 'light' | 'gray'
+
 interface ThemeOption {
-  id: ThemeName
+  id: ThemeType
   label: string
   bg: string
   border: string
@@ -123,8 +125,8 @@ const ThemeVisualSelector = ({
   value, 
   onChange 
 }: { 
-  value: ThemeName
-  onChange: (theme: ThemeName) => void 
+  value: ThemeType
+  onChange: (theme: ThemeType) => void 
 }) => {
   const themes: ThemeOption[] = [
     { 
@@ -193,6 +195,7 @@ const ThemeVisualSelector = ({
 // ============================================================================
 export const RedesignSettingsPage: React.FC = () => {
   const { settings, updateSetting } = useSettingsStore()
+  const { theme, setTheme } = useTheme()
   
   // Estados locales para toggles (usando propiedades reales del store)
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled ?? true)
@@ -201,10 +204,10 @@ export const RedesignSettingsPage: React.FC = () => {
   const [batchTracking, setBatchTracking] = useState(settings.batchTrackingEnabled ?? false)
   const [lowEndMode, setLowEndMode] = useState(settings.lowEndMode ?? false)
 
-  // Handler para cambiar tema
-  const handleThemeChange = (themeId: ThemeName) => {
+  // Handler para cambiar tema (usando el contexto)
+  const handleThemeChange = (newTheme: 'dark' | 'light' | 'gray') => {
     if (navigator.vibrate) navigator.vibrate(10)
-    updateSetting('theme', themeId)
+    setTheme(newTheme)
   }
 
   // Handler para toggles con persistencia
@@ -256,7 +259,7 @@ export const RedesignSettingsPage: React.FC = () => {
                 </div>
               </div>
               <ThemeVisualSelector 
-                value={settings.theme || 'dark'} 
+                value={theme} 
                 onChange={handleThemeChange} 
               />
             </div>

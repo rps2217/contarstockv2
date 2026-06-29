@@ -1,4 +1,5 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
+import React, { useEffect, createContext, useContext } from 'react';
+import { useSettingsStore } from '@/stores';
 
 type Theme = 'dark' | 'light' | 'gray';
 
@@ -10,11 +11,19 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const RedesignThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const { settings, updateSetting } = useSettingsStore();
+  
+  // Usar el tema del store, con fallback a 'dark'
+  const theme = (settings.theme as Theme) || 'dark';
 
   useEffect(() => {
+    // Aplicar el tema al documento
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  const setTheme = (newTheme: Theme) => {
+    updateSetting('theme', newTheme);
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
