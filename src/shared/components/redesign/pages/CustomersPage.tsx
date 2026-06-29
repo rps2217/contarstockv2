@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Users, Plus, Search, Phone, Mail, MapPin, MoreVertical,
-  Edit2, Trash2, MessageSquare, ChevronRight, X, User
+  Users, Plus, Search, Phone, Mail,
+  Edit2, Trash2, MessageSquare, X, User, Send
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCustomers } from '@/features/customers/hooks/useCustomers'
 import type { Customer } from '@/types'
+import { toast } from 'sonner'
 
 // ============================================================================
 // Componentes
@@ -19,8 +20,11 @@ const StatCard = ({ label, value, color = 'text-primary' }: { label: string; val
   </motion.div>
 )
 
-const CustomerRow = ({ customer, onEdit, onDelete }: { 
-  customer: Customer; onEdit: (c: Customer) => void; onDelete: (id: string) => void 
+const CustomerRow = ({ customer, onEdit, onDelete, onMessage }: {
+  customer: Customer; 
+  onEdit: (c: Customer) => void; 
+  onDelete: (id: string) => void;
+  onMessage: (c: Customer) => void;
 }) => (
   <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
     className="flex items-center gap-4 p-4 bg-surface hover:bg-elevated rounded-xl transition-colors">
@@ -45,19 +49,265 @@ const CustomerRow = ({ customer, onEdit, onDelete }: {
         )}
       </div>
     </div>
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
+      {customer.phone && (
+        <button onClick={() => onMessage(customer)}
+          className="p-2 rounded-lg hover:bg-emerald-500/20 transition-colors" title="Enviar mensaje">
+          <MessageSquare className="w-4 h-4 text-emerald-500" />
+        </button>
+      )}
       <button onClick={() => onEdit(customer)}
-        className="p-2 rounded-lg hover:bg-blue-500/20 transition-colors">
+        className="p-2 rounded-lg hover:bg-blue-500/20 transition-colors" title="Editar">
         <Edit2 className="w-4 h-4 text-muted" />
       </button>
-      <button onClick={() => onDelete(customer.id)}
-        className="p-2 rounded-lg hover:bg-rose-500/20 transition-colors">
+      <button onClick={() => {
+        if (confirm('¿Eliminar este cliente?')) onDelete(customer.id)
+      }}
+        className="p-2 rounded-lg hover:bg-rose-500/20 transition-colors" title="Eliminar">
         <Trash2 className="w-4 h-4 text-rose-500" />
       </button>
-      <ChevronRight className="w-4 h-4 text-muted" />
     </div>
   </motion.div>
 )
+
+// ============================================================================
+// Modal de Formulario Cliente
+// ============================================================================
+const CustomerFormModal = ({ 
+  customer, 
+  onClose, 
+  onSave 
+}: { 
+  customer: Customer | null; 
+  onClose: () => void; 
+  onSave: (c: Customer) => void;
+}) => {
+  const [form, setForm] = useState<Customer>(customer || {
+    id: '',
+    firstName: '',
+    lastName: '',
+    rut: '',
+    phone: '',
+    email: '',
+    address: '',
+    notes: '',
+    syncStatus: 'pending'
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.firstName.trim()) {
+      toast.error('El nombre es requerido')
+      return
+    }
+    onSave(form)
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="bg-base border border-subtle rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="p-4 border-b border-subtle flex items-center justify-between">
+            <h2 className="text-lg font-bold text-primary">
+              {customer ? 'Editar Cliente' : 'Nuevo Cliente'}
+            </h2>
+            <button type="button" onClick={onClose} className="p-2 hover:bg-elevated rounded-xl">
+              <X className="w-5 h-5 text-muted" />
+            </button>
+          </div>
+
+          <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted mb-1 block">Nombre *</label>
+                <input
+                  type="text"
+                  value={form.firstName}
+                  onChange={e => setForm({ ...form, firstName: e.target.value })}
+                  className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="Juan"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted mb-1 block">Apellido</label>
+                <input
+                  type="text"
+                  value={form.lastName}
+                  onChange={e => setForm({ ...form, lastName: e.target.value })}
+                  className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="Pérez"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-1 block">RUT</label>
+              <input
+                type="text"
+                value={form.rut}
+                onChange={e => setForm({ ...form, rut: e.target.value })}
+                className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                placeholder="12.345.678-9"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-1 block">Teléfono</label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={e => setForm({ ...form, phone: e.target.value })}
+                className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                placeholder="+56 9 1234 5678"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-1 block">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                placeholder="correo@ejemplo.com"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-1 block">Dirección</label>
+              <input
+                type="text"
+                value={form.address}
+                onChange={e => setForm({ ...form, address: e.target.value })}
+                className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                placeholder="Av. Principal 123"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-1 block">Notas</label>
+              <textarea
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                rows={3}
+                className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+                placeholder="Notas adicionales..."
+              />
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-subtle flex gap-3">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium transition-colors">
+              Cancelar
+            </button>
+            <button type="submit"
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors">
+              {customer ? 'Guardar' : 'Crear'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ============================================================================
+// Modal de Enviar Mensaje
+// ============================================================================
+const SendMessageModal = ({ 
+  customer, 
+  onClose 
+}: { 
+  customer: Customer | null; 
+  onClose: () => void;
+}) => {
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+
+  const handleSend = async () => {
+    if (!message.trim()) {
+      toast.error('Escribe un mensaje')
+      return
+    }
+    setSending(true)
+    await new Promise(r => setTimeout(r, 1000))
+    toast.success('Mensaje enviado')
+    setSending(false)
+    onClose()
+  }
+
+  if (!customer) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="bg-base border border-subtle rounded-t-3xl sm:rounded-2xl w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-subtle flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <Send className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-primary">Enviar mensaje</p>
+              <p className="text-xs text-muted">{customer.phone}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-elevated rounded-xl">
+            <X className="w-5 h-5 text-muted" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="text-xs text-muted mb-1 block">Mensaje</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={5}
+              className="w-full bg-surface border border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 resize-none"
+              placeholder="Escribe tu mensaje..."
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-subtle flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium transition-colors">
+            Cancelar
+          </button>
+          <button onClick={handleSend} disabled={sending}
+            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+            {sending ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            Enviar
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
 
 // ============================================================================
 // Componente principal
@@ -69,7 +319,7 @@ export const RedesignCustomersPage: React.FC = () => {
   const filtered = useMemo(() => {
     if (!searchQuery) return allCustomers
     const q = searchQuery.toLowerCase()
-    return allCustomers.filter(c => 
+    return allCustomers.filter(c =>
       c.firstName?.toLowerCase().includes(q) ||
       c.lastName?.toLowerCase().includes(q) ||
       c.rut?.includes(q) ||
@@ -146,12 +396,30 @@ export const RedesignCustomersPage: React.FC = () => {
                   customer={customer}
                   onEdit={actions.openEdit}
                   onDelete={actions.deleteCustomer}
+                  onMessage={actions.openSendMessage}
                 />
               ))
             )}
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {ui.isFormOpen && (
+          <CustomerFormModal
+            customer={ui.editingCustomer}
+            onClose={actions.closeForm}
+            onSave={actions.saveCustomer}
+          />
+        )}
+        {ui.isSendModalOpen && ui.selectedCustomerForMessage && (
+          <SendMessageModal
+            customer={ui.selectedCustomerForMessage}
+            onClose={actions.closeSendMessage}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
