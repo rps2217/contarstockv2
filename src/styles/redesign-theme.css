@@ -1,0 +1,158 @@
+/**
+ * Redesign Theme - Variables CSS para el nuevo diseño
+ * 
+ * Sistema de colores semánticos con tokens de diseño
+ */
+
+/* ================================================================================
+   CSS CUSTOM PROPERTIES - TOKENS DE DISEÑO
+   ================================================================================ */
+
+:root {
+  /* Fondos - Sistema de capas */
+  --bg-base: #0f0f0f;
+  --bg-surface: #181818;
+  --bg-elevated: #222222;
+  
+  /* Bordes */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  
+  /* Texto */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+}
+
+/* Tema Claro */
+[data-theme="light"] {
+  --bg-base: #fafafa;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f4f4f5;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+}
+
+/* Tema Gris */
+[data-theme="gray"] {
+  --bg-base: #1a1a1a;
+  --bg-surface: #242424;
+  --bg-elevated: #2e2e2e;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --text-primary: #e5e5e5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+}
+
+/* ================================================================================
+   TAILWIND CUSTOM COLORS
+   ================================================================================ */
+
+@layer utilities {
+  .bg-base {
+    background-color: var(--bg-base);
+  }
+  
+  .bg-surface {
+    background-color: var(--bg-surface);
+  }
+  
+  .bg-elevated {
+    background-color: var(--bg-elevated);
+  }
+  
+  .border-subtle {
+    border-color: var(--border-subtle);
+  }
+  
+  .text-primary {
+    color: var(--text-primary);
+  }
+  
+  .text-secondary {
+    color: var(--text-secondary);
+  }
+  
+  .text-muted {
+    color: var(--text-muted);
+  }
+}
+
+/* ================================================================================
+   COMPONENTES ESPECÍFICOS
+   ================================================================================ */
+
+/* Safe area para móviles */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* No scrollbar para navegación */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ================================================================================
+   ANIMACIONES
+   ================================================================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* ================================================================================
+   GRADIENTES
+   ================================================================================ */
+
+.gradient-radial {
+  background: radial-gradient(
+    ellipse at center,
+    var(--bg-elevated) 0%,
+    var(--bg-surface) 50%,
+    var(--bg-base) 100%
+  );
+}
+
+/* ================================================================================
+   UTILIDADES
+   ================================================================================ */
+
+.transition-theme {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
