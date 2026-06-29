@@ -108,35 +108,60 @@ const ActionCard: React.FC<ActionCardProps> = ({ title, description, icon: Icon,
 
 // Métricas adicionales desde IndexedDB
 const useDashboardMetrics = () => {
-  const productCount = useLiveQuery(() => db.products.count(), [], 0);
-  const customerCount = useLiveQuery(() => db.customers.count(), [], 0);
-  const providerCount = useLiveQuery(() => db.providers.count(), [], 0);
-  const sessionCount = useLiveQuery(() => db.sessions.count(), [], 0);
-  const scanCount = useLiveQuery(() => db.scans.count(), [], 0);
-  const syncQueueCount = useLiveQuery(() => db.syncQueue.count(), [], 0);
+  // Safe access to db tables with fallback
+  const safeCount = async (table: any): Promise<number> => {
+    try {
+      if (!table) return 0;
+      return await table.count();
+    } catch {
+      return 0;
+    }
+  };
+  
+  const productCount = useLiveQuery(async () => {
+    return safeCount(db?.products);
+  }, [], 0);
+  
+  const customerCount = useLiveQuery(async () => {
+    return safeCount(db?.customers);
+  }, [], 0);
+  
+  const providerCount = useLiveQuery(async () => {
+    return safeCount(db?.providers);
+  }, [], 0);
+  
+  const sessionCount = useLiveQuery(async () => {
+    return safeCount(db?.sessions);
+  }, [], 0);
+  
+  const scanCount = useLiveQuery(async () => {
+    return safeCount(db?.scans);
+  }, [], 0);
+  
+  const syncQueueCount = useLiveQuery(async () => {
+    return safeCount(db?.syncQueue);
+  }, [], 0);
   
   // Sesiones de hoy
   const todaySessions = useLiveQuery(async () => {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const sessions = await db.sessions.where('createdAt').above(startOfDay.getTime()).toArray();
-    return sessions.filter(s => s.status === 'completed').length;
+    try {
+      if (!db?.sessions) return 0;
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const sessions = await db.sessions.where('createdAt').above(startOfDay.getTime()).toArray();
+      return sessions.filter(s => s.status === 'completed').length;
+    } catch { return 0; }
   }, [], 0);
   
-  // Acciones recientes de sync
-  const recentSyncLogs = useLiveQuery(async () => {
-    const logs = await db.sync_logs.orderBy('timestamp').reverse().limit(5).toArray();
-    return logs.map(log => ({
-      id: log.id,
-      status: log.status,
-      action: log.action,
-      table: log.tableName,
-      time: log.timestamp,
-      error: log.errorMessage
-    }));
-  }, [], []);
-  
-  return { productCount, customerCount, providerCount, sessionCount, scanCount, syncQueueCount, todaySessions, recentSyncLogs };
+  return { 
+    productCount: productCount ?? 0, 
+    customerCount: customerCount ?? 0, 
+    providerCount: providerCount ?? 0, 
+    sessionCount: sessionCount ?? 0, 
+    scanCount: scanCount ?? 0, 
+    syncQueueCount: syncQueueCount ?? 0, 
+    todaySessions: todaySessions ?? 0 
+  };
 };
 
 export const RedesignDashboard: React.FC = () => {
