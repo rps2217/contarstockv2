@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarClock, Plus, Search, ChevronRight, Skull, AlertTriangle,
   PackageX, Clock, ShieldCheck, MapPin, RefreshCw, Package, AlertCircle,
+  X, Trash2, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -65,7 +66,7 @@ const SummaryCard = ({ status, count, total }: { status: UxExpiryStatus; count: 
   )
 }
 
-const RecordRow = ({ record }: { record: ExpiryRecord }) => {
+const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => void }) => {
   const status = mapStatus(record.status)
   const meta = STATUS_META[status]
   const daysText = record.daysLeft < 0 ? `Venció hace ${Math.abs(record.daysLeft)} días` : record.daysLeft === 0 ? 'Vence hoy' : `Faltan ${record.daysLeft} días`
@@ -74,7 +75,7 @@ const RecordRow = ({ record }: { record: ExpiryRecord }) => {
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-3 p-3 hover:bg-elevated transition-colors group rounded-xl cursor-pointer"
-      onClick={() => toast.info('Ver detalle del producto')}>
+      onClick={onClick}>
       <div className={cn('w-1.5 h-12 rounded-full shrink-0', meta.dot)} />
       <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center shrink-0">
         <Package className="w-5 h-5 text-muted" />
@@ -98,7 +99,13 @@ const RecordRow = ({ record }: { record: ExpiryRecord }) => {
   )
 }
 
-const Section = ({ status, records, isOpen, onToggle }: { status: UxExpiryStatus; records: ExpiryRecord[]; isOpen: boolean; onToggle: () => void }) => {
+const Section = ({ status, records, isOpen, onToggle, onRecordClick }: { 
+  status: UxExpiryStatus; 
+  records: ExpiryRecord[]; 
+  isOpen: boolean; 
+  onToggle: () => void;
+  onRecordClick: (record: ExpiryRecord) => void;
+}) => {
   const meta = STATUS_META[status]
   const Icon = meta.icon
   return (
@@ -124,7 +131,7 @@ const Section = ({ status, records, isOpen, onToggle }: { status: UxExpiryStatus
         {isOpen && records.length > 0 && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="divide-y divide-subtle border-t border-subtle px-2 py-2">
-              {records.slice(0, 20).map((r) => <RecordRow key={r.id} record={r} />)}
+              {records.slice(0, 20).map((r) => <RecordRow key={r.id} record={r} onClick={() => onRecordClick(r)} />)}
               {records.length > 20 && <p className="text-center py-3 text-xs text-muted">Mostrando 20 de {records.length}</p>}
             </div>
           </motion.div>
@@ -142,7 +149,12 @@ export const RedesignExpiryPage: React.FC = () => {
   })
 
   // USAR HOOK FUNCIONAL DE features/expiry
-  const { records: allRecords, filteredRecords, stats, isLoading, isSyncing, filters, actions } = useExpiry()
+  const { records: allRecords, filteredRecords, stats, isLoading, isSyncing, filters, actions, selectedRecord, setSelectedRecord } = useExpiry()
+
+  // Handler para click en registro
+  const handleRecordClick = (record: ExpiryRecord) => {
+    setSelectedRecord(record)
+  }
 
   // Calcular estadísticas
   const counts = useMemo(() => ({
@@ -291,11 +303,144 @@ export const RedesignExpiryPage: React.FC = () => {
             visibleStatuses.map((s) => (
               <Section key={s} status={s} records={grouped[s]}
                 isOpen={filter !== 'all' ? true : openSections[s]}
-                onToggle={() => setOpenSections((prev) => ({ ...prev, [s]: !prev[s] }))} />
+                onToggle={() => setOpenSections((prev) => ({ ...prev, [s]: !prev[s] }))}
+                onRecordClick={handleRecordClick} />
             ))
           )}
         </div>
       </div>
+
+      {/* Modal de Detalle */}
+      <AnimatePresence>
+        {selectedRecord && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+            onClick={() => setSelectedRecord(null)}
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-base border border-subtle rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-subtle flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const status = mapStatus(selectedRecord.status)
+                    const meta = STATUS_META[status]
+                    const Icon = meta.icon
+                    return (
+                      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border', meta.bg, meta.border)}>
+                        <Icon className={cn('w-5 h-5', meta.text)} />
+                      </div>
+                    )
+                  })()}
+                  <div>
+                    <p className="text-sm font-semibold text-primary">{selectedRecord.productName}</p>
+                    <p className="text-xs text-muted font-mono">{selectedRecord.barcode}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedRecord(null)} className="p-2 hover:bg-elevated rounded-xl">
+                  <X className="w-5 h-5 text-muted" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+                {/* Estado */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted">Estado</span>
+                  {(() => {
+                    const status = mapStatus(selectedRecord.status)
+                    const meta = STATUS_META[status]
+                    const daysText = selectedRecord.daysLeft < 0 
+                      ? `Venció hace ${Math.abs(selectedRecord.daysLeft)} días` 
+                      : selectedRecord.daysLeft === 0 
+                        ? 'Vence hoy' 
+                        : `Faltan ${selectedRecord.daysLeft} días`
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full border', meta.bg, meta.border, meta.text)}>
+                          {meta.label}
+                        </span>
+                        <span className="text-xs text-secondary">{daysText}</span>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Detalles */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Fecha Vencimiento</p>
+                    <p className="text-sm font-semibold text-primary">
+                      {MONTHS[selectedRecord.mm - 1]} {selectedRecord.yyyy}
+                    </p>
+                  </div>
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Cantidad</p>
+                    <p className="text-sm font-semibold text-primary">{selectedRecord.quantity} unidades</p>
+                  </div>
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Proveedor</p>
+                    <p className="text-sm font-semibold text-primary truncate">{selectedRecord.providerName}</p>
+                  </div>
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Ubicación</p>
+                    <p className="text-sm font-semibold text-primary truncate">{selectedRecord.location}</p>
+                  </div>
+                </div>
+
+                {/* Observaciones */}
+                {selectedRecord.observaciones && (
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Observaciones</p>
+                    <p className="text-sm text-secondary">{selectedRecord.observaciones}</p>
+                  </div>
+                )}
+
+                {/* Sincronización */}
+                <div className="flex items-center justify-between pt-2 border-t border-subtle">
+                  <span className="text-xs text-muted">Sincronización</span>
+                  <span className={cn(
+                    'text-xs font-medium px-2 py-0.5 rounded-full',
+                    selectedRecord.syncStatus === 'synced' ? 'bg-emerald-500/20 text-emerald-400' :
+                    selectedRecord.syncStatus === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                    'bg-rose-500/20 text-rose-400'
+                  )}>
+                    {selectedRecord.syncStatus === 'synced' ? 'Sincronizado' :
+                     selectedRecord.syncStatus === 'pending' ? 'Pendiente' : 'Error'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-4 border-t border-subtle flex gap-3">
+                <button 
+                  onClick={() => {
+                    toast.success('Registro eliminado')
+                    actions.deleteRecord(selectedRecord.id)
+                    setSelectedRecord(null)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-rose-500/20 text-rose-400 rounded-xl font-medium hover:bg-rose-500/30 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </button>
+                <button 
+                  onClick={() => setSelectedRecord(null)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-400 transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

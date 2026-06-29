@@ -63,7 +63,7 @@ const CustomerRow = ({ customer, onEdit, onDelete }: {
 // Componente principal
 // ============================================================================
 export const RedesignCustomersPage: React.FC = () => {
-  const { allCustomers, stats, isLoading, actions } = useCustomers()
+  const { allCustomers, stats, isLoading, ui, actions } = useCustomers()
   const [searchQuery, setSearchQuery] = useState('')
 
   const filtered = useMemo(() => {
