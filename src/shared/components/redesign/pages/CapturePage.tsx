@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scan,
   Package,
@@ -9,8 +9,17 @@ import {
   Camera,
   Keyboard,
   ArrowRight,
+  Plus,
+  Play,
+  History,
+  Search,
+  Barcode,
+  CheckCircle2,
+  Package2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAppStore } from '@/stores'
+import { useNavigate } from 'react-router-dom'
 
 const TABS = [
   {
@@ -59,9 +68,91 @@ interface CapturePageProps {
   onNavigate?: (view: string) => void
 }
 
+// Hook para obtener sesiones de conteo activas
+const useActiveSessions = () => {
+  // Usar el store de counting si existe, o datos mock
+  const countingSessions = useAppStore(state => (state as any).countingSessions || [])
+  const activeSessions = countingSessions.filter((s: any) => s.status === 'in_progress' || s.status === 'active')
+  return activeSessions
+}
+
+// Hook para buscar productos
+const useProductSearch = () => {
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+
+  const search = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      // Importar dinámicamente para evitar dependencias circulares
+      const { db } = await import('@/db')
+      const products = await db.products
+        .filter((p: any) => 
+          p.name.toLowerCase().includes(query.toLowerCase()) ||
+          p.sku?.toLowerCase().includes(query.toLowerCase()) ||
+          p.barcode?.includes(query)
+        )
+        .limit(10)
+        .toArray()
+      setSearchResults(products)
+    } catch (error) {
+      console.error('Error searching products:', error)
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  return { searchResults, isSearching, search }
+}
+
 export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('conteo')
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera')
+  const [manualCode, setManualCode] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  
+  const activeSessions = useActiveSessions()
+  const { searchResults, isSearching, search } = useProductSearch()
+
+  // Iniciar nuevo conteo
+  const handleNewCount = () => {
+    navigate('/counting/new')
+  }
+
+  // Continuar conteo existente
+  const handleContinueSession = (sessionId: string) => {
+    navigate(`/counting/${sessionId}`)
+  }
+
+  // Buscar producto manual
+  const handleManualSearch = () => {
+    if (manualCode.trim()) {
+      navigate(`/counting/new?code=${encodeURIComponent(manualCode.trim())}`)
+    }
+  }
+
+  // Manejar búsqueda
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    search(value)
+  }
+
+  // Navegar a detalle de producto
+  const handleProductSelect = (product: any) => {
+    navigate(`/data/product/${product.id}`)
+  }
+
+  // Ir a histórico de sesiones
+  const handleViewHistory = () => {
+    onNavigate?.('data')
+  }
 
   return (
     <div className="h-full flex flex-col bg-base">
@@ -98,6 +189,47 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
         <div className="max-w-2xl mx-auto h-full flex flex-col gap-6">
+          
+          {/* Sesiones Activas */}
+          {activeSessions.length > 0 && (
+            <div className="bg-surface border border-subtle rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-secondary flex items-center gap-2">
+                  <Play className="w-4 h-4 text-emerald-500" />
+                  Sesiones Activas
+                </h3>
+                <span className="text-xs text-muted bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded-full">
+                  {activeSessions.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {activeSessions.slice(0, 3).map((session: any) => (
+                  <button
+                    key={session.id}
+                    onClick={() => handleContinueSession(session.id)}
+                    className="w-full flex items-center justify-between p-3 bg-base rounded-xl border border-subtle hover:border-emerald-500/50 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                        <Scan className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-primary">
+                          {session.name || 'Sesión de conteo'}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {session.items?.length || 0} productos •{' '}
+                          {session.location || 'Sin ubicación'}
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Input Mode Toggle */}
           <div className="flex bg-surface p-1 rounded-xl border border-subtle">
             <button
@@ -127,32 +259,33 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
           </div>
 
           {/* Scanner / Input Area */}
-          <div className="flex-1 bg-surface border border-subtle rounded-3xl overflow-hidden relative flex flex-col items-center justify-center min-h-[300px]">
+          <div className="bg-surface border border-subtle rounded-3xl overflow-hidden relative flex flex-col items-center justify-center min-h-[200px]">
             {inputMode === 'camera' ? (
               <>
-                <div className="absolute inset-0 bg-black/10 dark:bg-black/40" />
-                {/* Mock Scanner Frame */}
-                <div className="relative w-64 h-64 border-2 border-blue-500/50 rounded-2xl flex items-center justify-center">
-                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
-                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
-                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
-                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl" />
+                <div className="absolute inset-0 bg-black/20" />
+                {/* Scanner Frame */}
+                <div className="relative w-64 h-40 border-2 border-blue-500/50 rounded-2xl flex items-center justify-center">
+                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
+                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-500 rounded-br-xl" />
 
                   <motion.div
-                    animate={{
-                      y: [-100, 100, -100],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: 'linear',
-                    }}
+                    animate={{ y: [-50, 50, -50] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                     className="w-full h-0.5 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.8)]"
                   />
                 </div>
-                <p className="absolute bottom-8 text-secondary text-sm font-medium">
+                <p className="absolute bottom-4 text-secondary text-sm font-medium">
                   Apunta al código de barras
                 </p>
+                <button
+                  onClick={handleNewCount}
+                  className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nuevo
+                </button>
               </>
             ) : (
               <div className="w-full max-w-sm p-6 flex flex-col gap-4">
@@ -160,54 +293,104 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
                   <label className="text-sm font-medium text-secondary">
                     Código de producto
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. 7791234567890"
-                    className="w-full bg-base border border-subtle rounded-xl px-4 py-3 text-primary focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                  />
+                  <div className="relative">
+                    <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                    <input
+                      type="text"
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
+                      placeholder="Ej. 7791234567890"
+                      className="w-full bg-base border border-subtle rounded-xl pl-12 pr-4 py-3 text-primary focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    />
+                  </div>
                 </div>
-                <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                <button 
+                  onClick={handleManualSearch}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Search className="w-4 h-4" />
                   Buscar producto
-                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
 
-          {/* Recent Scans (Mock) */}
+          {/* Búsqueda rápida de productos */}
           <div className="bg-surface border border-subtle rounded-2xl p-4">
-            <h3 className="text-sm font-semibold text-secondary mb-3">
-              Últimos escaneos
+            <h3 className="text-sm font-semibold text-secondary mb-3 flex items-center gap-2">
+              <Package2 className="w-4 h-4" />
+              Buscar producto
             </h3>
-            <div className="space-y-2">
-              {[
-                {
-                  name: 'Coca Cola 2.25L',
-                  code: '7790895000997',
-                  qty: 12,
-                },
-                {
-                  name: 'Galletas Oreo 117g',
-                  code: '7622300732236',
-                  qty: 5,
-                },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 bg-base rounded-xl border border-subtle"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-primary">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-muted font-mono">{item.code}</p>
-                  </div>
-                  <div className="bg-blue-500/10 text-blue-500 px-3 py-1 rounded-lg text-sm font-bold">
-                    +{item.qty}
-                  </div>
-                </div>
-              ))}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Nombre o código..."
+                className="w-full bg-base border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500 transition-all"
+              />
             </div>
+            
+            {/* Resultados */}
+            <AnimatePresence>
+              {searchResults.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 space-y-2 max-h-60 overflow-y-auto"
+                >
+                  {searchResults.map((product: any) => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleProductSelect(product)}
+                      className="w-full flex items-center justify-between p-3 bg-base rounded-xl border border-subtle hover:border-blue-500/50 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <Package2 className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-primary">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-muted font-mono">
+                            {product.barcode || product.sku || 'Sin código'}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted" />
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+              <p className="text-sm text-muted text-center py-4">
+                No se encontraron productos
+              </p>
+            )}
+          </div>
+
+          {/* Acciones rápidas */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleNewCount}
+              className="flex items-center justify-center gap-2 p-4 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white font-medium transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Nuevo conteo
+            </button>
+            <button
+              onClick={handleViewHistory}
+              className="flex items-center justify-center gap-2 p-4 bg-surface hover:bg-elevated border border-subtle rounded-2xl text-primary font-medium transition-colors"
+            >
+              <History className="w-5 h-5" />
+              Ver historial
+            </button>
           </div>
         </div>
       </div>
