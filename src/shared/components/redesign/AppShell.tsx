@@ -14,7 +14,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { cn } from './utils';
-import { useRedesignTheme } from './ThemeContext';
+import { useRedesignTheme, RedesignThemeProvider } from './ThemeContext';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
@@ -277,8 +277,17 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
   );
 };
 
-// Componente wrapper para usar con ThemeProvider
+// Componente wrapper que envuelve con RedesignThemeProvider
 export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) => {
+  return (
+    <RedesignThemeProvider>
+      <RedesignAppShell {...props} />
+    </RedesignThemeProvider>
+  );
+};
+
+// Exportar también el componente principal para uso directo si ya se tiene un provider
+export const RedesignAppShellWithProvider: React.FC<RedesignAppShellProps> = (props) => {
   return (
     <RedesignAppShell {...props} />
   );

@@ -61,8 +61,8 @@ const ThemeDemo = lazyWithRetry(() => import('@/shared/components/ui/ThemeDemo')
 // Wrapper para ThemeDemo
 const ThemeDemoPage = () => <ThemeDemo />;
 
-// Redesign Preview - Lazy load
-const RedesignPreviewApp = lazyWithRetry(() => import('@/shared/components/redesign/AppShell').then(m => ({ default: m.RedesignAppShell })));
+// Redesign Preview - Lazy load con ThemeProvider
+const RedesignPreviewApp = lazyWithRetry(() => import('@/shared/components/redesign/AppShell').then(m => ({ default: m.RedesignAppShellWrapper })));
 const RedesignPreviewPage = () => <RedesignPreviewApp />;
 
 const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
