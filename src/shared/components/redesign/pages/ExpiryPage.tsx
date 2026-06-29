@@ -14,6 +14,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '@/db'
 
 // ============================================================================
 // Modelo de dominio
@@ -297,33 +299,47 @@ export const RedesignExpiryPage: React.FC = () => {
     safe: false,
   })
 
-  // TODO: Reemplazar con datos reales del store
-  const mockRecords: ExpiryRecord[] = [
-    { id: '1', product: 'Yogur Yogurísimo Frutilla 190g', barcode: '7791234500011', location: 'Góndola 4 · Lácteos', month: 5, year: 2026, quantity: 24, daysLeft: -28 },
-    { id: '2', product: 'Leche La Serenísima 1L', barcode: '7790742302705', location: 'Cámara fría', month: 6, year: 2026, quantity: 12, daysLeft: -3 },
-    { id: '3', product: 'Jamón Cocido Paladini 200g', barcode: '7792100000048', location: 'Fiambrería', month: 7, year: 2026, quantity: 8, daysLeft: 9 },
-    { id: '4', product: 'Pan Lactal Bimbo 460g', barcode: '7790070410016', location: 'Panadería', month: 7, year: 2026, quantity: 15, daysLeft: 14 },
-    { id: '5', product: 'Queso Cremoso La Paulina 500g', barcode: '7791234500028', location: 'Fiambrería', month: 7, year: 2026, quantity: 6, daysLeft: 22 },
-    { id: '6', product: 'Mayonesa Hellmann\'s 475g', barcode: '7794000600171', location: 'Góndola 2 · Almacén', month: 9, year: 2026, quantity: 30, daysLeft: 78 },
-    { id: '7', product: 'Galletas Oreo 117g', barcode: '7622300732236', location: 'Góndola 6 · Golosinas', month: 11, year: 2026, quantity: 40, daysLeft: 140 },
-    { id: '8', product: 'Yerba Mate Playadito 500g', barcode: '7791720000115', location: 'Góndola 1 · Almacén', month: 2, year: 2027, quantity: 50, daysLeft: 232 },
-  ]
+  // Datos reales desde IndexedDB
+  const expiryRecords: ExpiryRecord[] = useLiveQuery(async (): Promise<ExpiryRecord[]> => {
+    const tableName = 'VENCIMIENTOS'
+    const records = await db.dynamic_data.where('tableName').equals(tableName).toArray()
+    
+    return records.map((r) => {
+      const data = r.data || {}
+      const mm = data.mm || data.month || 1
+      const yyyy = data.yyyy || data.year || new Date().getFullYear()
+      const expiryDate = new Date(yyyy, mm - 1)
+      const now = new Date()
+      const daysLeft = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      
+      return {
+        id: r.id?.toString() || Math.random().toString(),
+        product: data.producto || data.product || data.name || 'Producto sin nombre',
+        barcode: data.codigo || data.barcode || '',
+        location: data.ubicacion || data.location || '',
+        month: mm,
+        year: yyyy,
+        quantity: data.cantidad || data.quantity || 0,
+        daysLeft,
+      }
+    })
+  }, [], [] as ExpiryRecord[])
 
   const counts = useMemo(() => {
     const c: Record<ExpiryStatus, number> = {
       expired: 0, critical: 0, withdrawal: 0, next: 0, safe: 0,
     }
-    mockRecords.forEach((r) => {
+    expiryRecords.forEach((r) => {
       c[classify(r.daysLeft)] += 1
     })
     return c
-  }, [])
+  }, [expiryRecords])
 
   const grouped = useMemo(() => {
     const g: Record<ExpiryStatus, ExpiryRecord[]> = {
       expired: [], critical: [], withdrawal: [], next: [], safe: [],
     }
-    mockRecords.filter((r) => {
+    expiryRecords.filter((r) => {
       const matchesQuery =
         !query ||
         r.product.toLowerCase().includes(query.toLowerCase()) ||
