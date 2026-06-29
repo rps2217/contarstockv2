@@ -39,6 +39,7 @@ const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').
 // Vistas legacy - Carga solo cuando se accede (no en bundle inicial)
 // REDISEÑO: Usando páginas del rediseño
 const ReportsLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage })));
+const ExpiryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
 const ExpiryLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
 const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
 const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
@@ -233,6 +234,8 @@ const AppContent = () => {
                     <Route path="/sync/:tab" element={<SyncPage />} />
                     <Route path="/reports" element={<ReportsLegacy />} />
                     <Route path="/reports/:tab" element={<ReportsLegacy />} />
+                    <Route path="/expiry" element={<ExpiryPage />} />
+                    <Route path="/expiry/:tab" element={<ExpiryPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
 
                     {/* DEEP LINKS - Abrir app en registro específico */}

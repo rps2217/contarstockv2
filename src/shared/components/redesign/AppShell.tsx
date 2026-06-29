@@ -40,8 +40,8 @@ interface NavItem {
 const MOBILE_NAV: NavItem[] = [
   { id: 'dashboard', label: 'Panel', icon: LayoutDashboard },
   { id: 'capture', label: 'Capturar', icon: ScanLine },
+  { id: 'expiry', label: 'Vencim.', icon: CalendarClock },
   { id: 'data', label: 'Datos', icon: Database },
-  { id: 'reports', label: 'Reportes', icon: BarChart3 },
   { id: 'settings', label: 'Ajustes', icon: Settings },
 ];
 
@@ -53,6 +53,7 @@ const DESKTOP_NAV: NavItem[] = [
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
   { id: 'sync', label: 'Sync', icon: RefreshCw, badge: 3 },
   { id: 'settings', label: 'Ajustes', icon: Settings },
+  { id: 'expiry', label: 'Vencim.', icon: CalendarClock },
 ];
 
 // Mock props para demo - reemplazar con stores reales
@@ -135,8 +136,6 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         {DESKTOP_NAV.map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;
-            // Mostrar loading mientras DB se inicializa
-  if (!isReady) return <DbLoader />;
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
@@ -229,8 +228,6 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
           {MOBILE_NAV.map((item) => {
             const isActive = currentView === item.id;
             const Icon = item.icon;
-              // Mostrar loading mientras DB se inicializa
-  if (!isReady) return <DbLoader />;
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
@@ -279,8 +276,6 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
     </div>
   );
 
-    // Mostrar loading mientras DB se inicializa
-  if (!isReady) return <DbLoader />;
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
@@ -297,8 +292,6 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
 
 // Componente wrapper que envuelve con RedesignThemeProvider
 export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) => {
-    // Mostrar loading mientras DB se inicializa
-  if (!isReady) return <DbLoader />;
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
@@ -310,8 +303,6 @@ export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) 
 
 // Exportar también el componente principal para uso directo si ya se tiene un provider
 export const RedesignAppShellWithProvider: React.FC<RedesignAppShellProps> = (props) => {
-    // Mostrar loading mientras DB se inicializa
-  if (!isReady) return <DbLoader />;
   if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
 
   return (
