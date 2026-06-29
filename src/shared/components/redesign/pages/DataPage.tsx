@@ -12,6 +12,10 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ProductForm } from '../components/forms/ProductForm'
+import { CustomerForm } from '../components/forms/CustomerForm'
+import { ProviderForm } from '../components/forms/ProviderForm'
+import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 
@@ -41,6 +45,11 @@ const TABS = [
 export const RedesignDataPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventario')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showProductForm, setShowProductForm] = useState(false)
+  const [showCustomerForm, setShowCustomerForm] = useState(false)
+  const [showProviderForm, setShowProviderForm] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<any>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Datos reales de productos desde IndexedDB
   const products = useLiveQuery(async () => {
@@ -59,6 +68,66 @@ export const RedesignDataPage: React.FC = () => {
     }
     return await query
   }, [activeTab, searchQuery], [])
+
+  
+
+  // Crear producto
+  const handleCreateProduct = async (data: any) => {
+    const id = crypto.randomUUID()
+    await db.products.add({
+      ...data,
+      id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+    })
+  }
+
+  // Actualizar producto
+  const handleUpdateProduct = async (data: any) => {
+    if (!editingProduct?.id) return
+    await db.products.update(editingProduct.id, {
+      ...data,
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+    })
+    setEditingProduct(null)
+  }
+
+  // Eliminar producto
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('Eliminar este producto?')) return
+    setDeletingId(id)
+    try {
+      await db.products.delete(id)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  // Crear cliente
+  const handleCreateCustomer = async (data: any) => {
+    const id = crypto.randomUUID()
+    await db.customers.add({
+      ...data,
+      id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+    })
+  }
+
+  // Crear proveedor
+  const handleCreateProvider = async (data: any) => {
+    const id = crypto.randomUUID()
+    await db.providers.add({
+      ...data,
+      id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+    })
+  }
 
   // Conteo de productos
   const productCount = useLiveQuery(async () => {
@@ -133,9 +202,21 @@ export const RedesignDataPage: React.FC = () => {
                       )}
                     </div>
 
-                    <button className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-primary opacity-0 group-hover:opacity-100 transition-all md:flex hidden shrink-0">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button
+                        onClick={() => setEditingProduct(product)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-blue-500"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(product.id)}
+                        disabled={deletingId === product.id}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-rose-500"
+                      >
+                        {deletingId === product.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </motion.div>
                 )
               })
@@ -188,7 +269,7 @@ export const RedesignDataPage: React.FC = () => {
           )}
         </h1>
 
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 border-b border-subtle">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4 border-b border-subtle">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id
             const Icon = tab.icon
@@ -211,6 +292,33 @@ export const RedesignDataPage: React.FC = () => {
               </button>
             )
           })}
+          {activeTab === 'inventario' && (
+            <button
+              onClick={() => setShowProductForm(true)}
+              className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar
+            </button>
+          )}
+          {activeTab === 'clientes' && (
+            <button
+              onClick={() => setShowCustomerForm(true)}
+              className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-400 transition-colors shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar
+            </button>
+          )}
+          {activeTab === 'proveedores' && (
+            <button
+              onClick={() => setShowProviderForm(true)}
+              className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-amber-500 text-white hover:bg-amber-400 transition-colors shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar
+            </button>
+          )}
         </div>
       </div>
 
@@ -238,6 +346,33 @@ export const RedesignDataPage: React.FC = () => {
           {renderContent()}
         </div>
       </div>
+
+      {/* Modales de formularios */}
+      {showProductForm && (
+        <ProductForm
+          onSave={handleCreateProduct}
+          onClose={() => setShowProductForm(false)}
+        />
+      )}
+      {editingProduct && (
+        <ProductForm
+          product={editingProduct}
+          onSave={handleUpdateProduct}
+          onClose={() => setEditingProduct(null)}
+        />
+      )}
+      {showCustomerForm && (
+        <CustomerForm
+          onSave={handleCreateCustomer}
+          onClose={() => setShowCustomerForm(false)}
+        />
+      )}
+      {showProviderForm && (
+        <ProviderForm
+          onSave={handleCreateProvider}
+          onClose={() => setShowProviderForm(false)}
+        />
+      )}
     </div>
   )
 }

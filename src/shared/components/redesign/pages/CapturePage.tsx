@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scan,
@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/stores'
 import { useNavigate } from 'react-router-dom'
+import { useOpticalEngine } from '@/hooks/useOpticalEngine'
 
 const TABS = [
   {
@@ -119,6 +120,31 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
   const [searchQuery, setSearchQuery] = useState('')
   
   const activeSessions = useActiveSessions()
+
+  // === INTEGRACION DEL SCANNER ===
+  const scannerId = 'html5-qrcode-redesign'
+  const [scanError, setScanError] = useState<string | null>(null)
+  const lastScannedCode = useRef<string | null>(null)
+
+  const handleScan = useCallback((code: string) => {
+    if (lastScannedCode.current === code) return
+    lastScannedCode.current = code
+    console.log('Codigo escaneado:', code)
+    navigate(`/counting/new?code=${encodeURIComponent(code)}`)
+  }, [navigate])
+
+  const { error: scannerHookError, videoRef } = useOpticalEngine({
+    onScan: handleScan,
+    isTriggered: inputMode === 'camera',
+    scannerDomId: scannerId,
+  })
+
+  useEffect(() => {
+    if (scannerHookError) setScanError(scannerHookError)
+  }, [scannerHookError])
+  // === FIN INTEGRACION ===
+
+
   const { searchResults, isSearching, search } = useProductSearch()
 
   // Iniciar nuevo conteo

@@ -7,6 +7,12 @@ export { RedesignThemeProvider, useRedesignTheme, useTheme } from './ThemeContex
 export { RedesignAppShell, RedesignAppShellWrapper } from './AppShell';
 export { cn } from './utils';
 
+// Hooks de base de datos
+export { useDbReady, safeDbOperation, safeCount } from './hooks/useDbReady';
+
+// Componentes
+export { DbLoader, DbError } from './components/DbLoader';
+
 // Re-exportar ThemeName para uso en componentes del rediseño
 export type { ThemeName } from './ThemeContext';
 

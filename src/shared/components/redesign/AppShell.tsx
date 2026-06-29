@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { cn } from './utils';
 import { useRedesignTheme, RedesignThemeProvider } from './ThemeContext';
+import { useDbReady } from './hooks/useDbReady';
+import { DbLoader, DbError } from './components/DbLoader';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
@@ -60,10 +62,12 @@ interface RedesignAppShellProps {
 }
 
 export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
+  // Verificar que la base de datos esté lista
   isOnline = true,
   userName = 'Usuario',
   syncPending = 0,
 }) => {
+  const { isReady, error } = useDbReady();
   const [currentView, setCurrentView] = useState<ViewId>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -130,7 +134,11 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         {DESKTOP_NAV.map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;
-          return (
+            // Mostrar loading mientras DB se inicializa
+  if (!isReady) return <DbLoader />;
+  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+
+  return (
             <button
               key={item.id}
               onClick={() => setCurrentView(item.id)}
@@ -220,7 +228,11 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
           {MOBILE_NAV.map((item) => {
             const isActive = currentView === item.id;
             const Icon = item.icon;
-            return (
+              // Mostrar loading mientras DB se inicializa
+  if (!isReady) return <DbLoader />;
+  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+
+  return (
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
@@ -266,6 +278,10 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
     </div>
   );
 
+    // Mostrar loading mientras DB se inicializa
+  if (!isReady) return <DbLoader />;
+  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+
   return (
     <div className="flex h-screen w-full bg-base text-primary font-sans overflow-hidden selection:bg-blue-500/30">
       <Sidebar />
@@ -279,6 +295,10 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
 
 // Componente wrapper que envuelve con RedesignThemeProvider
 export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) => {
+    // Mostrar loading mientras DB se inicializa
+  if (!isReady) return <DbLoader />;
+  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+
   return (
     <RedesignThemeProvider>
       <RedesignAppShell {...props} />
@@ -288,6 +308,10 @@ export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) 
 
 // Exportar también el componente principal para uso directo si ya se tiene un provider
 export const RedesignAppShellWithProvider: React.FC<RedesignAppShellProps> = (props) => {
+    // Mostrar loading mientras DB se inicializa
+  if (!isReady) return <DbLoader />;
+  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+
   return (
     <RedesignAppShell {...props} />
   );
