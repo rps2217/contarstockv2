@@ -23,7 +23,7 @@ interface StatCardProps {
 }
 
 const variantStyles: Record<string, { bg: string; text: string }> = {
-  default: { bg: 'bg-slate-800', text: 'text-slate-400' },
+  default: { bg: 'bg-elevated', text: 'text-muted' },
   blue: { bg: 'bg-blue-500/10', text: 'text-blue-400' },
   green: { bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
   yellow: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
@@ -43,7 +43,7 @@ export const StatCard: React.FC<StatCardProps> = memo(({
   
   return (
     <div className={cn(
-      'bg-slate-900/50 border border-slate-800/60 rounded-xl p-4 text-center',
+      'bg-surface/50 border border-subtle/60 rounded-xl p-4 text-center',
       className
     )}>
       {/* Icon */}

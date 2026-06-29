@@ -91,7 +91,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   // Clases según variante
   const variantClass = {
     default: isDark
-      ? 'bg-slate-900 border border-white/10 text-white focus:border-blue-500'
+      ? 'bg-surface border border-white/10 text-white focus:border-blue-500'
       : 'bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-600',
     filled: isDark
       ? 'bg-black/40 border border-white/5 text-white focus:border-blue-500'
@@ -133,7 +133,7 @@ export const FormField: React.FC<FormFieldProps> = ({
           rows={rows}
           autoFocus={autoFocus}
           onBlur={onBlur}
-          className={`${baseInputClass} ${variantClass[variant]} ${isDark ? 'placeholder:text-slate-600' : 'placeholder:text-slate-400'} resize-none ${className}`}
+          className={`${baseInputClass} ${variantClass[variant]} ${isDark ? 'placeholder:text-slate-600' : 'placeholder:text-muted'} resize-none ${className}`}
         />
       );
     }
@@ -149,7 +149,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         max={max}
         autoFocus={autoFocus}
         onBlur={onBlur}
-        className={`${baseInputClass} ${variantClass[variant]} ${isDark ? 'placeholder:text-slate-600' : 'placeholder:text-slate-400'} ${className}`}
+        className={`${baseInputClass} ${variantClass[variant]} ${isDark ? 'placeholder:text-slate-600' : 'placeholder:text-muted'} ${className}`}
       />
     );
   };
@@ -158,7 +158,7 @@ export const FormField: React.FC<FormFieldProps> = ({
     <div className="space-y-2">
       {/* Label */}
       <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${
-        isDark ? 'text-slate-400' : 'text-slate-500'
+        isDark ? 'text-muted' : 'text-slate-500'
       }`}>
         {icon && <span className="text-blue-400">{icon}</span>}
         {label}
@@ -172,7 +172,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         {/* Icon overlay */}
         {icon && !loading && (
           <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none ${
-            isDark ? 'text-slate-500' : 'text-slate-400'
+            isDark ? 'text-slate-500' : 'text-muted'
           }`}>
             {icon}
           </div>
@@ -275,7 +275,7 @@ export const QuantityInput: React.FC<{
 
   return (
     <div className="space-y-2">
-      <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+      <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-muted' : 'text-slate-500'}`}>
         <span>#️⃣</span> {label}
       </label>
       <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export const QuantityInput: React.FC<{
           max={max}
           className={`flex-1 px-4 py-3 rounded-xl text-center text-lg font-black transition-all outline-none ${
             isDark
-              ? 'bg-slate-900 border border-white/10 text-white focus:border-blue-500'
+              ? 'bg-surface border border-white/10 text-white focus:border-blue-500'
               : 'bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-600'
           }`}
         />
@@ -330,7 +330,7 @@ export const EventTypeSelector: React.FC<{
 
   return (
     <div className="space-y-2">
-      <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+      <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-muted' : 'text-slate-500'}`}>
         <span>⚡</span> {label}
       </label>
       <div className="grid grid-cols-2 gap-2">
@@ -349,7 +349,7 @@ export const EventTypeSelector: React.FC<{
                   ? 'bg-blue-600 border-blue-500 text-white'
                   : 'bg-emerald-600 border-emerald-500 text-white'
                 : isDark
-                ? 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
+                ? 'bg-white/5 border-white/10 text-muted hover:border-white/20'
                 : 'bg-slate-100 border-slate-200 text-slate-600 hover:border-slate-300'
             }`}
           >
@@ -383,7 +383,7 @@ export const DestinationSelector: React.FC<{
 
   return (
     <div className="space-y-2">
-      <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+      <label className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-muted' : 'text-slate-500'}`}>
         <span>🏭</span> {label}
       </label>
       
@@ -397,7 +397,7 @@ export const DestinationSelector: React.FC<{
               value === opt
                 ? 'bg-blue-600 text-white'
                 : isDark
-                ? 'bg-white/5 text-slate-400 hover:bg-white/10'
+                ? 'bg-white/5 text-muted hover:bg-white/10'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -415,7 +415,7 @@ export const DestinationSelector: React.FC<{
             placeholder="Otro destino..."
             className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold ${
               isDark
-                ? 'bg-slate-900 border border-white/10 text-white'
+                ? 'bg-surface border border-white/10 text-white'
                 : 'bg-slate-50 border border-slate-200 text-slate-800'
             }`}
             onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit()}

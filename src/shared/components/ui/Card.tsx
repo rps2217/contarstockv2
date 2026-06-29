@@ -14,8 +14,8 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantClasses: Record<CardVariant, string> = {
-  default: 'bg-slate-900/80 border border-white/5',
-  elevated: 'bg-slate-900/90 shadow-xl shadow-black/20 border border-white/10',
+  default: 'bg-surface/80 border border-white/5',
+  elevated: 'bg-surface/90 shadow-xl shadow-black/20 border border-white/10',
   outlined: 'bg-transparent border-2 border-white/10',
   glass: 'bg-white/5 backdrop-blur-sm border border-white/10',
 };
