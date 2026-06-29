@@ -33,8 +33,8 @@ const Dashboard = lazyWithRetry(() => import('@/shared/components/redesign').the
 const CapturePage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCapturePage })));
 const DataPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDataPage })));
 const SyncPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSyncPage })));
-// SettingsPage original - tiene los stores reales conectados
-const SettingsPage = lazyWithRetry(() => import('./features/settings/SettingsPage').then(m => ({ default: m.Settings })));
+// SettingsPage - usando versión rediseñada con datos reales
+const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage })));
 
 // Vistas legacy - Carga solo cuando se accede (no en bundle inicial)
 // REDISEÑO: Usando páginas del rediseño
