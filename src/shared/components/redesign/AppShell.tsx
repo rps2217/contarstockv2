@@ -174,9 +174,7 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         {DESKTOP_NAV.map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;
-  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
-
-  return (
+          return (
             <button
               key={item.id}
               onClick={() => setCurrentView(item.id)}
@@ -266,8 +264,7 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
           {MOBILE_NAV.map((item) => {
             const isActive = currentView === item.id;
             const Icon = item.icon;
-
-  return (
+            return (
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
