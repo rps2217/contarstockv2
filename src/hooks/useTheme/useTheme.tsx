@@ -6,6 +6,7 @@
  * - Persistencia en localStorage
  * - Detección de preferencia del sistema
  * - Temas personalizados de empresa
+ * - Soporte para tema 'gray' del rediseño
  */
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
@@ -14,7 +15,8 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 // TIPOS
 // ============================================================
 
-export type ThemeName = 'dark' | 'light' | 'high-contrast' | 'appsheet-dark';
+// Incluir 'gray' para compatibilidad con el rediseño
+export type ThemeName = 'dark' | 'light' | 'high-contrast' | 'appsheet-dark' | 'gray';
 export type ThemePreset = 'default' | 'corporate' | 'ocean' | 'forest' | 'sunset';
 
 export interface Theme {
@@ -60,6 +62,7 @@ interface ThemeContextType {
 const THEMES: Theme[] = [
   { name: 'dark', label: 'Oscuro', icon: '🌙' },
   { name: 'light', label: 'Claro', icon: '☀️' },
+  { name: 'gray', label: 'Gris', icon: '🌫️' },
   { name: 'high-contrast', label: 'Alto Contraste', icon: '🔳' },
 ];
 
@@ -244,12 +247,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [customThemes]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    // Cycle through: dark -> light -> gray -> dark
+    const order: ThemeName[] = ['dark', 'light', 'gray'];
+    const currentIndex = order.indexOf(theme as ThemeName);
+    const nextIndex = (currentIndex + 1) % order.length;
+    setTheme(order[nextIndex]);
   }, [theme, setTheme]);
 
   const cycleTheme = useCallback(() => {
-    const themeOrder: ThemeName[] = ['dark', 'light', 'high-contrast'];
-    const currentIndex = themeOrder.indexOf(theme);
+    const themeOrder: ThemeName[] = ['dark', 'light', 'gray', 'high-contrast'];
+    const currentIndex = themeOrder.indexOf(theme as ThemeName);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
     setTheme(themeOrder[nextIndex]);
   }, [theme, setTheme]);

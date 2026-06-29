@@ -45,6 +45,17 @@
   --text-muted: #737373;
 }
 
+/* Tema appsheet-dark (estilo AppSheet) */
+[data-theme="appsheet-dark"] {
+  --bg-base: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-elevated: #334155;
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
 /* ================================================================================
    TAILWIND CUSTOM COLORS
    ================================================================================ */

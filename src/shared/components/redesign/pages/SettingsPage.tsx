@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores'
-import { useTheme } from '../ThemeContext'
+import { useTheme, ThemeName } from '../ThemeContext'
 
 // ============================================================================
 // Componentes base
@@ -110,10 +110,9 @@ const Toggle = ({
 // ============================================================================
 // Selector Visual de Tema (Día, Gris, Noche)
 // ============================================================================
-type ThemeType = 'dark' | 'light' | 'gray'
 
 interface ThemeOption {
-  id: ThemeType
+  id: ThemeName
   label: string
   bg: string
   border: string
@@ -125,8 +124,8 @@ const ThemeVisualSelector = ({
   value, 
   onChange 
 }: { 
-  value: ThemeType
-  onChange: (theme: ThemeType) => void 
+  value: ThemeName
+  onChange: (theme: ThemeName) => void 
 }) => {
   const themes: ThemeOption[] = [
     { 
@@ -204,8 +203,8 @@ export const RedesignSettingsPage: React.FC = () => {
   const [batchTracking, setBatchTracking] = useState(settings.batchTrackingEnabled ?? false)
   const [lowEndMode, setLowEndMode] = useState(settings.lowEndMode ?? false)
 
-  // Handler para cambiar tema (usando el contexto)
-  const handleThemeChange = (newTheme: 'dark' | 'light' | 'gray') => {
+  // Handler para cambiar tema (usando el contexto principal)
+  const handleThemeChange = (newTheme: ThemeName) => {
     if (navigator.vibrate) navigator.vibrate(10)
     setTheme(newTheme)
   }

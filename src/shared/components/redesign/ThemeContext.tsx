@@ -1,46 +1,26 @@
-import React, { useEffect, createContext, useContext, useState } from 'react';
-import { useSettingsStore } from '@/stores';
+import React from 'react';
+import { useTheme as useMainTheme, ThemeName } from '@/hooks/useTheme/useTheme';
 
-type Theme = 'dark' | 'light' | 'gray';
+// Re-exportar tipos del tema
+export type { ThemeName };
 
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+// Crear contexto que delega al useTheme principal
+// Esto asegura que RedesignThemeProvider sea un wrapper alrededor del ThemeProvider principal
+
+interface RedesignThemeContextType {
+  theme: ThemeName;
+  setTheme: (theme: ThemeName) => void;
 }
 
-// Valor por defecto cuando no hay provider (para evitar crashes)
-const defaultContext: ThemeContextType = {
-  theme: 'dark',
-  setTheme: () => {},
-};
-
-const ThemeContext = createContext<ThemeContextType>(defaultContext);
-
+// Este provider no hace nada - el ThemeProvider principal ya está en App.tsx
+// Solo proporciona el hook que delega al useTheme principal
 export const RedesignThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { settings, updateSetting } = useSettingsStore();
-  
-  // Usar el tema del store, con fallback a 'dark'
-  const theme = (settings.theme as Theme) || 'dark';
-
-  useEffect(() => {
-    // Aplicar el tema al documento
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  const setTheme = (newTheme: Theme) => {
-    updateSetting('theme', newTheme);
-  };
-
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <>{children}</>;
 };
 
-export const useRedesignTheme = (): ThemeContextType => {
-  // Siempre retorna el contexto, usando el default si no hay provider
-  return useContext(ThemeContext);
+export const useRedesignTheme = (): RedesignThemeContextType => {
+  const { theme, setTheme } = useMainTheme();
+  return { theme, setTheme };
 };
 
 // Alias para compatibilidad con componentes del rediseño original
