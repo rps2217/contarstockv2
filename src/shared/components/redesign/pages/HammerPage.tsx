@@ -317,7 +317,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
 
   // Obtener cargas teoricas locales
   const localOrders = useLiveQuery(() => 
-    db.expectedOrders.orderBy('updatedAt').reverse().limit(20).toArray()
+    db.expectedOrders.orderBy('importedAt').reverse().limit(20).toArray()
   ) || []
 
   const handleImportLocal = async (orderId: string) => {
