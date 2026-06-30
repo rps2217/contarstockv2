@@ -11,7 +11,7 @@ interface Props {
 
 export const PhotoViewerModal: React.FC<Props> = ({ item, onClose, theme }) => {
   if (!item) return null;
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isSynced = !!item.lastSyncTimestamp;
 
   return (

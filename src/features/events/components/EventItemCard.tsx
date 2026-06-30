@@ -71,10 +71,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto] items-start md:items-center gap-3 md:gap-4 group transition-all relative ${
         isCompact ? 'p-2' : 'p-4'
       } ${
-        theme === 'dark' ? 'bg-brand-surface hover:bg-brand-surface/80 shadow-lg shadow-black/20' : 'bg-white shadow-md hover:shadow-lg'
+        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-surface hover:bg-brand-surface/80 shadow-lg shadow-black/20' : 'bg-white shadow-md hover:shadow-lg'
       } ${
         isSelected ? 'border-blue-500 bg-blue-500/5' :
-        theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10' : 'border-slate-200'
       }`}
     >
       {/* MOBILE TOP ROW & DESKTOP COLUMN 1 */}
@@ -102,12 +102,12 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               <span className={`font-black uppercase tracking-[0.2em] ${
                 isExpanded ? 'text-xs' : 'text-[10px]'
               } ${
-                theme === 'dark' ? 'text-slate-500' : 'text-muted'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'
               }`}>Descripción del Producto</span>
               <h3 className={`font-black uppercase tracking-tighter italic leading-tight ${
                 isExpanded ? 'text-lg' : 'text-base'
               } ${
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
               }`}>
                 {item.productName}
               </h3>
@@ -115,7 +115,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             <div className="shrink-0 flex items-center gap-1.5">
               {item.isAdjusted && (
                 <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
-                  theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/35' : 'bg-emerald-100 text-emerald-800'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/35' : 'bg-emerald-100 text-emerald-800'
                 }`}>
                   Ajustado
                 </span>
@@ -128,7 +128,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
           <div className="grid grid-cols-2 gap-2">
             <div className={`p-2 rounded-xl border ${
-              theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <span className={`font-black text-slate-500 uppercase tracking-widest block mb-0.5 ${
                 isExpanded ? 'text-[10px]' : 'text-[9px]'
@@ -136,13 +136,13 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               <p className={`font-bold uppercase truncate ${
                 isExpanded ? 'text-sm' : 'text-xs'
               } ${
-                theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'
               }`}>
                 {item.providerName || 'N/A'}
               </p>
             </div>
             <div className={`p-2 rounded-xl border ${
-              theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <span className={`font-black text-slate-500 uppercase tracking-widest block mb-0.5 ${
                 isExpanded ? 'text-[10px]' : 'text-[9px]'
@@ -152,7 +152,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 className={`font-bold uppercase flex items-center gap-1 transition-all active:scale-95 ${
                   isExpanded ? 'text-sm' : 'text-xs'
                 } ${
-                  theme === 'dark' ? 'text-secondary' : 'text-slate-700'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-secondary' : 'text-slate-700'
                 }`}
               >
                 {item.barcode || 'N/A'}
@@ -166,11 +166,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             <div className="grid grid-cols-2 gap-2">
               {item.traspaso && (
                 <div className={`p-2 rounded-xl border ${
-                  theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-150'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-150'
                 }`}>
                   <span className="font-black text-slate-500 uppercase tracking-widest block mb-0.5 text-[8px] md:text-[9px]">Documento Traspaso</span>
                   <p className={`font-bold uppercase truncate text-xs ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-indigo-400' : 'text-indigo-600'
                   }`}>
                     {item.traspaso}
                   </p>
@@ -178,11 +178,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               )}
               {item.observaciones && (
                 <div className={`p-2 rounded-xl border ${
-                  theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-150'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-150'
                 } ${!item.traspaso ? 'col-span-2' : ''}`}>
                   <span className="font-black text-slate-500 uppercase tracking-widest block mb-0.5 text-[8px] md:text-[9px]">Notas Observadas</span>
                   <p className={`font-bold uppercase truncate text-xs ${
-                    theme === 'dark' ? 'text-secondary' : 'text-slate-600'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-secondary' : 'text-slate-600'
                   }`}>
                     {item.observaciones}
                   </p>
@@ -231,7 +231,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           <span className={`font-black uppercase tracking-[0.15em] whitespace-nowrap ${
             isExpanded ? 'text-xs' : 'text-[10px]'
           } ${
-            theme === 'dark' ? 'text-slate-500' : 'text-muted'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'
           }`}>Producto</span>
           {item.syncStatus === 'synced' && <Cloud className="w-3 h-3 text-emerald-500/70 shrink-0" />}
           {item.syncStatus === 'pending' && <RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin shrink-0" />}
@@ -240,7 +240,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         <h3 className={`font-black uppercase tracking-tighter italic truncate leading-tight ${
           isExpanded ? 'text-lg' : 'text-base'
         } ${
-          theme === 'dark' ? 'text-white' : 'text-slate-900'
+          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
         }`}>
           {item.productName || 'Producto Desconocido'}
         </h3>
@@ -253,7 +253,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             <p className={`font-bold uppercase truncate ${
               isExpanded ? 'text-sm' : 'text-xs'
             } ${
-              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'
             }`}>
               {item.providerName || 'N/A'}
             </p>
@@ -267,7 +267,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               className={`font-bold uppercase flex items-center gap-1 transition-all hover:text-blue-500 active:scale-95 ${
                 isExpanded ? 'text-sm' : 'text-xs'
               } ${
-                theme === 'dark' ? 'text-secondary' : 'text-slate-700'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-secondary' : 'text-slate-700'
               }`}
             >
               <span className="truncate">{item.barcode || 'N/A'}</span>
@@ -278,7 +278,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
         {item.isAdjusted && (
           <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit mt-1 ${
-            theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
           }`}>
             Ajustado
           </span>
@@ -291,13 +291,13 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           <span className={`font-black uppercase tracking-[0.15em] ${
             isExpanded ? 'text-xs' : 'text-[10px]'
           } ${
-            theme === 'dark' ? 'text-slate-500' : 'text-muted'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'
           }`}>Folio FRC</span>
           {item.event && (
             <span className={`font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md w-fit truncate ${
               isExpanded ? 'text-[10px]' : 'text-[9px]'
             } ${
-              theme === 'dark' ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'
             }`}>
               {item.event}
             </span>
@@ -310,7 +310,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               onFrcClick?.(item.frc);
             }}
             className={`px-2 py-1.5 rounded-xl border-2 font-black tracking-tighter italic transition-all hover:scale-105 active:scale-95 text-left flex flex-col w-fit max-w-full ${
-              theme === 'dark' 
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-white' 
                 : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white'
             }`}
@@ -321,7 +321,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </button>
         ) : (
           <div className={`px-2 py-1.5 rounded-xl border-2 border-dashed flex items-center justify-center w-fit ${
-            theme === 'dark' ? 'border-white/10 text-slate-600' : 'border-slate-200 text-muted'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10 text-slate-600' : 'border-slate-200 text-muted'
           }`}>
             <span className="text-[9px] font-black uppercase tracking-widest italic">N/A</span>
           </div>
@@ -333,10 +333,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         <div className="flex items-center gap-1.5">
           <Package className={`shrink-0 ${
             isExpanded ? 'w-4 h-4' : 'w-3.5 h-3.5'
-          } ${theme === 'dark' ? 'text-slate-500' : 'text-muted'}`} />
+          } ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'}`} />
           <span className={`font-black whitespace-nowrap ${
             isExpanded ? 'text-lg' : 'text-sm'
-          } ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+          } ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'}`}>
             {item.quantity} <span className={`${
               isExpanded ? 'text-sm' : 'text-[10px]'
             } text-slate-500 italic`}>UN</span>
@@ -351,10 +351,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         >
           <Truck className={`shrink-0 ${
             isExpanded ? 'w-4 h-4' : 'w-3 h-3'
-          } ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
+          } ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
           <span className={`font-black uppercase tracking-widest truncate ${
             isExpanded ? 'text-sm' : 'text-xs'
-          } ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
+          } ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {item.destino || 'SIN DESTINO'}
           </span>
         </button>
@@ -369,7 +369,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               onViewDetail(item);
             }}
             className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
-              theme === 'dark' 
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                 ? 'bg-purple-500/10 border-purple-500/20 text-purple-500 hover:bg-purple-500 hover:text-white' 
                 : 'bg-purple-50 border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white shadow-sm'
             }`}
@@ -387,10 +387,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             }}
             className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
               item.isAdjusted
-                ? theme === 'dark' 
+                ? theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                   ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white' 
                   : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white'
-                : theme === 'dark'
+                : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white'
                   : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-600 hover:text-white shadow-sm'
             }`}
@@ -407,7 +407,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               onEdit(item);
             }}
             className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
-              theme === 'dark' 
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                 ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500 hover:text-white' 
                 : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white shadow-sm'
             }`}
@@ -424,7 +424,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               onRemove(item);
             }}
             className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
-              theme === 'dark' 
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                 ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white' 
                 : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white shadow-sm'
             }`}

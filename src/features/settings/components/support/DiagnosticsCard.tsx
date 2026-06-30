@@ -11,7 +11,7 @@ export const DiagnosticsCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isTesting, setIsTesting] = useState(false);
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

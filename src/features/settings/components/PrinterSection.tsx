@@ -15,7 +15,7 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting, theme
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

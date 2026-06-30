@@ -38,7 +38,7 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
   sessions,
   theme = 'dark' 
 }) => {
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

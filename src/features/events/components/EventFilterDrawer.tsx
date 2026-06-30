@@ -51,7 +51,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
     });
   };
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
 
   if (!isOpen) return null;
 

@@ -29,7 +29,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
 }) => {
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const [isFocused, setIsFocused] = useState(false);
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
 
   // Synchronize local search text with global state
   useEffect(() => {

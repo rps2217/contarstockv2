@@ -33,10 +33,10 @@ export const ProductSearchInput: React.FC<Props> = ({
 }) => {
   return (
     <div className={`p-6 rounded-[2rem] border-4 border-black space-y-4 ${
-      theme === 'dark' ? 'bg-blue-500/5' : 'bg-blue-50'
+      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-blue-500/5' : 'bg-blue-50'
     }`}>
       <div className="flex items-center justify-between">
-        <h3 className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+        <h3 className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'}`}>
           {isEditing ? 'Información del Producto' : 'Agregar Productos'}
         </h3>
       </div>
@@ -52,7 +52,7 @@ export const ProductSearchInput: React.FC<Props> = ({
               placeholder="SKU / EAN..."
               disabled={isEditing}
               className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                theme === 'dark'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
                   ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                   : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
               }`}
@@ -61,7 +61,7 @@ export const ProductSearchInput: React.FC<Props> = ({
               {isSearching ? (
                 <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
               ) : (
-                <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-muted'}`} />
+                <Search className={`w-5 h-5 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-600' : 'text-muted'}`} />
               )}
             </div>
           </div>
@@ -74,7 +74,7 @@ export const ProductSearchInput: React.FC<Props> = ({
             value={quantity}
             onChange={(e) => onQuantityChange(parseInt(e.target.value) || 0)}
             className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-              theme === 'dark'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
                 ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                 : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
             }`}
@@ -103,13 +103,13 @@ export const ProductSearchInput: React.FC<Props> = ({
       {/* Product Preview */}
       {product && (
         <div className={`p-3 rounded-xl border-2 flex items-center gap-3 ${
-          theme === 'dark' ? 'bg-black/40 border-blue-500/30' : 'bg-white border-blue-200 shadow-sm'
+          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-black/40 border-blue-500/30' : 'bg-white border-blue-200 shadow-sm'
         }`}>
           <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
             <Package className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className={`text-[11px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+            <p className={`text-[11px] font-black uppercase truncate ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'}`}>
               {product.name}
             </p>
             <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">

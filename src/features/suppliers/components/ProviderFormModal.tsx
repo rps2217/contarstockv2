@@ -48,20 +48,20 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className={`rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border ${
-          theme === 'dark' ? 'bg-brand-surface border-white/10' : 'bg-white border-slate-200'
+          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-surface border-white/10' : 'bg-white border-slate-200'
         }`}
       >
         <div className={`flex items-center justify-between p-6 border-b ${
-          theme === 'dark' ? 'border-white/5' : 'border-slate-100'
+          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/5' : 'border-slate-100'
         }`}>
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-brand-info/10' : 'bg-indigo-100'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-info/10' : 'bg-indigo-100'
             }`}>
-              <Truck className={`w-5 h-5 ${theme === 'dark' ? 'text-brand-info' : 'text-indigo-600'}`} />
+              <Truck className={`w-5 h-5 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-brand-info' : 'text-indigo-600'}`} />
             </div>
             <div>
-              <h2 className={`text-lg font-black uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <h2 className={`text-lg font-black uppercase ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-800'}`}>
                 {initialData ? 'Editar Proveedor' : 'Nuevo Proveedor'}
               </h2>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
@@ -70,7 +70,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
             </div>
           </div>
           <button onClick={onClose} className={`p-2 rounded-full transition-colors ${
-            theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-muted'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-muted'
           }`}>
             <X className="w-5 h-5" />
           </button>
@@ -90,7 +90,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 onChange={e => setFormData({ ...formData, rut: e.target.value })}
                 placeholder="Ej: 76.123.456-7"
                 className={`w-full px-4 py-3 rounded-xl outline-none transition-all font-medium disabled:opacity-50 border-2 ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                     ? 'bg-brand-dark border-white/5 focus:border-brand-warning text-white' 
                     : 'bg-slate-50 border-slate-200 focus:border-indigo-500 text-slate-900'
                 }`}
@@ -113,7 +113,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                 placeholder="Ej: LABORATORIOS CHILE S.A."
                 className={`w-full px-4 py-3 rounded-xl outline-none transition-all font-medium uppercase border-2 ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                     ? 'bg-brand-dark border-white/5 focus:border-brand-warning text-white' 
                     : 'bg-slate-50 border-slate-200 focus:border-indigo-500 text-slate-900'
                 }`}
@@ -122,17 +122,17 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
           </div>
 
           <div className={`rounded-2xl p-5 border space-y-4 ${
-            theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-200'
           }`}>
             <h3 className={`text-sm font-black uppercase flex items-center gap-2 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-700'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-700'
             }`}>
-              <ShieldAlert className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-info' : 'text-indigo-500'}`} />
+              <ShieldAlert className={`w-4 h-4 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-brand-info' : 'text-indigo-500'}`} />
               Política de Vencimientos
             </h3>
 
             <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-colors ${
-              theme === 'dark' ? 'bg-brand-surface border-white/5 hover:border-brand-info' : 'bg-white border-slate-200 hover:border-indigo-300'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-surface border-white/5 hover:border-brand-info' : 'bg-white border-slate-200 hover:border-indigo-300'
             }`}>
               <input
                 type="checkbox"
@@ -141,7 +141,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 className="w-5 h-5 text-brand-info rounded focus:ring-brand-info"
               />
               <div>
-                <p className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Acepta Canje / Devolución</p>
+                <p className={`text-sm font-bold ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-800'}`}>Acepta Canje / Devolución</p>
                 <p className="text-[10px] font-medium text-slate-500">Permite retornar productos por vencer</p>
               </div>
             </label>
@@ -158,12 +158,12 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                   value={formData.withdrawalDays}
                   onChange={e => setFormData({ ...formData, withdrawalDays: parseInt(e.target.value) || 0 })}
                   className={`w-24 px-4 py-2 rounded-xl outline-none transition-all font-black text-center text-lg border-2 ${
-                    theme === 'dark' 
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                       ? 'bg-brand-surface border-white/5 focus:border-brand-warning text-white' 
                       : 'bg-white border-slate-200 focus:border-indigo-500 text-slate-900'
                   }`}
                 />
-                <span className={`text-sm font-bold ${theme === 'dark' ? 'text-muted' : 'text-slate-600'}`}>Días antes de la fecha de caducidad</span>
+                <span className={`text-sm font-bold ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-600'}`}>Días antes de la fecha de caducidad</span>
               </div>
             </div>
 
@@ -177,7 +177,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 onChange={e => setFormData({ ...formData, exchangePolicy: e.target.value })}
                 placeholder="Ej: Solo se acepta canje presentando factura original."
                 className={`w-full px-4 py-3 rounded-xl outline-none transition-all font-medium border-2 resize-none ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                     ? 'bg-brand-surface border-white/5 focus:border-brand-info text-white' 
                     : 'bg-white border-slate-200 focus:border-indigo-500 text-slate-900'
                 }`}
@@ -190,7 +190,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
               type="button"
               onClick={onClose}
               className={`flex-1 px-4 py-3 font-bold rounded-xl transition-colors ${
-                theme === 'dark' ? 'bg-brand-dark text-muted hover:bg-brand-dark/80' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark text-muted hover:bg-brand-dark/80' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               Cancelar
@@ -198,7 +198,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
             <button
               type="submit"
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-bold rounded-xl transition-colors shadow-lg ${
-                theme === 'dark' ? 'bg-brand-warning text-black hover:bg-brand-warning/90 shadow-brand-warning/10' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-warning text-black hover:bg-brand-warning/90 shadow-brand-warning/10' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
               }`}
             >
               <Save className="w-5 h-5" />

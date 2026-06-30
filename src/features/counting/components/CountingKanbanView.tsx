@@ -53,7 +53,7 @@ const SessionCard: React.FC<{
   theme: string;
   onClick?: () => void;
 }> = ({ session, theme, onClick }) => {
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isHighContrast = theme === 'high-contrast';
 
   const statusBadge = getSessionStatusBadge(session.status);
@@ -122,7 +122,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
   onItemClick,
   theme = 'dark'
 }) => {
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isHighContrast = theme === 'high-contrast';
   
   const [groupBy, setGroupBy] = useState<GroupBy>('status');

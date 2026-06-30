@@ -3,19 +3,18 @@
  * 
  * Proporciona:
  * - Cambio de tema dinámico
- * - Persistencia en localStorage
+ * - Persistencia en settings store
  * - Detección de preferencia del sistema
- * - Temas personalizados de empresa
- * - Soporte para tema 'gray' del rediseño
+ * - Temas: night (oscuro), gray (gris claro), light (blanco), high-contrast
  */
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useSettingsStore } from '@/features/settings/store';
 
 // ============================================================
 // TIPOS
 // ============================================================
 
-// Incluir 'night' para el tema oscuro estilo Night Steel
 export type ThemeName = 'dark' | 'light' | 'high-contrast' | 'appsheet-dark' | 'gray' | 'night';
 export type ThemePreset = 'default' | 'corporate' | 'ocean' | 'forest' | 'sunset';
 
@@ -51,8 +50,26 @@ interface ThemeContextType {
   removeCustomTheme: (id: string) => void;
   applyCustomTheme: (theme: CustomTheme) => void;
   isDark: boolean;
+  isGray: boolean;
+  isNight: boolean;
   toggleTheme: () => void;
   cycleTheme: () => void;
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+export function isDarkTheme(theme: ThemeName): boolean {
+  return theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+}
+
+export function isGrayTheme(theme: ThemeName): boolean {
+  return theme === 'gray';
+}
+
+export function isNightTheme(theme: ThemeName): boolean {
+  return theme === 'night';
 }
 
 // ============================================================
@@ -73,10 +90,10 @@ const PRESETS: Record<ThemePreset, CustomTheme> = {
     colors: {
       primary: '#3b82f6',
       secondary: '#8b5cf6',
-      accent: '#f59e0b',
-      background: '#0f172a',
-      surface: '#1e293b',
-      text: '#f8fafc',
+      accent: '#6B8CAE',
+      background: '#0A0A0B',
+      surface: '#18181B',
+      text: '#FAFAFA',
       border: '#334155',
     },
   },
@@ -87,15 +104,15 @@ const PRESETS: Record<ThemePreset, CustomTheme> = {
       primary: '#2563eb',
       secondary: '#7c3aed',
       accent: '#0d9488',
-      background: '#0f172a',
-      surface: '#1e293b',
-      text: '#f8fafc',
+      background: '#0A0A0B',
+      surface: '#18181B',
+      text: '#FAFAFA',
       border: '#334155',
     },
   },
   ocean: {
     id: 'ocean',
-    name: 'Océano',
+    name: 'Oceano',
     colors: {
       primary: '#06b6d4',
       secondary: '#0ea5e9',
@@ -145,32 +162,28 @@ const CUSTOM_THEMES_KEY = 'app-custom-themes';
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeName>('night');
+  // Usar settings store para persistencia
+  const { settings, updateSetting } = useSettingsStore();
+  
+  // Estado local para el preset y custom themes
   const [preset, setPresetState] = useState<ThemePreset>('default');
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>([]);
   const [currentCustomTheme, setCurrentCustomTheme] = useState<CustomTheme | null>(null);
 
+  // Obtener tema del settings
+  const theme = (settings.theme as ThemeName) || 'night';
+
   // Cargar preferencias guardadas
   useEffect(() => {
-    // Detectar preferencia del sistema
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    // Cargar tema guardado
-    const savedTheme = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
+
+    // Cargar preset
     const savedPreset = localStorage.getItem(PRESET_KEY) as ThemePreset | null;
     const savedCustomThemes = localStorage.getItem(CUSTOM_THEMES_KEY);
 
-    if (savedTheme) {
-      setThemeState(savedTheme);
-    } else if (!prefersDark) {
-      setThemeState('light');
-    }
-
-    if (savedPreset) {
+    if (savedPreset && PRESETS[savedPreset]) {
       setPresetState(savedPreset);
-      if (PRESETS[savedPreset]) {
-        setCurrentCustomTheme(PRESETS[savedPreset]);
-      }
+      setCurrentCustomTheme(PRESETS[savedPreset]);
     }
 
     if (savedCustomThemes) {
@@ -184,36 +197,51 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Aplicar tema al documento
   useEffect(() => {
+    // Usar el tema de settings store
     document.documentElement.setAttribute('data-theme', theme);
-    
-    // Aplicar variables CSS personalizadas
+
+    // Aplicar variables CSS personalizadas del preset
     if (currentCustomTheme) {
       const root = document.documentElement;
       root.style.setProperty('--color-primary', currentCustomTheme.colors.primary);
       root.style.setProperty('--color-secondary', currentCustomTheme.colors.secondary);
       root.style.setProperty('--color-accent', currentCustomTheme.colors.accent);
+    } else {
+      // Aplicar colores según el tema base
+      const root = document.documentElement;
+      
+      if (isDarkTheme(theme)) {
+        root.style.setProperty('--color-accent', '#6B8CAE');
+      } else {
+        root.style.setProperty('--color-accent', '#2563EB');
+      }
     }
   }, [theme, currentCustomTheme]);
 
   // Escuchar cambios de preferencia del sistema
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       const savedTheme = localStorage.getItem(STORAGE_KEY);
       if (!savedTheme) {
-        setThemeState(e.matches ? 'dark' : 'light');
+        // Solo cambiar si no hay tema guardado
+        const newTheme = e.matches ? 'night' : 'light';
+        updateSetting('theme', newTheme);
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  }, [updateSetting]);
 
+  // Sincronizar con settings store
   const setTheme = useCallback((newTheme: ThemeName) => {
-    setThemeState(newTheme);
+    // Guardar en localStorage también
     localStorage.setItem(STORAGE_KEY, newTheme);
-  }, []);
+    // Actualizar settings store
+    updateSetting('theme', newTheme);
+  }, [updateSetting]);
 
   const setPreset = useCallback((newPreset: ThemePreset) => {
     setPresetState(newPreset);
@@ -235,7 +263,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(updated));
       return updated;
     });
-    
+
     if (currentCustomTheme?.id === id) {
       setCurrentCustomTheme(PRESETS.default);
     }
@@ -247,16 +275,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [customThemes]);
 
   const toggleTheme = useCallback(() => {
-    // Cycle through: dark -> light -> gray -> dark
-    const order: ThemeName[] = ['dark', 'light', 'gray'];
-    const currentIndex = order.indexOf(theme as ThemeName);
+    // Cycle through: night -> gray -> light -> night
+    const order: ThemeName[] = ['night', 'gray', 'light'];
+    const currentIndex = order.indexOf(theme);
     const nextIndex = (currentIndex + 1) % order.length;
     setTheme(order[nextIndex]);
   }, [theme, setTheme]);
 
   const cycleTheme = useCallback(() => {
     const themeOrder: ThemeName[] = ['night', 'gray', 'light', 'high-contrast'];
-    const currentIndex = themeOrder.indexOf(theme as ThemeName);
+    const currentIndex = themeOrder.indexOf(theme);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
     setTheme(themeOrder[nextIndex]);
   }, [theme, setTheme]);
@@ -272,7 +300,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       addCustomTheme,
       removeCustomTheme,
       applyCustomTheme,
-      isDark: theme === 'dark',
+      isDark: isDarkTheme(theme),
+      isGray: isGrayTheme(theme),
+      isNight: isNightTheme(theme),
       toggleTheme,
       cycleTheme,
     }}>

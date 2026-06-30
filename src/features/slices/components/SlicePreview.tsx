@@ -21,7 +21,7 @@ export const SlicePreview: React.FC<Props> = ({
 }) => {
   if (!activeSlice) return null;
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

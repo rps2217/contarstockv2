@@ -13,7 +13,7 @@ export const MaintenanceCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const [isRepairing, setIsRepairing] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

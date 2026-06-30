@@ -86,18 +86,18 @@ export const CustomersPage: React.FC = () => {
 
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans transition-colors duration-500 ${
-      theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-slate-900'
+      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-slate-900'
     }`}>
       {/* HEADER */}
       <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        theme === 'dark' ? 'bg-base/40 border-subtle' : 'bg-stone-50/80 border-stone-200 shadow-sm'
+        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-base/40 border-subtle' : 'bg-stone-50/80 border-stone-200 shadow-sm'
       }`}>
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/dashboard')}
               className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${
-                theme === 'dark' ? 'bg-white/5 border-subtle text-muted hover:bg-white/10' : 'bg-neutral-100 border-neutral-200 text-slate-600 hover:bg-neutral-200'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 border-subtle text-muted hover:bg-white/10' : 'bg-neutral-100 border-neutral-200 text-slate-600 hover:bg-neutral-200'
               }`}
             >
               <ChevronLeft className="w-6 h-6" />
@@ -108,7 +108,7 @@ export const CustomersPage: React.FC = () => {
                 Directorio de Clientes
               </h1>
               <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-neutral-500' : 'text-muted'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-neutral-500' : 'text-muted'
               }`}>
                 Gestión de contactos y notificaciones
               </p>
@@ -118,7 +118,7 @@ export const CustomersPage: React.FC = () => {
           <button
             onClick={() => setIsTemplateManagerOpen(true)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors border ${
-              theme === 'dark' 
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                 ? 'bg-white/5 border-subtle hover:bg-white/10 text-secondary' 
                 : 'bg-white border-neutral-200 hover:bg-neutral-50 text-slate-600 shadow-sm'
             }`}
@@ -169,7 +169,7 @@ export const CustomersPage: React.FC = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`p-5 rounded-2xl border transition-all relative overflow-hidden h-full ${
-                    theme === 'dark' 
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                       ? 'bg-surface/50 border-subtle hover:border-blue-500/50' 
                       : 'bg-white border-neutral-200 hover:border-blue-500/50 shadow-sm'
                   }`}
@@ -186,7 +186,7 @@ export const CustomersPage: React.FC = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg ${
-                        theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
                       }`}>
                         {(customer.firstName?.charAt(0) || '')}{(customer.lastName?.charAt(0) || '')}
                       </div>
@@ -194,7 +194,7 @@ export const CustomersPage: React.FC = () => {
                         <h3 className="font-bold text-lg leading-tight">
                           {customer.firstName} {customer.lastName}
                         </h3>
-                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-muted' : 'text-neutral-500'}`}>
+                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-neutral-500'}`}>
                           {customer.phone}
                         </p>
                       </div>
@@ -212,7 +212,7 @@ export const CustomersPage: React.FC = () => {
                     <button
                       onClick={() => handleEdit(customer)}
                       className={`p-2 rounded-xl transition-colors ${
-                        theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-secondary' : 'bg-neutral-100 hover:bg-neutral-200 text-slate-600'
+                        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 hover:bg-white/10 text-secondary' : 'bg-neutral-100 hover:bg-neutral-200 text-slate-600'
                       }`}
                       title="Editar"
                     >
@@ -221,7 +221,7 @@ export const CustomersPage: React.FC = () => {
                     <button
                       onClick={() => handleDelete(customer.id)}
                       className={`p-2 rounded-xl transition-colors ${
-                        theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500' : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
+                        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500' : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
                       }`}
                       title="Eliminar"
                     >
@@ -236,12 +236,12 @@ export const CustomersPage: React.FC = () => {
           {filteredCustomers.length === 0 && (
             <div className="py-12 flex flex-col items-center justify-center text-center">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-                theme === 'dark' ? 'bg-white/5' : 'bg-neutral-100'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5' : 'bg-neutral-100'
               }`}>
-                <Users className={`w-8 h-8 ${theme === 'dark' ? 'text-neutral-500' : 'text-muted'}`} />
+                <Users className={`w-8 h-8 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-neutral-500' : 'text-muted'}`} />
               </div>
               <h3 className="text-lg font-bold mb-1">No hay clientes</h3>
-              <p className={`text-sm max-w-sm ${theme === 'dark' ? 'text-muted' : 'text-neutral-500'}`}>
+              <p className={`text-sm max-w-sm ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-neutral-500'}`}>
                 {searchQuery ? 'No se encontraron clientes que coincidan con tu búsqueda.' : 'Agrega tu primer cliente para comenzar a enviar notificaciones de retiro.'}
               </p>
               {!searchQuery && (

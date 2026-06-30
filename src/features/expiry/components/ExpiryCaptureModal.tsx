@@ -63,7 +63,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   const [location, setLocation] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isHighContrast = theme === 'high-contrast';
 
   // Usar barcode escaneado si existe

@@ -35,7 +35,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
   theme = 'dark',
   className = '',
 }) => {
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isHighContrast = theme === 'high-contrast';
 
   const handleDecrement = () => {

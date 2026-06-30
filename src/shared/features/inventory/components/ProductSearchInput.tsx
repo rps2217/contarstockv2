@@ -156,7 +156,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
     }
   }, [autoFocus]);
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isHighContrast = theme === 'high-contrast';
 
   const borderColor = isHighContrast 

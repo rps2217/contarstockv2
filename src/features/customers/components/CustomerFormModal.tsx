@@ -63,14 +63,14 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border ${
-            theme === 'dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
           }`}
         >
           <div className={`p-4 border-b flex items-center justify-between ${
-            theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10' : 'border-slate-200'
           }`}>
             <h2 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
             }`}>
               <User className="w-5 h-5 text-blue-500" />
               {editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'}
@@ -78,7 +78,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             <button
               onClick={onClose}
               className={`p-2 rounded-xl transition-colors ${
-                theme === 'dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               <X className="w-5 h-5" />
@@ -88,7 +88,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Nombre
               </label>
@@ -98,7 +98,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                     ? 'bg-black/50 border-white/10 text-white focus:border-blue-500' 
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500'
                 }`}
@@ -108,7 +108,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Apellido
               </label>
@@ -118,7 +118,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                     ? 'bg-black/50 border-white/10 text-white focus:border-blue-500' 
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500'
                 }`}
@@ -128,13 +128,13 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
             <div>
               <label className={`block text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                theme === 'dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
               }`}>
                 Teléfono (WhatsApp)
               </label>
               <div className="relative">
                 <Phone className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-muted'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'
                 }`} />
                 <input
                   type="tel"
@@ -142,14 +142,14 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className={`w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all ${
-                    theme === 'dark' 
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                       ? 'bg-black/50 border-white/10 text-white focus:border-blue-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500'
                   }`}
                   placeholder="+56912345678"
                 />
               </div>
-              <p className={`text-[10px] mt-1.5 ${theme === 'dark' ? 'text-slate-500' : 'text-muted'}`}>
+              <p className={`text-[10px] mt-1.5 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'}`}>
                 Incluye el código de país (ej. +56 para Chile).
               </p>
             </div>
@@ -159,7 +159,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 type="button"
                 onClick={onClose}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
                     ? 'bg-white/5 hover:bg-white/10 text-white' 
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}

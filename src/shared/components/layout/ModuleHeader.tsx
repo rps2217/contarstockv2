@@ -29,13 +29,13 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   const handleBack = onBack || (() => navigate(-1));
 
   return (
-    <header className={`py-3 px-4 md:py-6 md:px-8 border-b ${theme === 'dark' ? 'bg-base border-white/5' : 'bg-white border-slate-100'}`}>
+    <header className={`py-3 px-4 md:py-6 md:px-8 border-b ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-base border-white/5' : 'bg-white border-slate-100'}`}>
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
             onClick={handleBack}
             className={`p-3 rounded-2xl transition-all active:scale-90 ${
-              theme === 'dark' ? 'bg-white/5 text-muted hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 text-muted hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
             } ${hideBackButtonOnMobile ? 'hidden md:flex' : ''}`}
           >
             <ChevronLeft className="w-6 h-6" />
@@ -43,12 +43,12 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
           
           <div className={`items-center gap-3 ${hideTitleOnMobile ? 'hidden md:flex' : 'flex'}`}>
             {icon && (
-              <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
+              <div className={`p-3 rounded-2xl ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
                 {icon}
               </div>
             )}
             <div>
-              <h1 className={`text-xl font-black uppercase italic tracking-tighter leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+              <h1 className={`text-xl font-black uppercase italic tracking-tighter leading-none ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'}`}>
                 {title}
               </h1>
               {subtitle && (

@@ -75,7 +75,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
 
   // ==================== MANAGEMENT MODE ====================
 
-  const isDark = settings.theme === 'dark';
+  const isDark = settings.theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
 
   // Unificar borradores e historial
   const allItems = useMemo(() => {

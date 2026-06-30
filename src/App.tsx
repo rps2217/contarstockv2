@@ -129,10 +129,11 @@ const AppContent = () => {
   const currentThemeClass = 
     settings.theme === 'high-contrast' ? 'bg-black text-yellow-400' :
     settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 
-    
+    settings.theme === 'gray' ? 'bg-[#E8E8E8] text-[#171717]' :
+    settings.theme === 'night' ? 'bg-[#0A0A0B] text-white' :
     'bg-base text-slate-100';
 
-  const isDarkMode = settings.theme === 'dark' || settings.theme === 'high-contrast' ;
+  const isDarkMode = settings.theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || settings.theme === 'high-contrast' || settings.theme === 'night';
   const isHighContrast = settings.theme === 'high-contrast';
 
   if (bootState === 'initializing' && isAuthenticated !== false) {

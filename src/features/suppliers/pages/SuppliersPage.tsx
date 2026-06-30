@@ -58,7 +58,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({
   theme,
   colorClass
 }) => {
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   
   return (
     <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
@@ -128,7 +128,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({
 export const SuppliersPage: React.FC = () => {
   const settings = useAppStore(state => state.settings);
   const theme = (settings?.theme as 'dark' | 'light' | 'high-contrast') || 'dark';
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const tableName = settings?.cloudConfig?.providersTableName || 'PROVEEDORES';
 
   const {

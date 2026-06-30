@@ -188,9 +188,9 @@ export function BulkActionBar<T = any>({
 }: BulkActionBarProps<T>) {
   if (selectedCount === 0) return null;
 
-  const bgClass = theme === 'dark' ? 'bg-elevated' : theme === 'light' ? 'bg-white' : 'bg-black';
-  const textClass = theme === 'dark' ? 'text-white' : theme === 'light' ? 'text-slate-900' : 'text-yellow-400';
-  const borderClass = theme === 'dark' ? 'border-subtle' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
+  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated' : theme === 'light' ? 'bg-white' : 'bg-black';
+  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : theme === 'light' ? 'text-slate-900' : 'text-yellow-400';
+  const borderClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-subtle' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgClass} border-t-4 ${borderClass} ${className}`}>
@@ -284,9 +284,9 @@ export function BulkEditModal<T = any>({
 
   if (!isOpen) return null;
 
-  const bgClass = theme === 'dark' ? 'bg-surface' : 'bg-white';
-  const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
-  const inputBgClass = theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
+  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface' : 'bg-white';
+  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900';
+  const inputBgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -308,8 +308,8 @@ export function BulkEditModal<T = any>({
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+          <div className={`p-4 rounded-xl border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'}`}>
               {config.description}
             </p>
           </div>
@@ -321,7 +321,7 @@ export function BulkEditModal<T = any>({
 
             return (
               <div key={field.key} className="space-y-2">
-                <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-muted' : 'text-slate-500'}`}>
+                <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'}`}>
                   {field.label} {field.required && <span className="text-rose-500">*</span>}
                 </label>
 

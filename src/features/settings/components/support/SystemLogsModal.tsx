@@ -15,7 +15,7 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dar
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info' | 'success'>('all');
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

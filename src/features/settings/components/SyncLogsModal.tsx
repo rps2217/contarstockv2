@@ -19,7 +19,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

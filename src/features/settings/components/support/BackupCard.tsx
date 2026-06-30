@@ -13,7 +13,7 @@ export const BackupCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const [isRestoring, setIsRestoring] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
 
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

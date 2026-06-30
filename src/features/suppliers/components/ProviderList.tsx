@@ -67,7 +67,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
             return (
               <div key={p.rut} className="px-3 py-1.5 h-auto w-full">
                 <div className={`flex items-stretch bg-white dark:bg-surface border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 ${
-                  theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10' : 'border-slate-200'
                 }`}>
                   {/* Left accent color indicator representing hasExchange */}
                   <div className={`w-1.5 shrink-0 rounded-l-2xl ${
@@ -154,7 +154,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                 key={p.rut}
                 onClick={() => onEdit(p)}
                 className={`flex items-center border-b border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors px-6 text-sm h-16 group cursor-pointer ${
-                  theme === 'dark' ? 'bg-brand-surface/20' : 'bg-white'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-surface/20' : 'bg-white'
                 }`}
               >
                 {/* RUT Column */}

@@ -58,7 +58,7 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         className={`fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-2xl shadow-2xl flex items-center gap-4 border ${
-          theme === 'dark' 
+          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
             ? 'bg-elevated border-subtle' 
             : 'bg-white border-stone-200'
         }`}
@@ -68,13 +68,13 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
             {selectedCount}
           </span>
           <span className={`font-bold text-sm uppercase tracking-wider ${
-            theme === 'dark' ? 'text-white' : 'text-stone-900'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-stone-900'
           }`}>
             Seleccionados
           </span>
         </div>
         
-        <div className={`h-8 w-px ${theme === 'dark' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
+        <div className={`h-8 w-px ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
         
         <div className="flex items-center gap-2">
           {actions.map((action, idx) => {
@@ -94,12 +94,12 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
           })}
         </div>
         
-        <div className={`h-8 w-px ${theme === 'dark' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
+        <div className={`h-8 w-px ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
         
         <button 
           onClick={onClear} 
           className={`p-2 rounded-xl transition-all ${
-            theme === 'dark' 
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
               ? 'text-muted hover:text-white hover:bg-white/5' 
               : 'text-stone-400 hover:text-stone-900 hover:bg-stone-100'
           }`}
