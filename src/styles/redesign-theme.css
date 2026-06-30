@@ -1,186 +1,259 @@
 /**
- * Redesign Theme - Variables CSS para el nuevo diseño
+ * Redesign Theme - Sistema de Temas con Variables CSS
  * 
- * Sistema de colores semánticos con tokens de diseño
+ * Temas disponibles:
+ * - night: Oscuro profesional estilo Night Steel (PRINCIPAL)
+ * - gray: Gris claro con alto contraste
+ * - light: Blanco puro
+ * - appsheet-dark: Estilo AppSheet
  */
 
-/* ================================================================================
-   CSS CUSTOM PROPERTIES - TOKENS DE DISEÑO
-   ================================================================================ */
-
 :root {
-  /* Fondos - Sistema de capas */
-  --bg-base: #0f0f0f;
-  --bg-surface: #181818;
-  --bg-elevated: #222222;
-  
-  /* Bordes */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  
-  /* Texto */
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #52525b;
-}
-
-/* Tema Claro */
-[data-theme="light"] {
-  --bg-base: #fafafa;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f4f4f5;
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
-}
-
-/* Tema Gris - Claro con alto contraste */
-[data-theme="gray"] {
-  --bg-base: #f0f0f0;
-  --bg-surface: #ffffff;
-  --bg-elevated: #e8e8e8;
-  --border-subtle: rgba(0, 0, 0, 0.12);
-  --border-default: rgba(0, 0, 0, 0.15);
-  --text-primary: #171717;
-  --text-secondary: #525252;
-  --text-muted: #737373;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-/* Tema Noche - Oscuro estilo Night Steel */
-[data-theme="night"] {
+  /* DEFAULT: Tema Noche */
   --bg-base: #0A0A0B;
   --bg-surface: #18181B;
-  --bg-elevated: #1F1F23;
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-default: rgba(255, 255, 255, 0.08);
+  --bg-elevated: #222222;
+  --bg-overlay: #2a2a2e;
+  
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  
   --text-primary: #FAFAFA;
   --text-secondary: #A1A1AA;
   --text-muted: #71717A;
+  --text-inverse: #0A0A0B;
+  
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  
+  --accent: #6B8CAE;
+  --accent-hover: #7A9BBF;
+  --accent-subtle: rgba(107, 140, 174, 0.15);
 }
 
-/* Tema appsheet-dark (estilo AppSheet) */
+/* TEMA NOCHE (night) - Oscuro Profesional */
+[data-theme="night"] {
+  --bg-base: #0A0A0B;
+  --bg-surface: #18181B;
+  --bg-elevated: #222222;
+  --bg-overlay: #2a2a2e;
+  
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --text-inverse: #0A0A0B;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  
+  --accent: #6B8CAE;
+  --accent-hover: #7A9BBF;
+  --accent-subtle: rgba(107, 140, 174, 0.15);
+}
+
+/* TEMA GRIS (gray) - Claro con Alto Contraste */
+[data-theme="gray"] {
+  --bg-base: #E8E8E8;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F5F5F5;
+  --bg-overlay: #DEDEDE;
+  
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  
+  --text-primary: #171717;
+  --text-secondary: #525252;
+  --text-muted: #737373;
+  --text-inverse: #FFFFFF;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-subtle: rgba(37, 99, 235, 0.1);
+}
+
+/* TEMA CLARO (light) - Blanco Puro */
+[data-theme="light"] {
+  --bg-base: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F4F4F5;
+  --bg-overlay: #E4E4E7;
+  
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  
+  --text-primary: #18181B;
+  --text-secondary: #52525B;
+  --text-muted: #A1A1AA;
+  --text-inverse: #FFFFFF;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-subtle: rgba(37, 99, 235, 0.1);
+}
+
+/* TEMA APPSHEET DARK */
 [data-theme="appsheet-dark"] {
-  --bg-base: #0f172a;
-  --bg-surface: #1e293b;
+  --bg-base: #0F172A;
+  --bg-surface: #1E293B;
   --bg-elevated: #334155;
-  --border-subtle: rgba(255, 255, 255, 0.12);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --bg-overlay: #475569;
+  
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-default: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #0F172A;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  
+  --accent: #3B82F6;
+  --accent-hover: #60A5FA;
+  --accent-subtle: rgba(59, 130, 246, 0.2);
 }
 
-/* ================================================================================
-   TAILWIND CUSTOM COLORS
-   ================================================================================ */
-
+/* TAILWIND CUSTOM UTILITIES */
 @layer utilities {
-  .bg-base {
-    background-color: var(--bg-base);
-  }
+  .bg-base { background-color: var(--bg-base) !important; }
+  .bg-surface { background-color: var(--bg-surface) !important; }
+  .bg-elevated { background-color: var(--bg-elevated) !important; }
+  .bg-overlay { background-color: var(--bg-overlay) !important; }
   
-  .bg-surface {
-    background-color: var(--bg-surface);
-  }
+  .text-primary { color: var(--text-primary) !important; }
+  .text-secondary { color: var(--text-secondary) !important; }
+  .text-muted { color: var(--text-muted) !important; }
+  .text-inverse { color: var(--text-inverse) !important; }
   
-  .bg-elevated {
-    background-color: var(--bg-elevated);
-  }
-  
-  .border-subtle {
-    border-color: var(--border-subtle);
-  }
-  
-  .text-primary {
-    color: var(--text-primary);
-  }
-  
-  .text-secondary {
-    color: var(--text-secondary);
-  }
-  
-  .text-muted {
-    color: var(--text-muted);
-  }
+  .border-subtle { border-color: var(--border-subtle) !important; }
+  .border-default { border-color: var(--border-default) !important; }
+  .border-strong { border-color: var(--border-strong) !important; }
 }
 
-/* ================================================================================
-   COMPONENTES ESPECÍFICOS
-   ================================================================================ */
+/* INPUTS - TEMA GRIS (texto oscuro visible) */
+[data-theme="gray"] input[type="text"],
+[data-theme="gray"] input[type="number"],
+[data-theme="gray"] input[type="email"],
+[data-theme="gray"] input[type="password"],
+[data-theme="gray"] input[type="search"],
+[data-theme="gray"] textarea,
+[data-theme="gray"] select {
+  color: #171717 !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
 
-/* Safe area para móviles */
+[data-theme="gray"] input::placeholder,
+[data-theme="gray"] textarea::placeholder {
+  color: #737373 !important;
+}
+
+[data-theme="gray"] input:focus,
+[data-theme="gray"] textarea:focus,
+[data-theme="gray"] select:focus {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  outline: none;
+}
+
+/* INPUTS - TEMA NOCHE (texto claro visible) */
+[data-theme="night"] input[type="text"],
+[data-theme="night"] input[type="number"],
+[data-theme="night"] input[type="email"],
+[data-theme="night"] input[type="password"],
+[data-theme="night"] input[type="search"],
+[data-theme="night"] textarea,
+[data-theme="night"] select {
+  color: #FAFAFA !important;
+  background-color: #222222 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="night"] input::placeholder,
+[data-theme="night"] textarea::placeholder {
+  color: #71717A !important;
+}
+
+[data-theme="night"] input:focus,
+[data-theme="night"] textarea:focus,
+[data-theme="night"] select:focus {
+  border-color: #6B8CAE !important;
+  box-shadow: 0 0 0 3px rgba(107, 140, 174, 0.15) !important;
+  outline: none;
+}
+
+/* INPUTS - TEMA CLARO */
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="search"],
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color: #18181B !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #A1A1AA !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] select:focus {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none;
+}
+
+/* COMPONENTES */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* No scrollbar para navegación */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Skeleton loading animation */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--bg-surface) 25%,
-    var(--bg-elevated) 50%,
-    var(--bg-surface) 75%
-  );
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-elevated) 50%, var(--bg-surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
-/* ================================================================================
-   ANIMACIONES
-   ================================================================================ */
-
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(107, 140, 174, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(107, 140, 174, 0); }
 }
 
-.pulse-glow {
-  animation: pulse-glow 2s infinite;
-}
-
-/* ================================================================================
-   GRADIENTES
-   ================================================================================ */
-
-.gradient-radial {
-  background: radial-gradient(
-    ellipse at center,
-    var(--bg-elevated) 0%,
-    var(--bg-surface) 50%,
-    var(--bg-base) 100%
-  );
-}
-
-/* ================================================================================
-   UTILIDADES
-   ================================================================================ */
+.pulse-glow { animation: pulse-glow 2s infinite; }
 
 .transition-theme {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }

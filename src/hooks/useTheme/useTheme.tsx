@@ -145,7 +145,7 @@ const CUSTOM_THEMES_KEY = 'app-custom-themes';
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeName>('dark');
+  const [theme, setThemeState] = useState<ThemeName>('night');
   const [preset, setPresetState] = useState<ThemePreset>('default');
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>([]);
   const [currentCustomTheme, setCurrentCustomTheme] = useState<CustomTheme | null>(null);

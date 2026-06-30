@@ -587,7 +587,7 @@ export const RedesignHammerPage: React.FC = () => {
                 onChange={(e) => setManualBarcode(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
                 placeholder="Ingresa codigo..."
-                className="flex-1 bg-surface border border-subtle rounded-xl px-4 py-2 text-sm font-mono focus:outline-none focus:border-blue-500"
+                className="flex-1 bg-surface border border-default rounded-xl px-4 py-2 text-sm font-mono text-primary focus:outline-none focus:border-[var(--accent)]"
                 autoFocus
               />
               <button 

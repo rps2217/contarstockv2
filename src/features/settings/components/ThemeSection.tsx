@@ -9,13 +9,34 @@ interface Props {
 }
 
 export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme = 'dark' }) => {
-  const isDark = theme === 'dark' || theme === 'night';
+  const currentTheme = settings.theme || 'night';
+  const isDark = currentTheme === 'dark' || currentTheme === 'night';
 
-  const themes: {id: Theme, label: string, bg: string, bgAlt: string, accent: string, text: string, border: string, icon: any}[] = [
-    { id: 'night', label: 'Noche', bg: 'bg-[#0A0A0B]', bgAlt: 'bg-[#18181B]', accent: 'bg-[#6B8CAE]', text: 'text-white', border: 'border-[#6B8CAE]', icon: Moon },
-    { id: 'gray', label: 'Gris', bg: 'bg-[#f0f0f0]', bgAlt: 'bg-[#e8e8e8]', accent: 'bg-[#525252]', text: 'text-[#171717]', border: 'border-[#525252]', icon: CloudSun },
-    { id: 'light', label: 'Dia', bg: 'bg-white', bgAlt: 'bg-slate-50', accent: 'bg-amber-400', text: 'text-slate-900', border: 'border-slate-300', icon: Sun },
-    { id: 'high-contrast', label: 'Alto Contraste', bg: 'bg-black', bgAlt: 'bg-gray-900', accent: 'bg-yellow-400', text: 'text-yellow-400', border: 'border-white', icon: Contrast },
+  const themes = [
+    { 
+      id: 'night' as Theme, 
+      label: 'Noche', 
+      preview: { bg: '#0A0A0B', surface: '#18181B', accent: '#6B8CAE', text: '#FAFAFA' }, 
+      icon: Moon 
+    },
+    { 
+      id: 'gray' as Theme, 
+      label: 'Gris', 
+      preview: { bg: '#E8E8E8', surface: '#FFFFFF', accent: '#2563EB', text: '#171717' }, 
+      icon: CloudSun 
+    },
+    { 
+      id: 'light' as Theme, 
+      label: 'Dia', 
+      preview: { bg: '#FAFAFA', surface: '#FFFFFF', accent: '#2563EB', text: '#18181B' }, 
+      icon: Sun 
+    },
+    { 
+      id: 'high-contrast' as Theme, 
+      label: 'Alto Contraste', 
+      preview: { bg: '#000000', surface: '#1a1a1a', accent: '#FFFF00', text: '#FFFFFF' }, 
+      icon: Contrast 
+    },
   ];
 
   const handleThemeChange = (themeId: Theme) => {
@@ -37,7 +58,7 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {themes.map(t => {
-          const isSelected = (settings.theme || 'dark') === t.id;
+          const isSelected = currentTheme === t.id;
           const Icon = t.icon;
           return (
             <button
@@ -45,18 +66,33 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
               onClick={() => handleThemeChange(t.id)}
               className={`relative p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
                 isSelected 
-                  ? `${t.bg} ${t.border} shadow-lg ring-2 ring-blue-500 ring-offset-2 ${isDark ? 'ring-offset-[#0f1423]' : 'ring-offset-white'}` 
-                  : `${t.bg} border-slate-200 dark:border-white/10 opacity-70 hover:opacity-100`
+                  ? 'shadow-lg ring-2 ring-blue-500 ring-offset-2' 
+                  : 'border-slate-200 dark:border-white/10 opacity-70 hover:opacity-100'
               }`}
+              style={{ 
+                backgroundColor: t.preview.bg,
+                borderColor: isSelected ? t.preview.accent : undefined,
+                ringColor: isSelected ? '#3B82F6' : undefined,
+                ringOffsetColor: isSelected ? (isDark ? '#0f1423' : '#ffffff') : undefined,
+              }}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.accent}`}>
+              {/* Preview del tema */}
+              <div className="w-full h-12 rounded-lg overflow-hidden flex flex-col">
+                <div className="h-3" style={{ backgroundColor: t.preview.surface }} />
+                <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: t.preview.bg }}>
+                  <div className="w-6 h-6 rounded" style={{ backgroundColor: t.preview.accent }} />
+                </div>
+              </div>
+              
+              {/* Icono */}
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: t.preview.accent }}>
                 <Icon className="w-4 h-4 text-white" />
               </div>
-              <div className="flex items-center gap-1">
-                <div className={`w-3 h-3 rounded-sm ${t.bgAlt}`} />
-                <div className={`w-3 h-3 rounded-sm ${t.bg}`} />
-              </div>
-              <span className={`text-xs font-medium ${t.text}`}>{t.label}</span>
+              
+              {/* Label */}
+              <span className="text-xs font-medium" style={{ color: t.preview.text }}>{t.label}</span>
+              
+              {/* Check de seleccion */}
               {isSelected && (
                 <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
                   <span className="text-white text-[10px]">✓</span>
