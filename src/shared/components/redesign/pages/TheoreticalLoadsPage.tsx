@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText, Cloud, HardDrive, Upload, Trash2, RefreshCw,
   Search, Package, Download, Loader2,
   CheckCircle2, AlertTriangle, Database, Layers,
-  Play, Send, Calendar, Clock, ArrowRight, Printer
+  Play, Send, Calendar, Clock, ArrowRight, Printer,
+  Eye, ShoppingCart, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -17,6 +18,7 @@ import {
 import { erpService, type ErpManifest } from '@/services/erpService'
 import { SoundFX } from '@/services/audio'
 import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
+import { formatDetailDateTime } from '@/lib/date'
 
 // ============================================================================
 // HELPERS
@@ -87,6 +89,7 @@ const LocalOrderCard = ({
   onDelete, 
   onStartCount,
   onPrint,
+  onViewDetail,
   isLoading,
   importingId 
 }: {
@@ -95,6 +98,7 @@ const LocalOrderCard = ({
   onDelete: () => void
   onStartCount: () => void
   onPrint: () => void
+  onViewDetail: () => void
   isLoading: boolean
   importingId: string | null
 }) => {
@@ -106,14 +110,19 @@ const LocalOrderCard = ({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-surface border border-subtle rounded-xl p-4 hover:border-emerald-500/30 transition-colors"
+      className="group bg-surface border border-subtle rounded-xl p-4 hover:border-emerald-500/30 transition-colors"
     >
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
           <HardDrive className="w-6 h-6 text-emerald-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-primary truncate">{displayName}</p>
+          <button onClick={onViewDetail} className="text-left hover:opacity-80 transition-opacity">
+            <p className="text-sm font-semibold text-primary truncate flex items-center gap-2">
+              {displayName}
+              <Eye className="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100" />
+            </p>
+          </button>
           <div className="flex items-center gap-4 mt-1.5 text-xs text-muted">
             <span className="flex items-center gap-1">
               <Package className="w-3 h-3" /> {skuCount} SKUs
@@ -329,6 +338,13 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
   const [importingId, setImportingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cloudManifests, setCloudManifests] = useState<ErpManifest[]>([])
+  const [detailModal, setDetailModal] = useState<{
+    open: boolean
+    order: ExpectedOrder | null
+  }>({
+    open: false,
+    order: null
+  })
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean
     title: string
@@ -529,6 +545,28 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     toast.success('Ticket enviado a imprimir')
   }
 
+  // Ver detalle de orden
+  const handleViewDetail = (order: ExpectedOrder) => {
+    setDetailModal({ open: true, order })
+  }
+
+  // Eliminar desde modal de detalle
+  const handleDeleteFromDetail = () => {
+    if (detailModal.order) {
+      setConfirmModal({
+        open: true,
+        title: 'Eliminar Carga Teórica',
+        description: `¿Eliminar "${detailModal.order.id}"? Esta acción no se puede deshacer.`,
+        confirmText: 'Eliminar',
+        variant: 'danger',
+        action: async () => {
+          await deleteLocalOrder(detailModal.order!.id)
+          setDetailModal({ open: false, order: null })
+        }
+      })
+    }
+  }
+
   const handleImportCloud = (manifestId: string) => {
     setConfirmModal({
       open: true,
@@ -681,6 +719,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
                         onDelete={() => handleDeleteLocal(order.id)}
                         onStartCount={() => handleStartCount(order)}
                         onPrint={() => handlePrintOrder(order)}
+                        onViewDetail={() => handleViewDetail(order)}
                         isLoading={loadingLocal}
                         importingId={importingId}
                       />
@@ -768,6 +807,14 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Detalle de Orden */}
+      <OrderDetailModal
+        isOpen={detailModal.open}
+        onClose={() => setDetailModal({ open: false, order: null })}
+        order={detailModal.order}
+        onDelete={handleDeleteFromDetail}
+      />
 
       {/* Modal de Confirmación */}
       <ConfirmModal
