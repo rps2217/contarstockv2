@@ -238,6 +238,85 @@ const CloudManifestCard = ({
 }
 
 // ============================================================================
+// MODAL DE DETALLE DE ORDEN
+// ============================================================================
+const OrderDetailModal = ({
+  isOpen,
+  onClose,
+  order,
+  onDelete
+}: {
+  isOpen: boolean
+  onClose: () => void
+  order: ExpectedOrder | null
+  onDelete: () => void
+}) => {
+  if (!isOpen || !order) return null
+
+  const skuCount = order.items?.length || 0
+  const totalQty = order.items?.reduce((acc, i) => acc + (i.expectedQty || i.quantity || 0), 0) || 0
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        className="bg-base border border-subtle rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-subtle flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <ShoppingCart className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-primary">{order.metadata?.documentType || 'Carga Teorica'}</h3>
+              <p className="text-xs text-muted font-mono">{order.id}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-surface rounded-lg transition-colors">
+            <X className="w-5 h-5 text-muted" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="bg-surface rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-black uppercase text-muted tracking-widest">Informacion</h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-muted text-xs">Tipo</span>
+                <p className="font-medium">{order.metadata?.documentType || 'Picking List'}</p>
+              </div>
+              <div>
+                <span className="text-muted text-xs">Orden Compra</span>
+                <p className="font-medium font-mono">{order.metadata?.purchaseOrder || '---'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-blue-500/10 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-blue-500">{skuCount}</p>
+              <p className="text-xs text-muted">SKUs</p>
+            </div>
+            <div className="bg-amber-500/10 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-amber-500">{totalQty}</p>
+              <p className="text-xs text-muted">Unidades</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 border-t border-subtle flex gap-3 shrink-0">
+          <button onClick={onDelete} className="flex-1 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl font-medium text-sm transition-colors">Eliminar</button>
+          <button onClick={onClose} className="flex-1 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium text-sm transition-colors">Cerrar</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+
+// ============================================================================
 // MODAL DE CONFIRMACIÓN
 // ============================================================================
 const ConfirmModal = ({ 
@@ -485,13 +564,19 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     setLoadingCloud(true)
     setError(null)
     try {
+      console.log("[TheoreticalLoads] Obteniendo cargas desde la nube...")
       const manifests = await erpService.downloadAllPendingManifests()
+      console.log("[TheoreticalLoads] Manifiestos recibidos:", manifests)
       setCloudManifests(manifests || [])
-      toast.success(`Se encontraron ${manifests?.length || 0} cargas en la nube`)
+      if (manifests && manifests.length > 0) {
+        toast.success(`Se encontraron ${manifests.length} cargas en la nube`)
+      } else {
+        toast.info("No hay cargas teoricas disponibles en la nube")
+      }
     } catch (err: any) {
-      console.error('Error fetchCloudManifests:', err)
-      setError('No se pudieron obtener las cargas teóricas de la nube')
-      toast.error(err.message || 'Error al cargar desde la nube')
+      console.error("[TheoreticalLoads] Error:", err)
+      setError("No se pudieron obtener las cargas de la nube")
+      toast.error(err.message || "Error al cargar desde la nube")
       setCloudManifests([])
     } finally {
       setLoadingCloud(false)
