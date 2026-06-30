@@ -56,7 +56,8 @@ const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').th
 const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
 // REDISEÑO: TheoreticalLoadsPage para gestión de cargas teóricas
 const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
-const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
+// REDISEÑO: HammerPage para modo ráfaga
+const HammerPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignHammerPage })));
 
 // Componentes pesados - Solo carga cuando se necesitan
 const Sidebar = lazyWithRetry(() => import('@/components/Sidebar').then(m => ({ default: m.Sidebar })));
@@ -265,8 +266,8 @@ const AppContent = () => {
                     <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
                     <Route path="/counting" element={<Navigate to="/reports" replace />} />
                     <Route path="/counting/:id" element={<CountingLegacy />} />
-                    <Route path="/massive" element={<HammerLegacy />} />
-                    <Route path="/massive/:batchId" element={<HammerLegacy />} />
+                    <Route path="/massive" element={<HammerPage />} />
+                    <Route path="/massive/:batchId" element={<HammerPage />} />
                     <Route path="/database" element={<Navigate to="/data" replace />} />
                     {/* REDISEÑO: Usando versiones rediseñadas */}
                     <Route path="/customers" element={<CustomersPage />} />
