@@ -5,7 +5,7 @@ import {
   Search, Package, Download, Loader2,
   CheckCircle2, AlertTriangle, Database, Layers,
   Play, Send, Calendar, Clock, ArrowRight, Printer,
-  Eye, ShoppingCart, X, ChevronDown, ChevronUp, Plus
+  Eye, ShoppingCart, X, Plus, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -20,6 +20,7 @@ import { erpService, type ErpManifest } from '@/services/erpService'
 import { SoundFX } from '@/services/audio'
 import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
 import { formatDetailDateTime } from '@/lib/date'
+import { NewOrderForm } from '../components/NewOrderForm'
 
 // ============================================================================
 // HELPERS
@@ -402,7 +403,7 @@ const ConfirmModal = ({
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
-type TabType = 'local' | 'cloud' | 'stock'
+type TabType = 'local' | 'cloud' | 'stock' | 'new'
 
 // Generar batchId único para las operaciones
 const generateBatchId = () => {
@@ -852,6 +853,13 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
             count={1}
             color="amber"
           />
+          <TabButton
+            active={activeTab === 'new'}
+            onClick={() => setActiveTab('new')}
+            icon={Plus}
+            label="Nueva"
+            color="emerald"
+          />
         </div>
       </div>
 
@@ -978,8 +986,8 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">Stock Teórico General</h4>
-                    <p className="text-[9px] font-bold text-muted uppercase mt-0.5 tracking-tight">Utilizar última planilla de stock total (STOCK)</p>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">Stock Teorico General</h4>
+                    <p className="text-[9px] font-bold text-muted uppercase mt-0.5 tracking-tight">Utilizar ultima planilla de stock total (STOCK)</p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
                 </button>
@@ -988,6 +996,28 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
               <div className="text-center pt-2">
                 <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.2em]">Selecciona un listado a sincronizar</p>
               </div>
+            </div>
+          )}
+
+          {/* ========== TAB NUEVA CARGA (formulario de importacion) ========== */}
+          {activeTab === 'new' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                  Nueva Carga Teorica
+                </h3>
+                <button
+                  onClick={() => setActiveTab('local')}
+                  className="px-3 py-1.5 bg-surface hover:bg-elevated text-muted text-xs rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+              <NewOrderForm
+                onSaved={() => setActiveTab('local')}
+                onCancel={() => setActiveTab('local')}
+              />
             </div>
           )}
         </div>
