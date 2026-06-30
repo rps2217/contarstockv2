@@ -825,6 +825,310 @@ export class ThermalPrinterEngine {
     }
   }
 
+  /**
+   * Imprimir ticket de conteo HAMMER con TEORICO vs REAL
+   */
+  public printHammerTicket(order: any) {
+    // 1. Quitar residuo previo
+    const oldIframe = document.getElementById('thermal-print-iframe');
+    if (oldIframe) {
+      oldIframe.parentNode?.removeChild(oldIframe);
+    }
+
+    // 2. Crear iframe invisible
+    const iframe = document.createElement('iframe');
+    iframe.id = 'thermal-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.bottom = '0';
+    iframe.style.right = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      console.error("No se pudo iniciar el canal de impresion nativa.");
+      return;
+    }
+
+    const title = order.metadata?.documentType || "CONTEO HAMMER";
+    const documentId = order.id;
+    const itemsCount = order.items?.length || 0;
+    const dateStr = new Date().toLocaleDateString('es-ES');
+    const timeStr = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const location = order.metadata?.purchaseOrder || 'ZONA-A';
+    const batchInfo = order.metadata?.internalGuide || `Lote: ${documentId}`;
+
+    // Calcular totales
+    const totalTeorico = (order.items || []).reduce((acc: number, item: any) => acc + (item.expectedQty || 0), 0);
+    const totalReal = (order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || item.totalQuantity || 0), 0);
+    const diferencia = totalReal - totalTeorico;
+
+    // Generar HTML de items
+    const itemsHtml = (order.items || []).map((item: any, index: number) => {
+      const teorico = item.expectedQty || 0;
+      const real = item.quantity || item.totalQuantity || 0;
+      const diff = real - teorico;
+      const diffClass = diff === 0 ? 'diff-ok' : diff > 0 ? 'diff-mas' : 'diff-menos';
+      const diffText = diff === 0 ? 'OK' : diff > 0 ? `+${diff}` : `${diff}`;
+
+      return `
+        <div class="hammer-item">
+          <div class="hammer-item-header">
+            <span class="hammer-item-num">${index + 1}</span>
+            <span class="hammer-item-name">${item.name || 'SIN DESCRIPCION'}</span>
+          </div>
+          <div class="hammer-item-details">
+            <div class="hammer-item-barcode">${item.barcode}</div>
+            <div class="hammer-item-location">${item.loc || ''}</div>
+          </div>
+          <div class="hammer-item-qtys">
+            <div class="qty-box">
+              <span class="qty-label">TEORICO</span>
+              <span class="qty-value">${teorico}</span>
+            </div>
+            <div class="qty-divider">VS</div>
+            <div class="qty-box">
+              <span class="qty-label">REAL</span>
+              <span class="qty-value">${real}</span>
+            </div>
+            <div class="qty-box diff-box ${diffClass}">
+              <span class="qty-label">DIF</span>
+              <span class="qty-value">${diffText}</span>
+            </div>
+          </div>
+          <div class="item-divider"></div>
+        </div>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${title} - ${documentId}</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+              width: 80mm;
+              margin: 0 auto;
+              padding: 5px;
+              background: #fff;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 8px;
+              padding-bottom: 5px;
+              border-bottom: 2px solid #000;
+            }
+            .header h1 {
+              font-size: 14px;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 3px;
+            }
+            .header .subtitle {
+              font-size: 9px;
+              font-weight: bold;
+            }
+            .header .meta {
+              font-size: 8px;
+              margin-top: 3px;
+            }
+            .totals-section {
+              display: flex;
+              justify-content: space-between;
+              margin: 8px 0;
+              padding: 5px;
+              background: #f5f5f5;
+              border: 1px solid #000;
+            }
+            .total-box {
+              text-align: center;
+            }
+            .total-box .label {
+              font-size: 7px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .total-box .value {
+              font-size: 14px;
+              font-weight: 900;
+            }
+            .total-box.diff .value {
+              font-size: 12px;
+            }
+            .diff-ok .value { color: #166534; }
+            .diff-mas .value { color: #1d4ed8; }
+            .diff-menos .value { color: #dc2626; }
+            .items-header {
+              font-size: 8px;
+              font-weight: bold;
+              text-transform: uppercase;
+              margin: 8px 0 4px 0;
+              padding-bottom: 2px;
+              border-bottom: 1px dashed #000;
+            }
+            .hammer-item {
+              margin-bottom: 8px;
+              page-break-inside: avoid;
+            }
+            .hammer-item-header {
+              display: flex;
+              align-items: baseline;
+              gap: 5px;
+              margin-bottom: 2px;
+            }
+            .hammer-item-num {
+              font-size: 8px;
+              font-weight: bold;
+              color: #666;
+              min-width: 20px;
+            }
+            .hammer-item-name {
+              font-size: 10px;
+              font-weight: 900;
+              text-transform: uppercase;
+              flex: 1;
+              word-break: break-word;
+            }
+            .hammer-item-details {
+              display: flex;
+              justify-content: space-between;
+              font-size: 8px;
+              margin-bottom: 3px;
+              color: #666;
+            }
+            .hammer-item-barcode {
+              font-family: monospace;
+            }
+            .hammer-item-qtys {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              padding: 4px;
+              background: #fff;
+              border: 1px solid #ccc;
+            }
+            .qty-box {
+              flex: 1;
+              text-align: center;
+            }
+            .qty-label {
+              display: block;
+              font-size: 6px;
+              font-weight: bold;
+              color: #666;
+              text-transform: uppercase;
+            }
+            .qty-value {
+              display: block;
+              font-size: 12px;
+              font-weight: 900;
+            }
+            .qty-divider {
+              font-size: 8px;
+              font-weight: bold;
+              color: #999;
+              padding: 0 2px;
+            }
+            .diff-box .qty-value {
+              font-size: 11px;
+            }
+            .item-divider {
+              border-top: 1px dashed #ccc;
+              margin-top: 4px;
+            }
+            .footer {
+              margin-top: 10px;
+              padding-top: 5px;
+              border-top: 2px solid #000;
+              text-align: center;
+            }
+            .footer .total-label {
+              font-size: 10px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .footer .items-count {
+              font-size: 9px;
+              margin-top: 2px;
+              color: #666;
+            }
+            .footer .datetime {
+              font-size: 8px;
+              margin-top: 3px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>CONTEO HAMMER</h1>
+            <div class="subtitle">${batchInfo}</div>
+            <div class="meta">
+              UBICACION: ${location} | FECHA: ${dateStr}
+            </div>
+          </div>
+
+          <div class="totals-section">
+            <div class="total-box">
+              <span class="label">Total Teorico</span>
+              <span class="value">${totalTeorico}</span>
+            </div>
+            <div class="total-box">
+              <span class="label">Total Real</span>
+              <span class="value">${totalReal}</span>
+            </div>
+            <div class="total-box diff ${diferencia === 0 ? 'diff-ok' : diferencia > 0 ? 'diff-mas' : 'diff-menos'}">
+              <span class="label">Diferencia</span>
+              <span class="value">${diferencia === 0 ? '0' : diferencia > 0 ? '+' + diferencia : diferencia}</span>
+            </div>
+          </div>
+
+          <div class="items-header">
+            Detalle de Items (${itemsCount})
+          </div>
+
+          <div class="items-container">
+            ${itemsHtml}
+          </div>
+
+          <div class="footer">
+            <div class="total-label">Fin del Reporte</div>
+            <div class="items-count">${itemsCount} productos listados</div>
+            <div class="datetime">Generado: ${dateStr} ${timeStr}</div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+    }, 120);
+  }
+
   isConnected(): boolean {
     const usbOk = !!this.usbDevice && this.usbDevice.opened;
     const bleOk = !!this.bleDevice && this.bleDevice.gatt.connected;

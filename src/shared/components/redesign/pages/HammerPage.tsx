@@ -5,7 +5,8 @@ import {
   Hammer, Package, Trash2, RefreshCw, Check, X,
   AlertTriangle, TrendingUp, Settings, Download, Scan, Keyboard,
   Cloud, CloudOff, Volume2, VolumeX, Play,
-  FileSpreadsheet, BarChart3, MapPin, Zap, RotateCcw, Printer
+  FileSpreadsheet, BarChart3, MapPin, Zap, RotateCcw, Printer,
+  HardDrive, Loader2, Eye, ShoppingCart
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -16,6 +17,10 @@ import { useHIDScanner } from '@/hooks/useHIDScanner'
 import { useAppStore } from '@/stores'
 import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '@/services/massiveSync'
 import { exportHammerToExcel } from '@/services/export'
+import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
+import { ExpectedOrderRepository, type ExpectedOrder } from '@/repositories/ExpectedOrderRepository'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '@/db'
 import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal'
 
 // ============================================================================
@@ -125,6 +130,7 @@ interface ToolsSheetProps {
   onImport: () => void
   onSync: () => void
   onExport: () => void
+  onPrint: () => void
   onReset: () => void
   onStartTestCounting: () => void
   isSyncing: boolean
@@ -137,7 +143,7 @@ interface ToolsSheetProps {
 
 const ToolsSheet: React.FC<ToolsSheetProps> = ({
   isOpen, onClose, location, onChangeLocation, onImport, onSync,
-  onExport, onReset, onStartTestCounting, isSyncing, autoSyncEnabled, 
+  onExport, onPrint, onReset, onStartTestCounting, isSyncing, autoSyncEnabled, 
   onToggleAutoSync, isVoiceEnabled, onToggleVoice, hasManifestItems
 }) => {
   return (
@@ -188,6 +194,15 @@ const ToolsSheet: React.FC<ToolsSheetProps> = ({
                 title="Exportar a Excel"
                 description="Descarga resumen en archivo .xlsx"
                 onClick={() => { onExport(); onClose(); toast.success('Exportando...'); }}
+              />
+
+              <ToolItem
+                icon={Printer}
+                iconColor="text-purple-500"
+                iconBg="bg-purple-500/10"
+                title="Imprimir Ticket"
+                description="Imprime ticket con TEORICO vs REAL"
+                onClick={() => { onPrint(); onClose(); }}
               />
 
               {hasManifestItems && (
@@ -284,19 +299,37 @@ const ToolsSheet: React.FC<ToolsSheetProps> = ({
 }
 
 // ============================================================================
-// Modal de Importacion
+// Modal de Importacion con seleccion de ordenes locales
 // ============================================================================
 interface ImportModalProps {
   isOpen: boolean
   onClose: () => void
   onImportStock: () => void
   onImportCloud: () => void
-  onImportLocal: () => void
+  onImportLocal: (orderId: string) => void
 }
 
 const ImportModal: React.FC<ImportModalProps> = ({
   isOpen, onClose, onImportStock, onImportCloud, onImportLocal
 }) => {
+  const [activeTab, setActiveTab] = useState<'import' | 'local'>('import')
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Obtener cargas teoricas locales
+  const localOrders = useLiveQuery(() => 
+    db.expectedOrders.orderBy('updatedAt').reverse().limit(20).toArray()
+  ) || []
+
+  const handleImportLocal = async (orderId: string) => {
+    setIsLoading(true)
+    try {
+      await onImportLocal(orderId)
+      onClose()
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -316,34 +349,98 @@ const ImportModal: React.FC<ImportModalProps> = ({
           Importar Carga Teorica
         </h3>
 
-        <div className="space-y-3">
-          <ToolItem
-            icon={BarChart3}
-            iconColor="text-amber-500"
-            iconBg="bg-amber-500/10"
-            title="Stock General"
-            description="Ultima planilla de stock total desde la nube"
-            onClick={() => { onImportStock(); onClose(); }}
-          />
-
-          <ToolItem
-            icon={Cloud}
-            iconColor="text-blue-500"
-            iconBg="bg-blue-500/10"
-            title="Ordenes desde Nube"
-            description="Cargas teoricas guardadas en Supabase"
-            onClick={() => { onImportCloud(); onClose(); }}
-          />
-
-          <ToolItem
-            icon={Package}
-            iconColor="text-emerald-500"
-            iconBg="bg-emerald-500/10"
-            title="Ordenes Locales"
-            description="Cargas teoricas guardadas en el dispositivo"
-            onClick={() => { onImportLocal(); onClose(); }}
-          />
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setActiveTab('import')}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-medium transition-colors',
+              activeTab === 'import' ? 'bg-blue-500 text-white' : 'bg-surface text-secondary'
+            )}
+          >
+            Importar
+          </button>
+          <button
+            onClick={() => setActiveTab('local')}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-medium transition-colors',
+              activeTab === 'local' ? 'bg-blue-500 text-white' : 'bg-surface text-secondary'
+            )}
+          >
+            Locales ({localOrders.length})
+          </button>
         </div>
+
+        {activeTab === 'import' && (
+          <div className="space-y-3">
+            <ToolItem
+              icon={BarChart3}
+              iconColor="text-amber-500"
+              iconBg="bg-amber-500/10"
+              title="Stock General"
+              description="Ultima planilla de stock total desde la nube"
+              onClick={() => { onImportStock(); onClose(); }}
+            />
+
+            <ToolItem
+              icon={Cloud}
+              iconColor="text-blue-500"
+              iconBg="bg-blue-500/10"
+              title="Ordenes desde Nube"
+              description="Cargas teoricas guardadas en Supabase"
+              onClick={() => { onImportCloud(); onClose(); }}
+            />
+
+            <ToolItem
+              icon={HardDrive}
+              iconColor="text-emerald-500"
+              iconBg="bg-emerald-500/10"
+              title="Ver Ordenes Locales"
+              description="Seleccionar una carga teorica guardada"
+              onClick={() => setActiveTab('local')}
+            />
+          </div>
+        )}
+
+        {activeTab === 'local' && (
+          <div className="space-y-2">
+            {localOrders.length === 0 ? (
+              <div className="text-center py-8">
+                <HardDrive className="w-12 h-12 text-muted mx-auto mb-3" />
+                <p className="text-sm text-muted">No hay cargas teoricas guardadas</p>
+                <p className="text-xs text-muted mt-1">Ve a Cargas Teoricas para crear una</p>
+              </div>
+            ) : (
+              localOrders.map(order => {
+                const skuCount = order.items?.length || 0
+                const totalQty = order.items?.reduce((acc, i) => acc + (i.quantity || i.expectedQty || 0), 0) || 0
+                const displayName = order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id
+                
+                return (
+                  <button
+                    key={order.id}
+                    onClick={() => handleImportLocal(order.id)}
+                    disabled={isLoading}
+                    className="w-full flex items-center gap-3 p-3 bg-surface hover:bg-elevated rounded-xl transition-colors text-left disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <ShoppingCart className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-primary truncate">{displayName}</p>
+                      <p className="text-xs text-muted">{skuCount} SKUs · {totalQty} unidades</p>
+                    </div>
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 text-muted animate-spin" />
+                    ) : (
+                      <Eye className="w-5 h-5 text-muted" />
+                    )}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        )}
 
         <button 
           onClick={onClose}
@@ -448,6 +545,49 @@ export const RedesignHammerPage: React.FC = () => {
   const handleExport = () => {
     exportHammerToExcel(batchId, state.items)
     toast.success('Exportando...')
+  }
+
+  const handleImportLocal = async (orderId: string) => {
+    try {
+      await importLocalExpectedOrderToHammer(batchId, orderId)
+      toast.success('Carga teorica importada')
+    } catch (err: any) {
+      toast.error(err.message || 'Error al importar')
+    }
+  }
+
+  const handlePrintTicket = () => {
+    if (state.items.length === 0) {
+      toast.error('No hay items para imprimir')
+      return
+    }
+
+    // Crear un objeto ExpectedOrder con los items del hammer
+    const hammerOrder: ExpectedOrder = {
+      id: `HAMMER-${batchId}-${Date.now()}`,
+      status: 'pending',
+      items: state.items.map(item => ({
+        barcode: item.barcode,
+        name: item.name,
+        expectedQty: item.expectedQty || 0,
+        quantity: item.totalQuantity,
+        loc: item.loc || '',
+        scannedAt: new Date().toISOString(),
+        syncStatus: 'synced' as const
+      })),
+      metadata: {
+        documentType: 'CONTEO HAMMER',
+        internalGuide: `Lote ${batchId}`,
+        purchaseOrder: locManager.location || 'ZONA-A',
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString()
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    thermalPrinter.printHammerTicket(hammerOrder)
+    toast.success('Imprimiendo ticket...')
   }
 
   // Stats
@@ -685,6 +825,7 @@ export const RedesignHammerPage: React.FC = () => {
         onImport={() => setIsImportModalOpen(true)}
         onSync={() => actions.syncToCloud()}
         onExport={handleExport}
+        onPrint={handlePrintTicket}
         onReset={() => actions.removeItem('ALL')}
         onStartTestCounting={handleStartTestCounting}
         isSyncing={state.isSyncing}
@@ -700,7 +841,7 @@ export const RedesignHammerPage: React.FC = () => {
         onClose={() => setIsImportModalOpen(false)}
         onImportStock={() => importManifestFromCloud(batchId)}
         onImportCloud={() => importExpectedOrderFromCloud(batchId)}
-        onImportLocal={() => importLocalExpectedOrderToHammer(batchId)}
+        onImportLocal={handleImportLocal}
       />
 
       <LocationSelectorModal
