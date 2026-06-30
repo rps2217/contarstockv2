@@ -5,7 +5,7 @@ import {
   Search, Package, Download, Loader2,
   CheckCircle2, AlertTriangle, Database, Layers,
   Play, Send, Calendar, Clock, ArrowRight, Printer,
-  Eye, ShoppingCart, X
+  Eye, ShoppingCart, X, ChevronDown, ChevronUp, Plus
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -13,7 +13,8 @@ import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { 
   ExpectedOrderRepository,
-  type ExpectedOrder 
+  type ExpectedOrder,
+  type ExpectedItem
 } from '@/repositories/ExpectedOrderRepository'
 import { erpService, type ErpManifest } from '@/services/erpService'
 import { SoundFX } from '@/services/audio'
@@ -338,6 +339,9 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
   const [importingId, setImportingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cloudManifests, setCloudManifests] = useState<ErpManifest[]>([])
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+  const [itemSearchQuery, setItemSearchQuery] = useState('')
   const [detailModal, setDetailModal] = useState<{
     open: boolean
     order: ExpectedOrder | null
@@ -598,6 +602,80 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     toast.success('Lista local actualizada')
   }
 
+  // Descargar órdenes desde la nube (Tabla PEDIDOS)
+  const downloadFromCloud = useCallback(async () => {
+    if (!navigator.onLine) {
+      toast.warning("Sin conexión a internet.")
+      return
+    }
+    setIsSyncing(true)
+    try {
+      const result = await ExpectedOrderRepository.downloadFromCloud()
+      if (result.success) {
+        toast.success(`Se descargaron ${result.orders.length} cargas desde la nube`)
+      } else {
+        toast.error(result.error || 'Error al descargar')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error de conexión')
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [])
+
+  // Subir todas las órdenes locales a la nube
+  const syncAllToCloud = useCallback(async () => {
+    if (!navigator.onLine) {
+      toast.warning("Sin conexión a internet.")
+      return
+    }
+    if (localOrders.length === 0) {
+      toast.warning("No hay órdenes locales para sincronizar")
+      return
+    }
+    setIsSyncing(true)
+    try {
+      let uploaded = 0
+      let errors = 0
+      for (const order of localOrders) {
+        const result = await ExpectedOrderRepository.uploadToCloud(order)
+        if (result.success) uploaded++
+        else errors++
+      }
+      if (errors === 0) {
+        toast.success(`Se sincronizaron ${uploaded} cargas a la nube`)
+      } else {
+        toast.warning(`Sincronizados: ${uploaded}, Errores: ${errors}`)
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error de sincronización')
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [localOrders])
+
+  // Toggle expansión de orden
+  const toggleExpandOrder = useCallback((orderId: string) => {
+    setExpandedOrderId(prev => prev === orderId ? null : orderId)
+    setItemSearchQuery('')
+  }, [])
+
+  // Órden expandida actualmente
+  const expandedOrder = useMemo(() => {
+    return localOrders.find(o => o.id === expandedOrderId) || null
+  }, [expandedOrderId, localOrders])
+
+  // Filtrar items de orden expandida
+  const filteredExpandedItems = useMemo(() => {
+    if (!expandedOrder) return []
+    if (!itemSearchQuery.trim()) return expandedOrder.items
+    const term = itemSearchQuery.toLowerCase()
+    return expandedOrder.items.filter(item =>
+      item.barcode.toLowerCase().includes(term) ||
+      item.name.toLowerCase().includes(term)
+    )
+  }, [expandedOrder, itemSearchQuery])
+
   // =========================================================================
   // RENDER
   // =========================================================================
@@ -614,6 +692,28 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
             <p className="text-secondary text-sm mt-1">
               Gestiona listados de stock teóricos para auditorías y conteos.
             </p>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadFromCloud}
+              disabled={isSyncing}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+              title="Descargar desde la nube"
+            >
+              {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span className="hidden sm:inline">Desde Nube</span>
+            </button>
+            <button
+              onClick={syncAllToCloud}
+              disabled={isSyncing || localOrders.length === 0}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+              title="Subir a la nube"
+            >
+              {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              <span className="hidden sm:inline">A Nube ({localOrders.length})</span>
+            </button>
           </div>
         </div>
 
