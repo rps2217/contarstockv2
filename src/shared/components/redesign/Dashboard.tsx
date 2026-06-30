@@ -23,6 +23,7 @@ import {
   ArrowRight,
   BarChart3,
   PieChart,
+  Scissors,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from './utils';
@@ -326,19 +327,19 @@ export const RedesignDashboard: React.FC = () => {
           />
 
           <StatCard
+            title="Cortes"
+            value={0}
+            icon={Scissors}
+            colorClass="bg-rose-500/10 text-rose-500"
+            linkTo="/slices"
+          />
+
+          <StatCard
             title="Sesiones"
             value={metrics.sessionCount || 0}
             icon={History}
             colorClass="bg-emerald-500/10 text-emerald-500"
             linkTo="/data"
-          />
-
-          <StatCard
-            title="Hoy"
-            value={metrics.todaySessions || 0}
-            icon={CheckCircle2}
-            colorClass="bg-cyan-500/10 text-cyan-500"
-            linkTo="/dashboard"
           />
 
           <StatCard
@@ -369,7 +370,7 @@ export const RedesignDashboard: React.FC = () => {
         )}
 
         {/* Quick Actions Grid */}
-        <div className="mb-6">
+        <div>
           <h2 className="text-lg font-semibold text-primary mb-4">
             Acciones rápidas
           </h2>
@@ -406,52 +407,6 @@ export const RedesignDashboard: React.FC = () => {
               delay={0.25}
               onClick={() => navigate('/data')}
             />
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <h2 className="text-lg font-semibold text-primary mb-4">
-            Actividad reciente
-          </h2>
-          <div className="bg-surface border border-subtle rounded-2xl overflow-hidden">
-            {recentActivity.slice(0, 5).map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-4 border-b border-subtle last:border-0 hover:bg-elevated transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-elevated flex items-center justify-center text-secondary">
-                    <span className="text-xs font-bold">
-                      {item.user?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-primary">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-muted">
-                      {item.time} {item.user && `• ${item.user}`}
-                    </p>
-                  </div>
-                </div>
-                {item.count !== undefined && (
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-primary">
-                      {item.count}
-                    </p>
-                    <p className="text-[10px] text-muted uppercase tracking-wider">
-                      {item.countLabel || 'Ítems'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-            {recentActivity.length === 0 && (
-              <div className="p-8 text-center text-muted text-sm">
-                No hay actividad reciente
-              </div>
-            )}
           </div>
         </div>
       </div>
