@@ -43,10 +43,16 @@ const ExpiryPage = lazyWithRetry(() => import('@/shared/components/redesign').th
 const ExpiryLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
 const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
 const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
+// REDISEÑO: CustomersPage usando versión rediseñada
+const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage })));
 const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
+// REDISEÑO: SuppliersPage usando versión rediseñada
+const SuppliersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage })));
 const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 const ExpectedOrdersLegacy = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
 const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
+// REDISEÑO: SlicesPage usando versión rediseñada
+const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
 const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
 const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
 
@@ -260,10 +266,11 @@ const AppContent = () => {
                     <Route path="/massive" element={<Navigate to="/reports" replace />} />
                     <Route path="/massive/:batchId" element={<HammerLegacy />} />
                     <Route path="/database" element={<Navigate to="/data" replace />} />
-                    <Route path="/customers" element={<CustomersLegacy />} />
-                    <Route path="/providers" element={<ProvidersLegacy />} />
+                    {/* REDISEÑO: Usando versiones rediseñadas */}
+                    <Route path="/customers" element={<CustomersPage />} />
+                    <Route path="/providers" element={<SuppliersPage />} />
                     <Route path="/expected-orders" element={<ExpectedOrdersLegacy />} />
-                    <Route path="/slices" element={<SlicesLegacy />} />
+                    <Route path="/slices" element={<SlicesPage />} />
                     <Route path="/dynamic/:tableKey" element={<DynamicLegacy />} />
 
                     {/* Fallback */}
