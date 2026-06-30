@@ -24,6 +24,7 @@ import {
   BarChart3,
   PieChart,
   Scissors,
+  Layers,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from './utils';
@@ -406,6 +407,14 @@ export const RedesignDashboard: React.FC = () => {
               icon={Package}
               delay={0.25}
               onClick={() => navigate('/data')}
+            />
+
+            <ActionCard
+              title="Cargas teóricas"
+              description="Gestiona listados de stock teóricos para auditorías."
+              icon={Layers}
+              delay={0.3}
+              onClick={() => navigate('/theoretical-loads')}
             />
           </div>
         </div>
