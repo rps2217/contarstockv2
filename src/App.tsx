@@ -133,7 +133,7 @@ const AppContent = () => {
     settings.theme === 'night' ? 'bg-[#0A0A0B] text-white' :
     'bg-base text-slate-100';
 
-  const isDarkMode = settings.theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || settings.theme === 'high-contrast' || settings.theme === 'night';
+  const isDarkMode = settings.theme === 'dark' || settings.theme === 'night' || settings.theme === 'high-contrast' || settings.theme === 'appsheet-dark';
   const isHighContrast = settings.theme === 'high-contrast';
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
