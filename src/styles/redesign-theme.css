@@ -34,15 +34,32 @@
   --text-muted: #a1a1aa;
 }
 
-/* Tema Gris */
+/* Tema Gris - Claro con alto contraste */
 [data-theme="gray"] {
-  --bg-base: #1a1a1a;
-  --bg-surface: #242424;
-  --bg-elevated: #2e2e2e;
-  --border-subtle: rgba(255, 255, 255, 0.1);
-  --text-primary: #e5e5e5;
-  --text-secondary: #a3a3a3;
+  --bg-base: #f0f0f0;
+  --bg-surface: #ffffff;
+  --bg-elevated: #e8e8e8;
+  --border-subtle: rgba(0, 0, 0, 0.12);
+  --border-default: rgba(0, 0, 0, 0.15);
+  --text-primary: #171717;
+  --text-secondary: #525252;
   --text-muted: #737373;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Tema Noche - Oscuro estilo Night Steel */
+[data-theme="night"] {
+  --bg-base: #0A0A0B;
+  --bg-surface: #18181B;
+  --bg-elevated: #1F1F23;
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 /* Tema appsheet-dark (estilo AppSheet) */

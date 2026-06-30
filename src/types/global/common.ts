@@ -8,7 +8,8 @@
 export type SyncStatus = 'pending' | 'synced' | 'error' | 'pending_delete';
 
 // Tema de la aplicación
-export type AppTheme = 'dark' | 'light' | 'high-contrast';
+export type AppTheme = 'dark' | 'light' | 'high-contrast' | 'gray' | 'night';
+export type Theme = AppTheme;
 
 // Resultado genérico de operación
 export interface OperationResult<T = void> {

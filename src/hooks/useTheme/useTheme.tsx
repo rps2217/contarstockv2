@@ -15,8 +15,8 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 // TIPOS
 // ============================================================
 
-// Incluir 'gray' para compatibilidad con el rediseño
-export type ThemeName = 'dark' | 'light' | 'high-contrast' | 'appsheet-dark' | 'gray';
+// Incluir 'night' para el tema oscuro estilo Night Steel
+export type ThemeName = 'dark' | 'light' | 'high-contrast' | 'appsheet-dark' | 'gray' | 'night';
 export type ThemePreset = 'default' | 'corporate' | 'ocean' | 'forest' | 'sunset';
 
 export interface Theme {
@@ -60,9 +60,9 @@ interface ThemeContextType {
 // ============================================================
 
 const THEMES: Theme[] = [
-  { name: 'dark', label: 'Oscuro', icon: '🌙' },
-  { name: 'light', label: 'Claro', icon: '☀️' },
+  { name: 'night', label: 'Noche', icon: '🌙' },
   { name: 'gray', label: 'Gris', icon: '🌫️' },
+  { name: 'light', label: 'Claro', icon: '☀️' },
   { name: 'high-contrast', label: 'Alto Contraste', icon: '🔳' },
 ];
 
@@ -255,7 +255,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, setTheme]);
 
   const cycleTheme = useCallback(() => {
-    const themeOrder: ThemeName[] = ['dark', 'light', 'gray', 'high-contrast'];
+    const themeOrder: ThemeName[] = ['night', 'gray', 'light', 'high-contrast'];
     const currentIndex = themeOrder.indexOf(theme as ThemeName);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
     setTheme(themeOrder[nextIndex]);
