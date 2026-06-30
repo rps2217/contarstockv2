@@ -4,7 +4,7 @@ import {
   FileText, Cloud, HardDrive, Upload, Trash2, RefreshCw,
   Search, Package, Download, Loader2,
   CheckCircle2, AlertTriangle, Database, Layers,
-  Play, Send, Calendar, Clock, ArrowRight
+  Play, Send, Calendar, Clock, ArrowRight, Printer
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -16,6 +16,7 @@ import {
 } from '@/repositories/ExpectedOrderRepository'
 import { erpService, type ErpManifest } from '@/services/erpService'
 import { SoundFX } from '@/services/audio'
+import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
 
 // ============================================================================
 // HELPERS
@@ -85,6 +86,7 @@ const LocalOrderCard = ({
   onImport, 
   onDelete, 
   onStartCount,
+  onPrint,
   isLoading,
   importingId 
 }: {
@@ -92,6 +94,7 @@ const LocalOrderCard = ({
   onImport: () => void
   onDelete: () => void
   onStartCount: () => void
+  onPrint: () => void
   isLoading: boolean
   importingId: string | null
 }) => {
@@ -145,6 +148,14 @@ const LocalOrderCard = ({
         >
           <Send className="w-3.5 h-3.5" />
           Enviar
+        </button>
+        <button
+          onClick={onPrint}
+          disabled={isLoading}
+          className="px-3 py-2 hover:bg-purple-500/10 text-purple-500 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+          title="Imprimir ticket térmico"
+        >
+          <Printer className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={onDelete}
@@ -511,6 +522,13 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     })
   }
 
+  // Imprimir ticket de carga teórica
+  const handlePrintOrder = (order: ExpectedOrder) => {
+    SoundFX.play('increment')
+    thermalPrinter.printExpectedOrder(order)
+    toast.success('Ticket enviado a imprimir')
+  }
+
   const handleImportCloud = (manifestId: string) => {
     setConfirmModal({
       open: true,
@@ -662,6 +680,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
                         onImport={() => handleImportLocal(order.id)}
                         onDelete={() => handleDeleteLocal(order.id)}
                         onStartCount={() => handleStartCount(order)}
+                        onPrint={() => handlePrintOrder(order)}
                         isLoading={loadingLocal}
                         importingId={importingId}
                       />
