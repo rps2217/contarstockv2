@@ -331,21 +331,30 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     })
   },
   customers: {
-    localTable: 'dynamic_data',
-    filterField: 'tableName',
-    filterValue: 'CLIENTES',
+    localTable: 'customers',
     remoteTable: 'CLIENTES',
     primaryKey: 'id',
     mapToRemote: (record) => ({
-      ...record.data,
       id: record.id,
-      updated_at: new Date(record.timestamp).toISOString()
+      first_name: record.firstName,
+      last_name: record.lastName || '',
+      phone: record.phone || '',
+      email: record.email || '',
+      address: record.address || '',
+      rut: record.rut || '',
+      created_at: record.createdAt ? new Date(record.createdAt).toISOString() : new Date().toISOString(),
+      updated_at: record.updatedAt ? new Date(record.updatedAt).toISOString() : new Date().toISOString()
     }),
     mapToLocal: (remote) => ({
       id: remote.id,
-      tableName: 'CLIENTES',
-      data: remote,
-      timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
+      firstName: remote.first_name || remote.firstName || '',
+      lastName: remote.last_name || remote.lastName || '',
+      phone: remote.phone || '',
+      email: remote.email || '',
+      address: remote.address || '',
+      rut: remote.rut || '',
+      createdAt: remote.created_at ? new Date(remote.created_at).getTime() : Date.now(),
+      updatedAt: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
       syncStatus: 'synced'
     })
   },

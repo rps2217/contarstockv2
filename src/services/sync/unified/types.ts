@@ -204,7 +204,7 @@ export const DEFAULT_SYNC_CONFIG: Required<SyncEngineConfig> = {
   maxDelayMs: 60000,
   enableRealtime: true,
   autoResolveConflicts: false,
-  tables: ['products', 'sessions', 'scans', 'providers', 'expiry', 'events'],
+  tables: ['products', 'sessions', 'scans', 'providers', 'customers', 'expiry', 'events'],
 };
 
 // =============================================================================
