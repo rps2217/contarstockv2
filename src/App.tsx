@@ -54,6 +54,8 @@ const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicMana
 // REDISEÑO: SlicesPage usando versión rediseñada
 const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
 const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
+// REDISEÑO: TheoreticalLoadsPage para gestión de cargas teóricas
+const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
 const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
 
 // Componentes pesados - Solo carga cuando se necesitan
@@ -271,6 +273,8 @@ const AppContent = () => {
                     <Route path="/providers" element={<SuppliersPage />} />
                     <Route path="/expected-orders" element={<ExpectedOrdersLegacy />} />
                     <Route path="/slices" element={<SlicesPage />} />
+                    {/* REDISEÑO: Página de cargas teóricas */}
+                    <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
                     <Route path="/dynamic/:tableKey" element={<DynamicLegacy />} />
 
                     {/* Fallback */}

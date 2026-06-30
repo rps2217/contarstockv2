@@ -91,8 +91,8 @@ export const MessageTemplateSchema = z.object({
 export const CustomerSchema = z.object({
   id: z.string().uuid().or(z.string().min(1)),
   firstName: z.string().min(1, "El nombre es requerido"),
-  lastName: z.string().min(1, "El apellido es requerido"),
-  phone: z.string().min(8, "Teléfono inválido"),
+  lastName: z.string().min(0).default(''),
+  phone: z.string().optional().default(''),
   email: z.string().email("Email inválido").optional().or(z.literal('')),
   address: z.string().optional(),
   rut: z.string().optional(),

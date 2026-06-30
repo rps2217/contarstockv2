@@ -155,7 +155,7 @@ export const useCustomers = (): UseCustomersReturn => {
       sortField,
       sortOrder
     },
-    isLoading: customers.length === 0,
+    isLoading: false,
     ui: {
       isFormOpen,
       isSendModalOpen,
