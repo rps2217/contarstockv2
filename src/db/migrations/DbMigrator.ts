@@ -16,9 +16,10 @@ export class DbMigrator {
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, syncStatus, expectedItems, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp], [synced+mm+yyyy]',
-      expectedOrders: 'id, internalId',
+      expectedOrders: 'id, internalId, importedAt',
       logs: '++id, level, module, timestamp',
       sync_logs: '++id, timestamp, action, tableName, status',
+      syncQueue: '++id, tableName, operation, recordId, timestamp, retries, priority, [tableName+operation]',
       settings: '&key',
       locations: '++id, &name, lastUsed',
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
@@ -30,11 +31,10 @@ export class DbMigrator {
       productProviders: '++id, &productBarcode, &providerRut, isPrimary, [productBarcode+providerRut]',
       blindScans: '++id, batchId, barcode, timestamp',
       blindManifests: '++id, batchId, barcode',
-      // Vencimientos - Índice único en claveUnica para evitar duplicados
       expirations: '++id, &claveUnica, barcode, mm, yyyy, status, timestamp, syncStatus, [mm+yyyy], [barcode+mm+yyyy]',
-      // Audit Log - Sistema de trazabilidad estilo AppSheet
       audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, [tableName+recordId], [userId+timestamp]',
-      // Sync Metrics - Métricas de sincronización (v53)
+      bulkHistory: '++id, module, action, timestamp, undone',
+      viewPreferences: '++id, module',
       syncMetrics: '++id, timestamp, tableName, operation, [timestamp+tableName]'
     }).upgrade(_tx => {
       // Migration completed successfully
@@ -48,6 +48,7 @@ export class DbMigrator {
       expectedOrders: 'id, internalId, importedAt',
       logs: '++id, level, module, timestamp',
       sync_logs: '++id, timestamp, action, tableName, status',
+      syncQueue: '++id, tableName, operation, recordId, timestamp, retries, priority, [tableName+operation]',
       settings: '&key',
       locations: '++id, &name, lastUsed',
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
@@ -61,9 +62,11 @@ export class DbMigrator {
       blindManifests: '++id, batchId, barcode',
       expirations: '++id, &claveUnica, barcode, mm, yyyy, status, timestamp, syncStatus, [mm+yyyy], [barcode+mm+yyyy]',
       audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, [tableName+recordId], [userId+timestamp]',
+      bulkHistory: '++id, module, action, timestamp, undone',
+      viewPreferences: '++id, module',
       syncMetrics: '++id, timestamp, tableName, operation, [timestamp+tableName]'
     }).upgrade(_tx => {
-      // Migration: índice importedAt agregado a expectedOrders
+      // Migration: bulkHistory and viewPreferences tables added
     });
   }
 }
