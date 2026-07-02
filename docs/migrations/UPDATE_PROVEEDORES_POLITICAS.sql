@@ -1,0 +1,246 @@
+-- ============================================================
+-- ACTUALIZAR POLÍTICAS DE PROVEEDORES DESDE PROVE.xlsx
+-- Generado: 2026-07-02
+-- Total proveedores: 240
+-- ============================================================
+
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '91637000'; -- ABBOTT LABORATORIES DE CHILE
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76100557'; -- AGROINDUSTRIAL BLIGUEDER SPA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76950321'; -- AGROINDUSTRIA AyC SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77557943'; -- AGUA ESENCIAL CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76111593'; -- AKI PHARM CHILE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76885423'; -- ALEA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76468448'; -- ALIMENTARIA SpA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77704340'; -- ALIMENTOS DAILY FRESH SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76486776'; -- ALIMENTOS ECO-CARE LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76964638'; -- ALIVE NUTRITION SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76710295'; -- ALLNUT SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76353639'; -- ANDES NUTRACLINIC SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '12226663'; -- ANTONIO AGUILAR VALDES
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76472612'; -- AQUIAHORA PRODUCTOS ALIMENTICIOS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76620842'; -- ARAUCO NUTRIENTES NATURALES SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76210354'; -- ASESORIAS Y COMERCIALIZADORA DP LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77315891'; -- B-GOURMET COMERCIALIZADORA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76575018'; -- BALUTTI SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77120411'; -- BECACTUS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '5056407'; -- BENIGNO SUAREZ PAREDES
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76566396'; -- BERRYVITA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 180, has_exchange = TRUE WHERE rut = '76567652'; -- BIOBRUSH SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77801098'; -- BIOCELL SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 180, has_exchange = TRUE WHERE rut = '77328470'; -- BIOINGEMAR LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76821525'; -- BIOESSENZ SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76880257'; -- BIOTECNOLOGIAS AMERICANAS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77557943'; -- BODY FAST ELECTROLYTES SPA (Ex COMERCIAL NORTE SUR SPA)
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76455721'; -- BRISNACKS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77726283'; -- BROTA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76899641'; -- BUDA SECRET SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76604305'; -- CAA YARI SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76792948'; -- CASCARA FOODS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96886530'; -- CHICOLASTIC CHILE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96864620'; -- CIELOS DEL ESTE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77220353'; -- CLAUDIA GALLARDO FOOD AND SERVICES EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96681470'; -- CLOROX CHILE S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76057772'; -- COESAM BEAUTY_ HEALTY SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77063791'; -- COLMENARES LAS PALMAS LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76640462'; -- COM. DANIEL BERESCIUK EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76012926'; -- COMERC. SERGIO ROMERO CASTILLO E.I.R.L.
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '76956580'; -- COMERCIAL AQUASOLAR SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77601436'; -- COMERCIAL BFORTIES SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76902343'; -- COMERCIAL BMMP SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76390436'; -- COMERCIAL CANAS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76581530'; -- COMERCIAL CHILENO BRITANICA S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '96973910'; -- AGROCOMMERCE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76180740'; -- COMERCIAL CHIRINO Y CIA. LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '99515750'; -- COMERCIAL CRESSO S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 180, has_exchange = TRUE WHERE rut = '92621000'; -- COSMÉTICA DAVIS S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77000396'; -- COSMÉTICA NATURAL EMA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76415174'; -- COMERCIAL DENTSWISS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77345078'; -- COMERCIAL E INVERSIONES EVA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76368039'; -- COMERCIAL E INVERSIONES SONRRISOS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76276266'; -- COMERCIAL FABIOLA OYARZO AGUIRRE EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76366647'; -- COMERCIAL FITOMED LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76789210'; -- COMERCIAL HELIDERM LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '78281380'; -- COMERCIAL KOSMETIK CHILE LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76576377'; -- COMERCIAL LEINENWEBER SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '99592830'; -- COMERCIAL NUEVO HOGAR SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76428086'; -- COMERCIAL SOUTH EASTH LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77970998'; -- COMERCIAL OLIVER SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76203687'; -- Comercial y Deportes Turok Villacura Carter EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77302720'; -- COMERCIALIZADORA DIUANA Y BERCOVICH LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76835352'; -- COMERCIALIZADORA MARCELA BERNEDO TRAPP EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76195762'; -- COMERCIALIZADORA SIKEREI SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76175402'; -- COMERCIALIZADORA VANIA PERRET NEILSON EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '76128495'; -- COMERCIALIZADORA VIDA ORGANICA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76954677'; -- COMERCIALIZADORA Y DISTRIBUIDORA ZIEGE LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76059349'; -- COMERCIALIZADORA Y ELABORADORA ZE FARMS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77408490'; -- COSMETICOS ELICINA LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76237579'; -- COSMETICOS SUSANA OLAVARRIA COLLANTES EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76961707'; -- COMERCIAL ROSSELOT SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '17107960'; -- DARIO VERGARA LARA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76237579'; -- DELASAVIA NATURAL & CULINARY COSMETICS EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77877940'; -- DISTRIBUIDORA ALMA BRANDS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = 'nan'; -- 
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = 'nan'; -- 
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96895110'; -- DISTR. COMERCIAL PHARMASAN LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '96717500'; -- DISTRIBUCION NATURAL S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76937323'; -- DISTRIBUIDORA Y COMERCIALIZADORA PRIMOS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76393581'; -- DOÑA VICKY GOURMET VIRGINIA A.PEREZ COFRE EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76749273'; -- DRASANVI CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77781470'; -- DROGUERIA FARMOQUIMICA DEL PACIFICO SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 240, has_exchange = TRUE WHERE rut = '92288000'; -- DROGUERIA HOFMANN S.A.C.
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76669439'; -- DULZURA NATURAL E.I.R.L
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76024780'; -- ECOSMETIC LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76178738'; -- ECOTERRA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76178738'; -- ECOTERRA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '96630110'; -- ECOVIDA S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76575600'; -- ELABORADORA DE ALIMENTOS NUTRA ANDES LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76121304'; -- ELABORADORA Y COMERCIALIZADORA DE ESENCIAS FLORALES LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = 'nan'; -- 
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76689183'; -- ELABORADOR Y DISTRIBUIDOR DE ALIMENTOS VERDE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77208333'; -- ELABORADORA Y COMERCIALIZADORA LA CASONA EL MONTE LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '96901670'; -- EMBOTELLADORA AGUA MINERAL PUYEHUE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76566148'; -- EMBOTELLADORA LAS TINAJAS LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76236457'; -- EMPRESAS IDA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '99546140'; -- EMUELLE CHILE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '4892782'; -- ENRIQUETA POSECK ROLOFF
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76642205'; -- EQUIPAMIENTO Y PERFORMANCE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76276266'; -- EXPERIENCIA MONOI S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '79781370'; -- FARMACIAS KNOP S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76285343'; -- FRAILE CASTRUCCIO YUTE LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76614776'; -- FREEMET COMERCIAL SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76214347'; -- FUNCTIONAL PRODUCTS TRADING ARICA S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77372273'; -- FUNGI PHARMA 2 SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76945848'; -- FUTURE FOOD
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '99590850'; -- GENOMMA LAB CHILE S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '6509583'; -- GISELA MELITA ELLER SOMMER
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76714266'; -- GLOBALL SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76695095'; -- GOLDEN SPIRIT SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76820761'; -- GOOD VIBE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76227149'; -- GREEN SPIRIT SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76227149'; -- GREEN SPIRIT SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76769431'; -- GRUPO TIVA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77092152'; -- GOSH BABE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76712671'; -- HAKUNAMATATA COMERCIAL Y ELABORADORA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76958647'; -- HAMLET SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76423512'; -- HEALTHY NUTRITION STORE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76878755'; -- HELMUT BD SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '31'; -- HIMALAYA WELLNESS USA LTD
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76380804'; -- HOMA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '93178000'; -- ICB S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76959830'; -- IMP. DIST. Y COM. HAIR Y COMPLEMENTS LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76259425'; -- IMPORTADORA BE ORGANICS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76396449'; -- IMP.COMERCIALIZADORA MAITENA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76231804'; -- IMPORTADORA Y COMERCIALIZADORA BIOFOODS LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77578018'; -- IMPORTADORA Y COMERCIALIZADORA PROSA CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77094420'; -- IMPORTADORA Y DISTRIBUIDORA AMCAR LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76505519'; -- IMPORTADORA Y EXPORTADORA HOMAR SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76241008'; -- INFUSIONES DEL ESTE
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96778080'; -- INVERSIONES CARTAGO LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '79798650'; -- INVERSIONES LA ESPERANZA CHILE LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '76476360'; -- INVERSIONES NUTRARTIS LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77997203'; -- INVERSIONES SALUDAGRO LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76233433'; -- INVERSIONES WELLNESS TECHNOLOGIES LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76432413'; -- INVERSIONES LAR SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76118052'; -- ISLA NATURA EXPORTADORA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '5057786'; -- JOSÉ JAIME MEZA MU#OZ
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77341720'; -- JPM EXPORTACIONES LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '18641966'; -- JUAN PABLO HERESI BESOAIN
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76467151'; -- JUGOS RUSTICOS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76603337'; -- KI-NUA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = TRUE WHERE rut = '89688800'; -- KNOP LABORATORIOS S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76265009'; -- KOKISIMO SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '76067896'; -- LA BOTICA DEL ALMA S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76590598'; -- LA FERMENTISTA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76987479'; -- LABORATORIO AVANTI SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '91913000'; -- LABORATORIO DURANDIN S.A.I
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '83271500'; -- LABORATORIO EMPROQUIM SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77005780'; -- LABORATORIO GREEN MEDICAL LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76078039'; -- LABORATORIO INTERNACIONAL PHARMACORP SBO LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '87674400'; -- LABORATORIO PASTEUR S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '81350200'; -- LABORATORIO RECCIUS LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '92121000'; -- LABORATORIOS MAVER S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76160163'; -- LABORATORIO NATURAL FUCHSLOCHER SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '91042000'; -- LABORATORIO PETRIZZIO LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '95730000'; -- LABORATORIOS PRATER S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '99571800'; -- LAGOS DISTRIBUIDORES
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '80538300'; -- LASTRADE HNOS. Y CIA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '76157285'; -- LA PREPIE LABORATOIRES LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '5170511'; -- LAURA XIMENA POLANCO GONZALEZ
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76894849'; -- LEMUNKO SUR SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '77131055'; -- LIVA COMPANY SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77248485'; -- LVXO DE CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76553597'; -- MAOZ 29 SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '6664351'; -- MARIA ANGELES GONZALES BUSTAMANTE
+UPDATE "PROVEEDORES" SET withdrawal_days = 180, has_exchange = TRUE WHERE rut = '76702215'; -- MARIA MEDICINAL SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76444905'; -- MEDICATEL SPA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77293404'; -- MEDICINA, ALIMENTO, INTELIGENCIA & NATURALEZA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76685404'; -- MANGLARES SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '94544000'; -- MEGALABS CHILE S,A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77197736'; -- NANOCUPPER CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76806548'; -- NATURAL DETOX SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76381181'; -- NATURAL NUTRITION SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 210, has_exchange = TRUE WHERE rut = '76154602'; -- NATURALLY S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77620056'; -- NB NONBEES SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76853307'; -- NORA JECHAN Y ASOCIADOS LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96945670'; -- NOVOFARMA SERVICE S.A PROVEEDOR ELI
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76049654'; -- NUTRACOM S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76013800'; -- NUTRALINE LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '96881100'; -- NUTRAPHARM S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76495325'; -- ORIGEN SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76290153'; -- PACIFIC NUTRICION LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77530176'; -- PAMELA GONZALEZ CERCA EIRL
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76045001'; -- PARIS PROVENCE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76759645'; -- PATAGONIA BROTHERS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76033037'; -- PIQUE Y COMPAÑIA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76423281'; -- PISA FARMACEUTICA DE CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76398814'; -- PROCESADORA HUERTO DEL SUR SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76740421'; -- Productora y comercializadora Irarrazaval SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76121816'; -- PROIMEX SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '79684790'; -- PROMERCO S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '78030690'; -- PROSUD S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '86172000'; -- RAMIREZ Y SANCHEZ LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76691039'; -- REGIONAL FOODS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '81210400'; -- REUTTER S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77472860'; -- REVISTA MUNDO NUEVO LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76352658'; -- SABORES SIN CULPA SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76185799'; -- SAGITA CONSULTORA EN RIESGO QUIMICO E IND. SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76917207'; -- SAINT-MARIE DE LOS ANDES SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '59090380'; -- SALUS FLORADIX CHILE
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '94282000'; -- SCA CHILE S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76832359'; -- SCIENTIFIC BODY SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76653564'; -- SEAWEED PLACE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76630750'; -- SERCOFAR S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76043435'; -- SIMAIOS CHILE COMERCIAL LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77286144'; -- SIN TOYO SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '76641147'; -- SOC. COM. AUSTRALIS LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '77844060'; -- SOC.MEDICA IMP. Y COM.BIOPLUS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77371473'; -- SOCIEDAD BALANCELAB LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76267832'; -- SOCIEDAD COMERCIAL Y AGRÍCOLA PROMAUKA LIMITADA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76481561'; -- SOCIEDAD FARMACÉUTICA TERVIS PHARMA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77384184'; -- SOUTH PACIFIC BRANDS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76087887'; -- SOUTH TRADE MARKETING LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77323790'; -- SPAN COMERCIALIZADORA DE FLORES Y AROMAS LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '93654000'; -- SPES S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76544660'; -- SUPLALIM LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '10377777'; -- SUSANA MAGNA GUTIERREZ
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '78281380'; -- SUSTAINABLE BOTANICALS CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76421695'; -- TE TREGUEAR CHILE LTDA.
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '99570570'; -- TERRAFRUT S.A
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '77138762'; -- TESORO MEDICO SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76149554'; -- THE NATURE FACTORY SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76226576'; -- THE NOT COMPANY SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76226576'; -- THE NOT COMPANY SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '79676110'; -- TRANSPORTES Y COMERCIAL TRESSA LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76645309'; -- UMA ROOTS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76486071'; -- UMBRELLA 7 SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76417502'; -- URTUBIA HNOS LTDA
+UPDATE "PROVEEDORES" SET withdrawal_days = 150, has_exchange = TRUE WHERE rut = '76116217'; -- VAICO SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76352606'; -- VICTORIA S.P.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '76768963'; -- VIDA PHARMA GROUP SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '96800680'; -- VITAMIGOS S.A.
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77322254'; -- VITAL ELEMENTS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76101945'; -- VIVENAT SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 120, has_exchange = TRUE WHERE rut = '78292680'; -- WELEDA CHILE SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76564426'; -- WELLMED SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 30, has_exchange = FALSE WHERE rut = '76764595'; -- WILD FOODS SPA
+UPDATE "PROVEEDORES" SET withdrawal_days = 90, has_exchange = TRUE WHERE rut = '77205416'; -- ZUVAVIT SPA

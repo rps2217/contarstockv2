@@ -128,6 +128,7 @@ export function useProductSearch(options?: {
 
 /**
  * Obtener políticas del proveedor
+ * Usa withdrawalDays del proveedor o fallback a 30 días
  */
 async function getProviderPolicy(supplierRut?: string): Promise<ProviderPolicy | undefined> {
   if (!supplierRut) return undefined;
@@ -137,9 +138,9 @@ async function getProviderPolicy(supplierRut?: string): Promise<ProviderPolicy |
     
     if (provider) {
       return {
-        hasExchange: provider.hasExchange ?? provider.has_exchange ?? false,
-        hasCanje: provider.hasExchange ?? provider.has_exchange ?? false,
-        withdrawalDays: provider.withdrawalDays ?? provider.withdrawal_days ?? 0,
+        hasExchange: provider.hasExchange ?? provider.has_exchange ?? true,
+        hasCanje: provider.hasExchange ?? provider.has_exchange ?? true,
+        withdrawalDays: provider.withdrawalDays ?? provider.withdrawal_days ?? 30,
       };
     }
   } catch {
@@ -151,6 +152,7 @@ async function getProviderPolicy(supplierRut?: string): Promise<ProviderPolicy |
 
 /**
  * Obtener políticas de Producto-Proveedor específicas
+ * Si no hay política específica, hereda del proveedor
  */
 export async function getProductProviderPolicy(
   productBarcode: string,
@@ -163,16 +165,18 @@ export async function getProductProviderPolicy(
       .first();
     
     if (pp) {
+      // Si hay política específica en PRODUCTO_PROVEEDOR, usarla
+      // Si no, heredar del proveedor
       return {
-        hasExchange: pp.hasExchange ?? pp.has_exchange ?? false,
-        hasCanje: pp.hasExchange ?? pp.has_exchange ?? false,
-        withdrawalDays: pp.withdrawalDays ?? pp.withdrawal_days ?? 0,
+        hasExchange: pp.hasExchange ?? pp.has_exchange ?? true,
+        hasCanje: pp.hasExchange ?? pp.has_exchange ?? true,
+        withdrawalDays: pp.withdrawalDays ?? pp.withdrawal_days ?? 30,
       };
     }
   } catch {
     // Fallback a políticas generales del proveedor
-    return getProviderPolicy(providerRut);
   }
   
-  return undefined;
+  // Si no hay relación específica, buscar en el proveedor
+  return getProviderPolicy(providerRut);
 }

@@ -89,7 +89,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             const provider = await db.table('providers').get(pp.providerRut);
             
             providerPolicy = {
-              hasExchange: pp.hasExchange ?? pp.has_exchange ?? provider?.hasExchange ?? false,
+              hasExchange: pp.hasExchange ?? pp.has_exchange ?? provider?.hasExchange ?? true,
               withdrawalDays: pp.withdrawalDays ?? pp.withdrawal_days ?? provider?.withdrawalDays ?? 30,
               isPrimary: pp.isPrimary ?? false,
             };
