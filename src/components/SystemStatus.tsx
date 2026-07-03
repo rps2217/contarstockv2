@@ -110,7 +110,7 @@ const SystemStatusInner: React.FC = () => {
   };
   }, []);
 
-  const alerts = [];
+  const alerts: React.ReactNode[] = [];
 
   if (integrityAlert) {
     alerts.push(

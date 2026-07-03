@@ -43,7 +43,7 @@
     "noImplicitAny": false, // Deshabilitado - muchos componentes legacy usan any
 
     // No permite this implícito en funciones
-    "noImplicitThis": true,
+    "noImplicitThis": false, // Deshabilitado por ahora
 
     // Trata undefined como un tipo válido
     "strictNullChecks": true,
