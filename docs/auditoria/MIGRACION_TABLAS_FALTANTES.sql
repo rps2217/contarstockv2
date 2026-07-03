@@ -2,7 +2,7 @@
 -- MIGRACIÓN: CREAR TABLAS FALTANTES Y CORREGIR ESTRUCTURAS
 -- ContarStock v2
 -- Fecha: 2026-07-02
--- IMPORTANTE: Usar comillas dobles para tablas con mayúsculas en PostgreSQL
+-- IMPORTANTE: Usar comillas dobles para tablas y columnas con mayúsculas
 -- =============================================================================
 
 -- =============================================================================
@@ -69,13 +69,12 @@ ADD COLUMN IF NOT EXISTS mm INTEGER,
 ADD COLUMN IF NOT EXISTS yyyy INTEGER,
 ADD COLUMN IF NOT EXISTS batch VARCHAR(50);
 
--- Migrar datos de camelCase a snake_case si existen
--- Nota: createdat es bigint (timestamp Unix ms), convertir con to_timestamp()
-UPDATE "SESSIONS" SET created_at = to_timestamp(createdat::double precision / 1000) WHERE createdat IS NOT NULL AND created_at IS NULL;
-UPDATE "SESSIONS" SET erp_order = erporder WHERE erporder IS NOT NULL AND erp_order IS NULL;
-UPDATE "SESSIONS" SET logistics_label = logisticslabel WHERE logisticslabel IS NOT NULL AND logistics_label IS NULL;
-UPDATE "SESSIONS" SET session_type = sessiontype WHERE sessiontype IS NOT NULL AND session_type IS NULL;
-UPDATE "SESSIONS" SET photo_url = photourl WHERE photourl IS NOT NULL AND photo_url IS NULL;
+-- Migrar datos de camelCase a snake_case (usar comillas para columnas con mayúsculas)
+UPDATE "SESSIONS" SET created_at = to_timestamp("createdat"::double precision / 1000) WHERE "createdat" IS NOT NULL AND created_at IS NULL;
+UPDATE "SESSIONS" SET erp_order = "erporder" WHERE "erporder" IS NOT NULL AND erp_order IS NULL;
+UPDATE "SESSIONS" SET logistics_label = "logisticslabel" WHERE "logisticslabel" IS NOT NULL AND logistics_label IS NULL;
+UPDATE "SESSIONS" SET session_type = "sessiontype" WHERE "sessiontype" IS NOT NULL AND session_type IS NULL;
+UPDATE "SESSIONS" SET photo_url = "photourl" WHERE "photourl" IS NOT NULL AND photo_url IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON "SESSIONS"(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_erp ON "SESSIONS"(erp_order);
@@ -91,9 +90,10 @@ ADD COLUMN IF NOT EXISTS provider_name VARCHAR(255),
 ADD COLUMN IF NOT EXISTS clave_unica VARCHAR(100),
 ADD COLUMN IF NOT EXISTS is_adjusted BOOLEAN;
 
-UPDATE "EVENTOS" SET product_name = productName WHERE productName IS NOT NULL AND product_name IS NULL;
-UPDATE "EVENTOS" SET provider_name = providerName WHERE providerName IS NOT NULL AND provider_name IS NULL;
-UPDATE "EVENTOS" SET is_adjusted = isAdjusted WHERE isAdjusted IS NOT NULL AND is_adjusted IS NULL;
+-- Usar comillas para columnas con mayúsculas
+UPDATE "EVENTOS" SET product_name = "productName" WHERE "productName" IS NOT NULL AND product_name IS NULL;
+UPDATE "EVENTOS" SET provider_name = "providerName" WHERE "providerName" IS NOT NULL AND provider_name IS NULL;
+UPDATE "EVENTOS" SET is_adjusted = "isAdjusted" WHERE "isAdjusted" IS NOT NULL AND is_adjusted IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_eventos_barcode ON "EVENTOS"(barcode);
 CREATE INDEX IF NOT EXISTS idx_eventos_clave ON "EVENTOS"(clave_unica);
