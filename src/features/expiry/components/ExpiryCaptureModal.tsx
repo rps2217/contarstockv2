@@ -19,8 +19,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2, Pencil } from 'lucide-react';
 import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';
 import { QuantityInput } from '@/shared/features/inventory/components/QuantityInput';
-import type { ProductInfo } from '@/shared/features/inventory/components';
+import type { ProductInfo } from '@/shared/features/inventory/hooks/useProductSearch';
 import type { ExpiryRecord } from '../hooks/useExpiry';
+import { db } from '@/db';
 
 export type ExpiryModalMode = 'create' | 'edit';
 
@@ -94,16 +95,58 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
         setHasCanje(initialData.hasCanje);
         setWithdrawalDays(initialData.withdrawalDays);
       } else if (scannedBarcode) {
-        // Modo creación: usar barcode escaneado
+        // Modo creación: usar barcode escaneado Y buscar producto en BD
         setBarcode(scannedBarcode);
-        setProduct(null);
+        
+        // Buscar producto en la BD para obtener proveedor y políticas
+        const fetchProduct = async () => {
+          try {
+            // Normalizar barcode para búsqueda
+            const normalizedCode = scannedBarcode.replace(/\s+/g, '').toUpperCase();
+            
+            // Buscar en productos
+            let foundProduct = await db.products.where('barcode').equalsIgnoreCase(normalizedCode).first();
+            
+            // Si no se encontró por barcode, buscar por SKU
+            if (!foundProduct) {
+              foundProduct = await db.products.where('sku').equalsIgnoreCase(normalizedCode).first();
+            }
+            
+            if (foundProduct) {
+              // Crear ProductInfo con datos del producto y proveedor
+              const productInfo: ProductInfo = {
+                barcode: foundProduct.barcode || scannedBarcode,
+                name: foundProduct.name,
+                supplierName: (foundProduct as any).supplier,
+                supplierRut: (foundProduct as any).supplierRut,
+              };
+              setProduct(productInfo);
+              
+              // Si el producto tiene políticas, aplicarlas
+              const wd = (foundProduct as any).withdrawalDays;
+              if (wd !== undefined) {
+                setWithdrawalDays(wd);
+              }
+              const he = (foundProduct as any).hasExchange;
+              if (he !== undefined) {
+                setHasCanje(he);
+              }
+            } else {
+              setProduct(null);
+            }
+          } catch (error) {
+            console.warn('Error buscando producto:', error);
+            setProduct(null);
+          }
+        };
+        
+        fetchProduct();
+        
         setQuantity(1);
         setSelectedMm(null);
         setSelectedYyyy(null);
         setLocation('');
         setObservaciones('');
-        setHasCanje(false);
-        setWithdrawalDays(30);
       }
     }
   }, [scannedBarcode, isOpen, isEditMode, initialData]);
@@ -166,8 +209,8 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
         observaciones,
         providerName: product?.supplierName || initialData?.providerName,
         providerRut: product?.supplierRut || initialData?.providerRut,
-        hasCanje: product?.providerPolicy?.hasExchange ?? hasCanje,
-        withdrawalDays: product?.providerPolicy?.withdrawalDays ?? withdrawalDays,
+        hasCanje: hasCanje,
+        withdrawalDays: withdrawalDays,
       };
 
       if (isEditMode) {
@@ -254,14 +297,14 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   </div>
                 )}
                 
-                {product?.providerPolicy && (
+                {product && (
                   <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex flex-col items-center leading-none ${
-                    product.providerPolicy.hasExchange 
+                    hasCanje 
                       ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
                       : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                   }`}>
-                    <span className="mb-1">{product.providerPolicy.hasExchange ? 'CANJE' : 'MERMA'}</span>
-                    <span className="text-xs">{product.providerPolicy.withdrawalDays}D</span>
+                    <span className="mb-1">{hasCanje ? 'CANJE' : 'MERMA'}</span>
+                    <span className="text-xs">{withdrawalDays}D</span>
                   </div>
                 )}
                 
@@ -389,12 +432,9 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                 (() => {
                   const lastDay = new Date(selectedYyyy, selectedMm, 0).getDate();
                   const expiryDate = new Date(selectedYyyy, selectedMm - 1, lastDay);
-                  // Usar withdrawalDays del estado o del producto
-                  const effectiveWithdrawalDays = product?.providerPolicy?.withdrawalDays ?? withdrawalDays;
-                  const withdrawalDateCalc = new Date(expiryDate.getTime() - effectiveWithdrawalDays * 24 * 60 * 60 * 1000);
+                  const withdrawalDateCalc = new Date(expiryDate.getTime() - withdrawalDays * 24 * 60 * 60 * 1000);
                   const daysUntilWithdrawal = Math.ceil((withdrawalDateCalc.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   const withdrawalMonth = MESES[withdrawalDateCalc.getMonth()];
-                  const effectiveHasCanje = product?.providerPolicy?.hasExchange ?? hasCanje;
                   
                   return (
                     <motion.div
@@ -442,9 +482,9 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                       <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
                         <span className="text-[10px] text-slate-500">Política</span>
                         <span className={`text-[10px] font-black ${
-                          effectiveHasCanje ? 'text-indigo-400' : 'text-amber-400'
+                          hasCanje ? 'text-indigo-400' : 'text-amber-400'
                         }`}>
-                          {effectiveHasCanje ? '🏭 CANJE' : '⚠️ MERMA'} • {effectiveWithdrawalDays} días
+                          {hasCanje ? '🏭 CANJE' : '⚠️ MERMA'} • {withdrawalDays} días
                         </span>
                       </div>
                     </motion.div>
