@@ -1,5 +1,5 @@
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState, useMemo, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores';
 import type { CountingSession } from '@/types';
@@ -20,7 +20,10 @@ import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
 import { ThemeProvider } from '@/hooks/useTheme/useTheme';
 import { useAppInit } from '@/hooks/useAppInit';
+import { MotionProvider, useMotionContext } from '@/hooks/useMotionContext';
+import { useSimpleUI } from '@/hooks/useDeviceCapability';
 import { motion, AnimatePresence } from 'motion/react';
+import { DashboardSimple } from '@/shared/components/redesign/DashboardSimple';
 
 // ============================================================================
 // LAZY IMPORTS - OPTIMIZACIÓN DE BUNDLE
@@ -30,49 +33,32 @@ import { motion, AnimatePresence } from 'motion/react';
 const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
 const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
+// Dashboard - carga diferida o versión simple según dispositivo
+const DashboardFull = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDashboard })));
+
 // Vistas principales (AppSheet-style) - Carga diferida
-// REDISEÑO: Usando páginas del rediseño
-const Dashboard = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDashboard })));
 const CapturePage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCapturePage })));
 const DataPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDataPage })));
 const SyncPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSyncPage })));
-// SettingsPage - usando versión rediseñada con datos reales
 const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage })));
-
-// Vistas legacy - ELIMINADAS (usando solo rediseño)
-// ============================================================================
-// NOTA: Las páginas legacy fueron eliminadas para consolidar en redesign
-// Mantenemos las referencias solo para no romper imports externos
-// ============================================================================
 
 // Páginas en redesign (consolidadas)
 const ReportsLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage })));
 const ExpiryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
-const ExpiryLegacy = ExpiryPage; // Alias para compatibilidad
+const ExpiryLegacy = ExpiryPage;
 
 // Páginas redesignadas
 const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage })));
 const SuppliersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage })));
 const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
 
-// Páginas legacy ELIMINADAS (archivos removidos):
-// - EventsLegacy (era @/features/events/EventsPage)
-// - CountingLegacy (era @/features/counting/CountingPage)  
-// - CustomersLegacy (era @/features/customers/CustomersPage)
-// - ProvidersLegacy (era @/features/suppliers/pages/SuppliersPage)
-// - ExpectedOrdersLegacy (era @/features/expected-orders/ExpectedOrdersPage)
-// - DynamicLegacy (era @/features/dynamic/DynamicManagementPage)
-// - SlicesLegacy (era @/features/slices/SlicesPage)
-// REDISEÑO: TheoreticalLoadsPage para gestión de cargas teóricas
+// Otras páginas
 const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
-// REDISEÑO: HammerPage para modo ráfaga
 const HammerPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignHammerPage })));
-// REDISEÑO: InventoryPage para gestión de inventario
 const InventoryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignInventoryPage })));
-// REDISEÑO: AuditPage para reportes de auditoría
 const AuditPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignAuditPage })));
 
-// Componentes pesados - Solo carga cuando se necesitan
+// Componentes pesados - Solo carga cuando se necesitan (y solo en desktop)
 const Sidebar = lazyWithRetry(() => import('@/components/Sidebar').then(m => ({ default: m.Sidebar })));
 const BottomDock = lazyWithRetry(() => import('@/components/BottomDock').then(m => ({ default: m.BottomDock })));
 const OnboardingOverlay = lazyWithRetry(() => import('@/shared/components/core/OnboardingOverlay').then(m => ({ default: m.OnboardingOverlay })));
@@ -84,7 +70,7 @@ const ThemeDemo = lazyWithRetry(() => import('@/shared/components/ui/ThemeDemo')
 // Wrapper para ThemeDemo
 const ThemeDemoPage = () => <ThemeDemo />;
 
-// Redesign Preview - Lazy load con ThemeProvider
+// Redesign Preview
 const RedesignPreviewApp = lazyWithRetry(() => import('@/shared/components/redesign/AppShell').then(m => ({ default: m.RedesignAppShellWrapper })));
 const RedesignPreviewPage = () => <RedesignPreviewApp />;
 
@@ -98,6 +84,13 @@ const AppContent = () => {
   const isStartSessionModalOpen = useAppStore(state => state.isStartSessionModalOpen);
   const setStartSessionModalOpen = useAppStore(state => state.setStartSessionModalOpen);
   const { bootState, initStep, isAuthenticated, handleLoginSuccess } = useAppInit();
+  
+  // Motion context para animaciones optimizadas
+  const { shouldReduceMotion, motionVariants } = useMotionContext();
+  
+  // Detectar si usar UI simplificada (móvil de gama baja)
+  const isSimpleUI = useSimpleUI();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [hasInitialRedirected, setHasInitialRedirected] = useState(false);
@@ -150,6 +143,20 @@ const AppContent = () => {
 
   const isDarkMode = settings.theme === 'dark' || settings.theme === 'night' || settings.theme === 'high-contrast' || settings.theme === 'appsheet-dark';
   const isHighContrast = settings.theme === 'high-contrast';
+  
+  // Memoizar transición de página para evitar recrear en cada render
+  const pageTransition = useMemo(() => ({
+    duration: shouldReduceMotion ? 0 : 0.25,
+    ease: [0.23, 1, 0.32, 1] as const
+  }), [shouldReduceMotion]);
+  
+  // Dashboard según tipo de dispositivo
+  const Dashboard = useMemo(() => {
+    if (isSimpleUI) {
+      return DashboardSimple;
+    }
+    return DashboardFull;
+  }, [isSimpleUI]);
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
@@ -206,17 +213,22 @@ const AppContent = () => {
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} ${isHighContrast ? 'high-contrast' : ''} font-sans selection:bg-blue-500/30`}>
-      <Suspense fallback={null}>
-        <OnboardingOverlay />
-        <SystemOperationsDrawer />
-        <ToastContainer />
-        <TaskProgressIndicator />
-      </Suspense>
+      {/* Solo cargar componentes de overlay en desktop */}
+      {!isMobile && (
+        <Suspense fallback={null}>
+          <OnboardingOverlay />
+          <SystemOperationsDrawer />
+          <ToastContainer />
+          <TaskProgressIndicator />
+        </Suspense>
+      )}
+      
       <OfflineBanner />
       <Toaster position="bottom-center" />
       
       <div className="flex-1 flex overflow-hidden relative">
-        {!isScanningMode && (
+        {/* Solo mostrar Sidebar en desktop */}
+        {!isScanningMode && !isMobile && (
           <Suspense fallback={null}>
             <Sidebar 
               view={location.pathname.split('/')[1] || 'dashboard'} 
@@ -227,101 +239,49 @@ const AppContent = () => {
           </Suspense>
         )}
         
-        <main className={`flex-1 relative overflow-hidden transition-[padding-left] duration-300 ease-in-out ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
+        <main className={`flex-1 relative overflow-hidden ${!isScanningMode && !isMobile ? `transition-[padding-left] duration-300 ease-in-out ${isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64'}` : ''}`}>
           
           <ErrorBoundary>
-            <AnimatePresence mode="wait">
-              <Suspense 
-                fallback={
-                  <div className="h-full w-full flex items-center justify-center surface-glass">
-                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                  </div>
-                }
-              >
-                <motion.div
-                  key={location.pathname}
-                  initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 1.02, y: -10 }}
-                  transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                  className="h-full w-full"
-                >
-                  <Routes location={location}>
-                    {/* RUTAS PRINCIPALES (AppSheet-style) */}
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/capture" element={<CapturePage />} />
-                    <Route path="/capture/:tab" element={<CapturePage />} />
-                    <Route path="/data" element={<DataPage />} />
-                    <Route path="/data/:table" element={<DataPage />} />
-                    <Route path="/data/:table/:id" element={<DataPage />} />
-                    <Route path="/sync" element={<SyncPage />} />
-                    <Route path="/sync/:tab" element={<SyncPage />} />
-                    <Route path="/reports" element={<ReportsLegacy />} />
-                    <Route path="/reports/:tab" element={<ReportsLegacy />} />
-                    <Route path="/expiry" element={<ExpiryPage />} />
-                    <Route path="/expiry/:tab" element={<ExpiryPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-
-                    {/* DEEP LINKS - Abrir app en registro específico */}
-                    <Route path="/session/:id" element={<ReportsLegacy />} />
-                    <Route path="/reception/:id" element={<CapturePage />} />
-                    <Route path="/product/:barcode" element={<DataPage />} />
-
-                    {/* TEMA DEMO - Página de demostración del tema AppSheet */}
-                    <Route path="/theme-demo" element={<ThemeDemoPage />} />
-
-                    {/* REDISEÑO - Preview del nuevo diseño de interfaz */}
-                    <Route path="/redesign" element={<RedesignPreviewPage />} />
-
-                    {/* RUTAS LEGACY (redirigir a nuevas o eliminar) */}
-                    <Route path="/reception" element={<Navigate to="/capture" replace />} />
-                    <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/events" element={<Navigate to="/reports" replace />} />
-                    <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/counting" element={<Navigate to="/reports" replace />} />
-                    <Route path="/counting/:id" element={<Navigate to="/reports" replace />} />
-                    <Route path="/massive" element={<HammerPage />} />
-                    <Route path="/massive/:batchId" element={<HammerPage />} />
-                    <Route path="/database" element={<Navigate to="/data" replace />} />
-                    {/* REDISEÑO: Usando versiones rediseñadas */}
-                    <Route path="/customers" element={<CustomersPage />} />
-                    <Route path="/providers" element={<SuppliersPage />} />
-                    <Route path="/expected-orders" element={<Navigate to="/reports" replace />} />
-                    <Route path="/slices" element={<SlicesPage />} />
-                    {/* REDISEÑO: Página de cargas teóricas */}
-                    <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
-                    {/* REDISEÑO: Inventory y Audit */}
-                    <Route path="/inventory" element={<InventoryPage />} />
-                    <Route path="/audit" element={<AuditPage />} />
-                    {/* Dynamic ELIMINADO - redirigir a datos */}
-                    <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
-
-                    {/* Fallback */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </motion.div>
-              </Suspense>
-            </AnimatePresence>
+            {/* Contenido con o sin animaciones según el dispositivo */}
+            <RoutesWrapper
+              location={location}
+              Dashboard={Dashboard}
+              shouldReduceMotion={shouldReduceMotion}
+              motionVariants={motionVariants}
+              pageTransition={pageTransition}
+              CapturePage={CapturePage}
+              DataPage={DataPage}
+              SyncPage={SyncPage}
+              ReportsLegacy={ReportsLegacy}
+              ExpiryPage={ExpiryPage}
+              SettingsPage={SettingsPage}
+              CustomersPage={CustomersPage}
+              SuppliersPage={SuppliersPage}
+              SlicesPage={SlicesPage}
+              HammerPage={HammerPage}
+              TheoreticalLoadsPage={TheoreticalLoadsPage}
+              InventoryPage={InventoryPage}
+              AuditPage={AuditPage}
+              ThemeDemoPage={ThemeDemoPage}
+              RedesignPreviewPage={RedesignPreviewPage}
+            />
           </ErrorBoundary>
         </main>
       </div>
       
+      {/* BottomDock y botón flotante - siempre en móvil */}
       {!isScanningMode && (
         <>
           <Suspense fallback={null}>
             <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
           </Suspense>
           {(location.pathname === '/' || location.pathname === '/dashboard') && (
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.9 }}
+            <button
               onClick={() => setStartSessionModalOpen(true)}
-              className="md:hidden fixed bottom-24 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-2xl shadow-blue-900/50 flex items-center justify-center border-b-4 border-blue-800"
+              className="md:hidden fixed bottom-24 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-2xl shadow-blue-900/50 flex items-center justify-center border-b-4 border-blue-800 active:scale-90 transition-transform"
             >
               <Plus className="w-8 h-8" />
-            </motion.button>
+            </button>
           )}
         </>
       )}
@@ -339,17 +299,144 @@ const AppContent = () => {
   );
 };
 
+// ============================================================================
+// ROUTES WRAPPER - Renderiza rutas con o sin animaciones según dispositivo
+// ============================================================================
+
+interface RoutesWrapperProps {
+  location: ReturnType<typeof useLocation>;
+  Dashboard: React.ComponentType;
+  shouldReduceMotion: boolean;
+  motionVariants: any;
+  pageTransition: any;
+  [key: string]: any;
+}
+
+const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
+  location,
+  Dashboard,
+  shouldReduceMotion,
+  motionVariants,
+  pageTransition,
+  ...pages
+}) => {
+  const { 
+    CapturePage, DataPage, SyncPage, ReportsLegacy, ExpiryPage, 
+    SettingsPage, CustomersPage, SuppliersPage, SlicesPage, 
+    HammerPage, TheoreticalLoadsPage, InventoryPage, AuditPage,
+    ThemeDemoPage, RedesignPreviewPage 
+  } = pages;
+
+  const content = (
+    <Routes location={location}>
+      {/* RUTAS PRINCIPALES */}
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/capture" element={<CapturePage />} />
+      <Route path="/capture/:tab" element={<CapturePage />} />
+      <Route path="/data" element={<DataPage />} />
+      <Route path="/data/:table" element={<DataPage />} />
+      <Route path="/data/:table/:id" element={<DataPage />} />
+      <Route path="/sync" element={<SyncPage />} />
+      <Route path="/sync/:tab" element={<SyncPage />} />
+      <Route path="/reports" element={<ReportsLegacy />} />
+      <Route path="/reports/:tab" element={<ReportsLegacy />} />
+      <Route path="/expiry" element={<ExpiryPage />} />
+      <Route path="/expiry/:tab" element={<ExpiryPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+
+      {/* DEEP LINKS */}
+      <Route path="/session/:id" element={<ReportsLegacy />} />
+      <Route path="/reception/:id" element={<CapturePage />} />
+      <Route path="/product/:barcode" element={<DataPage />} />
+
+      {/* DEMO */}
+      <Route path="/theme-demo" element={<ThemeDemoPage />} />
+      <Route path="/redesign" element={<RedesignPreviewPage />} />
+
+      {/* RUTAS LEGACY */}
+      <Route path="/reception" element={<Navigate to="/capture" replace />} />
+      <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
+      <Route path="/events" element={<Navigate to="/reports" replace />} />
+      <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
+      <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
+      <Route path="/counting" element={<Navigate to="/reports" replace />} />
+      <Route path="/counting/:id" element={<Navigate to="/reports" replace />} />
+      <Route path="/massive" element={<HammerPage />} />
+      <Route path="/massive/:batchId" element={<HammerPage />} />
+      <Route path="/database" element={<Navigate to="/data" replace />} />
+
+      {/* OTRAS PÁGINAS */}
+      <Route path="/customers" element={<CustomersPage />} />
+      <Route path="/providers" element={<SuppliersPage />} />
+      <Route path="/expected-orders" element={<Navigate to="/reports" replace />} />
+      <Route path="/slices" element={<SlicesPage />} />
+      <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
+      <Route path="/inventory" element={<InventoryPage />} />
+      <Route path="/audit" element={<AuditPage />} />
+      <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+
+  // Sin animaciones para dispositivos lentos
+  if (shouldReduceMotion) {
+    return (
+      <Suspense 
+        fallback={
+          <div className="h-full w-full flex items-center justify-center bg-base">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          </div>
+        }
+      >
+        {content}
+      </Suspense>
+    );
+  }
+
+  // Con animaciones para dispositivos de gama alta
+  return (
+    <AnimatePresence mode="wait">
+      <Suspense 
+        fallback={
+          <div className="h-full w-full flex items-center justify-center bg-base">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          </div>
+        }
+      >
+        <motion.div
+          key={location.pathname}
+          initial={motionVariants.page.initial}
+          animate={motionVariants.page.animate}
+          exit={motionVariants.page.exit}
+          transition={pageTransition}
+          className="h-full w-full"
+        >
+          {content}
+        </motion.div>
+      </Suspense>
+    </AnimatePresence>
+  );
+};
+
+// ============================================================================
+// APP
+// ============================================================================
 
 const App = () => (
   <Router>
     <ThemeProvider>
-      <NotificationCenterProvider>
-        <ErrorProvider>
-          <CommandMenuProvider>
-            <AppContent />
-          </CommandMenuProvider>
-        </ErrorProvider>
-      </NotificationCenterProvider>
+      <MotionProvider>
+        <NotificationCenterProvider>
+          <ErrorProvider>
+            <CommandMenuProvider>
+              <AppContent />
+            </CommandMenuProvider>
+          </ErrorProvider>
+        </NotificationCenterProvider>
+      </MotionProvider>
     </ThemeProvider>
   </Router>
 );

@@ -1,7 +1,4 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* AppSheet Dark Theme - Importar después de Tailwind */
 @import './styles/appsheet-theme.css';
@@ -67,6 +64,56 @@
     user-select: none;
     margin: 0;
     padding: 0;
+  }
+
+  /* ================================================
+   * REDUCED MOTION - Optimización para móviles lentos
+   * ================================================ */
+  
+  /* Detecta preferencia del sistema */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Clase para motion reducido (agregada por useReducedMotion) */
+  .motion-reduced *,
+  .motion-reduced *::before,
+  .motion-reduced *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 100ms !important;
+  }
+  
+  /* Deshabilitar parallax y efectos 3D en dispositivos lentos */
+  .motion-reduced .parallax,
+  .motion-reduced [style*="perspective"] {
+    transform: none !important;
+  }
+  
+  /* Transiciones más rápidas para móviles */
+  @media (max-width: 768px) {
+    .transition-colors {
+      transition-duration: 100ms !important;
+    }
+    .transition-transform {
+      transition-duration: 100ms !important;
+    }
+    .transition-all {
+      transition-duration: 150ms !important;
+    }
+  }
+  
+  /* will-change hints para optimizar GPU */
+  .motion-optimized {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
   }
 
   /* ================================================
