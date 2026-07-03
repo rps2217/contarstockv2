@@ -188,9 +188,9 @@ export function BulkActionBar<T = any>({
 }: BulkActionBarProps<T>) {
   if (selectedCount === 0) return null;
 
-  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-elevated' : theme === 'light' ? 'bg-white' : 'bg-black';
-  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : theme === 'light' ? 'text-slate-900' : 'text-yellow-400';
-  const borderClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-subtle' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
+  const bgClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-elevated' : theme === 'light' ? 'bg-white' : 'bg-black';
+  const textClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : theme === 'light' ? 'text-slate-900' : 'text-yellow-400';
+  const borderClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'border-subtle' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgClass} border-t-4 ${borderClass} ${className}`}>
@@ -284,9 +284,9 @@ export function BulkEditModal<T = any>({
 
   if (!isOpen) return null;
 
-  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface' : 'bg-white';
-  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900';
-  const inputBgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
+  const bgClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-surface' : 'bg-white';
+  const textClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : 'text-slate-900';
+  const inputBgClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -308,8 +308,8 @@ export function BulkEditModal<T = any>({
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          <div className={`p-4 rounded-xl border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-blue-400' : 'text-blue-600'}`}>
+          <div className={`p-4 rounded-xl border ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-blue-400' : 'text-blue-600'}`}>
               {config.description}
             </p>
           </div>
@@ -321,14 +321,14 @@ export function BulkEditModal<T = any>({
 
             return (
               <div key={field.key} className="space-y-2">
-                <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'}`}>
+                <label className={`text-[10px] font-black uppercase tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-muted' : 'text-slate-500'}`}>
                   {field.label} {field.required && <span className="text-rose-500">*</span>}
                 </label>
 
                 {field.type === 'select' ? (
                   <select
                     value={values[field.key] || ''}
-                    onChange={e => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(field.key, e.target.value)}
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none appearance-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   >
                     <option value="">Seleccionar...</option>
@@ -339,7 +339,7 @@ export function BulkEditModal<T = any>({
                 ) : field.type === 'textarea' ? (
                   <textarea
                     value={values[field.key] || ''}
-                    onChange={e => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(field.key, e.target.value)}
                     rows={3}
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   />
@@ -347,7 +347,7 @@ export function BulkEditModal<T = any>({
                   <input
                     type={field.type}
                     value={values[field.key] || ''}
-                    onChange={e => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(field.key, e.target.value)}
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   />
                 )}

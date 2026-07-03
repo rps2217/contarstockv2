@@ -62,7 +62,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   }, []);
 
   return (
-    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-base text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-base text-white' : 'bg-slate-50 text-slate-900'}`}>
       {header}
 
       {/* COMPORTAMIENTO CLÁSICO DE APPSHEET: NUBE DE ESTADO FLOTANTE */}

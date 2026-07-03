@@ -19,7 +19,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
     stock: product?.stock ?? 0,
     minStock: product?.minStock ?? 0,
     price: product?.price ?? 0,
-    cost: product?.cost ?? 0,
     category: product?.category || '',
     location: product?.location || '',
   })
@@ -61,7 +60,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
             <input
               type="text"
               value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               required
             />
@@ -73,7 +72,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
               <input
                 type="text"
                 value={form.sku}
-                onChange={e => setForm({ ...form, sku: e.target.value })}
+                onChange={(e) => setForm({ ...form, sku: e.target.value })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -82,7 +81,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
               <input
                 type="text"
                 value={form.barcode}
-                onChange={e => setForm({ ...form, barcode: e.target.value })}
+                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -94,7 +93,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
               <input
                 type="number"
                 value={form.stock}
-                onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -103,7 +102,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
               <input
                 type="number"
                 value={form.minStock}
-                onChange={e => setForm({ ...form, minStock: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -113,7 +112,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
                 type="number"
                 step="0.01"
                 value={form.price}
-                onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -125,7 +124,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
               <input
                 type="text"
                 value={form.category}
-                onChange={e => setForm({ ...form, category: e.target.value })}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -134,7 +133,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
               <input
                 type="text"
                 value={form.location}
-                onChange={e => setForm({ ...form, location: e.target.value })}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
                 className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
               />
             </div>

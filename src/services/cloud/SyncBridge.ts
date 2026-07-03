@@ -58,7 +58,7 @@ export class SyncBridge {
   async syncAll(options: SyncOptions = {}): Promise<SyncResult> {
     if (this.isRunning) {
       logger.warn('SyncBridge', 'Sync already in progress');
-      return { success: false, results: {}, totalDuration: 0, totalSuccess: 0, totalFailed: 0 };
+      return { success: false, results: {} as Record<string, EnhancedSyncResult>, totalDuration: 0, totalSuccess: 0, totalFailed: 0 };
     }
 
     this.isRunning = true;

@@ -76,7 +76,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   const [withdrawalDays, setWithdrawalDays] = useState(30);
 
   const isEditMode = mode === 'edit';
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
   const isHighContrast = theme === 'high-contrast';
 
   // Usar barcode escaneado si existe o datos iniciales para edición

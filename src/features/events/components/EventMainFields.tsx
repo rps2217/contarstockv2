@@ -30,7 +30,7 @@ export const EventMainFields: React.FC<Props> = ({
       {/* Folio FRC */}
       <div className="space-y-2">
         <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
+          (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-muted' : 'text-slate-500'
         }`}>
           <FileText className="w-3 h-3" /> Folio FRC
         </label>
@@ -41,7 +41,7 @@ export const EventMainFields: React.FC<Props> = ({
           onChange={(e) => onFrcChange(e.target.value.toUpperCase())}
           placeholder="Obligatorio"
           className={`w-full px-4 py-3 rounded-xl text-sm font-bold border-2 transition-all outline-none ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
+            (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray'
               ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
               : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
           }`}
@@ -51,7 +51,7 @@ export const EventMainFields: React.FC<Props> = ({
       {/* Guía */}
       <div className="space-y-2">
         <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-          theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
+          (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-muted' : 'text-slate-500'
         }`}>
           <Truck className="w-3 h-3" /> Guía
         </label>
@@ -62,7 +62,7 @@ export const EventMainFields: React.FC<Props> = ({
           onChange={(e) => onNguiaChange(e.target.value.toUpperCase())}
           placeholder="Obligatorio"
           className={`w-full px-4 py-3 rounded-xl text-sm font-bold border-2 transition-all outline-none ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
+            (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray'
               ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
               : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
           }`}

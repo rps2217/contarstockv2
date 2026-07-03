@@ -289,7 +289,7 @@ const CustomerFormModal = ({
                 <input
                   type="text"
                   value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
                   className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                   placeholder="Juan"
                 />
@@ -299,7 +299,7 @@ const CustomerFormModal = ({
                 <input
                   type="text"
                   value={lastName}
-                  onChange={e => setLastName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
                   className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                   placeholder="Pérez"
                 />
@@ -311,7 +311,7 @@ const CustomerFormModal = ({
               <input
                 type="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
                 className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                 placeholder="+56 9 1234 5678"
               />
@@ -393,7 +393,7 @@ const SendMessageModal = ({
             <label className="text-xs text-muted mb-1 block">Mensaje</label>
             <textarea
               value={message}
-              onChange={e => setMessage(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
               rows={5}
               className="w-full bg-surface border border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 resize-none"
               placeholder="Escribe tu mensaje..."
@@ -492,8 +492,8 @@ export const RedesignCustomersPage: React.FC = () => {
         {/* Stats */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar">
           <SummaryCard label="Total" value={stats.total} icon={Users} color="text-primary" />
-          <SummaryCard label="Sincronizados" value={stats.total - stats.inactive} icon={UserCheck} color="text-emerald-500" />
-          <SummaryCard label="Pendientes" value={stats.inactive} icon={Clock} color="text-amber-500" />
+          <SummaryCard label="Sincronizados" value={stats.syncedCount} icon={UserCheck} color="text-emerald-500" />
+          <SummaryCard label="Pendientes" value={stats.pendingCount} icon={Clock} color="text-amber-500" />
         </div>
       </div>
 

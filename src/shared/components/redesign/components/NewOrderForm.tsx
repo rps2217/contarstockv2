@@ -3,7 +3,8 @@ import { motion } from 'framer-motion'
 import { Upload, FileText, CheckCircle, Plus, X, Trash2, Save, Clipboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { ExpectedOrderRepository, type ExpectedItem, type ExpectedOrder } from '@/repositories/ExpectedOrderRepository'
+import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository'
+import type { ExpectedItem, ExpectedOrder } from '@/types'
 
 interface NewOrderFormProps {
   onSaved?: () => void

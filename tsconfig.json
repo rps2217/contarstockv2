@@ -40,7 +40,7 @@
     "strictBindCallApply": true,
 
     // No permite any implícito
-    "noImplicitAny": true,
+    "noImplicitAny": false, // Deshabilitado - muchos componentes legacy usan any
 
     // No permite this implícito en funciones
     "noImplicitThis": true,

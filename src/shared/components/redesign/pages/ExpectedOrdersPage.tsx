@@ -21,8 +21,8 @@ const StatCard = ({ label, value, color = 'text-primary' }: { label: string; val
 
 const OrderRow = ({ order, onSelect }: { order: ExpectedOrder; onSelect: () => void }) => {
   const itemCount = order.items?.length || 0
-  const totalUnits = order.items?.reduce((acc, i) => acc + i.quantity, 0) || 0
-  const createdAt = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'
+  const totalUnits = order.items?.reduce((acc, i) => acc + (i.expectedQty || 0), 0) || 0
+  const importedAt = order.importedAt ? new Date(order.importedAt).toLocaleDateString() : '-'
 
   return (
     <motion.div 
@@ -35,20 +35,14 @@ const OrderRow = ({ order, onSelect }: { order: ExpectedOrder; onSelect: () => v
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-primary truncate">
-            {order.purchaseOrder || order.internalId || 'Sin descripción'}
+            {order.metadata?.purchaseOrder || order.internalId || 'Sin descripción'}
           </p>
-          <span className={cn(
-            'px-2 py-0.5 rounded-full text-xs font-medium',
-            order.isFulfilled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-blue-500/20 text-blue-500'
-          )}>
-            {order.isFulfilled ? 'Completado' : 'Pendiente'}
-          </span>
         </div>
         <div className="flex items-center gap-4 mt-1">
           <span className="text-xs text-muted">{itemCount} items</span>
           <span className="text-xs text-muted">{totalUnits} unidades</span>
           <span className="text-xs text-muted flex items-center gap-1">
-            <Clock className="w-3 h-3" />{createdAt}
+            <Clock className="w-3 h-3" />{importedAt}
           </span>
         </div>
       </div>
@@ -74,9 +68,9 @@ export const RedesignExpectedOrdersPage: React.FC = () => {
     if (!searchQuery) return savedOrders || []
     const q = searchQuery.toLowerCase()
     return (savedOrders || []).filter(o => 
-      o.purchaseOrder?.toLowerCase().includes(q) ||
+      o.metadata?.purchaseOrder?.toLowerCase().includes(q) ||
       o.internalId?.toLowerCase().includes(q) ||
-      o.documentType?.toLowerCase().includes(q)
+      o.metadata?.documentType?.toLowerCase().includes(q)
     )
   }, [savedOrders, searchQuery])
 
@@ -84,9 +78,9 @@ export const RedesignExpectedOrdersPage: React.FC = () => {
     const orders = savedOrders || []
     return {
       total: orders.length,
-      pending: orders.filter(o => !o.isFulfilled).length,
-      completed: orders.filter(o => o.isFulfilled).length,
-      totalUnits: orders.reduce((acc, o) => acc + (o.items?.reduce((a, i) => a + i.quantity, 0) || 0), 0)
+      pending: orders.filter(o => o.totalExpectedUnits > 0).length,
+      completed: orders.filter(o => o._syncedFromCloud).length,
+      totalUnits: orders.reduce((acc, o) => acc + (o.items?.reduce((a, i) => a + (i.expectedQty || 0), 0) || 0), 0)
     }
   }, [savedOrders])
 

@@ -94,13 +94,13 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  };
 
  return (
- <div className={`flex flex-col h-screen ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-background' : 'bg-slate-50'}`}>
+ <div className={`flex flex-col h-screen ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-brand-background' : 'bg-slate-50'}`}>
  <header className={`border-b px-4 py-3 flex items-center justify-between sticky top-0 z-20 ${
-   theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
+   (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
  }`}>
  <div className="flex items-center gap-3">
- <button onClick={onBack} className={`p-2 rounded-full transition-colors ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'hover:bg-white/5 text-muted' : 'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft className="w-5 h-5" /></button>
- <div><h2 className={`font-black leading-none uppercase ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'}`}>{session?.erpOrder}</h2><span className="text-[10px] text-muted font-bold uppercase">{session?.logisticsLabel}</span></div>
+ <button onClick={onBack} className={`p-2 rounded-full transition-colors ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'hover:bg-white/5 text-muted' : 'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft className="w-5 h-5" /></button>
+ <div><h2 className={`font-black leading-none uppercase ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : 'text-slate-900'}`}>{session?.erpOrder}</h2><span className="text-[10px] text-muted font-bold uppercase">{session?.logisticsLabel}</span></div>
  </div>
  <div className="flex gap-2">
  {session && !session.isVerifiedMode && (
@@ -122,12 +122,12 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  <div className="max-w-4xl mx-auto space-y-4">
  {showDetective && (
  <div className={`bg-indigo-50 border-2 border-indigo-200 rounded-[2rem] p-6 mb-6 animate-in slide-in-from-top duration-300 ${
-   theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-indigo-950/30 border-indigo-500/20' : ''
+   (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-indigo-950/30 border-indigo-500/20' : ''
  }`}>
  <div className="flex items-center justify-between mb-4">
  <div className="flex items-center gap-2">
  <Zap className="w-5 h-5 text-indigo-600" />
- <h3 className={`font-black uppercase text-xs tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-indigo-300' : 'text-indigo-900'}`}>Resultados del Detective IA</h3>
+ <h3 className={`font-black uppercase text-xs tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-indigo-300' : 'text-indigo-900'}`}>Resultados del Detective IA</h3>
  </div>
  <button onClick={() => setShowDetective(false)} className="text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-600">Cerrar</button>
  </div>
@@ -141,11 +141,11 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  <div className="grid gap-3">
  {matchResults.map((match, idx) => (
  <div key={idx} className={`p-4 rounded-2xl border flex items-center justify-between shadow-sm ${
-   theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-indigo-100'
+   (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-indigo-100'
  }`}>
  <div>
  <div className="flex items-center gap-2">
- <span className={`font-black uppercase ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'}`}>{match.expectedOrder.internalId}</span>
+ <span className={`font-black uppercase ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : 'text-slate-900'}`}>{match.expectedOrder.internalId}</span>
  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
  match.matchScore > 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
  }`}>
@@ -159,7 +159,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  <div className="flex gap-2">
  <button 
  onClick={() => exportDiscrepancyPDF(match, session?.logisticsLabel || 'Bulto')}
- className={`p-2 text-rose-600 rounded-lg transition-colors ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'hover:bg-white/5' : 'hover:bg-rose-50'}`}
+ className={`p-2 text-rose-600 rounded-lg transition-colors ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'hover:bg-white/5' : 'hover:bg-rose-50'}`}
  title="Ver Discrepancias"
  >
  <FileText className="w-4 h-4" />
@@ -184,7 +184,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  )}
  {session?.labelPhoto && (
  <div className={`p-4 rounded-3xl border shadow-sm overflow-hidden mb-4 ${
-   theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
+   (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
  }`}>
  <div className="flex items-center justify-between mb-2">
  <h3 className="text-[10px] font-black uppercase tracking-widest text-muted">Evidencia de Etiqueta</h3>
@@ -208,10 +208,10 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  const status = determineItemStatus(item.totalQuantity, item.expectedQuantity);
  return (
  <div key={item.barcode} className={`p-5 rounded-3xl border shadow-sm flex items-center justify-between ${
-   theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
+   (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
  }`}>
  <div className="min-w-0 flex-1 pr-4">
- <h4 className={`font-black uppercase truncate text-sm ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'}`}>{item.productName}</h4>
+ <h4 className={`font-black uppercase truncate text-sm ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : 'text-slate-900'}`}>{item.productName}</h4>
   <div className="flex items-center gap-3 mt-1">
     <span className="font-mono text-blue-600 text-[10px] font-bold">{item.barcode}</span>
     {item.expectedQuantity > 0 && (
@@ -230,7 +230,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  </div>
  <div className="flex items-center gap-4">
  <div className={`text-2xl font-black tabular-nums ${getStatusColorClasses(status, 'text')}`}>{item.totalQuantity}</div>
- <button onClick={() => sessionService.deleteSessionItem(sessionId, item.barcode)} className={`p-2 transition-colors ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-slate-500 hover:text-rose-500' : 'text-secondary hover:text-rose-600'}`}><Trash2 className="w-5 h-5" /></button>
+ <button onClick={() => sessionService.deleteSessionItem(sessionId, item.barcode)} className={`p-2 transition-colors ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-slate-500 hover:text-rose-500' : 'text-secondary hover:text-rose-600'}`}><Trash2 className="w-5 h-5" /></button>
  </div>
  </div>
  );

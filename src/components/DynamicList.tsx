@@ -110,7 +110,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={`w-full pl-12 pr-12 py-3.5 rounded-2xl text-base font-bold border transition-all outline-none shadow-md ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
+              (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' 
                 ? 'bg-surface/60 border-white/5 text-white placeholder-stone-500 focus:bg-surface/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20' 
                 : 'bg-stone-50 border-stone-200 text-stone-900 placeholder-stone-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10'
             }`}
@@ -132,7 +132,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
           className={`flex items-center justify-center gap-2 h-[52px] px-4 md:px-5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all shrink-0 ${
             isPanelOpen
               ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-              : (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
+              : ((theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray'
                 ? 'bg-surface/60 border-white/5 text-stone-300 hover:bg-surface/90 hover:text-indigo-400'
                 : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200 hover:text-stone-950')
           }`}
@@ -166,7 +166,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
             exit={{ opacity: 0, height: 0, y: -6 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className={`overflow-hidden rounded-2xl border ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
+              (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray'
                 ? 'bg-surface/70 border-white/5 shadow-2xl backdrop-blur-md'
                 : 'bg-stone-50 border-stone-200 shadow-md'
             }`}
@@ -240,7 +240,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
                       className={`py-3 px-4 rounded-xl flex items-center justify-between transition-all border shrink-0 ${
                         selectedIds.size === filteredItems.length && filteredItems.length > 0
                           ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 font-bold'
-                          : (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10 text-stone-400 hover:text-white' : 'bg-stone-50 border-stone-200 text-stone-500 hover:text-stone-900')
+                          : ((theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-white/5 border-white/10 text-stone-400 hover:text-white' : 'bg-stone-50 border-stone-200 text-stone-500 hover:text-stone-900')
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -280,7 +280,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
                       className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all border text-xs font-bold uppercase tracking-wider ${
                         isPulling ? 'animate-pulse' : ''
                       } ${
-                        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
+                        (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' 
                           ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' 
                           : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
                       }`}
@@ -294,7 +294,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
                   <button 
                     onClick={() => window.print()} 
                     className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all border text-xs font-bold uppercase tracking-wider ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
+                      (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
                     }`}
                   >
                     <Printer className="w-4 h-4" />
@@ -304,7 +304,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
                   <button 
                     onClick={handleExportCSV} 
                     className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all border text-xs font-bold uppercase tracking-wider ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
+                      (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
                     }`}
                   >
                     <FileText className="w-4 h-4" />
@@ -314,7 +314,7 @@ export const DynamicList: React.FC<DynamicListProps> = ({
                   <button 
                     onClick={() => navigate('/settings')} 
                     className={`flex items-center justify-center w-[42px] h-[40px] rounded-xl transition-all border ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
+                      (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
                     }`}
                     title="Configuración General"
                   >

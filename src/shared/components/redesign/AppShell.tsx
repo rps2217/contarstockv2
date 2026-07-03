@@ -21,6 +21,8 @@ import {
   Building2,
   Scissors,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useDbReady } from './hooks/useDbReady';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
@@ -310,7 +312,21 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
     </div>
   );
 
-  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-base text-primary">
+        <div className="text-center">
+          <p className="text-lg font-bold mb-2">Error de base de datos</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full bg-base text-primary font-sans overflow-hidden selection:bg-blue-500/30">
@@ -318,8 +334,6 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
       <main className="flex-1 relative overflow-hidden">
         {renderView()}
       </main>
-      {/* BottomDock eliminado - navegación solo desktop via sidebar */}
-      <ToastContainer />
     </div>
   );
 };
@@ -328,24 +342,28 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
 export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) => {
   const { error } = useDbReady();
   
-  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-base text-primary">
+        <div className="text-center">
+          <p className="text-lg font-bold mb-2">Error de base de datos</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <RedesignThemeProvider>
-      <RedesignAppShell {...props} />
-    </RedesignThemeProvider>
-  );
+  return <RedesignAppShell {...props} />;
 };
 
 // Exportar también el componente principal para uso directo si ya se tiene un provider
 export const RedesignAppShellWithProvider: React.FC<RedesignAppShellProps> = (props) => {
-  const { error } = useDbReady();
-  
-  if (error) return <DbError error={error} onRetry={() => window.location.reload()} />;
-
-  return (
-    <RedesignAppShell {...props} />
-  );
+  return <RedesignAppShell {...props} />;
 };
 
 export default RedesignAppShell;

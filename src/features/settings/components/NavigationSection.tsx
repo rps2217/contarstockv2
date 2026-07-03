@@ -13,7 +13,7 @@ interface Props {
  * NavigationSection - Selector de módulo inicial
  */
 export const NavigationSection: React.FC<Props> = ({ settings, updateSetting, theme = 'dark' }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
   

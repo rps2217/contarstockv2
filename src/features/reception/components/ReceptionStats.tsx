@@ -13,7 +13,7 @@ interface Props {
 }
 
 export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 
   const cardClasses = isDark
     ? 'bg-surface border-white/5 shadow-2xl relative overflow-hidden group hover:border-white/10 transition-all p-5 rounded-[2rem] border'

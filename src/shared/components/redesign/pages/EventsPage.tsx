@@ -138,13 +138,9 @@ export const RedesignEventsPage: React.FC = () => {
     const sessions = await db.sessions.toArray()
     return sessions.map(s => ({
       id: s.id?.toString() || Math.random().toString(),
-      type: (s.sessionType === 'counting' ? 'info' : s.sessionType === 'expiry' ? 'warning' : 'info') as EventType,
+      type: (s.sessionType === 'hammer' ? 'warning' : 'info') as EventType,
       title: `Sesión ${s.sessionType || 'general'}`,
       description: s.sessionType ? `Tipo: ${s.sessionType}` : '',
-      productName: s.productName,
-      barcode: s.barcode,
-      location: s.location,
-      userName: s.userName,
       timestamp: s.timestamp || Date.now(),
       status: (s.syncStatus === 'synced' ? 'resolved' : 'active') as EventStatus
     }))

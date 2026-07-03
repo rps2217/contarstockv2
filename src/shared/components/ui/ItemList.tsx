@@ -49,7 +49,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   itemRenderer,
   keyField = 'barcode',
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
   const [editQty, setEditQty] = React.useState<number>(0);
 

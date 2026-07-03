@@ -78,7 +78,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   onBlur,
   autoFocus,
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 
   // Clases base
   const baseInputClass = `
@@ -209,7 +209,7 @@ export const SKUInput: React.FC<{
   onAdd?: () => void;
   showAddButton?: boolean;
 }> = ({ value, onChange, productName, isSearching, theme = 'dark', placeholder = 'Ingresa SKU o barcode...', onAdd, showAddButton }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 
   return (
     <div className="space-y-2">
@@ -271,7 +271,7 @@ export const QuantityInput: React.FC<{
   max?: number;
   label?: string;
 }> = ({ value, onChange, theme = 'dark', min = 0, max, label = 'Cantidad' }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 
   return (
     <div className="space-y-2">
@@ -326,7 +326,7 @@ export const EventTypeSelector: React.FC<{
   theme?: 'dark' | 'light';
   label?: string;
 }> = ({ value, onChange, options, theme = 'dark', label = 'Tipo de Evento' }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 
   return (
     <div className="space-y-2">
@@ -371,7 +371,7 @@ export const DestinationSelector: React.FC<{
   label?: string;
   showCustom?: boolean;
 }> = ({ value, onChange, options, theme = 'dark', label = 'Destino', showCustom = true }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
   const [customValue, setCustomValue] = React.useState('');
 
   const handleCustomSubmit = () => {

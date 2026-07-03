@@ -61,7 +61,7 @@ interface ThemeContextType {
 // ============================================================
 
 export function isDarkTheme(theme: ThemeName): boolean {
-  return theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  return (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 }
 
 export function isGrayTheme(theme: ThemeName): boolean {

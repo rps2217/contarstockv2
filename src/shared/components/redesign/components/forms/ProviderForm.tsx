@@ -7,7 +7,8 @@ import type { Provider } from '@/types'
 interface ProviderFormProps {
   provider?: Provider
   onSave: (data: Partial<Provider>) => Promise<void>
-  onClose: () => voi}
+  onClose: () => void
+}
 
 export const ProviderForm: React.FC<ProviderFormProps> = ({ provider, onSave, onClose }) => {
   const [loading, setLoading] = useState(false)
@@ -17,7 +18,6 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ provider, onSave, on
     email: provider?.email || '',
     phone: provider?.phone || '',
     address: provider?.address || '',
-    contact: provider?.contact || '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,29 +51,25 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ provider, onSave, on
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">Nombre *</label>
-            <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" required />
+            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" required />
           </div>
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">RUT</label>
-            <input type="text" value={form.rut} onChange={e => setForm({ ...form, rut: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-secondary mb-1">Persona de contacto</label>
-            <input type="text" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
+            <input type="text" value={form.rut} onChange={(e) => setForm({ ...form, rut: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">Telefono</label>
-              <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
+              <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">Direccion</label>
-            <input type="text" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
+            <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-amber-500" />
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-3 bg-base border border-subtle rounded-xl text-primary font-medium hover:bg-elevated transition-colors">Cancelar</button>

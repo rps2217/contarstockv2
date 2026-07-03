@@ -87,7 +87,7 @@ export class EnhancedSyncEngine {
         success: true,
         pullRes,
         pushRes,
-        metrics: this.getMetrics(registryKey)
+        metrics: this.getMetrics(registryKey) ?? undefined
       };
 
     } catch (error: any) {
@@ -97,7 +97,7 @@ export class EnhancedSyncEngine {
       return {
         success: false,
         error: error.message,
-        metrics: this.getMetrics(registryKey)
+        metrics: this.getMetrics(registryKey) ?? undefined
       };
     }
   }

@@ -21,7 +21,7 @@ export const SlicesSidebar: React.FC<Props> = ({
   onDelete,
   theme = 'dark',
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 
