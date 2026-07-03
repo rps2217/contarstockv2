@@ -141,7 +141,6 @@ export const RedesignEventsPage: React.FC = () => {
       type: (s.sessionType === 'hammer' ? 'warning' : 'info') as EventType,
       title: `Sesión ${s.sessionType || 'general'}`,
       description: s.sessionType ? `Tipo: ${s.sessionType}` : '',
-      timestamp: s.timestamp || Date.now(),
       status: (s.syncStatus === 'synced' ? 'resolved' : 'active') as EventStatus
     }))
   }, [])
