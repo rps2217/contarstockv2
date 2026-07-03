@@ -14,6 +14,7 @@ import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
 import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useExpiryNotifications } from '@/hooks/useExpiryNotifications';
+import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
@@ -107,6 +108,7 @@ const AppContent = () => {
   useAutoSession();
   useExpiryWatcher();
   useExpiryNotifications();
+  useAppShortcuts();
 
   useEffect(() => {
     (window as any).__APP_SETTINGS__ = settings;

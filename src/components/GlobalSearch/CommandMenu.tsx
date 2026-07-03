@@ -322,8 +322,22 @@ export function CommandMenuProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handler = () => setIsOpen(true);
+    // Escuchar múltiples eventos para abrir el command menu
     document.addEventListener('open-command-menu', handler);
-    return () => document.removeEventListener('open-command-menu', handler);
+    document.addEventListener('open-global-search', handler);
+    // Keyboard shortcut Ctrl+K / Cmd+K
+    const keyHandler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('open-command-menu', handler);
+      document.removeEventListener('open-global-search', handler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, []);
 
   return (

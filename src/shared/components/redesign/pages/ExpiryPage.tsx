@@ -4,6 +4,7 @@ import {
   CalendarClock, Plus, Search, ChevronRight, Skull, AlertTriangle,
   PackageX, Clock, ShieldCheck, MapPin, RefreshCw, Package, AlertCircle,
   X, Trash2, Check, Pencil, Download, Table2, FileSpreadsheet, FileText,
+  Filter, ArrowUpDown, Truck, LayoutGrid, List,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -203,6 +204,12 @@ export const RedesignExpiryPage: React.FC = () => {
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [editingRecord, setEditingRecord] = useState<ExpiryRecord | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
+  const [sortBy, setSortBy] = useState<'daysLeft' | 'productName' | 'provider'>('daysLeft')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [selectedProvider, setSelectedProvider] = useState<string>('')
+  const [selectedLocation, setSelectedLocation] = useState<string>('')
 
   // USAR HOOK FUNCIONAL DE features/expiry
   const { records: allRecords, filteredRecords, stats, isLoading, isSyncing, filters, actions, selectedIds, selectedRecord } = useExpiry()
@@ -273,6 +280,51 @@ export const RedesignExpiryPage: React.FC = () => {
     })
     return g
   }, [filteredRecords])
+
+  // Obtener proveedores y ubicaciones únicos
+  const providers = useMemo(() => {
+    const unique = new Set(allRecords.map(r => r.providerName).filter(Boolean))
+    return Array.from(unique).sort()
+  }, [allRecords])
+  
+  const locations = useMemo(() => {
+    const unique = new Set(allRecords.map(r => r.location).filter(Boolean))
+    return Array.from(unique).sort()
+  }, [allRecords])
+
+  // Filtrado y ordenamiento avanzado
+  const processedRecords = useMemo(() => {
+    let result = [...filteredRecords]
+    
+    // Filtro por proveedor
+    if (selectedProvider) {
+      result = result.filter(r => r.providerName === selectedProvider)
+    }
+    
+    // Filtro por ubicación
+    if (selectedLocation) {
+      result = result.filter(r => r.location === selectedLocation)
+    }
+    
+    // Ordenamiento
+    result.sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'daysLeft':
+          comparison = a.daysLeft - b.daysLeft
+          break
+        case 'productName':
+          comparison = (a.productName || '').localeCompare(b.productName || '')
+          break
+        case 'provider':
+          comparison = (a.providerName || '').localeCompare(b.providerName || '')
+          break
+      }
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+    
+    return result
+  }, [filteredRecords, selectedProvider, selectedLocation, sortBy, sortOrder])
 
   const totalRecords = allRecords.length
   const urgentCount = counts.expired + counts.critical + counts.withdrawal
@@ -398,16 +450,82 @@ export const RedesignExpiryPage: React.FC = () => {
                 placeholder="Buscar por producto, código o ubicación..."
                 className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500 transition-all" />
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              {FILTERS.map((f) => (
-                <button key={f.value} onClick={() => handleFilterClick(f.value)}
-                  className={cn('px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors shrink-0',
-                    filter === f.value ? 'bg-blue-600 text-white' : 'bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle')}>
-                  {f.label}
-                </button>
-              ))}
+            <div className="flex gap-2">
+              {/* Toggle filtros avanzados */}
+              <button onClick={() => setShowFilters(!showFilters)}
+                className={cn('p-2.5 rounded-xl transition-colors shrink-0',
+                  showFilters ? 'bg-blue-600 text-white' : 'bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle')}>
+                <Filter className="w-4 h-4" />
+              </button>
+              {/* Toggle vista */}
+              <button onClick={() => setViewMode(v => v === 'cards' ? 'table' : 'cards')}
+                className="p-2.5 rounded-xl bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle shrink-0">
+                {viewMode === 'cards' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+              </button>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                {FILTERS.map((f) => (
+                  <button key={f.value} onClick={() => handleFilterClick(f.value)}
+                    className={cn('px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors shrink-0',
+                      filter === f.value ? 'bg-blue-600 text-white' : 'bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle')}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+
+          {/* Filtros avanzados */}
+          {showFilters && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }} className="bg-surface border border-subtle rounded-xl p-4 space-y-3">
+              <div className="flex flex-wrap gap-3">
+                {/* Filtro por proveedor */}
+                <div className="flex-1 min-w-[180px]">
+                  <label className="text-xs text-muted mb-1 block flex items-center gap-1">
+                    <Truck className="w-3 h-3" /> Proveedor
+                  </label>
+                  <select value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value)}
+                    className="w-full bg-elevated border border-subtle rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500">
+                    <option value="">Todos</option>
+                    {providers.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                
+                {/* Filtro por ubicación */}
+                <div className="flex-1 min-w-[180px]">
+                  <label className="text-xs text-muted mb-1 block flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Ubicación
+                  </label>
+                  <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)}
+                    className="w-full bg-elevated border border-subtle rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500">
+                    <option value="">Todas</option>
+                    {locations.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+                
+                {/* Ordenar por */}
+                <div className="flex-1 min-w-[180px]">
+                  <label className="text-xs text-muted mb-1 block flex items-center gap-1">
+                    <ArrowUpDown className="w-3 h-3" /> Ordenar por
+                  </label>
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
+                    className="w-full bg-elevated border border-subtle rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500">
+                    <option value="daysLeft">Días restantes</option>
+                    <option value="productName">Nombre</option>
+                    <option value="provider">Proveedor</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Limpiar filtros */}
+              {(selectedProvider || selectedLocation) && (
+                <button onClick={() => { setSelectedProvider(''); setSelectedLocation(''); }}
+                  className="text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1">
+                  <X className="w-3 h-3" /> Limpiar filtros
+                </button>
+              )}
+            </motion.div>
+          )}
 
           {urgentCount > 0 && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
