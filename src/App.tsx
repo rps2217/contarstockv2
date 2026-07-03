@@ -36,24 +36,30 @@ const SyncPage = lazyWithRetry(() => import('@/shared/components/redesign').then
 // SettingsPage - usando versión rediseñada con datos reales
 const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage })));
 
-// Vistas legacy - Carga solo cuando se accede (no en bundle inicial)
-// REDISEÑO: Usando páginas del rediseño
+// Vistas legacy - ELIMINADAS (usando solo rediseño)
+// ============================================================================
+// NOTA: Las páginas legacy fueron eliminadas para consolidar en redesign
+// Mantenemos las referencias solo para no romper imports externos
+// ============================================================================
+
+// Páginas en redesign (consolidadas)
 const ReportsLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage })));
 const ExpiryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
-const ExpiryLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
-const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
-const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
-// REDISEÑO: CustomersPage usando versión rediseñada
+const ExpiryLegacy = ExpiryPage; // Alias para compatibilidad
+
+// Páginas redesignadas
 const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage })));
-const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
-// REDISEÑO: SuppliersPage usando versión rediseñada
 const SuppliersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage })));
-const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
-const ExpectedOrdersLegacy = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
-const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
-// REDISEÑO: SlicesPage usando versión rediseñada
 const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
-const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
+
+// Páginas legacy ELIMINADAS (archivos removidos):
+// - EventsLegacy (era @/features/events/EventsPage)
+// - CountingLegacy (era @/features/counting/CountingPage)  
+// - CustomersLegacy (era @/features/customers/CustomersPage)
+// - ProvidersLegacy (era @/features/suppliers/pages/SuppliersPage)
+// - ExpectedOrdersLegacy (era @/features/expected-orders/ExpectedOrdersPage)
+// - DynamicLegacy (era @/features/dynamic/DynamicManagementPage)
+// - SlicesLegacy (era @/features/slices/SlicesPage)
 // REDISEÑO: TheoreticalLoadsPage para gestión de cargas teóricas
 const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
 // REDISEÑO: HammerPage para modo ráfaga
@@ -259,25 +265,26 @@ const AppContent = () => {
                     {/* REDISEÑO - Preview del nuevo diseño de interfaz */}
                     <Route path="/redesign" element={<RedesignPreviewPage />} />
 
-                    {/* RUTAS LEGACY (redirigir a nuevas) */}
+                    {/* RUTAS LEGACY (redirigir a nuevas o eliminar) */}
                     <Route path="/reception" element={<Navigate to="/capture" replace />} />
                     <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/events" element={<EventsLegacy />} />
+                    <Route path="/events" element={<Navigate to="/reports" replace />} />
                     <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
                     <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
                     <Route path="/counting" element={<Navigate to="/reports" replace />} />
-                    <Route path="/counting/:id" element={<CountingLegacy />} />
+                    <Route path="/counting/:id" element={<Navigate to="/reports" replace />} />
                     <Route path="/massive" element={<HammerPage />} />
                     <Route path="/massive/:batchId" element={<HammerPage />} />
                     <Route path="/database" element={<Navigate to="/data" replace />} />
                     {/* REDISEÑO: Usando versiones rediseñadas */}
                     <Route path="/customers" element={<CustomersPage />} />
                     <Route path="/providers" element={<SuppliersPage />} />
-                    <Route path="/expected-orders" element={<ExpectedOrdersLegacy />} />
+                    <Route path="/expected-orders" element={<Navigate to="/reports" replace />} />
                     <Route path="/slices" element={<SlicesPage />} />
                     {/* REDISEÑO: Página de cargas teóricas */}
                     <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
-                    <Route path="/dynamic/:tableKey" element={<DynamicLegacy />} />
+                    {/* Dynamic ELIMINADO - redirigir a datos */}
+                    <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
