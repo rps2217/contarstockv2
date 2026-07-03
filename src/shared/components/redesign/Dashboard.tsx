@@ -181,6 +181,26 @@ const useDashboardMetrics = () => {
     } catch { return 0; }
   }, [], 0);
   
+  // Métricas de vencimiento
+  const expiryMetrics = useLiveQuery(async () => {
+    try {
+      if (!db) return { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 };
+      const expirations = await db.table('expirations').toArray() as any[];
+      
+      let expired = 0, critical = 0, warning = 0, safe = 0;
+      
+      expirations.forEach(e => {
+        const daysLeft = e.daysLeft ?? 0;
+        if (daysLeft < 0) expired++;
+        else if (daysLeft <= 7) critical++;
+        else if (daysLeft <= 30) warning++;
+        else safe++;
+      });
+      
+      return { expired, critical, warning, safe, total: expirations.length };
+    } catch { return { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 }; }
+  }, [], { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 });
+  
   return { 
     productCount: productCount ?? 0, 
     customerCount: customerCount ?? 0, 
@@ -188,7 +208,8 @@ const useDashboardMetrics = () => {
     sessionCount: sessionCount ?? 0, 
     scanCount: scanCount ?? 0, 
     syncQueueCount: syncQueueCount ?? 0, 
-    todaySessions: todaySessions ?? 0 
+    todaySessions: todaySessions ?? 0,
+    expiryMetrics 
   };
 };
 
@@ -328,11 +349,11 @@ export const RedesignDashboard: React.FC = () => {
           />
 
           <StatCard
-            title="Cortes"
-            value={0}
-            icon={Scissors}
+            title="Vencimientos"
+            value={metrics.expiryMetrics?.total || 0}
+            icon={CalendarClock}
             colorClass="bg-rose-500/10 text-rose-500"
-            linkTo="/slices"
+            linkTo="/expiry"
           />
 
           <StatCard
@@ -352,21 +373,72 @@ export const RedesignDashboard: React.FC = () => {
           />
         </div>
 
-        {/* Alertas */}
-        {(expiringItems || 0) > 0 && (
-          <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-rose-500" />
-              <span className="text-sm font-medium text-rose-500">
-                {expiringItems} producto{expiringItems !== 1 ? 's' : ''} próximo{expiringItems !== 1 ? 's' : ''} a vencer
-              </span>
+        {/* Resumen de Vencimientos */}
+        {metrics.expiryMetrics && metrics.expiryMetrics.total > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-secondary mb-3 flex items-center gap-2">
+              <CalendarClock className="w-4 h-4" />
+              Estado de Vencimientos
+            </h3>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-rose-500">{metrics.expiryMetrics.expired}</p>
+                <p className="text-xs text-muted">Vencidos</p>
+              </div>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-amber-500">{metrics.expiryMetrics.critical}</p>
+                <p className="text-xs text-muted">Críticos (7d)</p>
+              </div>
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-500">{metrics.expiryMetrics.warning}</p>
+                <p className="text-xs text-muted">Atención (30d)</p>
+              </div>
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-emerald-500">{metrics.expiryMetrics.safe}</p>
+                <p className="text-xs text-muted">Vigentes</p>
+              </div>
             </div>
-            <button
-              onClick={() => navigate('/expiry')}
-              className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1"
-            >
-              Ver <ArrowRight className="w-3 h-3" />
-            </button>
+          </div>
+        )}
+
+        {/* Alertas de Vencimiento */}
+        {metrics.expiryMetrics && (metrics.expiryMetrics.expired > 0 || metrics.expiryMetrics.critical > 0) && (
+          <div className="space-y-3 mb-6">
+            {/* Vencidos */}
+            {metrics.expiryMetrics.expired > 0 && (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <XCircle className="w-5 h-5 text-rose-500" />
+                  <span className="text-sm font-medium text-rose-500">
+                    {metrics.expiryMetrics.expired} producto{metrics.expiryMetrics.expired !== 1 ? 's' : ''} vencid{metrics.expiryMetrics.expired !== 1 ? 'os' : 'o'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate('/expiry')}
+                  className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1"
+                >
+                  Ver <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            
+            {/* Críticos */}
+            {metrics.expiryMetrics.critical > 0 && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  <span className="text-sm font-medium text-amber-500">
+                    {metrics.expiryMetrics.critical} producto{metrics.expiryMetrics.critical !== 1 ? 's' : ''} próximo{metrics.expiryMetrics.critical !== 1 ? 's' : ''} a vencer (7 días)
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate('/expiry')}
+                  className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1"
+                >
+                  Ver <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarClock, Plus, Search, ChevronRight, Skull, AlertTriangle,
   PackageX, Clock, ShieldCheck, MapPin, RefreshCw, Package, AlertCircle,
-  X, Trash2, Check,
+  X, Trash2, Check, Pencil, Download, Table2, FileSpreadsheet, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -13,6 +13,9 @@ import { useExpiry, ExpiryRecord, ExpiryStatus } from '@/features/expiry/hooks/u
 
 // IMPORTAR MODAL REAL DE CAPTURA
 import { ExpiryCaptureModal, ExpiryFormData } from '@/features/expiry/components/ExpiryCaptureModal'
+
+// IMPORTAR HOOK DE EXPORTACIÓN
+import { useExport } from '@/shared/hooks'
 
 // Tipos y constantes de UI
 type UxExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe'
@@ -106,6 +109,11 @@ const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
           <span className="text-xs text-muted font-mono">{record.barcode || 'Sin código'}</span>
           {record.location && <span className="text-xs text-secondary flex items-center gap-1"><MapPin className="w-3 h-3" />{record.location}</span>}
+          {record.providerName && record.providerName !== 'N/A' && (
+            <span className="text-xs text-secondary flex items-center gap-1">
+              🏭 {record.providerName}
+            </span>
+          )}
         </div>
       </div>
       {/* Fecha de vencimiento */}
@@ -194,17 +202,38 @@ export const RedesignExpiryPage: React.FC = () => {
   })
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<ExpiryRecord | null>(null)
 
   // USAR HOOK FUNCIONAL DE features/expiry
-  const { records: allRecords, filteredRecords, stats, isLoading, isSyncing, filters, actions, selectedIds, selectedRecord, setSelectedRecord } = useExpiry()
+  const { records: allRecords, filteredRecords, stats, isLoading, isSyncing, filters, actions, selectedIds, selectedRecord } = useExpiry()
+
+  // Hook de exportación
+  const expiryColumns = [
+    { key: 'barcode' as const, header: 'Código' },
+    { key: 'productName' as const, header: 'Producto' },
+    { key: 'quantity' as const, header: 'Cantidad' },
+    { key: 'mm' as const, header: 'Mes', format: (v: any) => String(v).padStart(2, '0') },
+    { key: 'yyyy' as const, header: 'Año' },
+    { key: 'daysLeft' as const, header: 'Días Restantes', format: (v: any) => v !== undefined ? String(v) : '-' },
+    { key: 'status' as const, header: 'Estado' },
+    { key: 'location' as const, header: 'Ubicación' },
+    { key: 'providerName' as const, header: 'Proveedor' },
+  ];
+  const { isExporting, exportTo } = useExport<ExpiryRecord>({ fileName: 'Vencimientos', columns: expiryColumns, sheetName: 'Vencimientos' });
 
   // Handler para click en registro
   const handleRecordClick = (record: ExpiryRecord) => {
     if (isSelectionMode) {
       actions.toggleSelection(record.id)
     } else {
-      setSelectedRecord(record)
+      actions.setSelectedRecord(record)
     }
+  }
+
+  // Abrir modal de edición
+  const handleEditRecord = (record: ExpiryRecord) => {
+    setEditingRecord(record)
+    actions.setSelectedRecord(null)
   }
 
   // Toggle modo selección
@@ -322,6 +351,30 @@ export const RedesignExpiryPage: React.FC = () => {
                   <RefreshCw className={cn('w-4 h-4', isSyncing && 'animate-spin')} />
                   <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
                 </button>
+                {/* Exportar dropdown */}
+                <div className="relative group">
+                  <button disabled={allRecords.length === 0 || isExporting}
+                    className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50">
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Exportar</span>
+                  </button>
+                  <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
+                    <div className="bg-surface border border-subtle rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                      <button onClick={() => exportTo(allRecords, 'csv')}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-elevated transition-colors text-sm">
+                        <Table2 className="w-4 h-4 text-emerald-500" /> CSV
+                      </button>
+                      <button onClick={() => exportTo(allRecords, 'excel')}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-elevated transition-colors text-sm">
+                        <FileSpreadsheet className="w-4 h-4 text-blue-500" /> Excel
+                      </button>
+                      <button onClick={() => exportTo(allRecords, 'pdf')}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-elevated transition-colors text-sm">
+                        <FileText className="w-4 h-4 text-rose-500" /> PDF
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <button onClick={() => setShowCaptureModal(true)}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
                   <Plus className="w-4 h-4" /><span className="hidden sm:inline">Registrar</span>
@@ -407,13 +460,13 @@ export const RedesignExpiryPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
-            onClick={() => setSelectedRecord(null)}
+            onClick={() => actions.setSelectedRecord(null)}
           >
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="bg-base border border-subtle rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="p-4 border-b border-subtle flex items-center justify-between">
@@ -433,7 +486,7 @@ export const RedesignExpiryPage: React.FC = () => {
                     <p className="text-xs text-muted font-mono">{selectedRecord.barcode}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedRecord(null)} className="p-2 hover:bg-elevated rounded-xl">
+                <button onClick={() => actions.setSelectedRecord(null)} className="p-2 hover:bg-elevated rounded-xl">
                   <X className="w-5 h-5 text-muted" />
                 </button>
               </div>
@@ -462,6 +515,13 @@ export const RedesignExpiryPage: React.FC = () => {
                   })()}
                 </div>
 
+                {/* Fecha de retiro calculada */}
+                {(() => {
+                  const withdrawalDateCalc = selectedRecord.withdrawalDate instanceof Date 
+                    ? selectedRecord.withdrawalDate 
+                    : new Date(selectedRecord.withdrawalDate)
+                  return (
+                    <>
                 {/* Detalles */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-surface rounded-xl p-3">
@@ -482,7 +542,23 @@ export const RedesignExpiryPage: React.FC = () => {
                     <p className="text-xs text-muted mb-1">Ubicación</p>
                     <p className="text-sm font-semibold text-primary truncate">{selectedRecord.location}</p>
                   </div>
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Política</p>
+                    <p className={cn('text-sm font-semibold', selectedRecord.hasCanje ? 'text-indigo-400' : 'text-amber-500')}>
+                      {selectedRecord.hasCanje ? '🏭 CANJE' : '⚠️ MERMA'}
+                    </p>
+                  </div>
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Fecha Retiro</p>
+                    <p className="text-sm font-semibold text-primary">
+                      {withdrawalDateCalc.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                    </p>
+                    <p className="text-xs text-muted">({selectedRecord.withdrawalDays} días antes)</p>
+                  </div>
                 </div>
+                    </>
+                  )
+                })()}
 
                 {/* Observaciones */}
                 {selectedRecord.observaciones && (
@@ -510,10 +586,17 @@ export const RedesignExpiryPage: React.FC = () => {
               {/* Actions */}
               <div className="p-4 border-t border-subtle flex gap-3">
                 <button 
+                  onClick={() => handleEditRecord(selectedRecord)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-amber-500/20 text-amber-400 rounded-xl font-medium hover:bg-amber-500/30 transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Editar
+                </button>
+                <button 
                   onClick={() => {
                     toast.success('Registro eliminado')
                     actions.deleteRecord(selectedRecord.id)
-                    setSelectedRecord(null)
+                    actions.setSelectedRecord(null)
                   }}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-rose-500/20 text-rose-400 rounded-xl font-medium hover:bg-rose-500/30 transition-colors"
                 >
@@ -521,7 +604,7 @@ export const RedesignExpiryPage: React.FC = () => {
                   Eliminar
                 </button>
                 <button 
-                  onClick={() => setSelectedRecord(null)}
+                  onClick={() => actions.setSelectedRecord(null)}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-400 transition-colors"
                 >
                   <Check className="w-4 h-4" />
@@ -546,6 +629,8 @@ export const RedesignExpiryPage: React.FC = () => {
             quantity: data.quantity,
             location: data.location,
             observaciones: data.observaciones,
+            providerName: data.providerName,
+            providerRut: data.providerRut,
             hasCanje: data.hasCanje,
             withdrawalDays: data.withdrawalDays,
           })
@@ -553,6 +638,33 @@ export const RedesignExpiryPage: React.FC = () => {
           if (id) {
             toast.success('Vencimiento registrado correctamente')
           }
+        }}
+        theme="dark"
+      />
+
+      {/* Modal de Edición */}
+      <ExpiryCaptureModal
+        isOpen={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        mode="edit"
+        initialData={editingRecord}
+        onUpdate={async (data: ExpiryFormData) => {
+          if (!editingRecord) return
+          
+          await actions.updateRecord(editingRecord.id, {
+            quantity: data.quantity,
+            mm: data.mm,
+            yyyy: data.yyyy,
+            location: data.location,
+            observaciones: data.observaciones,
+            providerName: data.providerName,
+            providerRut: data.providerRut,
+            hasCanje: data.hasCanje,
+            withdrawalDays: data.withdrawalDays,
+          })
+          
+          toast.success('Vencimiento actualizado correctamente')
+          setEditingRecord(null)
         }}
         theme="dark"
       />

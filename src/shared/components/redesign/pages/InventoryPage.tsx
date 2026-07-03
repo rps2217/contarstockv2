@@ -5,7 +5,7 @@
  * Migrado a redesign/pages/ para consolidar UI.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { 
   RefreshCw, 
@@ -17,7 +17,12 @@ import {
   Minus,
   Printer,
   LayoutGrid,
-  List
+  List,
+  Download,
+  Upload,
+  Table2,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/stores';
@@ -25,6 +30,7 @@ import { Product } from '@/types';
 import { ProductWithPolicy } from '@/features/product/types';
 // IMPORTANTE: Usar hooks desde features/ (lógica de negocio)
 import { useInventory } from '@/features/inventory/hooks/useInventory';
+import { useExport } from '@/shared/hooks';
 import { ProductCard } from '@/features/inventory/components/ProductCard';
 import { ProductForm } from '@/features/inventory/components/ProductForm';
 import { ImportTools } from '@/features/inventory/components/ImportTools';
@@ -132,6 +138,20 @@ export const RedesignInventoryPage: React.FC = () => {
     actions,
     ui
   } = useInventory();
+
+  // Hook de exportación
+  const inventoryColumns = useMemo(() => [
+    { key: 'barcode' as const, header: 'Código' },
+    { key: 'name' as const, header: 'Producto' },
+    { key: 'stock' as const, header: 'Stock' },
+    { key: 'sku' as const, header: 'SKU' },
+    { key: 'location' as const, header: 'Ubicación' },
+  ], []);
+  const { isExporting, exportTo } = useExport<Product>({ 
+    fileName: 'Inventario', 
+    columns: inventoryColumns, 
+    sheetName: 'Productos' 
+  });
 
   const [expandedSections, setExpandedSections] = useState({
     exchange: true,
@@ -260,6 +280,40 @@ export const RedesignInventoryPage: React.FC = () => {
       onRefresh={actions.syncProducts}
       actions={
         <>
+          {/* Importar CSV */}
+          <button
+            onClick={() => setIsImportOpen(true)}
+            className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}
+            title="Importar CSV"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
+          
+          {/* Exportar dropdown */}
+          <div className="relative group">
+            <button
+              disabled={filteredProducts.length === 0 || isExporting}
+              className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'} disabled:opacity-30`}
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
+              <div className={`${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-white border border-neutral-200'} rounded-xl shadow-xl overflow-hidden min-w-[120px]`}>
+                <button onClick={() => { exportTo(filteredProducts as Product[], 'csv'); }} disabled={isExporting}
+                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}>
+                  <Table2 className="w-4 h-4 text-emerald-500" /> CSV
+                </button>
+                <button onClick={() => { exportTo(filteredProducts as Product[], 'excel'); }} disabled={isExporting}
+                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}>
+                  <FileSpreadsheet className="w-4 h-4 text-blue-500" /> Excel
+                </button>
+                <button onClick={() => { exportTo(filteredProducts as Product[], 'pdf'); }} disabled={isExporting}
+                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}>
+                  <FileText className="w-4 h-4 text-rose-500" /> PDF
+                </button>
+              </div>
+            </div>
+          </div>
           <button
             onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
             className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}

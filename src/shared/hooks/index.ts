@@ -25,3 +25,7 @@ export type { TurboState, UseTurboModeReturn } from './useTurboMode';
 // Sincronización unificada
 export { useSync, useAutoSyncLegacy, useManualSync, useScheduledSyncLegacy } from './useSync';
 export type { UseSyncOptions, UseSyncReturn, SyncMode } from './useSync';
+
+// Exportación de datos
+export { useExport } from './useExport';
+export type { ExportFormat, ExportColumn, UseExportOptions, UseExportReturn } from './useExport';

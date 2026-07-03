@@ -484,16 +484,42 @@ export const useExpiry = (): UseExpiryReturn => {
       const existing = await db.table('expirations').get(id);
       if (!existing) throw new Error('Registro no encontrado');
 
+      // Merge data
+      const merged = { ...existing, ...data };
+      
+      // Recalcular fechas si mm o yyyy cambiaron
+      const mm = Number(merged.mm) || 1;
+      const yyyy = Number(merged.yyyy) || new Date().getFullYear();
+      const lastDay = new Date(yyyy, mm, 0).getDate();
+      const expiryDateObj = new Date(yyyy, mm - 1, lastDay);
+      const withdrawalDays = merged.withdrawalDays as number ?? DEFAULT_WITHDRAWAL_DAYS;
+      const hasCanje = merged.hasCanje as boolean ?? false;
+      
+      // Recalcular evaluación
+      const evaluation = evaluateExpiry(
+        expiryDateObj,
+        { withdrawalDays, hasCanje },
+        new Date(),
+        merged.quantity as number || 1
+      );
+
       const updated = {
-        ...existing,
-        ...data,
+        ...merged,
+        mm,
+        yyyy,
         timestamp: Date.now(),
-        syncStatus: 'pending' as const
+        syncStatus: 'pending' as const,
+        daysLeft: evaluation.daysLeft,
+        expiryDate: expiryDateObj.toISOString(),
+        expiryDateObj,
+        withdrawalDate: evaluation.withdrawalDate ?? new Date(),
+        status: evaluation.status,
+        estado: evaluation.label,
       };
 
       await db.table('expirations').put(updated as any);
       clearCache(EXPIRY_CACHE_KEY);
-      setRecords(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+      setRecords(prev => prev.map(r => r.id === id ? updated : r));
       toast.success('Registro actualizado');
     } catch (error) {
       logger.error('useExpiry', 'Error updating record', String(error));

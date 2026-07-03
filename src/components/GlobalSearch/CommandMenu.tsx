@@ -2,18 +2,19 @@
  * CommandMenu - Búsqueda global estilo Spotlight/Notion
  * 
  * Accesible via Cmd+K (Mac) o Ctrl+K (Windows/Linux)
+ * Busca en: productos, vencimientos, eventos, proveedores
  */
 
 import React, { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Package, FileText, Truck, Users, Clock, ArrowRight, X, Command } from 'lucide-react';
+import { Search, Package, FileText, Truck, Users, Clock, ArrowRight, X, Command, CalendarClock, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 
 interface SearchResult {
   id: string;
-  type: 'product' | 'event' | 'guide' | 'provider' | 'reception';
+  type: 'product' | 'event' | 'guide' | 'provider' | 'reception' | 'expiry';
   title: string;
   subtitle: string;
   icon: React.ElementType;
@@ -32,6 +33,7 @@ const COLORS: Record<string, string> = {
   guide: 'text-purple-400 bg-purple-500/20',
   provider: 'text-green-400 bg-green-500/20',
   reception: 'text-rose-400 bg-rose-500/20',
+  expiry: 'text-red-400 bg-red-500/20',
 };
 
 const ICONS: Record<string, React.ElementType> = {
@@ -40,6 +42,16 @@ const ICONS: Record<string, React.ElementType> = {
   guide: FileText,
   provider: Users,
   reception: Truck,
+  expiry: CalendarClock,
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  product: 'Producto',
+  event: 'Evento',
+  guide: 'Guía',
+  provider: 'Proveedor',
+  reception: 'Recepción',
+  expiry: 'Vencimiento',
 };
 
 export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme = 'dark' }) => {
@@ -49,9 +61,11 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  // Consultas a la base de datos
   const products = useLiveQuery(() => db.products.toArray());
   const sessions = useLiveQuery(() => db.sessions.toArray());
   const providers = useLiveQuery(() => db.providers.toArray());
+  const expirations = useLiveQuery(() => db.table('expirations').toArray() as any);
 
   // Focus input cuando se abre
   useEffect(() => {
@@ -84,22 +98,41 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
           title: product.name || product.barcode || 'Sin nombre',
           subtitle: `${product.barcode || ''} • Stock: ${product.stock || 0}`,
           icon: Package,
-          url: `/inventory?product=${product.id}`
+          url: `/data/products/${product.id}`
         });
       }
     });
 
-    // Sesiones
+    // Vencimientos
+    (expirations as any[])?.forEach((expiry: any) => {
+      if (expiry.barcode?.toLowerCase().includes(q) ||
+          (expiry as any).productName?.toLowerCase().includes(q) ||
+          String(expiry.mm).padStart(2, '0').includes(q) ||
+          String(expiry.yyyy).includes(q)) {
+        const daysLeft = expiry.daysLeft ?? 0;
+        results.push({
+          id: `expiry-${expiry.id}`,
+          type: 'expiry',
+          title: (expiry as any).productName || expiry.barcode || 'Sin nombre',
+          subtitle: `${String(expiry.mm).padStart(2, '0')}/${expiry.yyyy} • ${daysLeft < 0 ? `Venció hace ${Math.abs(daysLeft)} días` : `Faltan ${daysLeft} días`}`,
+          icon: CalendarClock,
+          url: '/expiry'
+        });
+      }
+    });
+
+    // Sesiones de conteo
     sessions?.forEach(session => {
       if (session.id?.toLowerCase().includes(q) ||
-          (session as any).name?.toLowerCase().includes(q)) {
+          (session as any).erpOrder?.toLowerCase().includes(q) ||
+          (session as any).location?.toLowerCase().includes(q)) {
         results.push({
           id: `session-${session.id}`,
           type: 'event',
-          title: (session as any).name || `Sesión ${session.id}`,
-          subtitle: `${(session as any).productCount || 0} productos`,
+          title: `Conteo: ${(session as any).erpOrder || session.id}`,
+          subtitle: `${(session as any).location || 'Sin ubicación'} • ${(session as any).totalSKUs || 0} SKUs`,
           icon: FileText,
-          url: `/events?session=${session.id}`
+          url: `/reports/${session.id}`
         });
       }
     });
@@ -114,13 +147,13 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
           title: (provider as any).name || 'Sin nombre',
           subtitle: `RUT: ${(provider as any).rut || 'N/A'}`,
           icon: Users,
-          url: `/providers?provider=${provider.id}`
+          url: '/providers'
         });
       }
     });
 
-    setResults(results.slice(0, 10));
-  }, [query, products, sessions, providers]);
+    setResults(results.slice(0, 15));
+  }, [query, products, sessions, providers, expirations]);
 
   // Navegación con teclado
   useEffect(() => {
@@ -157,11 +190,13 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface' : 'bg-white';
-  const borderClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-subtle' : 'border-slate-200';
-  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500';
-  const inputBgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated' : 'bg-slate-100';
+  const isDark = theme !== 'light';
+  const bgClass = isDark ? 'bg-surface' : 'bg-white';
+  const borderClass = isDark ? 'border-subtle' : 'border-slate-200';
+  const textClass = isDark ? 'text-white' : 'text-slate-900';
+  const mutedClass = isDark ? 'text-muted' : 'text-slate-500';
+  const inputBgClass = isDark ? 'bg-elevated' : 'bg-slate-100';
+  const hoverClass = isDark ? 'hover:bg-elevated' : 'hover:bg-slate-100';
 
   return (
     <AnimatePresence>
@@ -180,24 +215,24 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             className="fixed top-[15%] left-1/2 -translate-x-1/2 z-[201] w-full max-w-xl"
           >
-            <div className={`${bgClass} rounded-2xl shadow-2xl border-2 ${borderClass} overflow-hidden`}>
+            <div className={`${bgClass} rounded-2xl shadow-2xl border ${borderClass} overflow-hidden`}>
               {/* Input */}
-              <div className="flex items-center gap-3 px-4 py-4 border-b ${borderClass}">
+              <div className={`flex items-center gap-3 px-4 py-4 border-b ${borderClass}`}>
                 <Search className={`w-5 h-5 ${mutedClass}`} />
                 <input
                   ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar productos, eventos, guías..."
-                  className={`flex-1 bg-transparent border-none outline-none ${textClass} placeholder:${mutedClass} text-base`}
+                  placeholder="Buscar productos, vencimientos, eventos, proveedores..."
+                  className={`flex-1 bg-transparent border-none outline-none ${textClass} placeholder:text-muted text-base`}
                 />
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${inputBgClass}`}>
                   <Command className="w-3 h-3" />
                   <span className="text-xs font-bold">K</span>
                 </div>
               </div>
-
+	
               {/* Results */}
               <div className="max-h-80 overflow-y-auto">
                 {results.length > 0 ? (
@@ -211,18 +246,18 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                           onClick={() => { navigate(result.url); onClose(); }}
                           onMouseEnter={() => setSelectedIndex(index)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-left ${
-                            index === selectedIndex ? (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated' : 'bg-slate-100') : ''
+                            index === selectedIndex ? (isDark ? 'bg-elevated' : 'bg-slate-100') : ''
                           }`}
                         >
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}>
                             <Icon className="w-5 h-5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-bold text-sm truncate ${textClass}`}>{result.title}</div>
+                            <div className={`font-semibold text-sm truncate ${textClass}`}>{result.title}</div>
                             <div className={`text-xs truncate ${mutedClass}`}>{result.subtitle}</div>
                           </div>
-                          <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${colorClass}`}>
-                            {result.type}
+                          <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${colorClass}`}>
+                            {TYPE_LABELS[result.type]}
                           </div>
                           {index === selectedIndex && <ArrowRight className={`w-4 h-4 ${mutedClass}`} />}
                         </button>
@@ -232,12 +267,14 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                 ) : query ? (
                   <div className={`p-8 text-center ${mutedClass}`}>
                     <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm font-bold">No se encontraron resultados</p>
+                    <p className="text-sm font-semibold">No se encontraron resultados</p>
+                    <p className="text-xs mt-1">Intenta con otros términos de búsqueda</p>
                   </div>
                 ) : (
                   <div className={`p-8 text-center ${mutedClass}`}>
                     <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm font-bold">Comienza a escribir para buscar</p>
+                    <p className="text-sm font-semibold">Comienza a escribir para buscar</p>
+                    <p className="text-xs mt-1">Productos, vencimientos, eventos y más</p>
                   </div>
                 )}
               </div>
@@ -252,7 +289,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                   <span className={`px-1.5 py-0.5 rounded ${inputBgClass} ${mutedClass}`}>Esc</span>
                   <span className={mutedClass}>Cerrar</span>
                 </div>
-                <button onClick={onClose} className={`p-1.5 rounded-lg ${inputBgClass}`}>
+                <button onClick={onClose} className={`p-1.5 rounded-lg ${hoverClass}`}>
                   <X className={`w-4 h-4 ${mutedClass}`} />
                 </button>
               </div>

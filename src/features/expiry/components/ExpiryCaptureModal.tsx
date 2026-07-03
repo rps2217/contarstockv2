@@ -1,5 +1,5 @@
 /**
- * ExpiryCaptureModal - Modal para capturar vencimientos
+ * ExpiryCaptureModal - Modal para capturar y editar vencimientos
  * 
  * Características:
  * - Búsqueda de producto por SKU/Barcode
@@ -9,22 +9,29 @@
  * - Observaciones
  * - Validación de fecha vencida
  * - Políticas de proveedor
+ * - Modo edición con datos pre-cargados
  * 
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2 } from 'lucide-react';
+import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2, Pencil } from 'lucide-react';
 import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';
 import { QuantityInput } from '@/shared/features/inventory/components/QuantityInput';
 import type { ProductInfo } from '@/shared/features/inventory/components';
+import type { ExpiryRecord } from '../hooks/useExpiry';
+
+export type ExpiryModalMode = 'create' | 'edit';
 
 interface ExpiryCaptureModalProps {
   isOpen: boolean;
   onClose: () => void;
   scannedBarcode?: string | null;
+  mode?: ExpiryModalMode;
+  initialData?: ExpiryRecord | null;
   onSubmit?: (data: ExpiryFormData) => Promise<void>;
+  onUpdate?: (data: ExpiryFormData) => Promise<void>;
   theme?: 'dark' | 'light' | 'high-contrast';
 }
 
@@ -49,7 +56,10 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   isOpen,
   onClose,
   scannedBarcode,
+  mode = 'create',
+  initialData,
   onSubmit,
+  onUpdate,
   theme = 'dark',
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,20 +72,45 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
   const [location, setLocation] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [hasCanje, setHasCanje] = useState(false);
+  const [withdrawalDays, setWithdrawalDays] = useState(30);
 
+  const isEditMode = mode === 'edit';
   const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
   const isHighContrast = theme === 'high-contrast';
 
-  // Usar barcode escaneado si existe
+  // Usar barcode escaneado si existe o datos iniciales para edición
   useEffect(() => {
-    if (scannedBarcode && isOpen) {
-      setBarcode(scannedBarcode);
+    if (isOpen) {
+      if (isEditMode && initialData) {
+        // Modo edición: cargar datos existentes
+        setBarcode(initialData.barcode);
+        setProduct(null); // No buscar producto en BD para edición
+        setQuantity(initialData.quantity);
+        setSelectedMm(initialData.mm);
+        setSelectedYyyy(initialData.yyyy);
+        setLocation(initialData.location);
+        setObservaciones(initialData.observaciones);
+        setHasCanje(initialData.hasCanje);
+        setWithdrawalDays(initialData.withdrawalDays);
+      } else if (scannedBarcode) {
+        // Modo creación: usar barcode escaneado
+        setBarcode(scannedBarcode);
+        setProduct(null);
+        setQuantity(1);
+        setSelectedMm(null);
+        setSelectedYyyy(null);
+        setLocation('');
+        setObservaciones('');
+        setHasCanje(false);
+        setWithdrawalDays(30);
+      }
     }
-  }, [scannedBarcode, isOpen]);
+  }, [scannedBarcode, isOpen, isEditMode, initialData]);
 
-  // Limpiar form al cerrar
+  // Limpiar form al cerrar (solo en modo creación)
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && !isEditMode) {
       setBarcode('');
       setProduct(null);
       setQuantity(1);
@@ -83,8 +118,10 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
       setSelectedYyyy(null);
       setLocation('');
       setObservaciones('');
+      setHasCanje(false);
+      setWithdrawalDays(30);
     }
-  }, [isOpen]);
+  }, [isOpen, isEditMode]);
 
   // Validar fecha vencida
   const isDateExpired = useMemo(() => {
@@ -119,19 +156,25 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onSubmit?.({
+      const formData: ExpiryFormData = {
         barcode,
-        productName: product?.name || barcode, // Usar barcode como nombre si no se encontró
+        productName: product?.name || barcode || initialData?.productName || '',
         quantity,
         mm: selectedMm!,
         yyyy: selectedYyyy!,
         location,
         observaciones,
-        providerName: product?.supplierName,
-        providerRut: product?.supplierRut,
-        hasCanje: product?.providerPolicy?.hasExchange,
-        withdrawalDays: product?.providerPolicy?.withdrawalDays,
-      });
+        providerName: product?.supplierName || initialData?.providerName,
+        providerRut: product?.supplierRut || initialData?.providerRut,
+        hasCanje: product?.providerPolicy?.hasExchange ?? hasCanje,
+        withdrawalDays: product?.providerPolicy?.withdrawalDays ?? withdrawalDays,
+      };
+
+      if (isEditMode) {
+        await onUpdate?.(formData);
+      } else {
+        await onSubmit?.(formData);
+      }
       onClose();
     } catch {
       // Error manejado externamente
@@ -168,15 +211,17 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
             }`}>
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${
-                  isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                  isEditMode 
+                    ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'
+                    : isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
                 }`}>
-                  <Package className="w-5 h-5" />
+                  {isEditMode ? <Pencil className="w-5 h-5" /> : <Package className="w-5 h-5" />}
                 </div>
                 <div>
                   <span className={`text-[10px] font-black uppercase tracking-widest ${
                     isDark ? 'text-slate-500' : 'text-slate-500'
                   }`}>
-                    Captura de Vencimiento
+                    {isEditMode ? 'Editar Vencimiento' : 'Captura de Vencimiento'}
                   </span>
                   <p className={`font-black text-sm truncate max-w-[200px] ${
                     isDark ? 'text-white' : 'text-slate-900'
@@ -235,15 +280,34 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
             {/* CONTENT */}
             <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
               
-              {/* 1. BÚSQUEDA DE PRODUCTO */}
-              <ProductSearchInput
-                value={barcode}
-                onChange={(val) => { setBarcode(val); }}
-                onProductFound={(p) => setProduct(p)}
-                placeholder="Escanee o ingrese código..."
-                theme={theme}
-                autoFocus={!scannedBarcode}
-              />
+              {/* 1. BÚSQUEDA DE PRODUCTO - Solo en modo creación */}
+              {isEditMode ? (
+                <div className="space-y-2">
+                  <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                    isDark ? 'text-slate-500' : 'text-slate-500'
+                  }`}>
+                    <Package className="w-3 h-3" />
+                    Producto
+                  </label>
+                  <div className={`px-4 py-3.5 rounded-xl border-2 ${
+                    isDark ? 'bg-white/5 border-white/10 text-muted' : 'bg-slate-100 border-slate-200 text-slate-600'
+                  }`}>
+                    <p className="font-mono font-bold">{barcode}</p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {initialData?.productName || barcode}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <ProductSearchInput
+                  value={barcode}
+                  onChange={(val) => { setBarcode(val); }}
+                  onProductFound={(p) => setProduct(p)}
+                  placeholder="Escanee o ingrese código..."
+                  theme={theme}
+                  autoFocus={!scannedBarcode}
+                />
+              )}
 
               {/* 2. CANTIDAD */}
               <QuantityInput
@@ -314,10 +378,12 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                 (() => {
                   const lastDay = new Date(selectedYyyy, selectedMm, 0).getDate();
                   const expiryDate = new Date(selectedYyyy, selectedMm - 1, lastDay);
-                  const withdrawalDays = product?.providerPolicy?.withdrawalDays ?? 30;
-                  const withdrawalDate = new Date(expiryDate.getTime() - withdrawalDays * 24 * 60 * 60 * 1000);
-                  const daysUntilWithdrawal = Math.ceil((withdrawalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                  const withdrawalMonth = MESES[withdrawalDate.getMonth()];
+                  // Usar withdrawalDays del estado o del producto
+                  const effectiveWithdrawalDays = product?.providerPolicy?.withdrawalDays ?? withdrawalDays;
+                  const withdrawalDateCalc = new Date(expiryDate.getTime() - effectiveWithdrawalDays * 24 * 60 * 60 * 1000);
+                  const daysUntilWithdrawal = Math.ceil((withdrawalDateCalc.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  const withdrawalMonth = MESES[withdrawalDateCalc.getMonth()];
+                  const effectiveHasCanje = product?.providerPolicy?.hasExchange ?? hasCanje;
                   
                   return (
                     <motion.div
@@ -341,7 +407,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                           <p className={`text-lg font-black mt-1 ${
                             daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-blue-400'
                           }`}>
-                            {withdrawalMonth} {withdrawalDate.getDate()}, {withdrawalDate.getFullYear()}
+                            {withdrawalMonth} {withdrawalDateCalc.getDate()}, {withdrawalDateCalc.getFullYear()}
                           </p>
                         </div>
                         <div className="text-right">
@@ -363,16 +429,78 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                         </div>
                       </div>
                       <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500">Política del proveedor</span>
+                        <span className="text-[10px] text-slate-500">Política</span>
                         <span className={`text-[10px] font-black ${
-                          product?.providerPolicy?.hasExchange ? 'text-indigo-400' : 'text-amber-400'
+                          effectiveHasCanje ? 'text-indigo-400' : 'text-amber-400'
                         }`}>
-                          {product?.providerPolicy?.hasExchange ? '🏭 CANJE' : '⚠️ MERMA'} • {withdrawalDays} días
+                          {effectiveHasCanje ? '🏭 CANJE' : '⚠️ MERMA'} • {effectiveWithdrawalDays} días
                         </span>
                       </div>
                     </motion.div>
                   );
                 })()
+              )}
+
+              {/* 4.2. POLÍTICAS (Editable en modo edición) */}
+              {isEditMode && (
+                <div className="space-y-3">
+                  <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                    isDark ? 'text-slate-500' : 'text-slate-500'
+                  }`}>
+                    <span className="w-5 h-5 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center text-[10px] font-black">!</span>
+                    Políticas del Proveedor
+                  </label>
+                  <div className={`p-4 rounded-2xl border-2 ${
+                    isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    {/* Toggle Canje */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          ¿Tiene Canje?
+                        </p>
+                        <p className={`text-xs ${isDark ? 'text-muted' : 'text-slate-500'}`}>
+                          El proveedor acepta devolución de productos no vendidos
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setHasCanje(!hasCanje)}
+                        className={`relative w-14 h-8 rounded-full transition-colors ${
+                          hasCanje ? 'bg-indigo-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                          hasCanje ? 'translate-x-7' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                    
+                    {/* Días de retiro */}
+                    <div>
+                      <label className={`text-xs font-bold mb-2 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        Días de anticipación para retiro
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="1"
+                          max="90"
+                          value={withdrawalDays}
+                          onChange={(e) => setWithdrawalDays(Number(e.target.value))}
+                          className="flex-1 accent-purple-500"
+                        />
+                        <span className={`w-16 text-center font-black text-lg ${
+                          hasCanje ? 'text-indigo-400' : 'text-amber-500'
+                        }`}>
+                          {withdrawalDays}
+                        </span>
+                      </div>
+                      <p className={`text-[10px] mt-1 ${isDark ? 'text-muted' : 'text-slate-500'}`}>
+                        Días antes del vencimiento para retirar el producto
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* 5. UBICACIÓN */}
@@ -473,7 +601,9 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   isSubmitting 
                     ? 'bg-slate-700 text-slate-500 cursor-wait'
                     : canSubmit
-                      ? 'bg-white text-black hover:bg-blue-50 active:bg-blue-100 shadow-blue-500/20'
+                      ? isEditMode
+                        ? 'bg-amber-500 text-white hover:bg-amber-400 active:bg-amber-300 shadow-amber-500/20'
+                        : 'bg-white text-black hover:bg-blue-50 active:bg-blue-100 shadow-blue-500/20'
                       : isDark
                         ? 'bg-white/5 text-slate-600 cursor-not-allowed'
                         : 'bg-slate-200 text-muted cursor-not-allowed'
@@ -481,6 +611,8 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
               >
                 {isSubmitting ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
+                ) : isEditMode ? (
+                  <><CornerDownLeft className="w-6 h-6 text-white" /> Actualizar Vencimiento</>
                 ) : (
                   <><CornerDownLeft className="w-6 h-6 text-black" /> Registrar Vencimiento</>
                 )}
