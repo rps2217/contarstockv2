@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores';
 import type { CountingSession } from '@/types';
 import { isModuleEnabled } from './services/moduleManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ErrorProvider } from '@/lib/errors';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
 import { Toaster } from 'sonner';
@@ -339,9 +340,11 @@ const App = () => (
   <Router>
     <ThemeProvider>
       <NotificationCenterProvider>
-        <CommandMenuProvider>
-          <AppContent />
-        </CommandMenuProvider>
+        <ErrorProvider>
+          <CommandMenuProvider>
+            <AppContent />
+          </CommandMenuProvider>
+        </ErrorProvider>
       </NotificationCenterProvider>
     </ThemeProvider>
   </Router>

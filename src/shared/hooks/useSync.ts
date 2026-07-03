@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { unifiedSyncEngine } from '@/services/sync/unified';
+import { syncBridge, SYNC_ORDER } from '@/services/cloud/SyncBridge';
 import { useSyncStore } from '@/store/useSyncStore';
 import { useToastStore } from '@/store/useToastStore';
 import { logger } from '@/services/logger';
@@ -301,3 +302,7 @@ export const useManualSync = () => useSync({ mode: 'manual' });
  */
 export const useScheduledSyncLegacy = (interval = 60000) => 
   useSync({ mode: 'scheduled', interval });
+
+// Re-exportar SyncBridge para uso directo
+export { syncBridge, SYNC_ORDER, type SyncTable } from '@/services/cloud/SyncBridge';
+export { useSync, useTableSync } from '@/services/cloud/SyncBridge';

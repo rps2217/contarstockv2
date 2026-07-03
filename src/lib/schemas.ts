@@ -6,10 +6,29 @@
  * Esquemas de validación para todos los modelos de la aplicación.
  * Usar para validar datos antes de guardar en IndexedDB o enviar a Supabase.
  * 
+ * SCHEMAS LOCALES (esta carpeta):
+ * - ProductSchema, ProviderSchema, CustomerSchema
+ * - ExpiryRecordSchema, SessionSchema, EventSchema
+ * 
+ * SCHEMAS CLOUD (services/schemas.ts):
+ * - CloudProductSchema (importación desde CSV/Excel)
+ * - CloudProviderSchema
+ * - CloudOrderRowSchema
+ * 
  * @module schemas
  */
 
 import { z } from 'zod';
+
+// Re-exportar schemas de cloud para uso conveniente
+export {
+  CloudProductSchema,
+  CloudProviderSchema,
+  CloudStockSchema,
+  CloudOrderRowSchema,
+  CloudInventoryRowSchema,
+  CloudReceptionRowSchema,
+} from '@/services/schemas';
 
 // =============================================================================
 // SCHEMAS BASE
