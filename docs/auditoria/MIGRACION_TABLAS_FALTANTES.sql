@@ -70,7 +70,8 @@ ADD COLUMN IF NOT EXISTS yyyy INTEGER,
 ADD COLUMN IF NOT EXISTS batch VARCHAR(50);
 
 -- Migrar datos de camelCase a snake_case si existen
-UPDATE "SESSIONS" SET created_at = createdat WHERE createdat IS NOT NULL AND created_at IS NULL;
+-- Nota: createdat puede ser bigint (timestamp Unix ms), convertir a timestamptz
+UPDATE "SESSIONS" SET created_at = (createdat::bigint / 1000)::timestamptz WHERE createdat IS NOT NULL AND created_at IS NULL;
 UPDATE "SESSIONS" SET erp_order = erporder WHERE erporder IS NOT NULL AND erp_order IS NULL;
 UPDATE "SESSIONS" SET logistics_label = logisticslabel WHERE logisticslabel IS NOT NULL AND logistics_label IS NULL;
 UPDATE "SESSIONS" SET session_type = sessiontype WHERE sessiontype IS NOT NULL AND session_type IS NULL;
