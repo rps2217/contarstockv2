@@ -217,7 +217,7 @@ export const RedesignDataPage: React.FC = () => {
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteProduct(product.id)}
+                        onClick={() => product.id && handleDeleteProduct(product.id)}
                         disabled={deletingId === product.id}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-rose-500"
                       >

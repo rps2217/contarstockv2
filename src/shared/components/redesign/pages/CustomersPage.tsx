@@ -393,7 +393,7 @@ const SendMessageModal = ({
             <label className="text-xs text-muted mb-1 block">Mensaje</label>
             <textarea
               value={message}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
               rows={5}
               className="w-full bg-surface border border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 resize-none"
               placeholder="Escribe tu mensaje..."

@@ -75,7 +75,7 @@ export const useScannerEngine = (options: ScannerEngineOptions = {}) => {
     }
 
     // 5. PRODUCTO_PROVEEDOR: Buscar políticas específicas por producto-proveedor
-    let ppRelation = null;
+    let ppRelation: any = null;
     try {
       const ppRelations = await db.table('productProviders').where('productBarcode').equals(normalizedCode).toArray();
       // Priorizar proveedor principal o el primero que tenga datos específicos

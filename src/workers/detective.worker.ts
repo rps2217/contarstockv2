@@ -19,7 +19,7 @@ const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
 };
 
 const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: ExpectedOrder): MatchResult => {
- const details = [];
+ const details: Array<{barcode: string; name: string; physicalQty: number; expectedQty: number; difference: number; isSemanticMatch?: boolean}> = [];
  const potentialAliases: AliasSuggestion[] = [];
  let exactMatches = 0;
  let semanticMatches = 0;

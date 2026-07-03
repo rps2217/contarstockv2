@@ -566,25 +566,23 @@ export const RedesignHammerPage: React.FC = () => {
     // Crear un objeto ExpectedOrder con los items del hammer
     const hammerOrder: ExpectedOrder = {
       id: `HAMMER-${batchId}-${Date.now()}`,
-      status: 'pending',
+      internalId: `HAMMER-${batchId}`,
       items: state.items.map(item => ({
         barcode: item.barcode,
         name: item.name,
         expectedQty: item.expectedQty || 0,
         quantity: item.totalQuantity,
-        loc: item.loc || '',
-        scannedAt: new Date().toISOString(),
-        syncStatus: 'synced' as const
+        location: item.loc || ''
       })),
+      totalExpectedUnits: state.items.reduce((sum, i) => sum + i.totalQuantity, 0),
+      totalExpectedSKUs: state.items.length,
+      importedAt: Date.now(),
       metadata: {
         documentType: 'CONTEO HAMMER',
         internalGuide: `Lote ${batchId}`,
         purchaseOrder: locManager.location || 'ZONA-A',
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString()
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+        date: new Date().toLocaleDateString()
+      }
     }
 
     thermalPrinter.printHammerTicket(hammerOrder)
@@ -841,7 +839,7 @@ export const RedesignHammerPage: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImportStock={() => importManifestFromCloud(batchId)}
-        onImportCloud={() => importExpectedOrderFromCloud(batchId)}
+        onImportCloud={() => importExpectedOrderFromCloud(batchId, '')}
         onImportLocal={handleImportLocal}
       />
 

@@ -95,13 +95,13 @@ export const RedesignReceptionPage: React.FC = () => {
     const sessions = await db.sessions.toArray()
     return sessions.slice(0, 20).map(s => ({
       id: s.id?.toString() || Math.random().toString(),
-      supplierName: s.supplierName || s.productName || 'Recepción',
+      supplierName: (s as any).supplierName || (s as any).productName || 'Recepción',
       documentNumber: (s as any).documentNumber,
-      receivedBy: s.userName,
-      location: s.location,
-      receivedAt: s.timestamp || Date.now(),
+      receivedBy: (s as any).userName,
+      location: (s as any).location,
+      receivedAt: (s as any).timestamp || Date.now(),
       items: s.sessionType === 'reception' ? [
-        { barcode: s.barcode || '', name: s.productName, quantity: 1 }
+        { barcode: (s as any).barcode || '', name: (s as any).productName, quantity: 1 }
       ] : [],
       status: (s.syncStatus === 'synced' ? 'completed' : 'in-progress') as Reception['status']
     }))

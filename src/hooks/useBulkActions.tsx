@@ -328,7 +328,7 @@ export function BulkEditModal<T = any>({
                 {field.type === 'select' ? (
                   <select
                     value={values[field.key] || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange(field.key, e.target.value)}
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none appearance-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   >
                     <option value="">Seleccionar...</option>
@@ -339,7 +339,7 @@ export function BulkEditModal<T = any>({
                 ) : field.type === 'textarea' ? (
                   <textarea
                     value={values[field.key] || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange(field.key, e.target.value)}
                     rows={3}
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   />

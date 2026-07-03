@@ -12,10 +12,9 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { 
-  ExpectedOrderRepository,
-  type ExpectedOrder,
-  type ExpectedItem
+  ExpectedOrderRepository
 } from '@/repositories/ExpectedOrderRepository'
+import type { ExpectedOrder, ExpectedItem } from '@/types'
 import { erpService, type ErpManifest } from '@/services/erpService'
 import { SoundFX } from '@/services/audio'
 import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
@@ -535,8 +534,9 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     setImportingId(order.id)
     setLoadingLocal(true)
     try {
-      const { startTestCountingFromOrder } = await import('@/services/massiveSync')
-      const sessionId = await startTestCountingFromOrder(batchId, order.id)
+      const { loadHammerManifestAsTestSession } = await import('@/services/massiveSync')
+      const result = await loadHammerManifestAsTestSession(batchId, order.id)
+      const sessionId = result.sessionId
       SoundFX.play('success')
       toast.success('Conteo iniciado')
       navigate(`/counting/${sessionId}`)
@@ -858,6 +858,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
             onClick={() => setActiveTab('new')}
             icon={Plus}
             label="Nueva"
+            count={0}
             color="emerald"
           />
         </div>

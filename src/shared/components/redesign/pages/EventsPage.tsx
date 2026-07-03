@@ -23,7 +23,7 @@ interface EventRecord {
   barcode?: string
   location?: string
   userName?: string
-  timestamp: number
+  timestamp?: number
   status: EventStatus
 }
 
@@ -64,7 +64,7 @@ const StatCard = ({ type, count }: { type: EventType; count: number }) => {
 const EventRow = ({ event, onDismiss }: { event: EventRecord; onDismiss: (id: string) => void }) => {
   const meta = EVENT_META[event.type]
   const Icon = meta.icon
-  const timeAgo = formatTimeAgo(event.timestamp)
+  const timeAgo = event.timestamp ? formatTimeAgo(event.timestamp) : ''
 
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}

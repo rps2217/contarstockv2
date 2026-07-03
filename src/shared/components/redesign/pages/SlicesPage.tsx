@@ -242,13 +242,13 @@ export const RedesignSlicesPage: React.FC = () => {
     const sessions = await db.sessions.toArray()
     return sessions.slice(0, 15).map(s => ({
       id: s.id?.toString() || Math.random().toString(),
-      barcode: s.barcode || '',
-      productName: s.productName || 'Producto sin nombre',
+      barcode: (s as any).barcode || '',
+      productName: (s as any).productName || 'Producto sin nombre',
       originalQuantity: Math.floor(Math.random() * 50) + 10,
       slicedQuantity: Math.floor(Math.random() * 30),
       remainingQuantity: Math.floor(Math.random() * 20) + 1,
-      location: s.location,
-      createdAt: s.timestamp || Date.now(),
+      location: (s as any).location,
+      createdAt: (s as any).timestamp || Date.now(),
       status: (s.syncStatus === 'synced' ? 'completed' : 'in-progress') as Slice['status']
     }))
   }, [])

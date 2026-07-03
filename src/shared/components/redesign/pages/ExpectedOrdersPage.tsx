@@ -60,7 +60,9 @@ const OrderRow = ({ order, onSelect }: { order: ExpectedOrder; onSelect: () => v
 // Componente principal
 // ============================================================================
 export const RedesignExpectedOrdersPage: React.FC = () => {
-  const { savedOrders, actions } = useExpectedOrders()
+  const hook = useExpectedOrders()
+  const savedOrders = hook.state.savedOrders
+  const actions = hook.actions
   const [searchQuery, setSearchQuery] = useState('')
   const [showImportModal, setShowImportModal] = useState(false)
 

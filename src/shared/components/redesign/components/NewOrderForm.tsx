@@ -86,11 +86,16 @@ export const NewOrderForm: React.FC<NewOrderFormProps> = ({ onSaved, onCancel })
     
     setSavingOrder(true)
     try {
+      const totalExpectedUnits = parsedItems.reduce((sum, i) => sum + (i.expectedQty || 0), 0)
+      const totalExpectedSKUs = parsedItems.length
+      
       const newOrder: ExpectedOrder = {
         id: `TL-${Date.now().toString(36).toUpperCase()}`,
         internalId: docId || `ORDEN-${Date.now()}`,
-        importedAt: new Date().toISOString(),
+        importedAt: Date.now(),
         items: parsedItems,
+        totalExpectedUnits,
+        totalExpectedSKUs,
         metadata: {
           documentType,
           purchaseOrder,

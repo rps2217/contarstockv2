@@ -174,7 +174,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
               <textarea
                 rows={2}
                 value={formData.exchangePolicy || ''}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, exchangePolicy: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, exchangePolicy: e.target.value })}
                 placeholder="Ej: Solo se acepta canje presentando factura original."
                 className={`w-full px-4 py-3 rounded-xl outline-none transition-all font-medium border-2 resize-none ${
                   (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' 
