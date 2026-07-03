@@ -13,7 +13,7 @@ interface ManagementBulkActionsProps {
   selectedCount: number;
   onClearSelection: () => void;
   actions: BulkAction[];
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   title?: string;
 }
 
@@ -71,7 +71,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           className={`fixed top-0 right-0 h-full w-80 z-[70] shadow-2xl border-l flex flex-col pointer-events-auto ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-surface border-white/10' : 'bg-white border-slate-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-surface border-white/10' : 'bg-white border-slate-200'
           }`}
         >
           <div className="p-6 flex items-center justify-between border-b border-white/5">
@@ -81,7 +81,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
               </div>
               <div>
                 <h4 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                 }`}>{title}</h4>
                 <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">{selectedCount} Seleccionados</p>
               </div>
@@ -89,7 +89,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
             <button
               onClick={onClearSelection}
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               <X className="w-4 h-4" />
@@ -98,10 +98,10 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
 
           <div className="flex-1 p-6 space-y-4 overflow-y-auto no-scrollbar">
             <div className={`p-4 rounded-2xl border ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-slate-500' : 'text-muted'
               }`}>Operaciones Disponibles</p>
               
               <div className="space-y-2">
@@ -126,7 +126,7 @@ export const ManagementBulkActions: React.FC<ManagementBulkActionsProps> = ({
             </div>
 
             <div className={`p-4 rounded-2xl border border-dashed ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10' : 'border-slate-200'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/10' : 'border-slate-200'
             }`}>
               <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center italic">
                 Próximamente más acciones masivas aquí...

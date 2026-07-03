@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ThemeProps {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const SettingsSection = ({ children, title, className = "", theme = 'dark' }: any) => {

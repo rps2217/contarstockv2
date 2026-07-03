@@ -12,7 +12,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (slice: Omit<AppSheetSlice, 'id' | 'isSystem'>) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 const SOURCE_TABLES: { value: SourceTable; label: string }[] = [
@@ -45,7 +45,7 @@ export const CreateSliceModal: React.FC<Props> = ({ isOpen, onClose, onCreate, t
   const [allowEdits, setAllowEdits] = useState(true);
   const [allowDeletes, setAllowDeletes] = useState(true);
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

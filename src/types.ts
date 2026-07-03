@@ -173,9 +173,12 @@ export interface ConsolidatedItem {
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'providers' | 'customers' | 'compliance';
-// ThemeName (re-exportado desde useTheme)
-export type ThemeName = 'light' | 'dark' | 'gray' | 'high-contrast' | 'appsheet-dark';
+// ThemeName - sincronizado con useTheme.tsx
+export type ThemeName = 'light' | 'dark' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 export type Theme = ThemeName;
+// Alias para props de componentes
+export type ThemeProp = ThemeName | undefined;
+export type ThemeProps = ThemeName | 'dark';
 
 export interface VisualGuideItem {
   barcode: string;

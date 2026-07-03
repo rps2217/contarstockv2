@@ -33,7 +33,7 @@ interface Session {
 interface CountingKanbanViewProps {
   sessions: Session[];
   onItemClick?: (session: Session) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 type GroupBy = 'status' | 'sync' | 'type';
@@ -53,7 +53,7 @@ const SessionCard: React.FC<{
   theme: string;
   onClick?: () => void;
 }> = ({ session, theme, onClick }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isHighContrast = theme === 'high-contrast';
 
   const statusBadge = getSessionStatusBadge(session.status);
@@ -122,7 +122,7 @@ export const CountingKanbanView: React.FC<CountingKanbanViewProps> = ({
   onItemClick,
   theme = 'dark'
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isHighContrast = theme === 'high-contrast';
   
   const [groupBy, setGroupBy] = useState<GroupBy>('status');

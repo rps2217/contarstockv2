@@ -28,7 +28,7 @@ interface EventCaptureModalProps {
     destino: string;
     timestamp: string;
   }) => Promise<any>;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 const EVENT_TYPES = [

@@ -5,7 +5,7 @@ import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/Sett
 import { checkSystemHealth, repairSystem, purgeOldData, HealthReport } from '../../../../services/maintenance';
 
 interface Props {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const MaintenanceCard: React.FC<Props> = ({ theme = 'dark' }) => {
@@ -13,7 +13,7 @@ export const MaintenanceCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const [isRepairing, setIsRepairing] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

@@ -6,14 +6,14 @@ import { createFullBackup, restoreFullBackup } from '../../../../services/backup
 import { SoundFX } from '../../../../services/audio';
 
 interface Props {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const BackupCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const [isRestoring, setIsRestoring] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

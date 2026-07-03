@@ -10,7 +10,7 @@ interface Props {
   activeSlice: AppSheetSlice | undefined;
   filteredRows: any[];
   isLoading?: boolean;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const SlicePreview: React.FC<Props> = ({
@@ -21,7 +21,7 @@ export const SlicePreview: React.FC<Props> = ({
 }) => {
   if (!activeSlice) return null;
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

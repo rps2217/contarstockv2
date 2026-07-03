@@ -4,14 +4,14 @@ import { SettingsCard, SettingsCardHeader } from '../common/SettingsElements';
 import { runSystemHealthCheck, TestResult } from '../../../../services/diagnostics';
 
 interface Props {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const DiagnosticsCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isTesting, setIsTesting] = useState(false);
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

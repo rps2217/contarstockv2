@@ -9,7 +9,7 @@ import { KernelSystemCard } from './support/KernelSystemCard';
 import { SystemLogsModal } from './support/SystemLogsModal';
 
 interface Props {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const SupportSection: React.FC<Props> = ({ theme = 'dark' }) => {

@@ -4,7 +4,7 @@ import { Package, Trash2 } from 'lucide-react';
 interface EventItemRowProps {
   item: any;
   onDelete: (id: string) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const EventItemRow: React.FC<EventItemRowProps> = React.memo(({ 

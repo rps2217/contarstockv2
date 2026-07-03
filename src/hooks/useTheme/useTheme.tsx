@@ -61,7 +61,7 @@ interface ThemeContextType {
 // ============================================================
 
 export function isDarkTheme(theme: ThemeName): boolean {
-  return theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  return theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
 }
 
 export function isGrayTheme(theme: ThemeName): boolean {
@@ -226,7 +226,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const savedTheme = localStorage.getItem(STORAGE_KEY);
       if (!savedTheme) {
         // Solo cambiar si no hay tema guardado
-        const newTheme = e.matches ? 'night' : 'light';
+        const newTheme = e.matches ? 'dark' : 'light';
         updateSetting('theme', newTheme);
       }
     };

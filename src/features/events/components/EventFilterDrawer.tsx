@@ -13,7 +13,7 @@ interface EventFilterDrawerProps {
   activeFiltersCount: number;
   dateRange: { start: string | null; end: string | null };
   onSetDateRange: (range: { start: string | null; end: string | null }) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
@@ -51,7 +51,7 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
     });
   };
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
 
   if (!isOpen) return null;
 

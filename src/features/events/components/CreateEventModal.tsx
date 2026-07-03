@@ -41,7 +41,7 @@ export const CreateEventModal: React.FC<Props> = ({
   theme, 
   editingItem 
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {

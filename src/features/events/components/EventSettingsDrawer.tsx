@@ -14,7 +14,7 @@ interface EventSettingsDrawerProps {
   onClearLocalData?: () => void;
   onBulkImport?: (items: any[]) => Promise<boolean>;
   onClearAllEvents?: () => Promise<void>;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
@@ -45,7 +45,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={`fixed top-0 right-0 h-full w-80 z-[90] shadow-2xl border-l flex flex-col ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface border-white/10' : 'bg-white border-slate-200'
             }`}
           >
             <div className="p-6 flex items-center justify-between border-b border-white/5">
@@ -55,7 +55,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                 </div>
                 <div>
                   <h4 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                   }`}>Preferencias</h4>
                   <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-1">Configuración de Vista</p>
                 </div>
@@ -63,7 +63,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
               <button
                 onClick={onClose}
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'hover:bg-white/10 text-muted' : 'hover:bg-slate-100 text-slate-500'
                 }`}
               >
                 <X className="w-4 h-4" />
@@ -87,7 +87,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                 <div className="flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 text-blue-500" />
                   <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
                   }`}>Mantenimiento</h5>
                 </div>
                 <button
@@ -96,12 +96,12 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                     if (ok) onFullRefresh?.();
                   }}
                   className={`w-full p-4 rounded-xl border flex items-center justify-between group transition-all ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
                   }`}
                 >
                   <div className="text-left">
                     <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                     }`}>Resincronización Total</p>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Fuerza re-descarga de la nube</p>
                   </div>
@@ -114,7 +114,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                 <div className="flex items-center gap-2">
                   <Layout className="w-4 h-4 text-blue-500" />
                   <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
                   }`}>Visualización</h5>
                 </div>
                 <div 
@@ -122,12 +122,12 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                   className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                     preferences.compactView
                       ? 'border-blue-500 bg-blue-500/10'
-                      : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/5 bg-white/5 hover:bg-white/10' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                      : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/5 bg-white/5 hover:bg-white/10' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                   }`}
                 >
                   <div>
                     <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                     }`}>Vista Compacta</p>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Reduce el espaciado de la lista</p>
                   </div>
@@ -146,12 +146,12 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                   className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                     preferences.showPriorityAssistant
                       ? 'border-blue-500 bg-blue-500/10'
-                      : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/5 bg-white/5 hover:bg-white/10' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                      : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/5 bg-white/5 hover:bg-white/10' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                   }`}
                 >
                   <div>
                     <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                     }`}>Asistente de Priorización</p>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Muestra el panel de alertas y sugerencias</p>
                   </div>
@@ -174,7 +174,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                     window.location.hash = '#/settings?tab=system';
                   }}
                   className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10' : 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10' : 'border-blue-200 bg-blue-50 hover:bg-blue-100'
                   }`}
                 >
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -182,7 +182,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                   </div>
                   <div className="text-left">
                     <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                     }`}>Ajustes del Sistema</p>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronización y Kernel Global</p>
                   </div>

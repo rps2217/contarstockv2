@@ -12,7 +12,7 @@ import { useSyncStore } from '@/stores';
 interface Props {
   settings: AppSettings;
   updateSetting: (key: keyof AppSettings, value: any) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const CloudSection: React.FC<Props> = ({ settings, theme = 'dark' }) => {
@@ -22,7 +22,7 @@ export const CloudSection: React.FC<Props> = ({ settings, theme = 'dark' }) => {
   
   const { latencyMs, pendingItems, isSupabaseConnected, isSyncing } = useSyncStore();
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

@@ -270,42 +270,72 @@ export class ValidationError extends Error {
  * Valida un producto antes de guardar
  */
 export function validateProduct(data: unknown): ValidatedProduct {
-  return validate(ProductSchema, data, 'Product');
+  const result = ProductSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw new ValidationError(`Validation failed for Product: ${errors}`, result.error.errors);
+  }
+  return result.data;
 }
 
 /**
  * Valida un proveedor antes de guardar
  */
 export function validateProvider(data: unknown): ValidatedProvider {
-  return validate(ProviderSchema, data, 'Provider');
+  const result = ProviderSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw new ValidationError(`Validation failed for Provider: ${errors}`, result.error.errors);
+  }
+  return result.data;
 }
 
 /**
  * Valida un cliente antes de guardar
  */
 export function validateCustomer(data: unknown): ValidatedCustomer {
-  return validate(CustomerSchema, data, 'Customer');
+  const result = CustomerSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw new ValidationError(`Validation failed for Customer: ${errors}`, result.error.errors);
+  }
+  return result.data;
 }
 
 /**
  * Valida un vencimiento antes de guardar
  */
 export function validateExpiry(data: unknown): ValidatedExpiryRecord {
-  return validate(ExpiryRecordSchema, data, 'ExpiryRecord');
+  const result = ExpiryRecordSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw new ValidationError(`Validation failed for ExpiryRecord: ${errors}`, result.error.errors);
+  }
+  return result.data;
 }
 
 /**
  * Valida una sesión antes de guardar
  */
 export function validateSession(data: unknown): ValidatedSession {
-  return validate(SessionSchema, data, 'Session');
+  const result = SessionSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw new ValidationError(`Validation failed for Session: ${errors}`, result.error.errors);
+  }
+  return result.data;
 }
 
 /**
  * Valida un evento antes de guardar
  */
 export function validateEvent(data: unknown): ValidatedEvent {
-  return validate(EventSchema, data, 'Event');
+  const result = EventSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw new ValidationError(`Validation failed for Event: ${errors}`, result.error.errors);
+  }
+  return result.data;
 }
 
 /**

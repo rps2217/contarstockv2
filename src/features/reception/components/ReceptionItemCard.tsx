@@ -17,7 +17,7 @@ export const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, onVi
   const isSynced = !!item.lastSyncTimestamp;
   const isDraft = item.status === 'draft';
   const hasPhoto = !!(item.labelPhoto || item.photoUrl);
-  const isDark = settings.theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = settings.theme === 'dark' || settings.theme === 'high-contrast' || settings.theme === 'appsheet-dark';
 
   return (
     <motion.div 

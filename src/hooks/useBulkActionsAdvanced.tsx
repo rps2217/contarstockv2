@@ -264,8 +264,8 @@ export interface UseBulkActionsAdvancedReturn<T> {
   keyboardHint: string;
   
   // UI
-  renderActionBar: (theme?: 'dark' | 'light' | 'high-contrast') => React.ReactNode;
-  renderBulkEditModal: (allItems: T[], theme?: 'dark' | 'light' | 'high-contrast') => React.ReactNode;
+  renderActionBar: (theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night') => React.ReactNode;
+  renderBulkEditModal: (allItems: T[], theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night') => React.ReactNode;
   
   // Audit
   // Exportación
@@ -558,7 +558,7 @@ export function useBulkActionsAdvanced<T = any>(
   }, [bulk, canUndo, performUndo, executeBulkActionWithHistory, config.enableKeyboardShortcuts]);
 
   // Render helpers
-  const renderActionBar = (theme?: 'dark' | 'light' | 'high-contrast') => (
+  const renderActionBar = (theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night') => (
     <BulkActionBar
       selectedCount={bulk.selectedCount}
       actions={config.actions}
@@ -568,7 +568,7 @@ export function useBulkActionsAdvanced<T = any>(
     />
   );
 
-  const renderBulkEditModal = (allItems: T[], theme?: 'dark' | 'light' | 'high-contrast') => (
+  const renderBulkEditModal = (allItems: T[], theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night') => (
     <BulkEditModal
       isOpen={bulk.isBulkEditModalOpen}
       onClose={bulk.closeBulkEditModal}
@@ -639,7 +639,7 @@ export interface BulkHistoryPanelProps {
   history: BulkHistoryEntry[];
   onUndo: (entry: BulkHistoryEntry) => void;
   onClear: () => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
@@ -655,13 +655,13 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface' : 'bg-white';
-  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500';
+  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface' : 'bg-white';
+  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900';
+  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500';
 
   if (history.length === 0) {
     return (
-      <div className={`p-4 rounded-xl ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated' : 'bg-slate-100'}`}>
+      <div className={`p-4 rounded-xl ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-elevated' : 'bg-slate-100'}`}>
         <div className="flex items-center gap-2 mb-2">
           <Clock className={`w-4 h-4 ${mutedClass}`} />
           <span className={`text-sm font-bold ${mutedClass}`}>Sin historial</span>
@@ -671,15 +671,15 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
   }
 
   return (
-    <div className={`rounded-xl overflow-hidden border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface border-subtle' : 'bg-white border-slate-200'}`}>
-      <div className={`p-3 flex items-center justify-between border-b ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-subtle' : 'border-slate-200'}`}>
+    <div className={`rounded-xl overflow-hidden border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface border-subtle' : 'bg-white border-slate-200'}`}>
+      <div className={`p-3 flex items-center justify-between border-b ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-subtle' : 'border-slate-200'}`}>
         <div className="flex items-center gap-2">
-          <Clock className={`w-4 h-4 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+          <Clock className={`w-4 h-4 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-blue-400' : 'text-blue-600'}`} />
           <span className={`text-sm font-bold ${textClass}`}>Historial de Acciones</span>
         </div>
         <button
           onClick={onClear}
-          className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+          className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
         >
           Limpiar
         </button>
@@ -689,7 +689,7 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
         {history.slice(0, 10).map(entry => (
           <div
             key={entry.id}
-            className={`p-3 flex items-center justify-between border-b last:border-b-0 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-subtle' : 'border-slate-100'}`}
+            className={`p-3 flex items-center justify-between border-b last:border-b-0 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-subtle' : 'border-slate-100'}`}
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -736,7 +736,7 @@ export interface DryRunModalProps {
     errors: string[];
     preview: Record<string, any>[];
   } | null;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const DryRunModal: React.FC<DryRunModalProps> = ({
@@ -748,10 +748,10 @@ export const DryRunModal: React.FC<DryRunModalProps> = ({
 }) => {
   if (!isOpen || !results) return null;
 
-  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface' : 'bg-white';
-  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500';
-  const inputBgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
+  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface' : 'bg-white';
+  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900';
+  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500';
+  const inputBgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -776,9 +776,9 @@ export const DryRunModal: React.FC<DryRunModalProps> = ({
 
         <div className="p-8 space-y-6">
           {/* Resumen */}
-          <div className={`p-4 rounded-xl border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+          <div className={`p-4 rounded-xl border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-bold ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+              <span className={`text-sm font-bold ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-blue-400' : 'text-blue-600'}`}>
                 Elementos afectados
               </span>
               <span className="text-2xl font-black text-blue-500">{results.affected}</span>
@@ -792,7 +792,7 @@ export const DryRunModal: React.FC<DryRunModalProps> = ({
             </label>
             <div className={`rounded-xl border ${inputBgClass} max-h-48 overflow-y-auto`}>
               {results.preview.slice(0, 10).map((item, idx) => (
-                <div key={idx} className={`p-3 border-b last:border-b-0 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/5' : 'border-slate-200'}`}>
+                <div key={idx} className={`p-3 border-b last:border-b-0 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/5' : 'border-slate-200'}`}>
                   <div className="flex items-center justify-between">
                     <span className={`text-xs font-mono truncate flex-1 ${textClass}`}>
                       {item.id}
@@ -830,7 +830,7 @@ export const DryRunModal: React.FC<DryRunModalProps> = ({
             <button
               onClick={onClose}
               className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
                   ? 'bg-white/10 text-white hover:bg-white/20' 
                   : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
               }`}
@@ -859,7 +859,7 @@ export interface ViewPreferencesToolbarProps {
   onToggleCompact: () => void;
   onSortByChange: (sortBy: ViewPreferences['sortBy']) => void;
   onToggleSortOrder: () => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const ViewPreferencesToolbar: React.FC<ViewPreferencesToolbarProps> = ({
@@ -869,10 +869,10 @@ export const ViewPreferencesToolbar: React.FC<ViewPreferencesToolbarProps> = ({
   onToggleSortOrder,
   theme = 'dark'
 }) => {
-  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated' : 'bg-white';
-  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900';
-  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500';
-  const activeClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600';
+  const bgClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-elevated' : 'bg-white';
+  const textClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900';
+  const mutedClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500';
+  const activeClass = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600';
 
   const sortOptions: { value: ViewPreferences['sortBy']; label: string }[] = [
     { value: 'date', label: 'Fecha' },
@@ -894,7 +894,7 @@ export const ViewPreferencesToolbar: React.FC<ViewPreferencesToolbarProps> = ({
       </button>
 
       {/* Separador */}
-      <div className={`w-px h-6 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-slate-700' : 'bg-slate-200'}`} />
+      <div className={`w-px h-6 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-slate-700' : 'bg-slate-200'}`} />
 
       {/* Ordenar por */}
       <div className="flex items-center gap-1">
@@ -905,7 +905,7 @@ export const ViewPreferencesToolbar: React.FC<ViewPreferencesToolbarProps> = ({
           className={`text-xs font-bold bg-transparent border-none outline-none cursor-pointer ${textClass}`}
         >
           {sortOptions.map(opt => (
-            <option key={opt.value} value={opt.value} className={theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated' : 'bg-white'}>
+            <option key={opt.value} value={opt.value} className={theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-elevated' : 'bg-white'}>
               {opt.label}
             </option>
           ))}

@@ -32,7 +32,7 @@ interface ExpiryCaptureModalProps {
   initialData?: ExpiryRecord | null;
   onSubmit?: (data: ExpiryFormData) => Promise<void>;
   onUpdate?: (data: ExpiryFormData) => Promise<void>;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export interface ExpiryFormData {
@@ -76,7 +76,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   const [withdrawalDays, setWithdrawalDays] = useState(30);
 
   const isEditMode = mode === 'edit';
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isHighContrast = theme === 'high-contrast';
 
   // Usar barcode escaneado si existe o datos iniciales para edición
@@ -262,6 +262,17 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   }`}>
                     <span className="mb-1">{product.providerPolicy.hasExchange ? 'CANJE' : 'MERMA'}</span>
                     <span className="text-xs">{product.providerPolicy.withdrawalDays}D</span>
+                  </div>
+                )}
+                
+                {/* Indicador de proveedor */}
+                {product?.supplierName && (
+                  <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter ${
+                    isDark 
+                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' 
+                      : 'bg-blue-50 text-blue-600 border-blue-200'
+                  }`} title={product.supplierRut ? `RUT: ${product.supplierRut}` : 'Sin RUT'}>
+                    <span className="truncate max-w-[120px]">{product.supplierName}</span>
                   </div>
                 )}
                 <button 

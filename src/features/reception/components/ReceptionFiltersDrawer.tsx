@@ -38,7 +38,7 @@ export const ReceptionFiltersDrawer: React.FC<Props> = ({
   theme,
   onClear
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
 
   if (!isOpen) return null;
 

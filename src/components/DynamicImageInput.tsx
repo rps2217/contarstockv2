@@ -7,7 +7,7 @@ interface DynamicImageInputProps {
   value?: string;
   onChange: (url: string) => void;
   label: string;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   tableName: string;
 }
 
@@ -123,7 +123,7 @@ export const DynamicImageInput: React.FC<DynamicImageInputProps> = ({
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className={`w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
               ? 'bg-white/5 border-white/10 hover:bg-white/10 text-muted hover:text-white'
               : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-700'
           } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}

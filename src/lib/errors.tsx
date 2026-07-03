@@ -314,7 +314,8 @@ export function isAuthError(error: unknown): boolean {
 // ERROR CONTEXT
 // =============================================================================
 
-import { createContext, useContext, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useCallback } from 'react';
+// ReactNode ya está importado al inicio del archivo
 
 interface ErrorContextValue {
   handleError: (error: unknown, context?: string) => void;

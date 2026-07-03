@@ -64,7 +64,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`relative w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-black ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface' : 'bg-white'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface' : 'bg-white'
           }`}
         >
           <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
@@ -88,13 +88,13 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            <div className={`p-4 rounded-2xl border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-blue-400' : 'text-blue-600'}`}>Resumen de cambios</p>
+            <div className={`p-4 rounded-2xl border ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-blue-400' : 'text-blue-600'}`}>Resumen de cambios</p>
               <p className="text-sm font-bold mt-1">Se aplicarán cambios a <span className="text-blue-500">{selectedCount}</span> registros seleccionados.</p>
             </div>
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
               }`}>
                 <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
               </label>
@@ -102,7 +102,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
                 value={destino}
                 onChange={(e) => setDestino(e.target.value)}
                 className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
                     ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                     : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
                 }`}
@@ -114,7 +114,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
 
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
               }`}>
                 <Hash className="w-3 h-3" /> Número de Traspaso
               </label>
@@ -123,7 +123,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
                 value={traspaso}
                 onChange={(e) => setTraspaso(e.target.value)}
                 className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
                     ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                     : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
                 }`}
@@ -132,7 +132,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
 
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
               }`}>
                 <FileText className="w-3 h-3" /> Observaciones
               </label>
@@ -140,7 +140,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
                 className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray'
                     ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                     : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
                 }`}

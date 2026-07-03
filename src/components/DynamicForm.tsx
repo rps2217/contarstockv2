@@ -10,7 +10,7 @@ interface DynamicFormProps {
   onSubmit: (values: Record<string, any>) => void;
   onCancel?: () => void;
   isLoading?: boolean;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -66,7 +66,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
   const renderInput = (key: string, col: ColumnSchema) => {
     const commonClasses = `w-full px-4 py-3 rounded-xl border transition-all outline-none ${
-      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
+      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
         ? 'bg-white/5 border-white/10 focus:border-amber-500/50 text-white' 
         : 'bg-slate-50 border-slate-200 focus:border-amber-500 text-slate-900 shadow-sm'
     } ${errors[key] ? 'border-rose-500' : ''} ${col.editable === false ? 'opacity-50 cursor-not-allowed' : ''}`;
@@ -128,7 +128,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                   className={`h-12 rounded-xl text-sm font-black transition-all border ${
                     values[key] === opt
                       ? 'bg-amber-500 border-amber-500 text-black'
-                      : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 border-white/10 text-muted' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10 text-muted' : 'bg-slate-50 border-slate-200 text-slate-600'
                   }`}
                 >
                   {opt}
@@ -162,10 +162,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
               values[key] 
                 ? 'border-amber-500 bg-amber-500/10' 
-                : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/5 bg-white/5' : 'border-slate-200 bg-slate-50'
+                : theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/5 bg-white/5' : 'border-slate-200 bg-slate-50'
             }`}
           >
-            <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'}`}>{col.label}</span>
+            <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'}`}>{col.label}</span>
             <div className={`w-10 h-5 rounded-full relative transition-all ${values[key] ? 'bg-amber-500' : 'bg-slate-700'}`}>
               <motion.div 
                 animate={{ x: values[key] ? 20 : 2 }}
@@ -202,7 +202,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(schema.columns).filter(([_, col]) => col.visible !== false).map(([key, col]) => (
           <div key={key} className="space-y-2">
-            <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-500' : 'text-muted'}`}>
+            <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-slate-500' : 'text-muted'}`}>
               {col.label}
               {col.required && <span className="text-rose-500">*</span>}
             </label>
@@ -230,7 +230,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             type="button"
             onClick={onCancel}
             className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-slate-100 border-slate-200 hover:bg-slate-200'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-slate-100 border-slate-200 hover:bg-slate-200'
             }`}
           >
             Cancelar

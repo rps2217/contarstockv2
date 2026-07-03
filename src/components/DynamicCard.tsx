@@ -8,7 +8,7 @@ interface DynamicCardProps {
   schema: TableSchema;
   onRemove?: (item: any) => void;
   onClick?: (item: any) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   isSelected?: boolean;
   onSelect?: (id: string) => void;
 }
@@ -37,8 +37,8 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       className={`p-4 border rounded-2xl flex flex-col gap-3 transition-all cursor-pointer relative overflow-hidden group ${
         isSelected 
-          ? (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-indigo-500/20 border-indigo-500/50 ring-1 ring-indigo-500' : 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-400')
-          : (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 border-white/5 hover:bg-white/10' : 'bg-white border-stone-200 shadow-sm hover:border-indigo-300')
+          ? (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-indigo-500/20 border-indigo-500/50 ring-1 ring-indigo-500' : 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-400')
+          : (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/5 hover:bg-white/10' : 'bg-white border-stone-200 shadow-sm hover:border-indigo-300')
       } ${syncStatus === 'error' && !isSelected ? 'border-rose-500/50 bg-rose-500/5' : ''}`}
       onClick={() => onClick?.(item)}
     >
@@ -61,21 +61,21 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
                 e.stopPropagation();
                 onSelect(item.id);
               }}
-              className={`mt-1 shrink-0 transition-colors ${isSelected ? 'text-indigo-500' : (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-slate-600 hover:text-muted' : 'text-stone-300 hover:text-stone-500')}`}
+              className={`mt-1 shrink-0 transition-colors ${isSelected ? 'text-indigo-500' : (theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-slate-600 hover:text-muted' : 'text-stone-300 hover:text-stone-500')}`}
             >
               {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
             </button>
           )}
           <div className="flex flex-col gap-1 min-w-0">
             <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
-              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-stone-900'
+              theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-stone-900'
             }`}>
               {item[titleField] || 'Sin Título'}
             </h3>
             <div className="flex items-center gap-2">
               {barcodeField && item[barcodeField] && (
                 <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-widest border w-fit ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-elevated text-secondary border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-elevated text-secondary border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
                 }`}>
                   {item[barcodeField]}
                 </span>
@@ -116,7 +116,7 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
                 {col.label}
               </span>
               <span className={`text-xs font-bold truncate ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-secondary' : 'text-stone-700'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-secondary' : 'text-stone-700'
               }`}>
                 {col.type === 'image' ? (
                   <div className="flex items-center gap-2 mt-1">

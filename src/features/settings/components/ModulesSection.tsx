@@ -3,13 +3,13 @@ import { LayoutGrid, AlertCircle } from 'lucide-react';
 import { getModules, toggleModule } from '../../../services/moduleManager';
 
 interface Props {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const ModulesSection: React.FC<Props> = ({ theme = 'dark' }) => {
   const [modules, setModules] = React.useState(getModules());
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

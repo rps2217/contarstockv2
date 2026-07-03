@@ -5,7 +5,7 @@ import { AppSettings, Theme } from '../../../types';
 interface Props {
   settings: AppSettings;
   updateSetting: (key: keyof AppSettings, value: any) => void;
-  theme?: 'dark' | 'light' | 'high-contrast' | 'gray' | 'night';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night' | 'gray' | 'night';
 }
 
 export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme = 'dark' }) => {
@@ -72,8 +72,8 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
               style={{ 
                 backgroundColor: t.preview.bg,
                 borderColor: isSelected ? t.preview.accent : undefined,
-                ringColor: isSelected ? '#3B82F6' : undefined,
-                ringOffsetColor: isSelected ? (isDark ? '#0f1423' : '#ffffff') : undefined,
+                outline: isSelected ? '2px solid #3B82F6' : undefined,
+                outlineOffset: isSelected ? '2px' : undefined,
               }}
             >
               {/* Preview del tema */}

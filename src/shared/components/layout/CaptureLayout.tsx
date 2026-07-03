@@ -16,7 +16,7 @@ interface CaptureLayoutProps {
   list: React.ReactNode;
   emptyState?: React.ReactNode;
   footer?: React.ReactNode;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   inputRef?: React.RefObject<HTMLInputElement>;
   scrollRef?: React.RefObject<HTMLDivElement>;
   readOnly?: boolean;
@@ -62,7 +62,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   }, []);
 
   return (
-    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-base text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-base text-white' : 'bg-slate-50 text-slate-900'}`}>
       {header}
 
       {/* COMPORTAMIENTO CLÁSICO DE APPSHEET: NUBE DE ESTADO FLOTANTE */}

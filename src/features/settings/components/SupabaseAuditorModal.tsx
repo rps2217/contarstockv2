@@ -13,7 +13,7 @@ import { useSupabaseAudit, SYSTEM_TABLES, TableAuditResult } from '../hooks/useS
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const SupabaseAuditorModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark' }) => {
@@ -33,7 +33,7 @@ export const SupabaseAuditorModal: React.FC<Props> = ({ isOpen, onClose, theme =
     handleCopy,
   } = useSupabaseAudit();
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 
@@ -105,7 +105,7 @@ export const SupabaseAuditorModal: React.FC<Props> = ({ isOpen, onClose, theme =
   );
 };
 
-const ModalHeader: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'high-contrast' }> = ({ onClose, theme = 'dark' }) => {
+const ModalHeader: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night' }> = ({ onClose, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
   
@@ -134,7 +134,7 @@ const ModalHeader: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'h
   );
 };
 
-const AuditBanner: React.FC<{ onAudit: () => void; theme?: 'dark' | 'light' | 'high-contrast' }> = ({ onAudit, theme = 'dark' }) => {
+const AuditBanner: React.FC<{ onAudit: () => void; theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night' }> = ({ onAudit, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
   
@@ -160,7 +160,7 @@ const AuditBanner: React.FC<{ onAudit: () => void; theme?: 'dark' | 'light' | 'h
 const SystemTablesList: React.FC<{ 
   results: Record<string, TableAuditResult>;
   onTest: (table: string) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }> = ({ results, onTest, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
@@ -209,7 +209,7 @@ const LegacyTablesList: React.FC<{
   onAddTable: () => void;
   onToggleSelection: (table: string) => void;
   onTest: (table: string) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }> = ({ results, customTable, customLegacyList, selectedForDeletion, onCustomTableChange, onAddTable, onToggleSelection, onTest, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
@@ -286,7 +286,7 @@ const TableStatus: React.FC<{
   status?: TableAuditResult;
   onTest: () => void;
   showExtra?: boolean;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }> = ({ status, onTest, showExtra, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
@@ -337,7 +337,7 @@ const SQLGeneratorPanel: React.FC<{
   copied: boolean;
   hasSelection: boolean;
   onCopy: () => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }> = ({ script, copied, hasSelection, onCopy, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
@@ -395,7 +395,7 @@ const SQLGeneratorPanel: React.FC<{
   );
 };
 
-const ModalFooter: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'high-contrast' }> = ({ onClose, theme = 'dark' }) => {
+const ModalFooter: React.FC<{ onClose: () => void; theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night' }> = ({ onClose, theme = 'dark' }) => {
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
   

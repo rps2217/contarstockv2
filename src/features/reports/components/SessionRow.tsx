@@ -14,7 +14,7 @@ export const SessionRow = memo(({ index, style, data }: any) => {
   const hasIssues = session.auditStatus === 'failed';
 
   // Clases según tema
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

@@ -9,7 +9,7 @@ import { getSyncLogStatusBadge } from '@/lib/ui';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark' }) => {
@@ -19,7 +19,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dark'
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

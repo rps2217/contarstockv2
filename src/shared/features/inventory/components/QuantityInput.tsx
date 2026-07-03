@@ -20,7 +20,7 @@ interface QuantityInputProps {
   step?: number;
   label?: string;
   disabled?: boolean;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   className?: string;
 }
 
@@ -35,7 +35,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
   theme = 'dark',
   className = '',
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isHighContrast = theme === 'high-contrast';
 
   const handleDecrement = () => {

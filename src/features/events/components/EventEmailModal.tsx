@@ -43,7 +43,7 @@ interface EventEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedItems: any[];
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const EventEmailModal: React.FC<EventEmailModalProps> = ({
@@ -311,12 +311,12 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
           className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-surface border border-white/10' : 'bg-white border border-slate-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-surface border border-white/10' : 'bg-white border border-slate-200'
           }`}
         >
           {/* Header */}
           <div className={`p-6 border-b flex items-center justify-between shrink-0 ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10' : 'border-slate-200'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/10' : 'border-slate-200'
           }`}>
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
@@ -324,7 +324,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
               </div>
               <div>
                 <h2 className={`text-2xl font-black uppercase tracking-tighter italic leading-none ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-white' : 'text-slate-900'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-white' : 'text-slate-900'
                 }`}>Redactar Solicitud</h2>
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
                   {selectedItems.length} ítems seleccionados
@@ -334,7 +334,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
             <button 
               onClick={onClose}
               className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 text-muted hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 text-muted hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
               <X className="w-6 h-6" />
@@ -348,14 +348,14 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
             <div className="space-y-6 flex flex-col">
               <div>
                 <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
                 }`}>Plantilla</label>
                 <div className="flex gap-3">
                   <select
                     value={selectedTemplateId}
                     onChange={(e) => setSelectedTemplateId(e.target.value)}
                     className={`flex-1 px-5 py-4 rounded-2xl text-sm font-bold border outline-none transition-all ${
-                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
+                      theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
                         ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
                     }`}
@@ -378,7 +378,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
 
               <div>
                 <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
                 }`}>Para (Destinatario)</label>
                 <input
                   type="email"
@@ -386,7 +386,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
                   onChange={(e) => setTo(e.target.value)}
                   placeholder="ej. pm@empresa.com"
                   className={`w-full px-5 py-4 rounded-2xl text-sm font-medium border outline-none transition-all ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
                       ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
                   }`}
@@ -395,14 +395,14 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
 
               <div>
                 <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                  theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
                 }`}>Asunto</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   className={`w-full px-5 py-4 rounded-2xl text-sm font-medium border outline-none transition-all ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
                       ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
                   }`}
@@ -412,7 +412,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
               <div className="flex-1 flex flex-col min-h-[250px]">
                 <div className="flex items-center justify-between mb-3">
                   <label className={`block text-xs font-black uppercase tracking-widest ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
                   }`}>Mensaje</label>
                   <span className="text-[10px] text-indigo-500 font-bold bg-indigo-500/10 px-3 py-1 rounded-full">Usa [TABLA_PRODUCTOS] para insertar la tabla</span>
                 </div>
@@ -420,7 +420,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   className={`flex-1 w-full px-5 py-4 rounded-2xl text-sm font-medium border outline-none transition-all resize-none ${
-                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' 
+                    theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' 
                       ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
                   }`}
@@ -429,7 +429,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
 
               {/* Template Save Controls */}
               <div className={`p-5 rounded-2xl border ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 {!isEditingTemplate ? (
                   <div className="flex gap-3">
@@ -456,7 +456,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
                       onChange={(e) => setNewTemplateName(e.target.value)}
                       placeholder="Nombre de la nueva plantilla..."
                       className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border outline-none ${
-                        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-black/40 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-black/40 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                       }`}
                       autoFocus
                     />
@@ -480,11 +480,11 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
             {/* Right Column: Preview */}
             <div className="flex flex-col h-full">
               <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'text-muted' : 'text-slate-500'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'text-muted' : 'text-slate-500'
               }`}>Vista Previa del Correo</label>
               
               <div className={`flex-1 rounded-3xl border overflow-hidden flex flex-col shadow-inner ${
-                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-white border-white/10' : 'bg-white border-slate-200'
+                theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-white border-white/10' : 'bg-white border-slate-200'
               }`}>
                 <div className="bg-slate-100 border-b border-slate-200 p-5 text-sm text-slate-600 font-medium shrink-0">
                   <div className="flex items-center"><span className="text-muted w-16 inline-block">Para:</span> {to || '(Sin destinatario)'}</div>
@@ -501,7 +501,7 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
 
           {/* Footer Actions */}
           <div className={`p-6 border-t flex justify-end shrink-0 ${
-            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'
+            theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'
           }`}>
             <button
               onClick={handleOpenGmail}

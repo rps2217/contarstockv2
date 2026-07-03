@@ -11,7 +11,7 @@ interface Props {
   activeSliceId: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 export const SlicesSidebar: React.FC<Props> = ({
@@ -21,7 +21,7 @@ export const SlicesSidebar: React.FC<Props> = ({
   onDelete,
   theme = 'dark',
 }) => {
-  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  const isDark = theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 

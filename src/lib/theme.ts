@@ -8,7 +8,7 @@ export type Theme = 'dark' | 'light' | 'high-contrast' | 'gray' | 'night' | 'app
  * Verifica si el tema es oscuro
  */
 export function isDarkTheme(theme: Theme): boolean {
-  return theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark';
+  return theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray';
 }
 
 /**

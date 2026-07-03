@@ -7,7 +7,7 @@ import { LucideIcon } from 'lucide-react';
 interface EventListPanelProps {
   title: string;
   count?: number;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   virtualizer: any;
   grouped?: any[];
   groupedItems?: any[];
@@ -94,7 +94,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
     <motion.div 
       layout
       className={`flex-1 flex flex-col overflow-hidden rounded-[2.5rem] border-4 border-black transition-all relative ${
-        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' ? 'bg-base/60' : 'bg-stone-100/80'
+        theme === 'dark' || theme === 'night' || theme === 'high-contrast' || theme === 'appsheet-dark' || theme === 'gray' ? 'bg-base/60' : 'bg-stone-100/80'
       }`}
     >
       <div className={`${bgColor} p-4 flex items-center justify-between border-b-4 border-black`}>

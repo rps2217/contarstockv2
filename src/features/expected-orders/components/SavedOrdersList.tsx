@@ -13,7 +13,7 @@ interface SavedOrdersListProps {
   state: any;
   actions: any;
   isDark: boolean;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
   onViewDetail?: (order: ExpectedOrder) => void;
 }
 

@@ -5,7 +5,7 @@ import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/Sett
 import { toast } from 'sonner';
 
 interface Props {
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
 /**
