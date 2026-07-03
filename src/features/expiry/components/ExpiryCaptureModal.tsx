@@ -309,6 +309,72 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                 </div>
               </div>
 
+              {/* 4.1. FECHA DE RETIRO CALCULADA */}
+              {selectedMm && selectedYyyy && (
+                (() => {
+                  const lastDay = new Date(selectedYyyy, selectedMm, 0).getDate();
+                  const expiryDate = new Date(selectedYyyy, selectedMm - 1, lastDay);
+                  const withdrawalDays = product?.providerPolicy?.withdrawalDays ?? 30;
+                  const withdrawalDate = new Date(expiryDate.getTime() - withdrawalDays * 24 * 60 * 60 * 1000);
+                  const daysUntilWithdrawal = Math.ceil((withdrawalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  const withdrawalMonth = MESES[withdrawalDate.getMonth()];
+                  
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-4 rounded-2xl border-2 ${
+                        daysUntilWithdrawal < 0
+                          ? 'bg-rose-500/10 border-rose-500/30'
+                          : daysUntilWithdrawal <= 7
+                            ? 'bg-amber-500/10 border-amber-500/30'
+                            : 'bg-blue-500/10 border-blue-500/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`text-[10px] font-black uppercase tracking-widest ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-blue-400'
+                          }`}>
+                            📅 Fecha de Retiro
+                          </p>
+                          <p className={`text-lg font-black mt-1 ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-blue-400'
+                          }`}>
+                            {withdrawalMonth} {withdrawalDate.getDate()}, {withdrawalDate.getFullYear()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-[10px] font-black uppercase ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-slate-400'
+                          }`}>
+                            {daysUntilWithdrawal < 0 ? 'Ya pasó' : 'En'}
+                          </p>
+                          <p className={`text-2xl font-black ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : daysUntilWithdrawal <= 7 ? 'text-amber-400' : 'text-emerald-400'
+                          }`}>
+                            {daysUntilWithdrawal < 0 ? Math.abs(daysUntilWithdrawal) : daysUntilWithdrawal}
+                          </p>
+                          <p className={`text-[10px] uppercase ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-slate-400'
+                          }`}>
+                            {daysUntilWithdrawal < 0 ? 'días' : 'días'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-500">Política del proveedor</span>
+                        <span className={`text-[10px] font-black ${
+                          product?.providerPolicy?.hasExchange ? 'text-indigo-400' : 'text-amber-400'
+                        }`}>
+                          {product?.providerPolicy?.hasExchange ? '🏭 CANJE' : '⚠️ MERMA'} • {withdrawalDays} días
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })()
+              )}
+
               {/* 5. UBICACIÓN */}
               <div className="space-y-2">
                 <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
