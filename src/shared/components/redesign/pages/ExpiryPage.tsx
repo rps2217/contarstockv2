@@ -11,6 +11,9 @@ import { toast } from 'sonner'
 // IMPORTAR HOOK FUNCIONAL DE features/expiry
 import { useExpiry, ExpiryRecord, ExpiryStatus } from '@/features/expiry/hooks/useExpiry'
 
+// IMPORTAR MODAL REAL DE CAPTURA
+import { ExpiryCaptureModal, ExpiryFormData } from '@/features/expiry/components/ExpiryCaptureModal'
+
 // Tipos y constantes de UI
 type UxExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe'
 
@@ -488,201 +491,29 @@ export const RedesignExpiryPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Modal de Captura */}
-      <AnimatePresence>
-        {showCaptureModal && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
-            onClick={() => setShowCaptureModal(false)}
-          >
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-base border border-subtle rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="p-4 border-b border-subtle flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <CalendarClock className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-primary">Registrar Vencimiento</p>
-                    <p className="text-xs text-muted">Ingresa los datos del producto</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowCaptureModal(false)} className="p-2 hover:bg-elevated rounded-xl">
-                  <X className="w-5 h-5 text-muted" />
-                </button>
-              </div>
-
-              {/* Form */}
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault()
-                  const form = e.target as HTMLFormElement
-                  const data = new FormData(form)
-                  
-                  const barcode = data.get('barcode') as string
-                  const productName = data.get('productName') as string
-                  const mm = parseInt(data.get('mm') as string) || new Date().getMonth() + 1
-                  const yyyy = parseInt(data.get('yyyy') as string) || new Date().getFullYear()
-                  const quantity = parseInt(data.get('quantity') as string) || 1
-                  const location = data.get('location') as string || ''
-                  const observaciones = data.get('observaciones') as string || ''
-                  const hasCanje = data.get('hasCanje') === 'on'
-                  const withdrawalDays = parseInt(data.get('withdrawalDays') as string) || 30
-                  
-                  if (!barcode || !productName) {
-                    toast.error('Completa los campos obligatorios')
-                    return
-                  }
-                  
-                  const id = await actions.createRecord({
-                    barcode,
-                    productName,
-                    mm,
-                    yyyy,
-                    quantity,
-                    location,
-                    observaciones,
-                    hasCanje,
-                    withdrawalDays,
-                  })
-                  
-                  if (id) {
-                    toast.success('Vencimiento registrado')
-                    setShowCaptureModal(false)
-                  }
-                }}
-                className="flex-1 overflow-y-auto p-4 space-y-4"
-              >
-                {/* Código de barras */}
-                <div>
-                  <label className="block text-xs text-muted mb-1.5">Código de Barras *</label>
-                  <input
-                    name="barcode"
-                    type="text"
-                    required
-                    placeholder="Ej: 7801234567890"
-                    className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Nombre del producto */}
-                <div>
-                  <label className="block text-xs text-muted mb-1.5">Nombre del Producto *</label>
-                  <input
-                    name="productName"
-                    type="text"
-                    required
-                    placeholder="Ej: Leche entera 1L"
-                    className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Fecha de vencimiento */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-muted mb-1.5">Mes</label>
-                    <select
-                      name="mm"
-                      defaultValue={new Date().getMonth() + 1}
-                      className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                    >
-                      {MONTHS.map((m, i) => (
-                        <option key={i} value={i + 1}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-muted mb-1.5">Año</label>
-                    <input
-                      name="yyyy"
-                      type="number"
-                      min={2020}
-                      max={2030}
-                      defaultValue={new Date().getFullYear()}
-                      className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Cantidad */}
-                <div>
-                  <label className="block text-xs text-muted mb-1.5">Cantidad (unidades)</label>
-                  <input
-                    name="quantity"
-                    type="number"
-                    min={1}
-                    defaultValue={1}
-                    className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Ubicación */}
-                <div>
-                  <label className="block text-xs text-muted mb-1.5">Ubicación</label>
-                  <input
-                    name="location"
-                    type="text"
-                    placeholder="Ej: Bodega A, Estante 3"
-                    className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Días de retiro */}
-                <div>
-                  <label className="block text-xs text-muted mb-1.5">Días de anticipación retiro</label>
-                  <input
-                    name="withdrawalDays"
-                    type="number"
-                    min={1}
-                    max={365}
-                    defaultValue={30}
-                    className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Tiene canje */}
-                <div className="flex items-center gap-3">
-                  <input
-                    name="hasCanje"
-                    type="checkbox"
-                    id="hasCanje"
-                    className="w-5 h-5 rounded border-subtle bg-surface text-blue-500 focus:ring-blue-500"
-                  />
-                  <label htmlFor="hasCanje" className="text-sm text-primary">Producto con derecho a canje</label>
-                </div>
-
-                {/* Observaciones */}
-                <div>
-                  <label className="block text-xs text-muted mb-1.5">Observaciones</label>
-                  <textarea
-                    name="observaciones"
-                    rows={2}
-                    placeholder="Notas adicionales..."
-                    className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500 resize-none"
-                  />
-                </div>
-
-                {/* Submit */}
-                <div className="pt-2 shrink-0">
-                  <button
-                    type="submit"
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-500 transition-colors"
-                  >
-                    <Check className="w-4 h-4" />
-                    Guardar Vencimiento
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modal de Captura - Usando componente real */}
+      <ExpiryCaptureModal
+        isOpen={showCaptureModal}
+        onClose={() => setShowCaptureModal(false)}
+        onSubmit={async (data: ExpiryFormData) => {
+          const id = await actions.createRecord({
+            barcode: data.barcode,
+            productName: data.productName,
+            mm: data.mm,
+            yyyy: data.yyyy,
+            quantity: data.quantity,
+            location: data.location,
+            observaciones: data.observaciones,
+            hasCanje: data.hasCanje,
+            withdrawalDays: data.withdrawalDays,
+          })
+          
+          if (id) {
+            toast.success('Vencimiento registrado correctamente')
+          }
+        }}
+        theme="dark"
+      />
 
       {/* FAB flotante para móvil */}
       {!isSelectionMode && (
