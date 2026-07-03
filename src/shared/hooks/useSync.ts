@@ -305,4 +305,4 @@ export const useScheduledSyncLegacy = (interval = 60000) =>
 
 // Re-exportar SyncBridge para uso directo
 export { syncBridge, SYNC_ORDER, type SyncTable } from '@/services/cloud/SyncBridge';
-export { useSync, useTableSync } from '@/services/cloud/SyncBridge';
+export { useSync as useEnhancedSync, useTableSync } from '@/services/cloud/SyncBridge';

@@ -99,8 +99,8 @@ export class AuthenticationError extends AppError {
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '@/services/logger';
-import { Button } from '@/shared/components/ui/design-system/Button';
-import { Card } from '@/shared/components/ui/design-system/Card';
+import { Button } from '@/shared/components/ui/Button';
+import { Card } from '@/shared/components/ui/Card';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
