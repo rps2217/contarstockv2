@@ -75,6 +75,17 @@ const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => 
   const daysText = record.daysLeft < 0 ? `Venció hace ${Math.abs(record.daysLeft)} días` : record.daysLeft === 0 ? 'Vence hoy' : `Faltan ${record.daysLeft} días`
   const expiryMonth = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm
   const expiryYear = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy
+  
+  // Calcular fecha de retiro
+  const withdrawalDate = record.withdrawalDate instanceof Date ? record.withdrawalDate : new Date(record.withdrawalDate)
+  const daysUntilWithdrawal = Math.ceil((withdrawalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const withdrawalMonth = MONTHS[withdrawalDate.getMonth()]
+  const withdrawalDaysText = daysUntilWithdrawal < 0 
+    ? `Retirar hace ${Math.abs(daysUntilWithdrawal)} días`
+    : daysUntilWithdrawal === 0 
+      ? 'Retirar hoy'
+      : `Retirar en ${daysUntilWithdrawal} días`
+  
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-3 p-3 hover:bg-elevated transition-colors group rounded-xl cursor-pointer"
@@ -84,15 +95,46 @@ const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => 
         <Package className="w-5 h-5 text-muted" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-primary truncate">{record.productName || 'Producto sin nombre'}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-primary truncate">{record.productName || 'Producto sin nombre'}</p>
+          {record.hasCanje && (
+            <span className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded">
+              🏭 CANJE
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
           <span className="text-xs text-muted font-mono">{record.barcode || 'Sin código'}</span>
           {record.location && <span className="text-xs text-secondary flex items-center gap-1"><MapPin className="w-3 h-3" />{record.location}</span>}
         </div>
       </div>
+      {/* Fecha de vencimiento */}
       <div className="text-right shrink-0 hidden sm:block">
-        <p className="text-sm font-semibold text-primary">{MONTHS[expiryMonth - 1]} {expiryYear}</p>
+        <p className="text-sm font-semibold text-primary">📅 {MONTHS[expiryMonth - 1]} {expiryYear}</p>
         <p className="text-xs text-muted">{record.quantity} un.</p>
+      </div>
+      {/* Fecha de retiro */}
+      <div className={cn('text-right shrink-0 px-2 py-1 rounded-lg border hidden md:block', 
+        daysUntilWithdrawal < 0 
+          ? 'bg-rose-500/10 border-rose-500/30'
+          : daysUntilWithdrawal <= 7
+            ? 'bg-amber-500/10 border-amber-500/30'
+            : daysUntilWithdrawal <= record.withdrawalDays
+              ? 'bg-orange-500/10 border-orange-500/30'
+              : 'bg-blue-500/10 border-blue-500/30'
+      )}>
+        <p className={cn('text-[10px] font-bold',
+          daysUntilWithdrawal < 0 ? 'text-rose-400' : 
+          daysUntilWithdrawal <= 7 ? 'text-amber-400' : 'text-blue-400'
+        )}>
+          📤 {withdrawalMonth} {withdrawalDate.getDate()}
+        </p>
+        <p className={cn('text-[10px]',
+          daysUntilWithdrawal < 0 ? 'text-rose-400/70' : 
+          daysUntilWithdrawal <= 7 ? 'text-amber-400/70' : 'text-muted'
+        )}>
+          {withdrawalDaysText}
+        </p>
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1 w-28">
         <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-full border', meta.bg, meta.border, meta.text)}>{meta.label}</span>
