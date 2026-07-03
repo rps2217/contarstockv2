@@ -3,6 +3,7 @@
  * 
  * Arquitectura simplificada v2.0 - Un solo hook, una sola responsabilidad
  * Usa cache centralizado para evitar recargas excesivas
+ * Usa validación Zod para garantizar integridad de datos
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
@@ -14,6 +15,7 @@ import { logger } from '@/services/logger';
 import { ExpiryStatus, evaluateExpiry } from '../domain/expiryDomain';
 import { formatExpiryDate, getStatusLabel } from '../domain/expiryDomain';
 import { useCloudCache, clearCache } from '@/shared/hooks/useCloudCache';
+import { validateExpiry, ExpiryRecordSchema, type ValidatedExpiryRecord } from '@/lib/schemas';
 
 // Cache key para vencimientos
 const EXPIRY_CACHE_KEY = 'expiry-records';
@@ -388,6 +390,29 @@ export const useExpiry = (): UseExpiryReturn => {
 
   const createRecord = useCallback(async (data: CreateExpiryData): Promise<string | null> => {
     try {
+      // ========== VALIDACION ZOD ==========
+      const validationResult = ExpiryRecordSchema.safeParse({
+        barcode: data.barcode,
+        productName: data.productName,
+        providerName: data.providerName,
+        providerRut: data.providerRut,
+        mm: data.mm,
+        yyyy: data.yyyy,
+        quantity: data.quantity,
+        location: data.location,
+        observaciones: data.observaciones,
+        withdrawalDays: data.withdrawalDays ?? 30,
+        hasCanje: data.hasCanje ?? false,
+      });
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+        logger.warn('useExpiry', 'Validation failed', errors);
+        toast.error(`Datos inválidos: ${errors}`);
+        return null;
+      }
+      // ====================================
+      
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const claveUnica = `${data.barcode}${data.yyyy}${String(data.mm).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`;
       
