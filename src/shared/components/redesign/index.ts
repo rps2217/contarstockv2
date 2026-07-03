@@ -29,3 +29,5 @@ export { RedesignCustomersPage } from './pages/CustomersPage';
 export { RedesignSuppliersPage } from './pages/SuppliersPage';
 export { RedesignSlicesPage } from './pages/SlicesPage';
 export { RedesignTheoreticalLoadsPage } from './pages/TheoreticalLoadsPage';
+export { RedesignInventoryPage } from './pages/InventoryPage';
+export { RedesignAuditPage } from './pages/AuditPage';

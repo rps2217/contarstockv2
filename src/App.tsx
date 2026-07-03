@@ -64,6 +64,10 @@ const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').th
 const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
 // REDISEÑO: HammerPage para modo ráfaga
 const HammerPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignHammerPage })));
+// REDISEÑO: InventoryPage para gestión de inventario
+const InventoryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignInventoryPage })));
+// REDISEÑO: AuditPage para reportes de auditoría
+const AuditPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignAuditPage })));
 
 // Componentes pesados - Solo carga cuando se necesitan
 const Sidebar = lazyWithRetry(() => import('@/components/Sidebar').then(m => ({ default: m.Sidebar })));
@@ -283,6 +287,9 @@ const AppContent = () => {
                     <Route path="/slices" element={<SlicesPage />} />
                     {/* REDISEÑO: Página de cargas teóricas */}
                     <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
+                    {/* REDISEÑO: Inventory y Audit */}
+                    <Route path="/inventory" element={<InventoryPage />} />
+                    <Route path="/audit" element={<AuditPage />} />
                     {/* Dynamic ELIMINADO - redirigir a datos */}
                     <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
 
