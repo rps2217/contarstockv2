@@ -157,7 +157,10 @@ export const useExpiry = (): UseExpiryReturn => {
 
   // Fetcher para cache
   const fetchExpiryRecords = useCallback(async () => {
-    const stored = await db.table('expirations').toArray();
+    // Filtrar registros eliminados (soft delete)
+    const stored = await db.table('expirations')
+      .filter(item => item.syncStatus !== 'pending_delete')
+      .toArray();
     const nowDate = new Date();
     
     const processed: ExpiryRecord[] = stored.map(item => {
