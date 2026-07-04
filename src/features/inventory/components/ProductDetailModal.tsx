@@ -103,12 +103,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
           />
           
-          {/* Modal */}
+          {/* Modal - Full screen on mobile, centered on desktop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[90vh] z-[60] flex flex-col"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-x-0 inset-y-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[90vh] md:rounded-2xl md:shadow-2xl z-[60] flex flex-col bg-base overflow-hidden"
           >
             <RecordDetailView
               title={product.name}
