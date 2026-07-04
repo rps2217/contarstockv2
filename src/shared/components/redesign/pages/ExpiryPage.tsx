@@ -73,22 +73,50 @@ const SummaryCard = ({ status, count, total }: { status: UxExpiryStatus; count: 
   )
 }
 
+// Helper para formatear fecha completa
+const formatExpiryDate = (record: ExpiryRecord) => {
+  const day = record.expiryDateObj ? record.expiryDateObj.getDate() : 1
+  const month = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm
+  const year = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy
+  return { day, month, year }
+}
+
+// Helper para obtener color de fecha de vencimiento basado en urgencia
+const getExpiryDateColor = (daysLeft: number) => {
+  if (daysLeft < 0) return { text: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/40' }
+  if (daysLeft === 0) return { text: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/40' }
+  if (daysLeft <= 7) return { text: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/40' }
+  if (daysLeft <= 30) return { text: 'text-yellow-400', bg: 'bg-yellow-500/15', border: 'border-yellow-500/40' }
+  return { text: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/40' }
+}
+
+// Helper para color de fecha de retiro
+const getWithdrawalDateColor = (daysUntilWithdrawal: number, withdrawalDays: number) => {
+  if (daysUntilWithdrawal < 0) return { text: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/40' }
+  if (daysUntilWithdrawal <= 7) return { text: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/40' }
+  if (daysUntilWithdrawal <= withdrawalDays) return { text: 'text-orange-400', bg: 'bg-orange-500/15', border: 'border-orange-500/40' }
+  return { text: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/40' }
+}
+
 const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => void }) => {
   const status = mapStatus(record.status)
   const meta = STATUS_META[status]
-  const daysText = record.daysLeft < 0 ? `Venció hace ${Math.abs(record.daysLeft)} días` : record.daysLeft === 0 ? 'Vence hoy' : `Faltan ${record.daysLeft} días`
-  const expiryMonth = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm
-  const expiryYear = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy
+  const daysText = record.daysLeft < 0 ? `${Math.abs(record.daysLeft)}d venc` : record.daysLeft === 0 ? 'Vence hoy' : `${record.daysLeft}d`
+  
+  // Fecha de vencimiento
+  const { day: expiryDay, month: expiryMonthNum, year: expiryYear } = formatExpiryDate(record)
+  const expiryDateColor = getExpiryDateColor(record.daysLeft)
   
   // Calcular fecha de retiro
   const withdrawalDate = record.withdrawalDate instanceof Date ? record.withdrawalDate : new Date(record.withdrawalDate)
   const daysUntilWithdrawal = Math.ceil((withdrawalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
   const withdrawalMonth = MONTHS[withdrawalDate.getMonth()]
   const withdrawalDaysText = daysUntilWithdrawal < 0 
-    ? `Retirar hace ${Math.abs(daysUntilWithdrawal)} días`
+    ? `${Math.abs(daysUntilWithdrawal)}d`
     : daysUntilWithdrawal === 0 
-      ? 'Retirar hoy'
-      : `Retirar en ${daysUntilWithdrawal} días`
+      ? 'Hoy'
+      : `${daysUntilWithdrawal}d`
+  const withdrawalDateColor = getWithdrawalDateColor(daysUntilWithdrawal, record.withdrawalDays)
   
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
@@ -117,37 +145,36 @@ const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => 
           )}
         </div>
       </div>
-      {/* Fecha de vencimiento */}
-      <div className="text-right shrink-0 hidden sm:block">
-        <p className="text-sm font-semibold text-primary">📅 {MONTHS[expiryMonth - 1]} {expiryYear}</p>
-        <p className="text-xs text-muted">{record.quantity} un.</p>
+      
+      {/* Fecha de vencimiento - MEJORADA */}
+      <div className={cn('shrink-0 px-3 py-2 rounded-xl border text-center min-w-[90px]', expiryDateColor.bg, expiryDateColor.border)}>
+        <div className="flex items-center justify-center gap-1">
+          <CalendarClock className={cn('w-3.5 h-3.5 shrink-0', expiryDateColor.text)} />
+          <p className={cn('text-sm font-bold', expiryDateColor.text)}>{expiryDay} {MONTHS[expiryMonthNum - 1]}</p>
+        </div>
+        <p className="text-[10px] text-muted mt-0.5">{expiryYear}</p>
       </div>
-      {/* Fecha de retiro */}
-      <div className={cn('text-right shrink-0 px-2 py-1 rounded-lg border hidden md:block', 
-        daysUntilWithdrawal < 0 
-          ? 'bg-rose-500/10 border-rose-500/30'
-          : daysUntilWithdrawal <= 7
-            ? 'bg-amber-500/10 border-amber-500/30'
-            : daysUntilWithdrawal <= record.withdrawalDays
-              ? 'bg-orange-500/10 border-orange-500/30'
-              : 'bg-blue-500/10 border-blue-500/30'
-      )}>
-        <p className={cn('text-[10px] font-bold',
-          daysUntilWithdrawal < 0 ? 'text-rose-400' : 
-          daysUntilWithdrawal <= 7 ? 'text-amber-400' : 'text-blue-400'
-        )}>
-          📤 {withdrawalMonth} {withdrawalDate.getDate()}
-        </p>
-        <p className={cn('text-[10px]',
-          daysUntilWithdrawal < 0 ? 'text-rose-400/70' : 
-          daysUntilWithdrawal <= 7 ? 'text-amber-400/70' : 'text-muted'
-        )}>
-          {withdrawalDaysText}
-        </p>
+      
+      {/* Fecha de retiro - MEJORADA */}
+      <div className={cn('shrink-0 px-3 py-2 rounded-xl border text-center min-w-[90px]', withdrawalDateColor.bg, withdrawalDateColor.border)}>
+        <div className="flex items-center justify-center gap-1">
+          <PackageX className={cn('w-3.5 h-3.5 shrink-0', withdrawalDateColor.text)} />
+          <p className={cn('text-sm font-bold', withdrawalDateColor.text)}>{withdrawalDate.getDate()} {withdrawalMonth}</p>
+        </div>
+        <p className="text-[10px] text-muted mt-0.5">{withdrawalDaysText} retir</p>
       </div>
-      <div className="shrink-0 flex flex-col items-end gap-1 w-28">
-        <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-full border', meta.bg, meta.border, meta.text)}>{meta.label}</span>
-        <span className="text-[11px] text-secondary">{daysText}</span>
+      
+      {/* Días restantes y estado */}
+      <div className="shrink-0 flex flex-col items-center gap-1 min-w-[60px]">
+        <span className={cn(
+          'text-xs font-bold px-2 py-1 rounded-lg border',
+          record.daysLeft < 0 ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' :
+          record.daysLeft === 0 ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' :
+          record.daysLeft <= 7 ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+          'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+        )}>
+          {daysText}
+        </span>
       </div>
     </motion.div>
   )
@@ -611,46 +638,123 @@ export const RedesignExpiryPage: React.FC = () => {
 
               {/* Content */}
               <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
-                {/* Estado */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted">Estado</span>
-                  {(() => {
-                    const status = mapStatus(selectedRecord.status)
-                    const meta = STATUS_META[status]
-                    const daysText = selectedRecord.daysLeft < 0 
-                      ? `Venció hace ${Math.abs(selectedRecord.daysLeft)} días` 
-                      : selectedRecord.daysLeft === 0 
-                        ? 'Vence hoy' 
-                        : `Faltan ${selectedRecord.daysLeft} días`
-                    return (
+                {/* Estado con badge prominente */}
+                {(() => {
+                  const status = mapStatus(selectedRecord.status)
+                  const meta = STATUS_META[status]
+                  const daysText = selectedRecord.daysLeft < 0 
+                    ? `Venció hace ${Math.abs(selectedRecord.daysLeft)} días` 
+                    : selectedRecord.daysLeft === 0 
+                      ? 'Vence hoy' 
+                      : `Faltan ${selectedRecord.daysLeft} días`
+                  return (
+                    <div className={cn('flex items-center justify-between p-3 rounded-xl border', meta.bg, meta.border)}>
                       <div className="flex items-center gap-2">
-                        <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full border', meta.bg, meta.border, meta.text)}>
+                        <span className={cn('text-sm font-bold px-3 py-1 rounded-full border', meta.bg, meta.border, meta.text)}>
                           {meta.label}
                         </span>
-                        <span className="text-xs text-secondary">{daysText}</span>
                       </div>
-                    )
-                  })()}
-                </div>
+                      <span className="text-sm font-semibold text-primary">{daysText}</span>
+                    </div>
+                  )
+                })()}
 
-                {/* Fecha de retiro calculada */}
+                {/* Sección de Fechas - PRINCIPAL MEJORADA */}
                 {(() => {
                   const withdrawalDateCalc = selectedRecord.withdrawalDate instanceof Date 
                     ? selectedRecord.withdrawalDate 
                     : new Date(selectedRecord.withdrawalDate)
+                  
+                  const daysUntilWithdrawal = Math.ceil((withdrawalDateCalc.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  const expiryDateColor = getExpiryDateColor(selectedRecord.daysLeft)
+                  const withdrawalDateColor = getWithdrawalDateColor(daysUntilWithdrawal, selectedRecord.withdrawalDays)
+                  
                   return (
-                    <>
-                {/* Detalles */}
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted font-medium uppercase tracking-wider">Fechas Clave</p>
+                      
+                      {/* Timeline visual */}
+                      <div className="flex items-stretch gap-3">
+                        {/* Tarjeta Fecha de Retiro */}
+                        <div className={cn('flex-1 p-4 rounded-xl border text-center', withdrawalDateColor.bg, withdrawalDateColor.border)}>
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <PackageX className={cn('w-5 h-5', withdrawalDateColor.text)} />
+                            <span className={cn('text-xs font-bold uppercase', withdrawalDateColor.text)}>Retirar</span>
+                          </div>
+                          <p className={cn('text-2xl font-bold', withdrawalDateColor.text)}>
+                            {withdrawalDateCalc.getDate()}
+                          </p>
+                          <p className={cn('text-lg font-semibold', withdrawalDateColor.text)}>
+                            {MONTHS[withdrawalDateCalc.getMonth()]}
+                          </p>
+                          <p className="text-xs text-muted">{withdrawalDateCalc.getFullYear()}</p>
+                          <div className={cn('mt-2 text-xs font-medium px-2 py-1 rounded-full', 
+                            daysUntilWithdrawal < 0 ? 'bg-rose-500/20 text-rose-400' :
+                            daysUntilWithdrawal === 0 ? 'bg-rose-500/20 text-rose-400' :
+                            daysUntilWithdrawal <= 7 ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          )}>
+                            {daysUntilWithdrawal < 0 ? `${Math.abs(daysUntilWithdrawal)} días` : 
+                             daysUntilWithdrawal === 0 ? '¡Hoy!' : 
+                             `${daysUntilWithdrawal} días`}
+                          </div>
+                        </div>
+                        
+                        {/* Línea de conexión */}
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-surface border border-subtle flex items-center justify-center">
+                            <ArrowUpDown className="w-4 h-4 text-muted" />
+                          </div>
+                          <div className="flex-1 w-0.5 bg-gradient-to-b from-orange-500 to-blue-500 my-1" />
+                        </div>
+                        
+                        {/* Tarjeta Fecha de Vencimiento */}
+                        <div className={cn('flex-1 p-4 rounded-xl border text-center', expiryDateColor.bg, expiryDateColor.border)}>
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <CalendarClock className={cn('w-5 h-5', expiryDateColor.text)} />
+                            <span className={cn('text-xs font-bold uppercase', expiryDateColor.text)}>Vence</span>
+                          </div>
+                          <p className={cn('text-2xl font-bold', expiryDateColor.text)}>
+                            {selectedRecord.expiryDateObj ? selectedRecord.expiryDateObj.getDate() : 1}
+                          </p>
+                          <p className={cn('text-lg font-semibold', expiryDateColor.text)}>
+                            {MONTHS[selectedRecord.mm - 1]}
+                          </p>
+                          <p className="text-xs text-muted">{selectedRecord.yyyy}</p>
+                          <div className={cn('mt-2 text-xs font-medium px-2 py-1 rounded-full',
+                            selectedRecord.daysLeft < 0 ? 'bg-rose-500/20 text-rose-400' :
+                            selectedRecord.daysLeft === 0 ? 'bg-rose-500/20 text-rose-400' :
+                            selectedRecord.daysLeft <= 7 ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-emerald-500/20 text-emerald-400'
+                          )}>
+                            {selectedRecord.daysLeft < 0 ? `${Math.abs(selectedRecord.daysLeft)} días` : 
+                             selectedRecord.daysLeft === 0 ? '¡Hoy!' : 
+                             `${selectedRecord.daysLeft} días`}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Info adicional de fechas */}
+                      <div className="flex items-center gap-2 text-xs text-muted">
+                        <span className="px-2 py-1 bg-surface rounded-lg border border-subtle">
+                          {selectedRecord.withdrawalDays} días de anticipación para retiro
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Detalles adicionales */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-surface rounded-xl p-3">
-                    <p className="text-xs text-muted mb-1">Fecha Vencimiento</p>
-                    <p className="text-sm font-semibold text-primary">
-                      {MONTHS[selectedRecord.mm - 1]} {selectedRecord.yyyy}
-                    </p>
-                  </div>
                   <div className="bg-surface rounded-xl p-3">
                     <p className="text-xs text-muted mb-1">Cantidad</p>
                     <p className="text-sm font-semibold text-primary">{selectedRecord.quantity} unidades</p>
+                  </div>
+                  <div className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-muted mb-1">Política</p>
+                    <p className={cn('text-sm font-semibold', selectedRecord.hasCanje ? 'text-indigo-400' : 'text-amber-500')}>
+                      {selectedRecord.hasCanje ? '🏭 CANJE' : '⚠️ MERMA'}
+                    </p>
                   </div>
                   <div className="bg-surface rounded-xl p-3">
                     <p className="text-xs text-muted mb-1">Proveedor</p>
@@ -660,23 +764,7 @@ export const RedesignExpiryPage: React.FC = () => {
                     <p className="text-xs text-muted mb-1">Ubicación</p>
                     <p className="text-sm font-semibold text-primary truncate">{selectedRecord.location}</p>
                   </div>
-                  <div className="bg-surface rounded-xl p-3">
-                    <p className="text-xs text-muted mb-1">Política</p>
-                    <p className={cn('text-sm font-semibold', selectedRecord.hasCanje ? 'text-indigo-400' : 'text-amber-500')}>
-                      {selectedRecord.hasCanje ? '🏭 CANJE' : '⚠️ MERMA'}
-                    </p>
-                  </div>
-                  <div className="bg-surface rounded-xl p-3">
-                    <p className="text-xs text-muted mb-1">Fecha Retiro</p>
-                    <p className="text-sm font-semibold text-primary">
-                      {withdrawalDateCalc.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
-                    </p>
-                    <p className="text-xs text-muted">({selectedRecord.withdrawalDays} días antes)</p>
-                  </div>
                 </div>
-                    </>
-                  )
-                })()}
 
                 {/* Observaciones */}
                 {selectedRecord.observaciones && (
