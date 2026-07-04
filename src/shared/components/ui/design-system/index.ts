@@ -4,7 +4,6 @@
  * Paleta monocromática de grises inspirada en ChatGPT/OpenHands.
  */
 
-export { ModuleCard } from './ModuleCard';
 export { FilterSearch } from './FilterSearch';
 export { ActionFAB } from './ActionFAB';
 export { ModulePage, SimpleHeader } from './ModulePage';
