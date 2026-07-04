@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Database,
@@ -19,6 +19,7 @@ import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { useToastStore } from '@/store/useToastStore'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { Pagination } from '@/shared/components/ui/Pagination'
 
 const TABS = [
   {
@@ -52,6 +53,22 @@ export const RedesignDataPage: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const { addToast } = useToastStore()
+  
+  // Paginación
+  const ITEMS_PER_PAGE = 50;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  
+  // Reset pagination when products or tab change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [products.length, activeTab]);
+  
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = Math.min(start + ITEMS_PER_PAGE, products.length);
+    return products.slice(start, end);
+  }, [products, currentPage]);
 
   // Datos reales de productos desde IndexedDB
   const products = useLiveQuery(async () => {
@@ -156,82 +173,91 @@ export const RedesignDataPage: React.FC = () => {
                 {searchQuery ? 'No se encontraron productos' : 'No hay productos en el inventario'}
               </div>
             ) : (
-              products.slice(0, 50).map((product, idx) => {
-                const isOutOfStock = (product.stock || 0) === 0
-                const isLowStock = (product.stock || 0) > 0 && (product.stock || 0) <= (product.minStock || 10)
-                
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                    key={product.id}
-                    className="bg-surface border border-subtle rounded-2xl p-4 flex items-center gap-4 hover:bg-elevated transition-colors cursor-pointer group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center shrink-0">
-                      <Package className="w-6 h-6 text-muted" />
-                    </div>
+              <>
+                {paginatedProducts.map((product, idx) => {
+                  const isOutOfStock = (product.stock || 0) === 0
+                  const isLowStock = (product.stock || 0) > 0 && (product.stock || 0) <= (product.minStock || 10)
+                  
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(idx, 10) * 0.03 }}
+                      key={product.id}
+                      className="bg-surface border border-subtle rounded-2xl p-4 flex items-center gap-4 hover:bg-elevated transition-colors cursor-pointer group"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center shrink-0">
+                        <Package className="w-6 h-6 text-muted" />
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-primary truncate">
-                        {product.name || 'Sin nombre'}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted font-mono">
-                          {product.barcode || product.sku || 'Sin código'}
-                        </span>
-                        {product.category && (
-                          <>
-                            <span className="w-1 h-1 rounded-full bg-subtle" />
-                            <span className="text-xs text-secondary">
-                              {product.category}
-                            </span>
-                          </>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-primary truncate">
+                          {product.name || 'Sin nombre'}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted font-mono">
+                            {product.barcode || product.sku || 'Sin código'}
+                          </span>
+                          {product.category && (
+                            <>
+                              <span className="w-1 h-1 rounded-full bg-subtle" />
+                              <span className="text-xs text-secondary">
+                                {product.category}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2">
+                          {isOutOfStock && <AlertCircle className="w-4 h-4 text-rose-500" />}
+                          {isLowStock && !isOutOfStock && <AlertCircle className="w-4 h-4 text-amber-500" />}
+                          <span
+                            className={cn(
+                              'text-sm font-bold',
+                              isOutOfStock ? 'text-rose-500' : isLowStock ? 'text-amber-500' : 'text-emerald-500',
+                            )}
+                          >
+                            {product.stock || 0} un.
+                          </span>
+                        </div>
+                        {product.price && (
+                          <span className="text-xs text-muted">{product.price}</span>
                         )}
                       </div>
-                    </div>
 
-                    <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-2">
-                        {isOutOfStock && <AlertCircle className="w-4 h-4 text-rose-500" />}
-                        {isLowStock && !isOutOfStock && <AlertCircle className="w-4 h-4 text-amber-500" />}
-                        <span
-                          className={cn(
-                            'text-sm font-bold',
-                            isOutOfStock ? 'text-rose-500' : isLowStock ? 'text-amber-500' : 'text-emerald-500',
-                          )}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={() => setEditingProduct(product)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-blue-500"
                         >
-                          {product.stock || 0} un.
-                        </span>
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => product.id && handleDeleteProduct(product.id)}
+                          disabled={deletingId === product.id}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-rose-500"
+                        >
+                          {deletingId === product.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
                       </div>
-                      {product.price && (
-                        <span className="text-xs text-muted">{product.price}</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button
-                        onClick={() => setEditingProduct(product)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-blue-500"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => product.id && handleDeleteProduct(product.id)}
-                        disabled={deletingId === product.id}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:bg-subtle hover:text-rose-500"
-                      >
-                        {deletingId === product.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </motion.div>
-                )
-              })
-            )}
-            {products.length > 50 && (
-              <div className="text-center py-4 text-sm text-muted">
-                Mostrando 50 de {products.length} productos
-              </div>
+                    </motion.div>
+                  )
+                })}
+                
+                {/* Paginación */}
+                {products.length > ITEMS_PER_PAGE && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={products.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={setCurrentPage}
+                    className="py-4"
+                  />
+                )}
+              </>
             )}
           </div>
         )
