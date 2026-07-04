@@ -5,12 +5,6 @@
  * Para nuevos proyectos, preferir:
  *   - modules/{module}/hooks/ para hooks específicos de módulo
  *   - shared/hooks/ para hooks reutilizables
- *
- * Hooks que deberían migrar:
- *   - useAudit → modules/sync/hooks/
- *   - useGenericSync → infrastructure/sync/hooks/
- *   - useExpiryWatcher → modules/expiry/hooks/
- *   - useConflictResolution → infrastructure/sync/hooks/
  */
 
 // App lifecycle
@@ -18,13 +12,15 @@ export { useAppInit } from './useAppInit';
 export { useAutoSession } from './useAutoSession';
 export { useAutoLock } from './useAutoLock';
 
-// Sync
+// Sync - Usar @/shared/hooks/useSync en su lugar
 export { useAutoSync } from './useAutoSync';
-export { useGenericSync } from './useGenericSync';
-export { useSyncQueue } from './useSyncQueue';
 export { useScheduledSync } from './useScheduledSync';
 export { useRealtimeSync } from './useRealtimeSync';
 export { useAudit } from './useAudit';
+
+// ⚠️ DEPRECATED - No usar en código nuevo
+// export { useGenericSync } from './useGenericSync'; // Usar useSync de @/shared/hooks
+// export { useSyncQueue } from './useSyncQueue';    // Usar useSync de @/shared/hooks
 
 // Network
 export { useNetworkStatus } from './useNetworkStatus';
@@ -35,7 +31,7 @@ export { useFormValidation } from './useFormValidation';
 // Performance
 export { useDebounce, useThrottle, useMediaQuery, useIntersectionObserver, useVirtualScroll } from './usePerformanceOptimizations';
 
-// Module-specific (consider moving to module hooks/)
+// Module-specific
 export { useExpiryWatcher } from './useExpiryWatcher';
 export { useConflictResolution } from './useConflictResolution';
 
