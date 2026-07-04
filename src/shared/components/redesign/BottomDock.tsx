@@ -9,7 +9,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cn } from './utils';
+import { cn } from '@/lib/utils';
 
 interface RedesignBottomDockProps {
   onQuickAction?: () => void;

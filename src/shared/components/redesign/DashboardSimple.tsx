@@ -11,7 +11,7 @@
 import React from 'react';
 import { Scan, Package, ArrowDownToLine, Zap, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from './utils';
+import { cn } from '@/lib/utils';
 import { useSyncStore, useAppStore } from '@/stores';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';

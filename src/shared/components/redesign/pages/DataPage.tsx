@@ -52,23 +52,11 @@ export const RedesignDataPage: React.FC = () => {
   const [showProviderForm, setShowProviderForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const { addToast } = useToastStore()
   
   // Paginación
-  const ITEMS_PER_PAGE = 50;
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
-  
-  // Reset pagination when products or tab change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [products.length, activeTab]);
-  
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const end = Math.min(start + ITEMS_PER_PAGE, products.length);
-    return products.slice(start, end);
-  }, [products, currentPage]);
+  const ITEMS_PER_PAGE = 50
 
   // Datos reales de productos desde IndexedDB
   const products = useLiveQuery(async () => {
@@ -87,6 +75,19 @@ export const RedesignDataPage: React.FC = () => {
     }
     return await query
   }, [activeTab, searchQuery], [])
+  
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  
+  // Reset pagination when products or tab change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+  
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = Math.min(start + ITEMS_PER_PAGE, products.length);
+    return products.slice(start, end);
+  }, [products, currentPage]);
 
   
 

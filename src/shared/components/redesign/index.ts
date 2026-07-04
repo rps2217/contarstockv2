@@ -5,7 +5,7 @@ export { RedesignBottomDock } from './BottomDock';
 export { RedesignDashboard } from './Dashboard';
 export { RedesignThemeProvider, useRedesignTheme, useTheme } from './ThemeContext';
 export { RedesignAppShell, RedesignAppShellWrapper } from './AppShell';
-export { cn } from './utils';
+export { cn } from '@/lib/utils';
 
 // Hooks de base de datos
 export { useDbReady, safeDbOperation, safeCount } from './hooks/useDbReady';

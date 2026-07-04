@@ -13,7 +13,7 @@ import {
   CalendarClock,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cn } from './utils';
+import { cn } from '@/lib/utils';
 
 interface RedesignSidebarProps {
   isCollapsed: boolean;

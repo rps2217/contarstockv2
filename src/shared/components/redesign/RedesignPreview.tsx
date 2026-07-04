@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { RedesignAppShellWrapper } from './AppShell';
 import { RedesignThemeProvider } from './ThemeContext';
-import { cn } from './utils';
+import { cn } from '@/lib/utils';
 
 interface RedesignPreviewProps {
   onClose?: () => void;

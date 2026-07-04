@@ -27,7 +27,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from './utils';
+import { cn } from '@/lib/utils';
 import { useSyncStore, useAppStore } from '@/stores';
 import { useDashboard, type ActivityItem } from '@/features/dashboard/hooks/useDashboard';
 import { useLiveQuery } from 'dexie-react-hooks';
