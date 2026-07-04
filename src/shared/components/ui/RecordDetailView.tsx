@@ -298,19 +298,42 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Right: Actions */}
+          {/* Right: Quick Actions - Visible on Mobile */}
           <div className="flex items-center gap-2">
+            {/* Mobile: Show Edit/Delete directly */}
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-colors text-sm font-medium md:hidden"
+                title="Editar"
+              >
+                <Pencil className="w-4 h-4" />
+                <span>Editar</span>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 transition-colors text-sm font-medium md:hidden"
+                title="Eliminar"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Eliminar</span>
+              </button>
+            )}
+
+            {/* Desktop: Refresh + More menu */}
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted hover:text-white transition-colors hidden md:flex"
                 title="Actualizar"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
             )}
             
-            <div className="relative">
+            <div className="relative hidden md:block">
               <button
                 onClick={() => setShowActionsMenu(!showActionsMenu)}
                 className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted hover:text-white transition-colors"
