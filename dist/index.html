@@ -9,15 +9,39 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>LogiCount Pro - Enterprise Core</title>
-  <script type="module" crossorigin src="/assets/index-CoUrwp3v.js"></script>
+    
+    <!-- Performance: Preconnect a Google Fonts (reducir DNS lookup) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Performance: Fonts con display=swap para no bloquear render -->
+    <!-- DM Sans: Fuente principal de la UI -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <!-- JetBrains Mono: Fuente para código/barras -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <!-- Inter: Solo si es necesaria explícitamente (lazy load) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <!-- Libre Barcode 128: Carga diferida solo cuando se necesita -->
+    
+    <!-- Fallback: System fonts mientras cargan las fuentes web -->
+    <style>
+        /* Font loading optimization - Evita FOIT (Flash of Invisible Text) */
+        body {
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        code, pre, .font-mono, .barcode {
+            font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/index-U4JhiAPG.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/vendor-react-azjgIxh1.js">
-  <link rel="modulepreload" crossorigin href="/assets/vendor-ui-CRBRsQvM.js">
-  <link rel="modulepreload" crossorigin href="/assets/vendor-export-F4pSbNOz.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-ui-D-inJnC_.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-export-DjU56ERT.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-charts-DTvpSAzT.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-db-L_q3_bRU.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-date-CipgX2BN.js">
-  <link rel="modulepreload" crossorigin href="/assets/vendor-parse-CQ6BHVuC.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-DMvLWfMp.css">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-parse-1p9647wa.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-BBlVTLEV.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
     <div id="root"></div>
