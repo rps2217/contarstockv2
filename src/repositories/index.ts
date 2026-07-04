@@ -10,9 +10,6 @@ export { SessionRepository, sessionRepository } from './SessionRepository';
 // Scan Repositories
 export { ScanRepository, scanRepository } from './ScanRepository';
 
-// Event Repositories
-export { EventRepository } from './EventRepository';
-
 // Queue Repositories
 export { SyncQueueRepository, syncQueueRepository } from './SyncQueueRepository';
 export { SyncLogRepository } from './SyncLogRepository';
