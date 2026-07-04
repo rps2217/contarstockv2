@@ -388,20 +388,23 @@ export const RedesignExpiryPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-base">
-      <div className="pt-8 px-4 sm:px-6 lg:px-8 shrink-0">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight flex items-center gap-3">
-              <CalendarClock className="w-8 h-8 text-blue-500" />
-              Vencimientos
-              {urgentCount > 0 && (
-                <span className="flex items-center gap-1 text-sm font-normal text-rose-500 bg-rose-500/10 px-2 py-1 rounded-full">
-                  <AlertCircle className="w-4 h-4" />
-                  {urgentCount} urgente{urgentCount !== 1 ? 's' : ''}
-                </span>
-              )}
-            </h1>
-            <p className="text-secondary text-sm mt-2">Controla la caducidad de tus productos y planifica retiros.</p>
+      {/* Header mejorado con más espacio en escritorio */}
+      <div className="px-4 sm:px-6 lg:px-8 xl:px-12 shrink-0 border-b border-subtle bg-surface/50">
+        <div className="max-w-7xl mx-auto flex items-center justify-between py-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <CalendarClock className="w-6 h-6 text-blue-500" />
+            </div>
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-primary">Vencimientos</h1>
+              <p className="text-xs lg:text-sm text-muted">{totalRecords} registros • {urgentCount} urgente{urgentCount !== 1 ? 's' : ''}</p>
+            </div>
+            {urgentCount > 0 && (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-rose-500 bg-rose-500/10 px-3 py-1.5 rounded-full">
+                <AlertCircle className="w-4 h-4" />
+                {urgentCount}
+              </span>
+            )}
           </div>
           <div className="flex gap-2 shrink-0">
             {/* Modo selección */}
@@ -464,13 +467,17 @@ export const RedesignExpiryPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
-        <div className="max-w-4xl mx-auto flex flex-col gap-5">
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+      {/* Contenido principal con más espacio en escritorio */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-12 pb-24 md:pb-8">
+        {/* Contenedor que aprovecha mejor el espacio en pantallas grandes */}
+        <div className="max-w-7xl mx-auto flex flex-col gap-5">
+          {/* Stats cards en grid responsive */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {STATUS_ORDER.map((s) => <SummaryCard key={s} status={s} count={counts[s]} total={totalRecords} />)}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          {/* Barra de búsqueda y filtros alineados */}
+          <div className="flex flex-col lg:flex-row gap-3 items-start">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
               <input type="text" value={filters?.searchQuery || ''} onChange={(e) => actions.setSearchQuery(e.target.value)}
