@@ -58,6 +58,7 @@ export interface AuditLogEntry {
   deviceInfo?: string;   // Info del dispositivo
   timestamp: number;
   synced: boolean;        // Si ya fue sincronizado a la nube
+  syncStatus?: 'synced' | 'pending' | 'error';  // Estado de sincronización
 }
 
 export interface ProductProvider {
@@ -72,6 +73,7 @@ export interface ProductProvider {
   marca?: string;
   createdAt?: number;
   updatedAt?: number;
+  syncStatus?: 'synced' | 'pending' | 'error';  // Estado de sincronización
 }
 
 // View Preferences - Para persistir preferencias de vista por módulo

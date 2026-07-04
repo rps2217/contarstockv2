@@ -83,11 +83,11 @@ export class DbMigrator {
       customers: '&id, firstName, lastName, phone, syncStatus',
       messageTemplates: 'id, name, syncStatus',
       dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]',
-      productProviders: '++id, &productBarcode, &providerRut, isPrimary, [productBarcode+providerRut]',
+      productProviders: '++id, &productBarcode, &providerRut, isPrimary, syncStatus, [productBarcode+providerRut], [productBarcode+syncStatus]',
       blindScans: '++id, batchId, barcode, timestamp',
       blindManifests: '++id, batchId, barcode',
       expirations: '++id, &claveUnica, barcode, mm, yyyy, status, timestamp, syncStatus, [mm+yyyy], [barcode+mm+yyyy]',
-      audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, [tableName+recordId], [userId+timestamp]',
+      audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, syncStatus, [tableName+recordId], [userId+timestamp], [tableName+syncStatus]',
       bulkHistory: '++id, module, action, timestamp, undone',
       viewPreferences: '++id, module',
       syncMetrics: '++id, timestamp, tableName, operation, [timestamp+tableName]'
@@ -102,6 +102,48 @@ export class DbMigrator {
           provider.hasExchange = true;
         }
         await tx.table('providers').put(provider);
+      }
+    });
+
+    // v56: Agregar índices syncStatus faltantes a productProviders y audit_logs
+    db.version(56).stores({
+      products: '&barcode, name, syncStatus', 
+      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, syncStatus, expectedItems, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp], [synced+mm+yyyy]',
+      expectedOrders: 'id, internalId, importedAt',
+      logs: '++id, level, module, timestamp',
+      sync_logs: '++id, timestamp, action, tableName, status',
+      syncQueue: '++id, tableName, operation, recordId, timestamp, retries, priority, [tableName+operation]',
+      settings: '&key',
+      locations: '++id, &name, lastUsed',
+      visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
+      erpSessions: 'id, erpOrderId, status, createdAt',
+      providers: '&rut, name, syncStatus',
+      customers: '&id, firstName, lastName, phone, syncStatus',
+      messageTemplates: 'id, name, syncStatus',
+      dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]',
+      productProviders: '++id, &productBarcode, &providerRut, isPrimary, syncStatus, [productBarcode+providerRut], [productBarcode+syncStatus]',
+      blindScans: '++id, batchId, barcode, timestamp',
+      blindManifests: '++id, batchId, barcode',
+      expirations: '++id, &claveUnica, barcode, mm, yyyy, status, timestamp, syncStatus, [mm+yyyy], [barcode+mm+yyyy]',
+      audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, syncStatus, [tableName+recordId], [userId+timestamp], [tableName+syncStatus]',
+      bulkHistory: '++id, module, action, timestamp, undone',
+      viewPreferences: '++id, module',
+      syncMetrics: '++id, timestamp, tableName, operation, [timestamp+tableName]'
+    }).upgrade(async (tx) => {
+      // v56: Migrar syncStatus en productProviders si no existe
+      const productProviders = await tx.table('productProviders').toArray();
+      for (const pp of productProviders) {
+        if (pp.syncStatus === undefined) {
+          await tx.table('productProviders').update(pp.id!, { syncStatus: 'synced' });
+        }
+      }
+      // v56: Migrar syncStatus en audit_logs si no existe
+      const auditLogs = await tx.table('audit_logs').toArray();
+      for (const log of auditLogs) {
+        if (log.syncStatus === undefined) {
+          await tx.table('audit_logs').update(log.id!, { syncStatus: log.synced ? 'synced' : 'pending' });
+        }
       }
     });
   }
