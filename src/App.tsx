@@ -17,7 +17,7 @@ import { useExpiryNotifications } from '@/hooks/useExpiryNotifications';
 import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
 import { initializeWorkflows } from '@/lib/workflowEngine';
-import { useRowLevelSecurityStore } from '@/stores';
+import { useRowLevelSecurityStore, usePermissionStore } from '@/stores';
 import { LogiCountDB } from './db';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
@@ -114,6 +114,41 @@ const AppContent = () => {
   // Inicializar workflows al cargar la app
   useEffect(() => {
     initializeWorkflows();
+  }, []);
+
+  // Sincronizar rol de usuario con RLS
+  useEffect(() => {
+    const syncRoleToRLS = () => {
+      const permissionStore = usePermissionStore.getState();
+      const rlsStore = useRowLevelSecurityStore.getState();
+      
+      const role = permissionStore.currentRole;
+      const user = permissionStore.currentUser;
+      
+      // Actualizar contexto de seguridad
+      rlsStore.setContext({
+        userId: user?.id || 'anonymous',
+        role: role,
+      });
+      
+      // Si es admin, establecer bypass (ve todo)
+      if (role === 'admin') {
+        rlsStore.enableAdminBypass(true);
+      } else {
+        rlsStore.enableAdminBypass(false);
+      }
+    };
+    
+    syncRoleToRLS();
+    
+    // Suscribirse a cambios en el store de permisos
+    const unsubscribe = usePermissionStore.subscribe((state, prevState) => {
+      if (state.currentRole !== prevState.currentRole || state.currentUser !== prevState.currentUser) {
+        syncRoleToRLS();
+      }
+    });
+    
+    return () => unsubscribe();
   }, []);
 
   // Cargar ubicaciones disponibles para RLS desde la BD
