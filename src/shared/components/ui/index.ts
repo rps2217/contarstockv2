@@ -31,6 +31,10 @@ export * from './Tooltip';
 // Export Components
 export { ExportPreview } from './ExportPreview';
 
+// Icon Components
+export { Icon, LazyIcon, Spinner } from './Icon';
+export type { IconName } from './Icon';
+
 // Re-export specific components
 export { CardHeader, CardTitle, CardContent } from './Card';
 export { StatusDot } from './Badge';
