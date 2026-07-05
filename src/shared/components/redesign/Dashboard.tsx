@@ -26,6 +26,10 @@ import {
   Scissors,
   Layers,
   Loader2,
+  ShoppingCart,
+  ClipboardList,
+  Bell,
+  Settings,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -528,6 +532,30 @@ export const RedesignDashboard: React.FC = () => {
               icon={Layers}
               delay={0.3}
               onClick={() => navigate('/theoretical-loads')}
+            />
+
+            <ActionCard
+              title="Ver reportes"
+              description="Estadísticas y reportes de inventario."
+              icon={BarChart3}
+              delay={0.35}
+              onClick={() => navigate('/reports')}
+            />
+
+            <ActionCard
+              title="Órdenes"
+              description="Gestiona órdenes de compra y recepción."
+              icon={ShoppingCart}
+              delay={0.4}
+              onClick={() => navigate('/expected-orders')}
+            />
+
+            <ActionCard
+              title="Clientes"
+              description="Gestiona la base de datos de clientes."
+              icon={Users}
+              delay={0.45}
+              onClick={() => navigate('/customers')}
             />
           </div>
         </div>

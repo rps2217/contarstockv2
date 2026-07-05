@@ -52,6 +52,10 @@ const ExpiryLegacy = ExpiryPage;
 const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage })));
 const SuppliersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage })));
 const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
+const CountingPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCountingPage })));
+const ExpectedOrdersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpectedOrdersPage })));
+const ReceptionPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReceptionPage })));
+const DynamicPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDynamicPage })));
 
 // Otras páginas
 const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
@@ -263,6 +267,10 @@ const AppContent = () => {
               CustomersPage={CustomersPage}
               SuppliersPage={SuppliersPage}
               SlicesPage={SlicesPage}
+              CountingPage={CountingPage}
+              ExpectedOrdersPage={ExpectedOrdersPage}
+              ReceptionPage={ReceptionPage}
+              DynamicPage={DynamicPage}
               HammerPage={HammerPage}
               TheoreticalLoadsPage={TheoreticalLoadsPage}
               InventoryPage={InventoryPage}
@@ -328,6 +336,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
   const { 
     CapturePage, DataPage, SyncPage, ReportsLegacy, ExpiryPage, 
     SettingsPage, CustomersPage, SuppliersPage, SlicesPage, 
+    CountingPage, ExpectedOrdersPage, ReceptionPage, DynamicPage,
     HammerPage, TheoreticalLoadsPage, InventoryPage, AuditPage,
     ThemeDemoPage, RedesignPreviewPage 
   } = pages;
@@ -350,36 +359,36 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       <Route path="/expiry/:tab" element={<ExpiryPage />} />
       <Route path="/settings" element={<SettingsPage />} />
 
+      {/* PÁGINAS DE MÓDULOS */}
+      <Route path="/counting" element={<CountingPage />} />
+      <Route path="/counting/:id" element={<CountingPage />} />
+      <Route path="/events" element={<ReportsLegacy />} />
+      <Route path="/reception" element={<ReceptionPage />} />
+      <Route path="/reception/:id" element={<ReceptionPage />} />
+      <Route path="/expected-orders" element={<ExpectedOrdersPage />} />
+      <Route path="/dynamic" element={<DynamicPage />} />
+      <Route path="/dynamic/:tableKey" element={<DynamicPage />} />
+
+      {/* OTRAS PÁGINAS */}
+      <Route path="/customers" element={<CustomersPage />} />
+      <Route path="/providers" element={<SuppliersPage />} />
+      <Route path="/slices" element={<SlicesPage />} />
+      <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
+      <Route path="/inventory" element={<InventoryPage />} />
+      <Route path="/audit" element={<AuditPage />} />
+      <Route path="/massive" element={<HammerPage />} />
+      <Route path="/massive/:batchId" element={<HammerPage />} />
+
       {/* DEEP LINKS */}
       <Route path="/session/:id" element={<ReportsLegacy />} />
-      <Route path="/reception/:id" element={<CapturePage />} />
       <Route path="/product/:barcode" element={<DataPage />} />
 
       {/* DEMO */}
       <Route path="/theme-demo" element={<ThemeDemoPage />} />
       <Route path="/redesign" element={<RedesignPreviewPage />} />
 
-      {/* RUTAS LEGACY */}
-      <Route path="/reception" element={<Navigate to="/capture" replace />} />
-      <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
-      <Route path="/events" element={<Navigate to="/reports" replace />} />
-      <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
-      <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
-      <Route path="/counting" element={<Navigate to="/reports" replace />} />
-      <Route path="/counting/:id" element={<Navigate to="/reports" replace />} />
-      <Route path="/massive" element={<HammerPage />} />
-      <Route path="/massive/:batchId" element={<HammerPage />} />
+      {/* RUTAS LEGACY (Alias) */}
       <Route path="/database" element={<Navigate to="/data" replace />} />
-
-      {/* OTRAS PÁGINAS */}
-      <Route path="/customers" element={<CustomersPage />} />
-      <Route path="/providers" element={<SuppliersPage />} />
-      <Route path="/expected-orders" element={<Navigate to="/reports" replace />} />
-      <Route path="/slices" element={<SlicesPage />} />
-      <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
-      <Route path="/inventory" element={<InventoryPage />} />
-      <Route path="/audit" element={<AuditPage />} />
-      <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
