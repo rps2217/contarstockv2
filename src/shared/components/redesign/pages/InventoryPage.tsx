@@ -44,7 +44,7 @@ import { ProductPolicyStatus } from '@/features/inventory/domain/productsDomain'
 import { ModulePage } from '@/shared/components/ui/design-system/ModulePage';
 import { FilterSearch } from '@/shared/components/ui/design-system/FilterSearch';
 import { ActionFAB } from '@/shared/components/ui/design-system/ActionFAB';
-import { EmptyState } from '@/shared/components/ui/design-system/EmptyState';
+import { EmptyState } from '@/shared/components/ui/EmptyState';
 
 // ============================================================================
 // COMPONENTE: ProductSection
