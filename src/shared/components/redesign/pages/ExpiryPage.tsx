@@ -4,7 +4,7 @@ import {
   CalendarClock, Plus, Search, ChevronRight, Skull, AlertTriangle,
   PackageX, Clock, ShieldCheck, MapPin, RefreshCw, Package, AlertCircle,
   X, Trash2, Check, Pencil, Download, Table2, FileSpreadsheet, FileText,
-  Filter, ArrowUpDown, Truck, LayoutGrid, List,
+  Filter, ArrowUpDown, Truck, LayoutGrid, List, Columns3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -180,6 +180,72 @@ const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => 
   )
 }
 
+// Componente Card para Vista Kanban
+const KanbanCard: React.FC<{ record: ExpiryRecord; onClick: () => void }> = ({ record, onClick }) => {
+  const dateColors = getExpiryDateColor(record.daysLeft);
+  const day = record.expiryDateObj ? record.expiryDateObj.getDate() : 1;
+  const month = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm;
+  const year = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="w-full bg-surface border border-subtle rounded-xl p-3 text-left hover:bg-elevated hover:border-blue-500/30 transition-all"
+    >
+      {/* Producto */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-primary truncate">{record.productName}</p>
+          <p className="text-xs text-muted font-mono">{record.barcode}</p>
+        </div>
+        {record.quantity > 1 && (
+          <span className="shrink-0 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+            {record.quantity}
+          </span>
+        )}
+      </div>
+
+      {/* Fecha de vencimiento */}
+      <div className={cn('flex items-center gap-2 rounded-lg p-2 mb-2', dateColors.bg, dateColors.border)}>
+        <CalendarClock className={cn('w-4 h-4 shrink-0', dateColors.text)} />
+        <div>
+          <p className={cn('text-sm font-bold', dateColors.text)}>
+            {String(day).padStart(2, '0')}/{String(month).padStart(2, '0')}/{year}
+          </p>
+          <p className="text-xs text-muted">
+            {record.daysLeft < 0 
+              ? `Venció hace ${Math.abs(record.daysLeft)} días`
+              : record.daysLeft === 0 
+                ? 'Vence hoy' 
+                : `${record.daysLeft} días`
+            }
+          </p>
+        </div>
+      </div>
+
+      {/* Info adicional */}
+      <div className="flex items-center justify-between text-xs text-muted">
+        {record.location && (
+          <span className="flex items-center gap-1 truncate">
+            <MapPin className="w-3 h-3 shrink-0" />
+            {record.location}
+          </span>
+        )}
+        {record.hasCanje && (
+          <span className="flex items-center gap-1 text-emerald-500">
+            <RefreshCw className="w-3 h-3" />
+            Canje
+          </span>
+        )}
+      </div>
+    </motion.button>
+  );
+};
+
 const Section = ({ status, records, isOpen, onToggle, onRecordClick }: { 
   status: UxExpiryStatus; 
   records: ExpiryRecord[]; 
@@ -232,7 +298,7 @@ export const RedesignExpiryPage: React.FC = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [editingRecord, setEditingRecord] = useState<ExpiryRecord | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
+  const [viewMode, setViewMode] = useState<'cards' | 'table' | 'kanban'>('cards')
   const [sortBy, setSortBy] = useState<'daysLeft' | 'productName' | 'provider'>('daysLeft')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedProvider, setSelectedProvider] = useState<string>('')
@@ -492,9 +558,14 @@ export const RedesignExpiryPage: React.FC = () => {
                 <Filter className="w-4 h-4" />
               </button>
               {/* Toggle vista */}
-              <button onClick={() => setViewMode(v => v === 'cards' ? 'table' : 'cards')}
-                className="p-2.5 rounded-xl bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle shrink-0">
-                {viewMode === 'cards' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+              <button onClick={() => setViewMode(v => {
+                if (v === 'cards') return 'table';
+                if (v === 'table') return 'kanban';
+                return 'cards';
+              })}
+                className="p-2.5 rounded-xl bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle shrink-0"
+                title={viewMode === 'cards' ? 'Vista tabla' : viewMode === 'table' ? 'Vista Kanban' : 'Vista cards'}>
+                {viewMode === 'cards' ? <List className="w-4 h-4" /> : viewMode === 'table' ? <Columns3 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
               </button>
               <div className="flex gap-2 overflow-x-auto no-scrollbar">
                 {FILTERS.map((f) => (
@@ -595,7 +666,49 @@ export const RedesignExpiryPage: React.FC = () => {
               <p className="text-sm text-muted">No hay registros de vencimientos</p>
               <p className="text-xs text-muted mt-1">Comienza agregando fechas de vencimiento</p>
             </div>
+          ) : viewMode === 'kanban' ? (
+            /* ===== VISTA KANBAN ===== */
+            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4">
+              {visibleStatuses.map((s) => {
+                const meta = STATUS_META[s];
+                const Icon = meta.icon;
+                const columnRecords = grouped[s] || [];
+                return (
+                  <div key={s} className="flex-shrink-0 w-80">
+                    {/* Header de columna */}
+                    <div className={cn('rounded-t-xl p-3 border-b', meta.bg, meta.border)}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icon className={cn('w-4 h-4', meta.text)} />
+                          <span className={cn('font-semibold text-sm', meta.text)}>{meta.label}</span>
+                        </div>
+                        <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', meta.bg, meta.text)}>
+                          {columnRecords.length}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Cards de la columna */}
+                    <div className="bg-base/50 border-x border-b border-subtle rounded-b-xl p-2 space-y-2 max-h-[60vh] overflow-y-auto">
+                      {columnRecords.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-muted">
+                          Sin items
+                        </div>
+                      ) : (
+                        columnRecords.map((record) => (
+                          <KanbanCard 
+                            key={record.id} 
+                            record={record} 
+                            onClick={() => handleRecordClick(record)} 
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* ===== VISTA CARDS/TABLE ===== */
             visibleStatuses.map((s) => (
               <Section key={s} status={s} records={grouped[s]}
                 isOpen={filter !== 'all' ? true : openSections[s]}
