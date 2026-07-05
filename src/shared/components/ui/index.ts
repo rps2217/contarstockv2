@@ -41,3 +41,9 @@ export { PageLoader, PageSkeleton, SkeletonLine } from './PageLoader';
 // Re-export specific components
 export { CardHeader, CardTitle, CardContent } from './Card';
 export { StatusDot } from './Badge';
+
+// Error Handling
+export * from './ErrorBoundary';
+
+// Empty States & Loading
+export * from './EmptyState';
