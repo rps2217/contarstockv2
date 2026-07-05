@@ -3,7 +3,7 @@
  * AuditPanel - Panel de visualización de logs de auditoría
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
@@ -20,9 +20,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   Info,
+  FileSpreadsheet,
+  FileJson,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuditStore, AuditLog, AuditAction, AuditSeverity } from '@/stores';
+import { exportAuditLogs } from '@/lib/auditExport';
+import { toast } from 'sonner';
 
 interface AuditPanelProps {
   className?: string;
@@ -100,7 +104,43 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
     });
   };
 
-  const handleExport = () => {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportXLSX = useCallback(async () => {
+    if (filteredLogs.length === 0) {
+      toast.error('No hay registros para exportar');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await exportAuditLogs(filteredLogs, { format: 'xlsx' });
+      toast.success(`Exportados ${filteredLogs.length} registros a Excel`);
+    } catch (err) {
+      toast.error('Error al exportar');
+      console.error(err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [filteredLogs]);
+
+  const handleExportCSV = useCallback(async () => {
+    if (filteredLogs.length === 0) {
+      toast.error('No hay registros para exportar');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await exportAuditLogs(filteredLogs, { format: 'csv' });
+      toast.success(`Exportados ${filteredLogs.length} registros a CSV`);
+    } catch (err) {
+      toast.error('Error al exportar');
+      console.error(err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [filteredLogs]);
+
+  const handleExportJSON = useCallback(() => {
     const data = JSON.stringify(filteredLogs, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -109,7 +149,8 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
     a.download = `audit-logs-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
+    toast.success(`Exportados ${filteredLogs.length} registros a JSON`);
+  }, [filteredLogs]);
 
   if (!isEnabled) {
     return (
@@ -141,9 +182,38 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
             )}>
               <Filter className="w-5 h-5" />
             </button>
-            <button onClick={handleExport} className="p-2 rounded-lg hover:bg-elevated text-muted" title="Exportar">
-              <Download className="w-5 h-5" />
-            </button>
+            <div className="relative group">
+              <button className="p-2 rounded-lg hover:bg-elevated text-muted flex items-center gap-1" title="Exportar">
+                <Download className="w-5 h-5" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {/* Dropdown */}
+              <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-subtle rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <button
+                  onClick={handleExportXLSX}
+                  disabled={isExporting}
+                  className="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-elevated text-left text-sm disabled:opacity-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                  Exportar Excel
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  disabled={isExporting}
+                  className="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-elevated text-left text-sm disabled:opacity-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-blue-500" />
+                  Exportar CSV
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-elevated text-left text-sm"
+                >
+                  <FileJson className="w-4 h-4 text-amber-500" />
+                  Exportar JSON
+                </button>
+              </div>
+            </div>
             <button onClick={() => clearLogs()} className="p-2 rounded-lg hover:bg-rose-500/20 text-muted hover:text-rose-500" title="Limpiar">
               <Trash2 className="w-5 h-5" />
             </button>

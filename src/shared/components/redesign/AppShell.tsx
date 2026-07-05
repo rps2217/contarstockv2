@@ -25,6 +25,8 @@ import { cn } from '@/lib/utils';
 import { useDbReady } from './hooks/useDbReady';
 import { SyncIndicator } from '../ui/SyncIndicator';
 import { useSyncStore } from '@/store/useSyncStore';
+import { WarehouseSelector } from '../ui/WarehouseSelector';
+import { useRowLevelSecurityStore } from '@/stores';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
@@ -183,6 +185,9 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
           <SyncIndicator variant="badge" className="ml-auto" />
         )}
       </div>
+
+      {/* Warehouse Selector - Solo cuando no está collapsed */}
+      {!isSidebarCollapsed && <WarehouseSelector />} 
 
       {/* Navigation */}
       <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto no-scrollbar">

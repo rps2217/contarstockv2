@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { useRLS, applyRLSFilters } from '@/stores/useRowLevelSecurityStore';
+import { useRLS, applyRLSFilters } from '@/stores';
 
 /**
  * Hook para filtrar datos según RLS

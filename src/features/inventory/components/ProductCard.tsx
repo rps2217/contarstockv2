@@ -18,6 +18,7 @@ import {
   Minus
 } from 'lucide-react';
 import { evaluateProductPolicy, evaluateStockStatus, ProductPolicyStatus } from '../domain/productsDomain';
+import { VirtualBadge } from '@/shared/components/ui/VirtualBadge';
 
 interface ProductCardProps {
   product: Product;
@@ -117,6 +118,14 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
               `}>
                 Stock: {product.stock}
               </span>
+            )}
+            {product.stock !== undefined && product.minStock !== undefined && product.minStock > 0 && (
+              <VirtualBadge
+                value={stockStatus === 'NORMAL' ? 'ok' : stockStatus === 'LOW' ? 'warning' : 'critical'}
+                style={stockStatus === 'NORMAL' ? 'success' : stockStatus === 'LOW' ? 'warning' : 'error'}
+                size="sm"
+                showIcon={false}
+              />
             )}
           </div>
         </div>

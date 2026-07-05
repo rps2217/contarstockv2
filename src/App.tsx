@@ -16,6 +16,9 @@ import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useExpiryNotifications } from '@/hooks/useExpiryNotifications';
 import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
+import { initializeWorkflows } from '@/lib/workflowEngine';
+import { useRowLevelSecurityStore } from '@/stores';
+import { LogiCountDB } from './db';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
 import { ThemeProvider } from '@/hooks/useTheme/useTheme';
@@ -107,6 +110,32 @@ const AppContent = () => {
   useExpiryWatcher();
   useExpiryNotifications();
   useAppShortcuts();
+
+  // Inicializar workflows al cargar la app
+  useEffect(() => {
+    initializeWorkflows();
+  }, []);
+
+  // Cargar ubicaciones disponibles para RLS desde la BD
+  useEffect(() => {
+    const loadLocations = async () => {
+      const rlsStore = useRowLevelSecurityStore.getState();
+      try {
+        const db = await LogiCountDB.getInstance();
+        const locations = await db.locations.toArray();
+        const locationNames = locations.map(l => l.name).filter(Boolean);
+        locationNames.forEach(loc => rlsStore.addWarehouse(loc));
+        
+        // También cargar ubicaciones únicas de productos
+        const products = await db.products.toArray();
+        const uniqueLocations = [...new Set(products.map(p => p.location).filter(Boolean))];
+        uniqueLocations.forEach(loc => rlsStore.addWarehouse(loc));
+      } catch (err) {
+        console.warn('Error cargando ubicaciones:', err);
+      }
+    };
+    loadLocations();
+  }, []);
 
   useEffect(() => {
     (window as any).__APP_SETTINGS__ = settings;
