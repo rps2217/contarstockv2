@@ -73,3 +73,13 @@ export type {
   UseVirtualListReturn, 
   VirtualItem 
 } from './useVirtualList';
+
+// ============================================================================
+// Permisos y Accesos (RBAC)
+// ============================================================================
+export { usePermissions, RequirePermission } from './usePermissions';
+
+// ============================================================================
+// Undo/Redo
+// ============================================================================
+export { showUndoToast, useUndoToast, UndoIndicator, useUndoRedoShortcuts } from '@/shared/components/ui/UndoRedoToast';
