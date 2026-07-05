@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDbReady } from './hooks/useDbReady';
+import { SyncIndicator } from '../ui/SyncIndicator';
+import { useSyncStore } from '@/store/useSyncStore';
 
 // Páginas rediseñadas
 import { RedesignDashboard } from './Dashboard';
@@ -176,6 +178,10 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
             </motion.div>
           )}
         </div>
+        {/* Sync Status - Solo cuando no está collapsed */}
+        {!isSidebarCollapsed && (
+          <SyncIndicator variant="badge" className="ml-auto" />
+        )}
       </div>
 
       {/* Navigation */}
