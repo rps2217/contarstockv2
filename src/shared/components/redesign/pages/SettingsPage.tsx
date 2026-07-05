@@ -21,10 +21,18 @@ import {
   Database,
   Cloud,
   Info,
+  ClipboardList,
+  History,
+  ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores'
 import { useTheme, ThemeName } from '../ThemeContext'
+import { RoleSettings } from '@/shared/components/settings/RoleSettings'
+import { AuditPanel } from '@/shared/components/audit/AuditPanel'
+import { usePermissions } from '@/shared/hooks/usePermissions'
+
+type SettingsSection = 'main' | 'permissions' | 'audit';
 
 // ============================================================================
 // Componentes base
@@ -195,6 +203,8 @@ const ThemeVisualSelector = ({
 export const RedesignSettingsPage: React.FC = () => {
   const { settings, updateSetting } = useSettingsStore()
   const { theme, setTheme } = useTheme()
+  const { isEnabled: rbacEnabled, isAdmin } = usePermissions()
+  const [activeSection, setActiveSection] = useState<SettingsSection>('main')
   
   // Estados locales para toggles (usando propiedades reales del store)
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled ?? true)
@@ -214,6 +224,34 @@ export const RedesignSettingsPage: React.FC = () => {
     updateSetting(key, value)
     setter(value)
   }
+
+  // Renderizar sección de permisos
+  const renderPermissionsSection = () => (
+    <div className="space-y-4">
+      <button
+        onClick={() => setActiveSection('main')}
+        className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-400 mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Volver a configuración
+      </button>
+      <RoleSettings />
+    </div>
+  )
+
+  // Renderizar sección de auditoría
+  const renderAuditSection = () => (
+    <div className="space-y-4">
+      <button
+        onClick={() => setActiveSection('main')}
+        className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-400 mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Volver a configuración
+      </button>
+      <AuditPanel maxHeight={500} />
+    </div>
+  )
 
   return (
     <div className="h-full flex flex-col bg-base">
@@ -357,16 +395,26 @@ export const RedesignSettingsPage: React.FC = () => {
 
           {/* ===== SECCIÓN: SISTEMA ===== */}
           <SettingsGroup title="Sistema">
+            {isAdmin && (
+              <>
+                <SettingsItem
+                  icon={Shield}
+                  label="Permisos y Roles"
+                  description="Gestión de acceso y permisos"
+                  onClick={() => setActiveSection('permissions')}
+                />
+                <SettingsItem
+                  icon={History}
+                  label="Auditoría"
+                  description="Logs de actividad del sistema"
+                  onClick={() => setActiveSection('audit')}
+                />
+              </>
+            )}
             <SettingsItem
               icon={Info}
               label="Acerca de"
               description="Versión y licencias"
-              onClick={() => {}}
-            />
-            <SettingsItem
-              icon={Shield}
-              label="Privacidad y Seguridad"
-              description="Contraseñas y permisos"
               onClick={() => {}}
             />
           </SettingsGroup>
