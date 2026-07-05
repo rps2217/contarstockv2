@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { CountingSession } from '../types';
 import { CountingSessionSchema } from '../schemas/database';
+import { IdValidator } from '../services/cloud/IdValidator';
 
 /**
  * Repository para CountingSession
@@ -260,6 +261,35 @@ export class SessionRepository {
   }
 }
 
+
+
+  /**
+   * Valida y filtra sesiones antes de sincronización
+   * Remueve sesiones con IDs problemáticos que causarían errores 406
+   */
+  static async getValidForSync(): Promise<CountingSession[]> {
+    const sessions = await db.sessions.toArray();
+    const { valid, invalid } = IdValidator.filterValidIds(
+      sessions.map(s => s.id),
+      'SESSIONS'
+    );
+
+    if (invalid.length > 0) {
+      console.warn(`[SessionRepository] Filtradas ${invalid.length} sesiones con IDs inválidos`);
+    }
+
+    const validSet = new Set(valid);
+    return sessions.filter(s => validSet.has(s.id));
+  }
+
+  /**
+   * Obtiene sesiones pendientes de sync con IDs válidos
+   */
+  static async getPendingSync(): Promise<CountingSession[]> {
+    const allSessions = await this.getValidForSync();
+    return allSessions.filter(s => s.syncStatus === 'pending');
+  }
+
 // Singleton para nuevo codigo
 export const sessionRepository = {
   save: SessionRepository.save,
@@ -292,4 +322,6 @@ export const sessionRepository = {
   getPaginated: SessionRepository.getPaginated,
   updateAudit: SessionRepository.updateAudit,
   markSynced: SessionRepository.markSynced,
+  getValidForSync: SessionRepository.getValidForSync,
+  getPendingSync: SessionRepository.getPendingSync,
 };

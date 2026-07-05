@@ -122,7 +122,7 @@ export const Textarea = memo(forwardRef<HTMLTextAreaElement, TextareaProps>(({
       </div>
     </div>
   );
-});
+}));
 
 Textarea.displayName = 'Textarea';
 
