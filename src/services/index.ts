@@ -51,6 +51,9 @@ export {
   resetSyncLock,
   // Legacy compatibility
   unifiedSyncEngine as syncOrchestrator,
+  // Conflict Resolution
+  conflictResolver,
+  conflictResolutionService,
 } from './sync';
 
 export type {
@@ -66,6 +69,9 @@ export type {
   SyncEventType,
   SyncEventPayload,
   SyncEventListener,
+  ConflictStrategy,
+  ConflictRecord,
+  ResolutionResult,
 } from './sync';
 
 // Sync FSM (legacy)
@@ -84,3 +90,8 @@ export * from './constants';
 
 // Types
 export * from './types';
+
+// ============================================================================
+// Exports Module (modularizado en sub-módulo)
+// ============================================================================
+export * from './exports';
