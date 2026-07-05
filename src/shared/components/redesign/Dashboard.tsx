@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Scan,
@@ -25,6 +25,7 @@ import {
   PieChart,
   Scissors,
   Layers,
+  Loader2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ import { useDashboard, type ActivityItem } from '@/features/dashboard/hooks/useD
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { formatTimeAgo } from '@/lib/date';
+import { CardSkeleton } from '@/shared/components/ui/EmptyState';
 
 interface StatCardProps {
   title: string;
@@ -226,6 +228,46 @@ export const RedesignDashboard: React.FC = () => {
     recentActivity,
     isOnline,
     todayStats
+
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Loading skeleton
+  if (isLoading) {
+    return (
+      <div className="h-full overflow-y-auto no-scrollbar bg-base pb-24 md:pb-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8 flex items-end justify-between">
+            <div className="space-y-2">
+              <div className="w-48 h-8 bg-surface rounded animate-pulse" />
+              <div className="w-64 h-4 bg-elevated rounded animate-pulse" />
+            </div>
+            <div className="w-32 h-8 bg-surface rounded-full animate-pulse" />
+          </div>
+          <div className="w-full h-16 bg-surface rounded-2xl animate-pulse mb-6" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-32 bg-surface rounded-2xl animate-pulse" />
+            ))}
+          </div>
+          <div className="space-y-4">
+            <div className="w-32 h-6 bg-surface rounded animate-pulse" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-32 bg-surface rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   } = useDashboard();
 
   // Handler para abrir modal de nuevo conteo

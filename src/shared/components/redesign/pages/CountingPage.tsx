@@ -10,7 +10,7 @@ import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   X, Check,
-  AlertTriangle, Scan, Keyboard, CheckCircle2,
+  AlertTriangle, Scan, Keyboard, CheckCircle2, ClipboardList, Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -19,6 +19,12 @@ import { toast } from 'sonner'
 import { useCountingLogic } from '@/features/counting/hooks/useCountingLogic'
 import { useProductivity } from '@/shared/hooks'
 import { SessionRepository } from '@/repositories/SessionRepository'
+
+// ============================================================================
+// COMPONENTES DE ESTADO (Loading/Empty/Error)
+// ============================================================================
+import { EmptyState } from '@/shared/components/ui/EmptyState'
+import { ListSkeleton } from '@/shared/components/ui/EmptyState'
 
 // ============================================================================
 // NUEVOS COMPONENTES REFACTORIZADOS
@@ -100,14 +106,57 @@ export const RedesignCountingPage: React.FC = () => {
     toast.success('Conteo vaciado')
   }
 
-  if (state?.isLoading || !sessionData?.session) {
+  if (state?.isLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-base">
-        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-muted mt-4">Cargando conteo...</p>
-        {!id && (
-          <p className="text-xs text-muted mt-2">No hay sesión activa</p>
-        )}
+      <div className="h-full flex flex-col bg-base">
+        {/* Header skeleton */}
+        <div className="pt-6 px-4 sm:px-6 shrink-0 bg-base border-b border-subtle">
+          <div className="flex justify-end mb-2">
+            <div className="w-10 h-10 bg-surface rounded-lg animate-pulse" />
+          </div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="space-y-2">
+              <div className="w-48 h-6 bg-surface rounded animate-pulse" />
+              <div className="w-32 h-4 bg-elevated rounded animate-pulse" />
+            </div>
+            <div className="flex gap-3">
+              <div className="w-16 h-8 bg-surface rounded animate-pulse" />
+              <div className="w-20 h-8 bg-surface rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+        {/* Content skeleton */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-32">
+          <ListSkeleton count={8} height={80} />
+        </div>
+      </div>
+    )
+  }
+
+  if (!sessionData?.session) {
+    return (
+      <div className="h-full flex flex-col bg-base">
+        <div className="pt-6 px-4 sm:px-6 shrink-0 bg-base border-b border-subtle">
+          <div className="flex justify-end mb-2">
+            <button 
+              onClick={() => navigate('/dashboard')} 
+              className="p-2 rounded-lg hover:bg-surface transition-colors"
+            >
+              <X className="w-5 h-5 text-muted" />
+            </button>
+          </div>
+        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="No hay sesión activa"
+          description="Crea una nueva sesión de conteo para comenzar"
+          action={{
+            label: "Crear sesión",
+            onClick: () => navigate('/'),
+            variant: 'primary'
+          }}
+          illustration="no-data"
+        />
       </div>
     )
   }
