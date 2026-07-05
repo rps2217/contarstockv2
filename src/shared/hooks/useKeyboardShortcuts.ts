@@ -73,7 +73,8 @@ export const useAppShortcuts = () => {
   const { setStartSessionModalOpen } = useAppStore();
   
   const shortcuts = useMemo<ShortcutDefinition[]>(() => [
-    // Búsqueda global
+    // ============ BÚSQUEDA Y NAVEGACIÓN ============
+    // Ctrl+K - Búsqueda global
     {
       key: 'k',
       modifiers: ['ctrl'],
@@ -83,24 +84,110 @@ export const useAppShortcuts = () => {
         window.dispatchEvent(event);
       },
     },
-    // Nuevo conteo
+    // Ctrl+P - Command Palette
+    {
+      key: 'p',
+      modifiers: ['ctrl'],
+      description: 'Abrir command palette',
+      action: () => {
+        const event = new CustomEvent('open-command-palette');
+        window.dispatchEvent(event);
+      },
+    },
+    
+    // ============ ACCIONES RÁPIDAS ============
+    // Ctrl+N - Nuevo registro
     {
       key: 'n',
       modifiers: ['ctrl'],
+      description: 'Nuevo registro rápido',
+      action: () => {
+        const event = new CustomEvent('quick-add');
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+Shift+N - Nuevo conteo
+    {
+      key: 'n',
+      modifiers: ['ctrl', 'shift'],
       description: 'Nuevo conteo',
       action: () => setStartSessionModalOpen(true),
     },
-    // Escape - cerrar modales
+    
+    // ============ NAVEGACIÓN POR MÓDULOS ============
+    // Ctrl+1 - Dashboard
+    {
+      key: '1',
+      modifiers: ['ctrl'],
+      description: 'Ir a Dashboard',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'dashboard' });
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+2 - Captura
+    {
+      key: '2',
+      modifiers: ['ctrl'],
+      description: 'Ir a Captura',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'capture' });
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+3 - Vencimientos
+    {
+      key: '3',
+      modifiers: ['ctrl'],
+      description: 'Ir a Vencimientos',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'expiry' });
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+4 - Inventario
+    {
+      key: '4',
+      modifiers: ['ctrl'],
+      description: 'Ir a Inventario',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'inventory' });
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+5 - Reportes
+    {
+      key: '5',
+      modifiers: ['ctrl'],
+      description: 'Ir a Reportes',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'reports' });
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+, - Configuración
+    {
+      key: ',',
+      modifiers: ['ctrl'],
+      description: 'Ir a Configuración',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'settings' });
+        window.dispatchEvent(event);
+      },
+    },
+    
+    // ============ ACCIONES GENERALES ============
+    // Escape - Cerrar modal
     {
       key: 'Escape',
-      description: 'Cerrar modal/abrir command menu',
+      description: 'Cerrar modal/cancelar',
       action: () => {
         const event = new CustomEvent('close-modal');
         window.dispatchEvent(event);
       },
       ignoreInputs: false,
     },
-    // Guardar (Ctrl+S)
+    // Ctrl+S - Guardar
     {
       key: 's',
       modifiers: ['ctrl'],
@@ -110,13 +197,32 @@ export const useAppShortcuts = () => {
         window.dispatchEvent(event);
       },
     },
-    // Actualizar (Ctrl+R)
+    // Ctrl+R - Actualizar
     {
       key: 'r',
       modifiers: ['ctrl'],
       description: 'Actualizar',
       action: () => {
         const event = new CustomEvent('keyboard-refresh');
+        window.dispatchEvent(event);
+      },
+    },
+    // Ctrl+E - Editar
+    {
+      key: 'e',
+      modifiers: ['ctrl'],
+      description: 'Editar seleccionado',
+      action: () => {
+        const event = new CustomEvent('edit-selected');
+        window.dispatchEvent(event);
+      },
+    },
+    // ? - Mostrar atajos
+    {
+      key: '?',
+      description: 'Mostrar atajos de teclado',
+      action: () => {
+        const event = new CustomEvent('show-shortcuts');
         window.dispatchEvent(event);
       },
     },

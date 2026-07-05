@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -94,6 +94,19 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
   const { isReady, error } = useDbReady();
   const [currentView, setCurrentView] = useState<ViewId>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Escuchar eventos de navegación desde atajos de teclado
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const viewId = (e as CustomEvent).detail as ViewId;
+      if (viewId && viewId !== currentView) {
+        setCurrentView(viewId);
+      }
+    };
+
+    window.addEventListener('app-navigate', handleNavigate);
+    return () => window.removeEventListener('app-navigate', handleNavigate);
+  }, [currentView]);
 
   const renderView = () => {
     switch (currentView) {
@@ -342,6 +355,20 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
 export const RedesignAppShellWrapper: React.FC<RedesignAppShellProps> = (props) => {
   const { error } = useDbReady();
   
+  // Escuchar eventos de navegación desde atajos de teclado y command palette
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // Usar setTimeout para asegurar que AppShell esté montado
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('app-navigate', { detail }));
+      }, 0);
+    };
+
+    window.addEventListener('navigate', handleNavigate);
+    return () => window.removeEventListener('navigate', handleNavigate);
+  }, []);
+
   if (error) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-base text-primary">
