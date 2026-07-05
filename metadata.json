@@ -1,9 +1,0 @@
-{
-  "name": "LogiCount Pro Enterprise v4.5",
-  "description": "Sistema profesional para gestión de inventario con extracción de datos de documentos por IA, recepción de bultos y sincronización automática en la nube.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone",
-    "geolocation"
-  ]
-}
