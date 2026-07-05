@@ -207,23 +207,35 @@ import { Button, Modal, Badge } from '@/shared/components/ui';
 ## Características Inspiradas en AppSheet (2026-07-05)
 
 ### 1. Row-Level Security (RLS)
-Sistema de filtros de datos por ubicación/almacén.
+Sistema de filtros de datos por ubicación/almacén con sincronización de roles.
 
 **Archivos:**
 - `src/store/useRowLevelSecurityStore.ts` - Store principal
-- `src/shared/hooks/useRLSFilter.ts` - Hook para componentes
+- `src/shared/hooks/useRLSFilter.tsx` - Hook para componentes
 - `src/shared/components/ui/WarehouseSelector.tsx` - Selector UI
+
+**Integración con Roles:**
+```typescript
+// App.tsx sincroniza automáticamente:
+// - Admin → bypass=true (ve todo)
+// - Supervisor → acceso completo con filtros por sección
+// - Operador → filtrado por warehouse/ubicación
+// - Viewer → solo lectura, filtrado por ubicación
+```
 
 **API:**
 ```typescript
-import { useRLS, applyRLSFilters } from '@/stores';
+import { useRLS, useWarehouseAccess, useWarehouseSelector } from '@/stores';
 
-// En componente
+// Hook principal
 const { filter, isAdmin, context } = useRLS();
-const filteredProducts = filter(products, 'products');
 
-// Filtro directo
-const visible = applyRLSFilters(data, 'products', context, configs, true);
+// Selector de almacén
+const { warehouses, activeWarehouse, setWarehouse } = useWarehouseAccess();
+<WarehouseSelector />  // Componente UI listo para usar
+
+// Filtrar datos
+const filteredProducts = filter(products, 'products');
 ```
 
 **Concepto:** Técnicos solo ven productos de su almacén, supervisores ven sus secciones.
