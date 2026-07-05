@@ -2,7 +2,8 @@
 /**
  * SkipLinks - Navegación por teclado para accesibilidad
  * 
- * Permite a usuarios de teclado saltar directamente al contenido principal.
+ * Solo se muestra cuando el usuario navega con Tab (accesibilidad).
+ * NO aparece con clicks normales del mouse.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -22,24 +23,41 @@ const defaultLinks: SkipLink[] = [
 ];
 
 export const SkipLinks: React.FC<{ links?: SkipLink[] }> = ({ links = defaultLinks }) => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isKeyboardUser, setIsKeyboardUser] = useState(false);
 
+  // Detectar navegación por teclado (Tab) vs mouse
   useEffect(() => {
-    // Mostrar skip links cuando se enfoca con Tab
-    const handleFocus = () => setIsVisible(true);
-    const handleBlur = () => setIsVisible(false);
+    let hideTimer: NodeJS.Timeout | null = null;
 
-    window.addEventListener('focusin', handleFocus);
-    window.addEventListener('focusout', handleBlur);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        setIsKeyboardUser(true);
+        // Auto-ocultar después de 5 segundos si no se usa
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => setIsKeyboardUser(false), 5000);
+      }
+    };
+
+    const handleMouseMove = () => {
+      // Si el usuario mueve el mouse, ya no está navegando por teclado
+      if (isKeyboardUser) {
+        setIsKeyboardUser(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('mousemove', handleMouseMove, { once: true });
 
     return () => {
-      window.removeEventListener('focusin', handleFocus);
-      window.removeEventListener('focusout', handleBlur);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (hideTimer) clearTimeout(hideTimer);
     };
-  }, []);
+  }, [isKeyboardUser]);
 
   const handleClick = (href: string) => {
-    // Buscar el elemento destino
+    setIsKeyboardUser(false);
+    
     let target: HTMLElement | null = null;
     
     if (href.startsWith('#')) {
@@ -56,12 +74,14 @@ export const SkipLinks: React.FC<{ links?: SkipLink[] }> = ({ links = defaultLin
     }
   };
 
+  // No renderizar si no es usuario de teclado
+  if (!isKeyboardUser) {
+    return null;
+  }
+
   return (
     <div
-      className={cn(
-        'fixed top-0 left-0 z-[9999] transition-all duration-200',
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-      )}
+      className="fixed top-0 left-0 z-[9999]"
       role="navigation"
       aria-label="Navegación rápida"
     >
@@ -82,32 +102,10 @@ export const SkipLinks: React.FC<{ links?: SkipLink[] }> = ({ links = defaultLin
 };
 
 /**
- * Hook para detectar si el usuario está navegando por teclado
+ * @deprecated Ya no necesario - SkipLinks detecta automáticamente
  */
 export function useKeyboardNavigation() {
-  const [isKeyboardUser, setIsKeyboardUser] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') {
-        setIsKeyboardUser(true);
-      }
-    };
-
-    const handleMouseDown = () => {
-      setIsKeyboardUser(false);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('mousedown', handleMouseDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('mousedown', handleMouseDown);
-    };
-  }, []);
-
-  return isKeyboardUser;
+  return false;
 }
 
 /**
