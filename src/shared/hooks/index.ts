@@ -63,3 +63,13 @@ export type { UseScannerOptions, UseScannerReturn } from './useScanner';
 // Bulk Operations (re-export desde hooks/bulk/)
 // ============================================================================
 export * from '@/hooks/bulk';
+
+// ============================================================================
+// Virtualization
+// ============================================================================
+export { useVirtualList, useDynamicVirtualList } from './useVirtualList';
+export type { 
+  UseVirtualListOptions, 
+  UseVirtualListReturn, 
+  VirtualItem 
+} from './useVirtualList';

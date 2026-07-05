@@ -1,17 +1,20 @@
 /**
  * CountingGrid - Lista de items con soporte para virtualización
+ * 
+ * Usa virtualización para listas grandes (>100 items) para mejor performance.
  */
 
-import React, { memo, useRef, useMemo } from 'react';
+import React, { memo, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { CountingItemRow, CountedItem } from './CountingItemRow';
 import { CountingEmptyState } from './CountingEmptyState';
+import { useVirtualList } from '@/shared/hooks';
 import { cn } from '@/lib/utils';
 
 // Threshold para usar virtualización (número de items)
 const VIRTUALIZATION_THRESHOLD = 100;
 // Altura estimada de cada fila
-const ESTIMATED_ROW_HEIGHT = 72;
+const ESTIMATED_ROW_HEIGHT = 80;
 
 interface CountingGridProps {
   items: CountedItem[];
@@ -32,19 +35,6 @@ export const CountingGrid = memo(({
 
   // Decidir si usar virtualización basándose en la cantidad de items
   const shouldVirtualize = useVirtualization && items.length > VIRTUALIZATION_THRESHOLD;
-
-  // Memoizar el cálculo de filas visibles
-  const virtualizedProps = useMemo(() => {
-    if (!shouldVirtualize) return null;
-
-    const containerHeight = containerRef.current?.clientHeight || 600;
-    const visibleRows = Math.ceil(containerHeight / ESTIMATED_ROW_HEIGHT) + 2; // +2 for overscan
-    
-    return {
-      visibleCount: visibleRows,
-      scrollTop: 0,
-    };
-  }, [shouldVirtualize, items.length]);
 
   if (items.length === 0) {
     return <CountingEmptyState className={className} />;
@@ -68,26 +58,41 @@ export const CountingGrid = memo(({
     );
   }
 
-  // Renderizado virtualizado para listas grandes
+  // Virtualización real para listas grandes
+  const {
+    virtualItems,
+    totalSize,
+    containerRef: virtualContainerRef,
+  } = useVirtualList({
+    items,
+    itemHeight: ESTIMATED_ROW_HEIGHT,
+    overscan: 5,
+  });
+
   return (
     <div
-      ref={containerRef}
-      className={cn('flex flex-col gap-2 py-3 overflow-y-auto', className)}
-      style={{ maxHeight: 'calc(100vh - 400px)' }}
+      ref={(el) => {
+        // Combinar refs
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        (virtualContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      }}
+      className={cn('relative overflow-y-auto py-3', className)}
+      style={{ height: 'calc(100vh - 400px)' }}
     >
-      <AnimatePresence mode="popLayout">
-        {items.map((item) => (
-          <CountingItemRow
-            key={item.barcode}
-            item={item}
-            isActive={activeBarcode === item.barcode}
-            onClick={() => onItemClick?.(item.barcode)}
-          />
-        ))}
-      </AnimatePresence>
-      
-      {/* Nota: Para implementación completa de virtualización,
-          usar @tanstack/react-virtual aquí */}
+      <div style={{ height: totalSize, position: 'relative' }}>
+        <AnimatePresence mode="popLayout">
+          {virtualItems.map(({ index, data, style }) => (
+            <div key={data.barcode} style={style}>
+              <CountingItemRow
+                item={data}
+                isActive={activeBarcode === data.barcode}
+                onClick={() => onItemClick?.(data.barcode)}
+                className="mx-2"
+              />
+            </div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 });
