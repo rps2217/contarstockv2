@@ -201,3 +201,145 @@ import { Button, Modal, Badge } from '@/shared/components/ui';
 - `b63925e1` - refactor: Consolidar exports de stores y hooks
 - `c2371314` - feat: Integrar RoleSettings y AuditPanel en Settings
 - `8b0ae15f` - feat: Conectar rutas y mejorar navegación
+
+---
+
+## Características Inspiradas en AppSheet (2026-07-05)
+
+### 1. Row-Level Security (RLS)
+Sistema de filtros de datos por ubicación/almacén.
+
+**Archivos:**
+- `src/store/useRowLevelSecurityStore.ts` - Store principal
+- `src/shared/hooks/useRLSFilter.ts` - Hook para componentes
+- `src/shared/components/ui/WarehouseSelector.tsx` - Selector UI
+
+**API:**
+```typescript
+import { useRLS, applyRLSFilters } from '@/stores';
+
+// En componente
+const { filter, isAdmin, context } = useRLS();
+const filteredProducts = filter(products, 'products');
+
+// Filtro directo
+const visible = applyRLSFilters(data, 'products', context, configs, true);
+```
+
+**Concepto:** Técnicos solo ven productos de su almacén, supervisores ven sus secciones.
+
+---
+
+### 2. Virtual Fields (Campos Calculados)
+Campos que se calculan en tiempo real sin persistir en BD.
+
+**Archivo:** `src/lib/virtualFields.ts`
+
+**Campos predefinidos:**
+```typescript
+PRODUCT_VIRTUAL_FIELDS = [
+  stockStatus,        // Badge: ok/warning/critical
+  stockPercentage,     // % stock vs mínimo
+  daysUntilExpiry,    // Días para vencer
+  expiryStatus,       // Badge: ok/warning/expired
+  stockValue,         // stock * precio
+  isCriticalStock,    // boolean
+  needsReorder,       // boolean
+]
+```
+
+**Uso:**
+```typescript
+import { computeVirtualFields, PRODUCT_VIRTUAL_FIELDS } from '@/lib/virtualFields';
+
+const fields = computeVirtualFields(product, PRODUCT_VIRTUAL_FIELDS, { today: new Date() });
+// { stockStatus: { value: 'warning', label: 'Estado Stock', ... }, ... }
+```
+
+---
+
+### 3. Expression DSL
+Motor de expresiones declarativas tipo AppSheet.
+
+**Archivo:** `src/lib/expressionEngine.ts`
+
+**Ejemplos:**
+```typescript
+import { evaluateExpression, INVENTORY_RULES } from '@/lib/expressionEngine';
+
+// Evaluar expresión
+const result = evaluateExpression('stock < minStock and minStock > 0', { stock: 5, minStock: 10 });
+// → false
+
+// Usar reglas predefinidas
+const alerts = INVENTORY_RULES.filter(r => r.enabled);
+```
+
+**Funciones disponibles:**
+- `now()`, `today()` - Fechas
+- `diffDays(a, b)` - Diferencia en días
+- `contains(s, sub)`, `startsWith()`, `endsWith()` - Texto
+- `if(cond, trueVal, falseVal)` - Lógicos
+- `abs()`, `min()`, `max()`, `round()` - Números
+
+---
+
+### 4. Workflow Engine
+Automatizaciones basadas en eventos.
+
+**Archivo:** `src/lib/workflowEngine.ts`
+
+**Concepto:** Cuando X ocurre → Hacer Y
+
+```typescript
+import { createStockAlertWorkflow, initializeWorkflows } from '@/lib/workflowEngine';
+
+// Inicializar
+initializeWorkflows();
+
+// Trigger manual
+const results = await executeWorkflows('products', product, 'updated');
+
+// Workflow predefinidos
+registerWorkflow(createStockAlertWorkflow());  // Stock bajo
+registerWorkflow(createExpiryAlertWorkflow());  // Próximo vencimiento
+```
+
+**Tipos de trigger:**
+- `created` - Al crear registro
+- `updated` - Al actualizar
+- `deleted` - Al eliminar
+- `condition` - Por schedule
+- `manual` - Manual
+
+**Tipos de acción:**
+- `notify` - Notificación toast
+- `log` - Registrar en consola
+- `audit` - Registrar en auditoría
+- `webhook` - Llamar API externa
+
+---
+
+### 5. Exportación de Auditoría
+Exportar logs a Excel/CSV.
+
+**Archivo:** `src/lib/auditExport.ts`
+
+```typescript
+import { exportAuditLogs, generateAuditSummary, useAuditExport } from '@/lib/auditExport';
+
+// Exportar a Excel
+await exportAuditLogs(logs, { format: 'xlsx', startDate, endDate });
+
+// Resumen
+const summary = generateAuditSummary(logs);
+// { totalLogs, todayCount, byAction, bySeverity, recentErrors }
+
+// Hook
+const { exportLogs, isExporting } = useAuditExport();
+```
+
+---
+
+### Commits de Features:
+- `546f9ada` - feat: Implementar características inspiradas en AppSheet
