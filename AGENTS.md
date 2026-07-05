@@ -135,3 +135,69 @@ src/lib/
 ### Commits:
 - 56dec72a - feat: ThemeCustomizer
 - cdb21295 - feat: Mejoras en ThemeCustomizer - Unificacion de colores y CSS variables
+
+---
+
+## Arquitectura Consolidada (2026-07-05)
+
+### Estructura de Directorios
+```
+src/
+├── store/                    # Stores core (archivo único)
+│   ├── useSyncStore.ts
+│   ├── useToastStore.ts
+│   ├── useTaskStore.ts
+│   ├── useExpiryStore.ts
+│   ├── useAppStore.ts
+│   ├── usePermissionStore.ts  # RBAC
+│   ├── useConflictStore.ts    # Resolución de conflictos
+│   ├── useAuditStore.ts       # Logs de auditoría
+│   └── useUndoRedoStore.ts    # Undo/Redo
+│
+├── stores/                   # Barrel exports
+│   └── index.ts              # Exporta todos los stores
+│
+├── features/                 # Módulos de negocio
+│   ├── inventory/
+│   ├── counting/
+│   ├── reception/
+│   ├── sync/
+│   ├── dashboard/
+│   ├── settings/
+│   └── ...
+│
+├── shared/
+│   ├── hooks/                # Hooks compartidos
+│   │   └── index.ts         # Exports centralizados
+│   └── components/
+│       ├── ui/               # Componentes atómicos
+│       ├── redesign/         # Páginas redesignadas
+│       ├── sync/             # ConflictResolver
+│       ├── audit/            # AuditPanel
+│       └── settings/         # RoleSettings
+│
+├── services/                 # Servicios de negocio
+├── repositories/             # Capa de datos
+└── db/                      # Dexie (IndexedDB)
+```
+
+### Imports Consolidados
+```typescript
+// Stores - usar '@/stores'
+import { useSyncStore, useToastStore } from '@/stores';
+import { usePermissionStore, ROLE_LABELS } from '@/stores';
+import { useAuditStore, AuditLog } from '@/stores';
+
+// Hooks - usar '@/shared/hooks'
+import { usePermissions, RequirePermission } from '@/shared/hooks';
+import { useGlobalSearch } from '@/shared/hooks';
+
+// Componentes UI
+import { Button, Modal, Badge } from '@/shared/components/ui';
+```
+
+### Commits de Arquitectura:
+- `89020d17` - refactor: Consolidar imports usando barrel exports @/stores
+- `b63925e1` - refactor: Consolidar exports de stores y hooks
+- `c2371314` - feat: Integrar RoleSettings y AuditPanel en Settings
+- `8b0ae15f` - feat: Conectar rutas y mejorar navegación
