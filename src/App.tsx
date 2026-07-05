@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
 import { ThemeProvider } from '@/hooks/useTheme/useTheme';
+import { SkipLinksProvider } from '@/shared/components/ui/SkipLinks';
 import { useAppInit } from '@/hooks/useAppInit';
 import { MotionProvider, useMotionContext } from '@/hooks/useMotionContext';
 import { useSimpleUI } from '@/hooks/useDeviceCapability';
@@ -239,7 +240,11 @@ const AppContent = () => {
           </Suspense>
         )}
         
-        <main className={`flex-1 relative overflow-hidden ${!isScanningMode && !isMobile ? `transition-[padding-left] duration-300 ease-in-out ${isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64'}` : ''}`}>
+        <main 
+          id="main-content"
+          role="main"
+          className={`flex-1 relative overflow-hidden ${!isScanningMode && !isMobile ? `transition-[padding-left] duration-300 ease-in-out ${isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64'}` : ''}`}
+        >
           
           <ErrorBoundary>
             {/* Contenido con o sin animaciones según el dispositivo */}
@@ -427,17 +432,19 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
 
 const App = () => (
   <Router>
-    <ThemeProvider>
-      <MotionProvider>
-        <NotificationCenterProvider>
-          <ErrorProvider>
-            <CommandMenuProvider>
-              <AppContent />
-            </CommandMenuProvider>
-          </ErrorProvider>
-        </NotificationCenterProvider>
-      </MotionProvider>
-    </ThemeProvider>
+    <SkipLinksProvider>
+      <ThemeProvider>
+        <MotionProvider>
+          <NotificationCenterProvider>
+            <ErrorProvider>
+              <CommandMenuProvider>
+                <AppContent />
+              </CommandMenuProvider>
+            </ErrorProvider>
+          </NotificationCenterProvider>
+        </MotionProvider>
+      </ThemeProvider>
+    </SkipLinksProvider>
   </Router>
 );
 
