@@ -6,9 +6,15 @@
 
 import { supabase } from '../../lib/supabase';
 import { logger } from '../logger';
+import { analyzeSupabaseError } from './QueryErrorHandler';
 
 // Tipos
 import type { SupabaseRow } from '../types/common';
+
+/**
+ * Códigos HTTP que indican "no encontrado" y我们应该 treat como éxito
+ */
+const NOT_FOUND_HTTP_CODES = ['406', '404'];
 
 /**
  * Formatea errores para salida legible
@@ -19,6 +25,45 @@ export function formatError(e: unknown): string {
     return (e as Error).message;
   }
   return String(e);
+}
+
+/**
+ * Verifica si un error es un "no encontrado" benigno
+ */
+function isBenignNotFoundError(error: { message?: string; code?: string } | null | undefined): boolean {
+  if (!error) return false;
+  
+  const message = error.message || '';
+  const code = error.code || '';
+  
+  // Verificar código HTTP en el mensaje
+  for (const httpCode of NOT_FOUND_HTTP_CODES) {
+    if (message.includes(httpCode)) {
+      return true;
+    }
+  }
+  
+  // Verificar códigos de error de Supabase/PGRST
+  if (code === 'PGRST204' || code === 'PGRST205' || code === '22P02') {
+    return true;
+  }
+  
+  // Verificar mensajes de "no encontrado"
+  const notFoundPatterns = [
+    'not find',
+    'does not exist',
+    'not found',
+    'could not find',
+    'Invalid input',
+  ];
+  
+  for (const pattern of notFoundPatterns) {
+    if (message.toLowerCase().includes(pattern.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 /**
@@ -206,6 +251,12 @@ export async function deleteRemote(
         .or(currentFilters.join(','));
       
       if (error) {
+        // Verificar si es un error benigno de "no encontrado" (406, 404, etc.)
+        if (isBenignNotFoundError(error)) {
+          logger.debug('SYNC_DELETE', `Record not found in ${tableName} (ID: ${id}), considering delete successful`);
+          return { success: true };
+        }
+        
         const errMsg = error.message || '';
         if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
           const missingCol = extractColumnNameFromError(errMsg);
@@ -221,6 +272,11 @@ export async function deleteRemote(
       }
       return { success: true };
     } catch (err: unknown) {
+      if (isBenignNotFoundError(err as { message?: string; code?: string })) {
+        logger.debug('SYNC_DELETE', `Record not found in ${tableName} (ID: ${id}), considering delete successful`);
+        return { success: true };
+      }
+      
       if (attempts >= filters.length - 1) {
         logger.error(`SYNC_DELETE_FAIL: ${tableName}`, String(err));
         return { success: false, error: formatError(err) };
