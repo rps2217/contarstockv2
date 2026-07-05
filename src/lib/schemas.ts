@@ -45,12 +45,17 @@ export const dateSchema = z.union([
   return val;
 });
 
-/** Schema para RUT chileno */
+/** Schema para RUT chileno - acepta múltiples formatos */
 export const rutSchema = z.string()
-  .min(7, 'RUT demasiado corto')
-  .max(12, 'RUT demasiado largo')
-  .regex(/^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$|^\d{7,9}-[\dkK]$/, 'RUT inválido')
-  .transform(val => val.toUpperCase());
+  .min(5, 'RUT demasiado corto')
+  .max(15, 'RUT demasiado largo')
+  .regex(
+    /^(?:$|^\s*$|^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$|^\d{7,9}-[\dkK]$|^\d{1,2}\.\d{3}\.\d{3}[\dkK]$|^\d{7,9}[\dkK]$|^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$|^\d{7,9}[\dkK]$)/i,
+    'RUT inválido'
+  )
+  .transform(val => val.trim().toUpperCase())
+  .optional()
+  .or(z.literal(''));
 
 /** Schema para SKU/Barcode */
 export const barcodeSchema = z.string()
