@@ -22,7 +22,7 @@ import {
   Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuditStore, AuditLog, AuditAction, AuditSeverity } from '@/store/useAuditStore';
+import { useAuditStore, AuditLog, AuditAction, AuditSeverity } from '@/stores';
 
 interface AuditPanelProps {
   className?: string;

@@ -7,7 +7,9 @@
  * if (can('inventory:delete')) { ... }
  */
 
-import { usePermissionStore, Permission, UserRole } from '@/store/usePermissionStore';
+
+import React from 'react';
+import { usePermissionStore } from '@/stores';
 
 export const usePermissions = () => {
   const {
@@ -46,7 +48,6 @@ export const usePermissions = () => {
 // HOC PARA PROteger COMPONENTES
 // =============================================================================
 
-import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface RequirePermissionProps {
@@ -147,7 +148,6 @@ export const PermissionButton: React.FC<PermissionButtonProps> = ({
 // COMPONENTE: Badge de rol
 // =============================================================================
 
-import { ROLE_LABELS, UserRole } from '@/store/usePermissionStore';
 
 interface RoleBadgeProps {
   role?: UserRole;

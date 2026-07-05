@@ -20,7 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useConflictStore, ConflictRecord } from '@/store/useConflictStore';
+import { useConflictStore, ConflictRecord } from '@/stores';
 import { toast } from 'sonner';
 
 interface ConflictResolverModalProps {

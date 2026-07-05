@@ -12,7 +12,7 @@
  */
 
 import { enhancedSyncEngine, type EnhancedSyncResult } from './GenericSyncEngineEnhanced';
-import { useSyncStore } from '@/store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { logger } from '../logger';
 
 // Tablas a sincronizar en orden de prioridad

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissions, RoleBadge, RoleSelector, PermissionList } from '@/shared/hooks/usePermissions';
-import { ROLE_LABELS, UserRole } from '@/store/usePermissionStore';
+import { ROLE_LABELS, UserRole } from '@/stores';
 import { toast } from 'sonner';
 
 export const RoleSettings: React.FC<{ className?: string }> = ({ className }) => {

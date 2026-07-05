@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { unifiedSyncEngine } from '@/services/sync/unified';
 import { syncBridge, SYNC_ORDER } from '@/services/cloud/SyncBridge';
 import { useSyncStore } from '@/store/useSyncStore';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/stores';
 import { logger } from '@/services/logger';
 import { SyncError } from '@/lib/errors';
 import { withRetry } from '@/lib/errors/retry';
