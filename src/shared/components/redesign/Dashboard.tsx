@@ -228,6 +228,7 @@ export const RedesignDashboard: React.FC = () => {
     recentActivity,
     isOnline,
     todayStats
+  } = useDashboard();
 
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
@@ -267,8 +268,6 @@ export const RedesignDashboard: React.FC = () => {
       </div>
     );
   }
-
-  } = useDashboard();
 
   // Handler para abrir modal de nuevo conteo
   const handleNewCount = () => {

@@ -259,9 +259,6 @@ export class SessionRepository {
   static async markSynced(id: string): Promise<void> {
     await db.sessions.update(id, { lastSyncTimestamp: Date.now(), syncStatus: 'synced' });
   }
-}
-
-
 
   /**
    * Valida y filtra sesiones antes de sincronización
@@ -289,6 +286,7 @@ export class SessionRepository {
     const allSessions = await this.getValidForSync();
     return allSessions.filter(s => s.syncStatus === 'pending');
   }
+}
 
 // Singleton para nuevo codigo
 export const sessionRepository = {

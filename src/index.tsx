@@ -34,6 +34,17 @@ if (typeof window !== 'undefined') {
 // Importar App DESPUÉS de establecer los polyfills
 import App from './App';
 
+// ============================================================================
+// MONITORING - Sentry + Web Vitals
+// ============================================================================
+import { initSentry, initWebVitals } from './services/monitoring';
+
+// Inicializar solo en producción
+if (import.meta.env.PROD) {
+ initSentry().catch(console.error);
+ initWebVitals().catch(console.error);
+}
+
 /**
  * SUPRESIÓN DE ADVERTENCIAS DE LIBRERÍAS (RECHARTS)
  * Recharts utiliza defaultProps en componentes funcionales, lo cual está deprecado en React 18.3+.

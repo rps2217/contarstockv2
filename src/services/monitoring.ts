@@ -6,6 +6,8 @@
  */
 
 import { logger } from './logger';
+import * as Sentry from '@sentry/react';
+import { onCLS, onFCP, onLCP, onTTFB, onINP } from 'web-vitals';
 
 // Tipos para Web Vitals
 interface WebVitalsMetric {
@@ -20,9 +22,8 @@ interface WebVitalsMetric {
  * Inicializa Sentry para tracking de errores
  * 
  * Para activar:
- * 1. npm install @sentry/react
- * 2. Crear cuenta en sentry.io
- * 3. Agregar VITE_SENTRY_DSN en .env
+ * 1. Crear cuenta en sentry.io
+ * 2. Agregar VITE_SENTRY_DSN en .env
  */
 export async function initSentry() {
   // Solo en producción
@@ -34,32 +35,21 @@ export async function initSentry() {
   const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
   
   if (!sentryDsn) {
-    logger.warn('MONITORING', 'Sentry DSN not configured');
+    logger.warn('MONITORING', 'Sentry DSN not configured - set VITE_SENTRY_DSN in .env');
     return;
   }
 
   try {
-    const { init, captureException, setUser, setTag } = await import('@sentry/react');
-    
-    init({
+    Sentry.init({
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
       release: `contarstock@${import.meta.env.VITE_APP_VERSION || '1.0.0'}`,
       
       // Sample rate para reducir volumen
-      tracesSampleRate: 0.1, // 10% de transacciones
+      tracesSampleRate: 0.1,
       
-      // Replays para debugging
-      replaysSessionSampleRate: 0.05,
-      replaysOnErrorSampleRate: 1.0,
-      
-      // Integraciones
-      integrations: [
-        // Capture errors en setTimeout/setInterval
-        new BrowserTracing(),
-        // Extraer información de React
-        Replay,
-      ],
+      // Integraciones automáticas de @sentry/react
+      // BrowserTracing, Replay están incluidos en el bundle
       
       // Tags globales
       initialScope: {
@@ -85,65 +75,38 @@ export function captureError(error: Error, context?: Record<string, unknown>) {
     return;
   }
 
-  try {
-    const { captureException } = require('@sentry/react');
-    captureException(error, { extra: context });
-  } catch {
-    // Sentry no disponible
+  Sentry.captureException(error, { extra: context });
+}
+
+/**
+ * Captura un mensaje en Sentry
+ */
+export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info') {
+  if (!import.meta.env.PROD) {
+    console.log('[Message Capture]', message);
+    return;
   }
+
+  Sentry.captureMessage(message, level);
 }
 
 /**
  * Configura información del usuario
  */
 export function setUserContext(user: { id: string; email?: string; username?: string }) {
-  if (!import.meta.env.PROD) return;
+  Sentry.setUser(user);
+}
 
-  try {
-    const { setUser } = require('@sentry/react');
-    setUser(user);
-  } catch {
-    // Sentry no disponible
-  }
+/**
+ * Agrega tags adicionales
+ */
+export function setTags(tags: Record<string, string>) {
+  Sentry.setTags(tags);
 }
 
 // ============================================================================
 // WEB VITALS - Performance Monitoring
 // ============================================================================
-
-/**
- * Tipos de métricas de Web Vitals
- */
-type MetricCallback = (metric: WebVitalsMetric) => void;
-
-/**
- * Obtiene el rating de una métrica basado en thresholds
- */
-function getRating(value: number, thresholds: { poor: number; needsImprovement: number; good: number }): WebVitalsMetric['rating'] {
-  if (value <= thresholds.good) return 'good';
-  if (value <= thresholds.needsImprovement) return 'needs-improvement';
-  return 'poor';
-}
-
-/**
- * CLS (Cumulative Layout Shift) thresholds
- */
-const CLS_THRESHOLDS = { poor: 0.25, needsImprovement: 0.1, good: 0.1 };
-
-/**
- * LCP (Largest Contentful Paint) thresholds
- */
-const LCP_THRESHOLDS = { poor: 4000, needsImprovement: 2500, good: 2500 };
-
-/**
- * FID (First Input Delay) / INP thresholds
- */
-const FID_THRESHOLDS = { poor: 300, needsImprovement: 100, good: 100 };
-
-/**
- * TTFB (Time to First Byte) thresholds
- */
-const TTFB_THRESHOLDS = { poor: 1800, needsImprovement: 800, good: 800 };
 
 /**
  * Inicializa Web Vitals tracking
@@ -155,13 +118,11 @@ export async function initWebVitals() {
   }
 
   try {
-    const { onCLS, onFID, onFCP, onLCP, onTTFB, onINP } = await import('web-vitals');
-
-    const reportWebVital = async (metric: WebVitalsMetric) => {
+    const reportWebVital = (metric: WebVitalsMetric) => {
       // Log en consola
       console.log(`[WebVital] ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`);
 
-      // Enviar a analytics (ej: Google Analytics, Mixpanel)
+      // Enviar a Google Analytics 4 si está disponible
       if (typeof window !== 'undefined' && 'gtag' in window) {
         (window as any).gtag('event', metric.name, {
           value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
@@ -172,13 +133,22 @@ export async function initWebVitals() {
 
       // Enviar a Sentry si es poor rating
       if (metric.rating === 'poor') {
-        captureWebVitalAlert(metric);
+        Sentry.captureMessage(`Poor Web Vital: ${metric.name}`, {
+          level: 'warning',
+          tags: {
+            web_vital: metric.name,
+            rating: metric.rating,
+          },
+          extra: {
+            value: metric.value,
+            id: metric.id,
+          },
+        });
       }
     };
 
     // Registrar métricas
     onCLS(reportWebVital);
-    onFID(reportWebVital);
     onFCP(reportWebVital);
     onLCP(reportWebVital);
     onTTFB(reportWebVital);
@@ -187,28 +157,6 @@ export async function initWebVitals() {
     logger.info('WEB_VITALS', 'Web Vitals tracking initialized');
   } catch (error) {
     logger.error('WEB_VITALS', 'Failed to init Web Vitals', error);
-  }
-}
-
-/**
- * Captura alertas de Web Vitals poor
- */
-function captureWebVitalAlert(metric: WebVitalsMetric) {
-  try {
-    const { captureMessage } = require('@sentry/react');
-    captureMessage(`Poor Web Vital: ${metric.name}`, {
-      level: 'warning',
-      tags: {
-        web_vital: metric.name,
-        rating: metric.rating,
-      },
-      extra: {
-        value: metric.value,
-        id: metric.id,
-      },
-    });
-  } catch {
-    // Sentry no disponible
   }
 }
 
@@ -238,6 +186,16 @@ export function trackEvent({ category, action, label, value }: AnalyticsEvent) {
       event_category: category,
       event_label: label,
       value: value,
+    });
+  }
+
+  // También trackear en Sentry Insights si está configurado
+  if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
+    Sentry.addBreadcrumb({
+      category: category,
+      message: action,
+      data: { label, value },
+      level: 'info',
     });
   }
 }
@@ -276,10 +234,14 @@ export const monitoring = {
   initSentry,
   initWebVitals,
   captureError,
+  captureMessage,
   setUserContext,
+  setTags,
   trackEvent,
   performanceMark,
   performanceMeasure,
+  // Re-export Sentry for direct use if needed
+  Sentry,
 };
 
 export default monitoring;
