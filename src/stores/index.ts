@@ -23,3 +23,7 @@ export { usePermissionStore, type Permission, type UserRole, type Role, ROLE_LAB
 export { useConflictStore, type ConflictRecord, type ConflictResolution } from '@/store/useConflictStore';
 export { useAuditStore, type AuditLog, type AuditAction, type AuditSeverity, auditCreate, auditUpdate, auditDelete, auditError, auditSync } from '@/store/useAuditStore';
 export { useUndoRedoStore, type UndoableAction, type ActionType, useUndoRedo, createProductAction, createInventoryAction, createScanAction } from '@/store/useUndoRedoStore';
+
+// Row-Level Security (RLS)
+export { useRowLevelSecurityStore, useRLS, applyRLSFilters, getTableFilter, isAdminBypass } from '@/store/useRowLevelSecurityStore';
+export type { RowFilter, SecurityContext, TableRLSConfig, ScopeType } from '@/store/useRowLevelSecurityStore';
