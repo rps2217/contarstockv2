@@ -78,6 +78,20 @@ export {
 } from './Reconciliation';
 
 // =============================================================================
+// CONFLICT RESOLUTION
+// =============================================================================
+export {
+  conflictResolver,
+  conflictResolutionService,
+} from './conflictResolution';
+
+export type {
+  ConflictStrategy,
+  ConflictRecord,
+  ResolutionResult,
+} from './conflictResolution';
+
+// =============================================================================
 // FSM PARA CONTROL DE FLUJO
 // =============================================================================
 export { syncFSM } from './fsm';
