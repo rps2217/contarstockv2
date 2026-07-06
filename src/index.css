@@ -9,6 +9,9 @@
 /* Redesign Theme - Nuevo diseño */
 @import './styles/redesign-theme.css';
 
+/* Enhanced Themes - Bordes y contrastes mejorados */
+@import './styles/themes/enhancedThemes.css';
+
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
