@@ -18,7 +18,7 @@ import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
 import { initializeWorkflows } from '@/lib/workflowEngine';
 import { useRowLevelSecurityStore, usePermissionStore } from '@/stores';
-import { LogiCountDB } from './db';
+import { db } from './db';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
 import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
 import { ThemeProvider } from '@/hooks/useTheme/useTheme';
@@ -156,7 +156,6 @@ const AppContent = () => {
     const loadLocations = async () => {
       const rlsStore = useRowLevelSecurityStore.getState();
       try {
-        const db = await LogiCountDB.getInstance();
         const locations = await db.locations.toArray();
         const locationNames = locations.map(l => l.name).filter(Boolean);
         locationNames.forEach(loc => rlsStore.addWarehouse(loc));
