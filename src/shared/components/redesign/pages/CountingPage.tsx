@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // Importar hooks de counting
+import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpiryModal'
 import { useCountingLogic } from '@/features/counting/hooks/useCountingLogic'
 import { useProductivity } from '@/shared/hooks'
 import { SessionRepository } from '@/repositories/SessionRepository'
@@ -311,6 +312,20 @@ export const RedesignCountingPage: React.FC = () => {
         sessionName={sessionData.session?.erpOrder}
         isLoading={isFinishing}
       />
+
+      {/* Modal de Fecha de Vencimiento para Productos Pharma */}
+      {state.machineState === 'AWAITING_PHARMA' && state.activeBarcode && (
+        <TestModeExpiryModal
+          barcode={state.activeBarcode}
+          productName={state.activeProduct?.name || 'Producto'}
+          onComplete={(data) => {
+            actions.handlePharmaComplete(data.mm, data.yyyy)
+          }}
+          onCancel={() => {
+            actions.cancelPharma()
+          }}
+        />
+      )}
     </div>
   )
 }

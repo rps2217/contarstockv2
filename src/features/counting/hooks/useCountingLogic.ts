@@ -35,7 +35,16 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
   const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
     if (!sessionId) return;
-    if (machineState !== 'IDLE' && machineState !== 'LOOKING_UP' && machineState !== 'COMMITTING' && machineState !== 'MANUAL_ENTRY') return;
+    const allowedStates = ['IDLE', 'LOOKING_UP', 'COMMITTING', 'MANUAL_ENTRY', 'AWAITING_PHARMA'];
+    if (!allowedStates.includes(machineState)) return;
+
+    // Si viene de AWAITING_PHARMA con fecha (del modal), ir directo a guardar
+    if (machineState === 'AWAITING_PHARMA' && mm !== undefined && yyyy !== undefined) {
+      dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
+      await sessionService.addScanEvent(sessionId, barcode, qty, mm, yyyy, currentLocation, batch);
+      dispatch({ type: 'COMMIT_COMPLETE' });
+      return;
+    }
 
     dispatch({ type: 'SCAN_INBOUND', barcode });
     
@@ -125,6 +134,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     state: { 
       isLoading: session === undefined,
       status: machineState.toLowerCase(),
+      machineState, // Exportar para detectar AWAITING_PHARMA en UI
       feedback: engine.feedback, 
       multiplier: engine.multiplier, 
       currentLocation,
