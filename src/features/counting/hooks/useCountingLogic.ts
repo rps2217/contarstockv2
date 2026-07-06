@@ -15,6 +15,7 @@ import { shouldPromptBatch, findItemByBarcode, evaluateProduct } from '../domain
 
 // Lego Hooks
 import { useCountingSync } from './useCountingSync';
+import { useExpiryTracker } from './useExpiryTracker';
 import { useCountingQueries } from './useCountingQueries';
 import { useCountingAI } from './useCountingAI';
 
@@ -32,6 +33,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
   useCountingSync(sessionId);
   const { session, consolidatedHistory } = useCountingQueries(sessionId, engine.activeBarcode, itemsRef);
   const { potentialMatch, setPotentialMatch } = useCountingAI(consolidatedHistory, session, settings);
+  const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker();
 
   const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
     if (!sessionId) return;
@@ -94,8 +96,24 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
         engine.actions.updateActiveItem(b, product || null, existing?.totalQuantity || 0, 0);
       });
     },
-    handlePharmaComplete: (m?: number, y?: number, b?: string) => {
-      if (engine.activeBarcode) finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
+    handlePharmaComplete: async (m?: number, y?: number, b?: string) => {
+      if (engine.activeBarcode && m !== undefined && y !== undefined) {
+        // Guardar en expiry tracker
+        await saveExpiry({
+          barcode: engine.activeBarcode,
+          productName: engine.activeProduct?.name,
+          mm: m,
+          yyyy: y,
+          sessionId: sessionId
+        });
+        // Sincronizar a la nube si hay conexión
+        const entry = await getExpiryForBarcode(engine.activeBarcode);
+        if (entry) {
+          syncExpiry(entry);
+        }
+        // Continuar con el flujo normal
+        finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
+      }
     },
     cancelPharma: () => {
       dispatch({ type: 'RESET' });

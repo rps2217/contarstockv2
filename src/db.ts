@@ -148,6 +148,19 @@ export class LogiCountDB extends Dexie {
   audit_logs!: Table<AuditLogEntry>;
   viewPreferences!: Table<ViewPreferences>;
   bulkHistory!: Table<BulkHistoryEntry>;
+    expirations!: Table<{
+    id?: number;
+    claveUnica: string;  // barcode + mm + yyyy
+    barcode: string;
+    productName?: string;
+    mm: number;
+    yyyy: number;
+    status: 'pending' | 'valid' | 'expired' | 'warning';
+    quantity?: number;
+    timestamp: number;
+    sessionId?: string;
+    syncStatus: 'synced' | 'pending' | 'error';
+  }>;
   syncMetrics!: Table<{
     id?: number;
     timestamp: number;
