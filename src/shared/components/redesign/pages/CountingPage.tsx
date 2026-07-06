@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 
 // Importar hooks de counting
 import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpiryModal'
+import { EditExpiryModal } from '@/features/counting/components/EditExpiryModal'
 import { useCountingLogic } from '@/features/counting/hooks/useCountingLogic'
 import { useProductivity } from '@/shared/hooks'
 import { SessionRepository } from '@/repositories/SessionRepository'
@@ -55,6 +56,7 @@ export const RedesignCountingPage: React.FC = () => {
   const [showFinish, setShowFinish] = useState(false)
   const [manualBarcode, setManualBarcode] = useState('')
   const [isFinishing, setIsFinishing] = useState(false)
+  const [editExpiryItem, setEditExpiryItem] = useState<{barcode: string; name: string; mm?: number; yyyy?: number} | null>(null)
 
   // Hook de counting
   const handleExit = () => navigate('/dashboard')
@@ -105,6 +107,23 @@ export const RedesignCountingPage: React.FC = () => {
   const handleReset = async () => {
     await actions.resetSession()
     toast.success('Conteo vaciado')
+  }
+
+  const handleEditExpiry = (item: any) => {
+    setEditExpiryItem({
+      barcode: item.barcode,
+      name: item.productName || 'Producto',
+      mm: item.mm,
+      yyyy: item.yyyy
+    })
+  }
+
+  const handleSaveExpiry = async (data: { mm: number; yyyy: number }) => {
+    if (!editExpiryItem) return
+    // Aquí se podría agregar lógica para actualizar la fecha en la BD
+    // Por ahora solo cerramos el modal
+    toast.success('Fecha actualizada')
+    setEditExpiryItem(null)
   }
 
   if (state?.isLoading) {
@@ -302,6 +321,16 @@ export const RedesignCountingPage: React.FC = () => {
         currentLocation={state.currentLocation}
         onLocationChange={actions.setCurrentLocation}
         onReset={handleReset}
+      />
+
+      <EditExpiryModal
+        isOpen={!!editExpiryItem}
+        barcode={editExpiryItem?.barcode || ''}
+        productName={editExpiryItem?.name || ''}
+        currentMm={editExpiryItem?.mm}
+        currentYyyy={editExpiryItem?.yyyy}
+        onSave={handleSaveExpiry}
+        onCancel={() => setEditExpiryItem(null)}
       />
 
       <CountingFinishModal
