@@ -20,6 +20,7 @@ import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpi
 import { EditExpiryModal } from '@/features/counting/components/EditExpiryModal'
 import { useCountingLogic } from '@/features/counting/hooks/useCountingLogic'
 import { useProductivity } from '@/shared/hooks'
+import { useExpiryTracker } from '@/features/counting/hooks/useExpiryTracker'
 import { SessionRepository } from '@/repositories/SessionRepository'
 
 // ============================================================================
@@ -61,6 +62,7 @@ export const RedesignCountingPage: React.FC = () => {
   // Hook de counting
   const handleExit = () => navigate('/dashboard')
   const { state, sessionData, actions } = useCountingLogic(id, handleExit)
+  const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker()
 
   // Productivity stats
   const itemsForStats = sessionData?.history?.map((i: any) => ({
