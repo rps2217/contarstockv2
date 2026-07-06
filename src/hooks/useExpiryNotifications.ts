@@ -21,7 +21,7 @@ export function useExpiryNotifications() {
   const lastNotifiedRef = useRef<string>('');
 
   // Consultar vencimientos
-  const expirations = useLiveQuery(() => db.table('expirations').toArray()) as any[] | undefined;
+  const expirations = useLiveQuery(() => db.expirations.toArray()) as any[] | undefined;
 
   useEffect(() => {
     if (!expirations) return;
