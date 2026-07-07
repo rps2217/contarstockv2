@@ -470,13 +470,24 @@ export const RedesignHammerPage: React.FC = () => {
   const [isToolsOpen, setIsToolsOpen] = useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isMigrating, setIsMigrating] = useState(false)
+  
+  // Modal de sesión existente
+  const [showSessionModal, setShowSessionModal] = useState(false)
+
+  // Verificar si hay datos existentes al cargar
+  useEffect(() => {
+    // Solo mostrar si hay items existentes
+    if (state.items && state.items.length > 0) {
+      setShowSessionModal(true)
+    }
+  }, []) // Solo al montar
 
   // HID Scanner
   useHIDScanner({
     onScan: (barcode) => {
       actions.registerScan(barcode)
     },
-    isEnabled: !isMigrating && !isToolsOpen && !isImportModalOpen,
+    isEnabled: !isMigrating && !isToolsOpen && !isImportModalOpen && !showSessionModal,
     maxLatency: 40
   })
 
@@ -505,6 +516,18 @@ export const RedesignHammerPage: React.FC = () => {
     window.addEventListener('keydown', handleShortcuts)
     return () => window.removeEventListener('keydown', handleShortcuts)
   }, [actions])
+
+  // Continuar con la sesión existente
+  const handleContinueSession = () => {
+    setShowSessionModal(false)
+  }
+
+  // Empezar nueva sesión (limpiar datos)
+  const handleNewSession = async () => {
+    await actions.removeItem('ALL') // Eliminar todos los items
+    setShowSessionModal(false)
+    toast.success('Sesión limpiada')
+  }
 
   const handleManualScan = () => {
     if (manualBarcode.trim()) {
@@ -852,6 +875,57 @@ export const RedesignHammerPage: React.FC = () => {
           locManager.closeModal?.()
         }}
       />
+
+      {/* Modal de Sesión Existente */}
+      <AnimatePresence>
+        {showSessionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-base border border-subtle rounded-2xl p-6 max-w-sm w-full"
+            >
+              <h3 className="text-lg font-bold text-primary mb-2 text-center">
+                Sesión Anterior Detectada
+              </h3>
+              <p className="text-sm text-muted text-center mb-6">
+                Hay <span className="font-bold text-primary">{state.items.length}</span> productos contados previamente. ¿Qué deseas hacer?
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={handleContinueSession}
+                  className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Check className="w-5 h-5" />
+                  Continuar con esta sesión
+                </button>
+                
+                <button
+                  onClick={handleNewSession}
+                  className="w-full py-3 px-4 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Empezar nueva sesión
+                </button>
+                
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full py-3 px-4 bg-surface hover:bg-elevated text-muted font-medium rounded-xl transition-colors"
+                >
+                  Volver al inicio
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
