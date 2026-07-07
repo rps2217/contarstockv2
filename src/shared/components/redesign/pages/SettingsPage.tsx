@@ -24,6 +24,8 @@ import {
   ClipboardList,
   History,
   ArrowLeft,
+  Activity,
+  AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores'
@@ -31,6 +33,12 @@ import { useTheme, ThemeName } from '../ThemeContext'
 import { RoleSettings } from '@/shared/components/settings/RoleSettings'
 import { AuditPanel } from '@/shared/components/audit/AuditPanel'
 import { usePermissions } from '@/shared/hooks/usePermissions'
+import { toast } from 'sonner'
+
+// ✅ Health Dashboard y Integrity Service
+import { HealthDashboard } from '@/shared/components/ui/health'
+import { integrityService, IntegrityCheckResult } from '@/services/IntegrityService'
+import { healthService } from '@/services/HealthService'
 
 type SettingsSection = 'main' | 'permissions' | 'audit';
 
@@ -213,6 +221,10 @@ export const RedesignSettingsPage: React.FC = () => {
   const [batchTracking, setBatchTracking] = useState(settings.batchTrackingEnabled ?? false)
   const [lowEndMode, setLowEndMode] = useState(settings.lowEndMode ?? false)
 
+  // ✅ Estados para Health Dashboard
+  const [showHealthDashboard, setShowHealthDashboard] = useState(false)
+  const [isRunningIntegrityCheck, setIsRunningIntegrityCheck] = useState(false)
+
   // Handler para cambiar tema (usando el contexto principal)
   const handleThemeChange = (newTheme: ThemeName) => {
     if (navigator.vibrate) navigator.vibrate(10)
@@ -223,6 +235,55 @@ export const RedesignSettingsPage: React.FC = () => {
   const handleToggle = (key: 'soundEnabled' | 'hapticsEnabled' | 'ttsEnabled' | 'batchTrackingEnabled' | 'lowEndMode', value: boolean, setter: (v: boolean) => void) => {
     updateSetting(key, value)
     setter(value)
+  }
+
+  // ✅ Handler para ejecutar integridad de datos
+  const handleRunIntegrityCheck = async () => {
+    setIsRunningIntegrityCheck(true)
+    toast.info('Ejecutando verificación de integridad...')
+    
+    try {
+      const result = await integrityService.runAllChecks({ maxSamples: 10 })
+      
+      if (result.passed) {
+        toast.success('✅ Integridad verificada - Sin problemas encontrados')
+      } else {
+        const critical = result.criticalIssues
+        const warnings = result.warningIssues
+        
+        toast.error(
+          <div className="flex flex-col">
+            <span>⚠️ Se encontraron {result.totalIssues} problemas</span>
+            <span className="text-xs mt-1">
+              {critical > 0 && `${critical} críticos, `}
+              {warnings} advertencias
+            </span>
+          </div>,
+          { duration: 5000 }
+        )
+        
+        // Abrir dashboard para ver detalles
+        setShowHealthDashboard(true)
+      }
+    } catch (error) {
+      toast.error('Error al ejecutar verificación de integridad')
+      console.error(error)
+    } finally {
+      setIsRunningIntegrityCheck(false)
+    }
+  }
+
+  // ✅ Handler para auto-fix
+  const handleAutoFix = async () => {
+    toast.info('Ejecutando correcciones automáticas...')
+    
+    try {
+      const result = await integrityService.autoFix()
+      toast.success(`✅ Se corrigieron ${result.fixed} problemas automáticamente`)
+    } catch (error) {
+      toast.error('Error al ejecutar correcciones automáticas')
+      console.error(error)
+    }
   }
 
   // Renderizar sección de permisos
@@ -409,6 +470,25 @@ export const RedesignSettingsPage: React.FC = () => {
                   description="Logs de actividad del sistema"
                   onClick={() => setActiveSection('audit')}
                 />
+                {/* ✅ Opción de Salud del Sistema */}
+                <SettingsItem
+                  icon={Activity}
+                  label="Salud del Sistema"
+                  description="Métricas, alertas y dashboard de salud"
+                  onClick={() => setShowHealthDashboard(true)}
+                />
+                {/* ✅ Opción de Integridad de Datos */}
+                <SettingsItem
+                  icon={AlertTriangle}
+                  label="Verificar Integridad"
+                  description="Detectar duplicados y datos corruptos"
+                  onClick={handleRunIntegrityCheck}
+                  rightElement={
+                    isRunningIntegrityCheck ? (
+                      <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
+                    ) : undefined
+                  }
+                />
               </>
             )}
             <SettingsItem
@@ -432,6 +512,13 @@ export const RedesignSettingsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ✅ Health Dashboard Modal */}
+      <HealthDashboard 
+        isOpen={showHealthDashboard} 
+        onClose={() => setShowHealthDashboard(false)}
+        theme={theme}
+      />
     </div>
   )
 }

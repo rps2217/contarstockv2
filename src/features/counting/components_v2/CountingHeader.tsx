@@ -1,11 +1,20 @@
 /**
  * CountingHeader - Header con título y estadísticas del conteo
+ * 
+ * @since 2026-07-07 - Incluye indicador de auto-save
  */
 
 import React, { memo } from 'react';
-import { motion } from 'framer-motion';
-import { Package, CheckCircle2, AlertTriangle, BarChart3, RefreshCw, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Package, CheckCircle2, AlertTriangle, BarChart3, RefreshCw, Settings, Cloud, CloudOff, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// ✅ Tipos para auto-save
+interface AutoSaveState {
+  hasPendingChanges: boolean;
+  lastSaveTime: Date | null;
+  isSaving: boolean;
+}
 
 interface CountingStats {
   total: number;
@@ -24,6 +33,8 @@ interface CountingHeaderProps {
   onOpenOptions?: () => void;
   multiplier: number;
   onMultiplierChange: (value: number) => void;
+  // ✅ Props de auto-save
+  autoSave?: AutoSaveState;
   className?: string;
 }
 
@@ -65,8 +76,21 @@ export const CountingHeader = memo(({
   onOpenOptions,
   multiplier,
   onMultiplierChange,
+  autoSave,
   className = '',
 }: CountingHeaderProps) => {
+  // ✅ Formatear tiempo relativo del último guardado
+  const formatLastSave = (date: Date | null): string => {
+    if (!date) return 'Nunca';
+    const diff = Date.now() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return 'Ahora';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `Hace ${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    return `Hace ${hours}h`;
+  };
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Title Bar */}
@@ -78,7 +102,44 @@ export const CountingHeader = memo(({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {/* ✅ Indicador de Auto-Save */}
+          <AnimatePresence mode="wait">
+            {autoSave && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
+                  autoSave.isSaving
+                    ? 'bg-blue-500/10 text-blue-400'
+                    : autoSave.hasPendingChanges
+                      ? 'bg-amber-500/10 text-amber-400'
+                      : 'bg-emerald-500/10 text-emerald-400'
+                )}
+                title={`Último guardado: ${formatLastSave(autoSave.lastSaveTime)}`}
+              >
+                {autoSave.isSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Guardando...</span>
+                  </>
+                ) : autoSave.hasPendingChanges ? (
+                  <>
+                    <Cloud className="w-3.5 h-3.5" />
+                    <span>Pendiente</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Guardado</span>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <span className="text-xs text-muted font-mono">{formattedDuration}</span>
           {onUndo && (
             <button

@@ -4,7 +4,7 @@
 
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, AlertTriangle } from 'lucide-react';
+import { Calendar, AlertTriangle, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface CountedItem {
@@ -21,6 +21,7 @@ interface CountingItemRowProps {
   item: CountedItem;
   isActive: boolean;
   onClick?: () => void;
+  onEditExpiry?: () => void;
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export const CountingItemRow = memo(({
   item,
   isActive,
   onClick,
+  onEditExpiry,
   className = '',
 }: CountingItemRowProps) => {
   const diff = item.expectedQty !== undefined
@@ -47,6 +49,12 @@ export const CountingItemRow = memo(({
   const expiryLabel = hasExpiry 
     ? `${String(item.mm).padStart(2, '0')}/${item.yyyy}` 
     : null;
+
+  // Handler para edición
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditExpiry?.();
+  };
 
   return (
     <motion.div
@@ -93,6 +101,17 @@ export const CountingItemRow = memo(({
         </div>
       </div>
 
+      {/* Botón de editar fecha */}
+      {onEditExpiry && (
+        <button
+          onClick={handleEditClick}
+          className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors"
+          title="Editar fecha de vencimiento"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      )}
+
       {/* Cantidades */}
       <div className="text-right">
         <p className="text-lg font-bold text-primary">{item.totalQuantity}</p>
@@ -113,6 +132,7 @@ export const CountingItemRowCompact = memo(({
   item,
   isActive,
   onClick,
+  onEditExpiry,
   className = '',
 }: CountingItemRowProps) => {
   return (

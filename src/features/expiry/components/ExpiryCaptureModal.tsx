@@ -7,21 +7,26 @@
  * - Campo de cantidad
  * - Campo de ubicación
  * - Observaciones
- * - Validación de fecha vencida
+ * - Validación de fecha vencida (robusta con rango 2024-2027)
+ * - Confirmación obligatoria para fechas críticas
  * - Políticas de proveedor
  * - Modo edición con datos pre-cargados
  * 
- * @version 2.1.0
+ * @version 3.0.0
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2, Pencil } from 'lucide-react';
+import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2, Pencil, AlertCircle, CheckCheck } from 'lucide-react';
 import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';
 import { QuantityInput } from '@/shared/features/inventory/components/QuantityInput';
 import type { ProductInfo } from '@/shared/features/inventory/hooks/useProductSearch';
 import type { ExpiryRecord } from '../hooks/useExpiry';
 import { db } from '@/db';
+
+// ✅ NUEVO: Imports de constantes y validación
+import { EXPIRY_YEARS, MIN_YEAR, MAX_YEAR, MIN_BARCODE_LENGTH } from '../constants';
+import { useExpiryValidation, validateYearInput, validateMonthInput } from '../hooks/useExpiryValidation';
 
 export type ExpiryModalMode = 'create' | 'edit';
 
@@ -51,7 +56,9 @@ export interface ExpiryFormData {
 }
 
 const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-const AÑOS = [2025, 2026, 2027, 2028];
+
+// ✅ CORREGIDO: Años con rango válido (2024-2027)
+const AÑOS = [...EXPIRY_YEARS]; // [2024, 2025, 2026, 2027]
 
 export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   isOpen,
@@ -166,41 +173,43 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
     }
   }, [isOpen, isEditMode]);
 
-  // Validar fecha vencida
-  const isDateExpired = useMemo(() => {
-    if (!selectedMm || !selectedYyyy) return false;
-    const expiryDate = new Date(selectedYyyy, selectedMm - 1, 1);
-    expiryDate.setMonth(expiryDate.getMonth() + 1);
-    expiryDate.setDate(0);
-    return expiryDate < new Date();
-  }, [selectedMm, selectedYyyy]);
+  // ✅ NUEVO: Validación robusta
+  const validation = useExpiryValidation({
+    barcode,
+    mm: selectedMm,
+    yyyy: selectedYyyy,
+    quantity,
+  });
 
-  // Es próximo a vencer (30 días)
-  const isNearExpiry = useMemo(() => {
-    if (!selectedMm || !selectedYyyy) return false;
-    const now = new Date();
-    const expiryDate = new Date(selectedYyyy, selectedMm, 0);
-    const diffDays = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diffDays > 0 && diffDays <= 30;
-  }, [selectedMm, selectedYyyy]);
+  // Usar validación para compatibilidad hacia atrás
+  const isDateExpired = validation.status === 'expired';
+  const isNearExpiry = validation.status === 'critical';
 
-  // Auto-detectar fecha del teclado
+  // Auto-detectar fecha del teclado (con rango corregido 2024-2027)
   useKeyboardDateDetection(selectedMm, selectedYyyy, setSelectedMm, setSelectedYyyy, isOpen);
 
-  // ¿Se puede enviar? (requiere barcode, mes y año)
-  const canSubmit = barcode.length >= 8 && selectedMm && selectedYyyy && !isSubmitting;
+  // ¿Se puede enviar? (usando validación robusta)
+  const canSubmit = validation.canSubmit && !isSubmitting;
 
   // ¿El producto fue encontrado en la BD?
   const productFound = product !== null;
 
-  // Handler de submit
+  // ✅ NUEVO: Handler de submit con confirmación obligatoria
   const handleSubmit = async () => {
     if (!canSubmit) return;
+
+    // ✅ Confirmación obligatoria para fechas críticas
+    if (validation.requiresConfirmation) {
+      const confirmed = window.confirm(validation.confirmationMessage);
+      if (!confirmed) {
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
       const formData: ExpiryFormData = {
-        barcode,
+        barcode: barcode.trim().toUpperCase(),
         productName: product?.name || barcode || initialData?.productName || '',
         quantity,
         mm: selectedMm!,
@@ -595,8 +604,29 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                 />
               </div>
 
-              {/* ALERTAS */}
+              {/* ✅ ALERTAS - Errors de validación */}
               <AnimatePresence>
+                {validation.errors.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`p-4 rounded-2xl border-2 flex items-start gap-3 ${
+                      isDark 
+                        ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}
+                  >
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-black uppercase tracking-wider mb-1">❌ Errores de Validación</p>
+                      {validation.errors.map((error, i) => (
+                        <p key={i} className="text-[10px] opacity-90">{error}</p>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
                 {isDateExpired && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -612,7 +642,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                     <div>
                       <p className="text-xs font-black uppercase tracking-wider">⚠️ Producto Vencido</p>
                       <p className="text-[10px] mt-1 opacity-80">
-                        La fecha seleccionada ya pasó. ¿Desea registrarlo como merma?
+                        La fecha seleccionada ya pasó. Requiere confirmación para registrar.
                       </p>
                     </div>
                   </motion.div>
@@ -633,7 +663,29 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                     <div>
                       <p className="text-xs font-black uppercase tracking-wider">⏰ Por Vencer</p>
                       <p className="text-[10px] mt-1 opacity-80">
-                        Este producto vencerá en menos de 30 días.
+                        Este producto vencerá en {validation.daysLeft} días. Requiere confirmación.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ✅ Warnings adicionales (status safe pero con días) */}
+                {validation.warnings.length > 0 && !isDateExpired && !isNearExpiry && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`p-4 rounded-2xl border-2 flex items-start gap-3 ${
+                      isDark 
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                        : 'bg-green-50 border-green-200 text-green-700'
+                    }`}
+                  >
+                    <CheckCheck className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider">✅ Vencimiento Válido</p>
+                      <p className="text-[10px] mt-1 opacity-80">
+                        {validation.warnings.join(' • ')}
                       </p>
                     </div>
                   </motion.div>
@@ -682,6 +734,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
 
 /**
  * Auto-detección de fecha desde teclado numérico
+ * ✅ CORREGIDO: Solo acepta años entre 2024 y 2027
  */
 function useKeyboardDateDetection(
   selectedMm: number | null,
@@ -717,13 +770,14 @@ function useKeyboardDateDetection(
         yearAccumulator += e.key;
         monthAccumulator += e.key;
 
-        // Auto-detectar año (4 dígitos)
+        // ✅ CORREGIDO: Auto-detectar año (solo acepta 2024-2027)
         if (yearAccumulator.length === 4) {
           const year = parseInt(yearAccumulator);
-          if (year >= 2025 && year <= 2035) {
+          if (year >= MIN_YEAR && year <= MAX_YEAR) {
             setSelectedYyyy(year);
             yearAccumulator = '';
           } else {
+            // Reiniciar si no es un año válido (2024-2027)
             yearAccumulator = yearAccumulator.slice(-1);
           }
         }

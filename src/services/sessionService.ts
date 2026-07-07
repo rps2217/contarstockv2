@@ -7,6 +7,9 @@ import { SessionRepository } from '../repositories/SessionRepository';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { CountingSession, ExpectedOrder, ExpectedItem, ScanRecord } from '../types';
 
+// ✅ Unit of Work para operaciones atómicas
+import { createUnitOfWork, withUnitOfWork, UnitOfWork } from '@/repositories/core/UnitOfWork';
+
 let pendingBuffer: any[] = [];
 
 export const getPendingBuffer = () => pendingBuffer;
@@ -43,7 +46,20 @@ export const createSession = async (
   };
   
   console.log('[createSession] session.expectedItems BEFORE save:', session.expectedItems);
-  await SessionRepository.save(session);
+  
+  // ✅ Usar UnitOfWork para crear sesión atómicamente
+  const result = await withUnitOfWork(async (uow) => {
+    uow.addOperation('CREATE', 'session', session, async () => {
+      await SessionRepository.delete(session.id);
+    });
+    return session;
+  });
+
+  if (!result.success) {
+    logger.error('SESSION', `Error al crear sesión: ${result.error}`);
+    throw new Error(`Error al crear sesión: ${result.error}`);
+  }
+
   console.log('[createSession] session saved with expectedItems:', session.expectedItems?.length);
   logger.info('SESSION', `Sesión creada: ${session.id}`);
   return session;
@@ -107,8 +123,36 @@ export const deleteSessionItem = async (sessionId: string, barcode: string) => {
 };
 
 export const deleteSession = async (id: string) => {
-  await db.scans.where('sessionId').equals(id).delete();
-  await SessionRepository.delete(id);
+  // ✅ Usar UnitOfWork para eliminar sesión atómicamente
+  const result = await withUnitOfWork(async (uow) => {
+    // Primero obtener los scans para poder eliminarlos
+    const scans = await ScanRepository.getBySession(id);
+    
+    // Agregar operación para eliminar scans
+    for (const scan of scans) {
+      uow.addOperation('DELETE', 'scan', scan, async () => {
+        // Inverse: recrear el scan
+        await db.scans.add(scan);
+      });
+    }
+    
+    // Agregar operación para eliminar sesión
+    const session = await SessionRepository.getById(id);
+    if (session) {
+      uow.addOperation('DELETE', 'session', session, async () => {
+        await SessionRepository.save(session);
+      });
+    }
+    
+    return { scansDeleted: scans.length, sessionDeleted: !!session };
+  });
+
+  if (!result.success) {
+    logger.error('SESSION', `Error al eliminar sesión: ${result.error}`);
+    throw new Error(`Error al eliminar sesión: ${result.error}`);
+  }
+
+  logger.info('SESSION', `Sesión eliminada: ${id}`);
 };
 
 export { cleanSyncedSessions } from './maintenance';
@@ -164,4 +208,74 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
 
 export const markScansAsSynced = async (scanIds: string[]) => {
    await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
+};
+
+/**
+ * ✅ Guarda un scan junto con un vencimiento de forma atómica
+ * Si falla el scan, no se guarda el vencimiento y viceversa
+ */
+export const addScanWithExpiry = async (
+  sessionId: string,
+  barcode: string,
+  quantity: number,
+  expiryData: {
+    mm: number;
+    yyyy: number;
+    productName?: string;
+    providerName?: string;
+    location?: string;
+  }
+): Promise<{ success: boolean; error?: string }> => {
+  const scanId = crypto.randomUUID();
+  const expiryId = crypto.randomUUID();
+
+  const scanEvent = {
+    id: scanId,
+    sessionId,
+    barcode,
+    quantity,
+    synced: 0,
+    timestamp: Date.now(),
+  };
+
+  const expiryEvent = {
+    id: expiryId,
+    barcode,
+    productName: expiryData.productName || '',
+    providerName: expiryData.providerName || 'SIN PROVEEDOR',
+    mm: expiryData.mm,
+    yyyy: expiryData.yyyy,
+    quantity,
+    location: expiryData.location || '',
+    observaciones: '',
+    claveUnica: `${barcode}-${expiryData.yyyy}-${String(expiryData.mm).padStart(2, '0')}`,
+    withdrawalDays: 30,
+    hasCanje: false,
+    timestamp: Date.now(),
+    syncStatus: 'pending',
+    status: 'critical',
+    daysLeft: Math.ceil(
+      (new Date(expiryData.yyyy, expiryData.mm - 1, 1).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    ),
+    expiryDate: new Date(expiryData.yyyy, expiryData.mm - 1, 1).toISOString(),
+    expiryDateObj: new Date(expiryData.yyyy, expiryData.mm - 1, 1),
+    withdrawalDate: new Date(
+      new Date(expiryData.yyyy, expiryData.mm - 1, 1).getTime() - 30 * 24 * 60 * 60 * 1000
+    ),
+    category: 'GENERAL',
+    estado: 'Crítico',
+    type: 'Individual' as const,
+  };
+
+  return withUnitOfWork(async (uow) => {
+    uow.addOperation('CREATE', 'scan', scanEvent, async () => {
+      await db.scans.delete(scanId);
+    });
+
+    uow.addOperation('CREATE', 'expiry', expiryEvent, async () => {
+      await db.table('expirations').delete(expiryId);
+    });
+
+    return { scanId, expiryId };
+  });
 };

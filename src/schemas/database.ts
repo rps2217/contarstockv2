@@ -31,7 +31,8 @@ export const CountingSessionSchema = z.object({
   totalSKUs: z.number().optional().default(0),
   lastSyncTimestamp: z.number().optional(),
   mm: z.number().min(1).max(12).optional(),
-  yyyy: z.number().min(2020).max(2100).optional(),
+  // ✅ CORREGIDO: Rango de años 2024-2027
+  yyyy: z.number().min(2024).max(2027).optional(),
   syncStatus: SyncStatusSchema.default('pending').optional(),
   // Test mode / expected order items
   expectedItems: z.array(z.object({

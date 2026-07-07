@@ -133,8 +133,9 @@ export type ValidatedCustomer = z.infer<typeof CustomerSchema>;
 // VENCIMIENTOS
 // =============================================================================
 
+// ✅ CORREGIDO: Rango de años 2024-2027
 const mmSchema = z.number().int().min(1).max(12);
-const yyyySchema = z.number().int().min(2020).max(2050);
+const yyyySchema = z.number().int().min(2024).max(2027);
 
 export const ExpiryRecordSchema = z.object({
   id: z.string().uuid().optional(),

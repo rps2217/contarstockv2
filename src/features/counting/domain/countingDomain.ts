@@ -13,6 +13,9 @@
 import { ConsolidatedItem } from '@/types';
 import { normalizeSku } from '@/services/utils';
 
+// ✅ NUEVO: Imports de constantes de expiry
+import { MIN_YEAR, MAX_YEAR } from '@/features/expiry/constants';
+
 // ============================================================
 // TIPOS
 // ============================================================
@@ -220,10 +223,11 @@ export const isValidQuantity = (qty: number): boolean => {
 
 /**
  * Valida fecha de vencimiento (mm/yyyy)
+ * ✅ CORREGIDO: Usa rango de años 2024-2027
  */
 export const isValidExpiryDate = (mm: number, yyyy: number): boolean => {
   if (mm < 1 || mm > 12) return false;
-  if (yyyy < 2020 || yyyy > 2050) return false;
+  if (yyyy < MIN_YEAR || yyyy > MAX_YEAR) return false;
   return true;
 };
 

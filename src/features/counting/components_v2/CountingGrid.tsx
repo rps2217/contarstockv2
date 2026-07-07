@@ -20,6 +20,7 @@ interface CountingGridProps {
   items: CountedItem[];
   activeBarcode?: string;
   onItemClick?: (barcode: string) => void;
+  onEditExpiry?: (item: CountedItem) => void;
   className?: string;
   useVirtualization?: boolean;
 }
@@ -28,6 +29,7 @@ export const CountingGrid = memo(({
   items,
   activeBarcode,
   onItemClick,
+  onEditExpiry,
   className = '',
   useVirtualization = false,
 }: CountingGridProps) => {
@@ -40,6 +42,11 @@ export const CountingGrid = memo(({
     return <CountingEmptyState className={className} />;
   }
 
+  // Handler para edición
+  const handleEditExpiry = (item: CountedItem) => {
+    onEditExpiry?.(item);
+  };
+
   // Renderizado simple para listas pequeñas
   if (!shouldVirtualize) {
     return (
@@ -51,6 +58,7 @@ export const CountingGrid = memo(({
               item={item}
               isActive={activeBarcode === item.barcode}
               onClick={() => onItemClick?.(item.barcode)}
+              onEditExpiry={onEditExpiry ? () => handleEditExpiry(item) : undefined}
             />
           ))}
         </AnimatePresence>
@@ -87,6 +95,7 @@ export const CountingGrid = memo(({
                 item={data}
                 isActive={activeBarcode === data.barcode}
                 onClick={() => onItemClick?.(data.barcode)}
+                onEditExpiry={onEditExpiry ? () => handleEditExpiry(data) : undefined}
                 className="mx-2"
               />
             </div>

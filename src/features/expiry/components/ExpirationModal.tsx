@@ -3,6 +3,9 @@ import { X, Check, Barcode, Calendar, Zap, AlertCircle, RefreshCcw } from 'lucid
 import { motion, AnimatePresence } from 'motion/react';
 import { normalizeSku } from '../../../services/utils';
 
+// ✅ NUEVO: Imports de constantes
+import { EXPIRY_YEARS } from '../constants';
+
 interface ExpirationModalProps {
   onComplete: (data: { barcode: string; productName: string; mm: number; yyyy: number; observaciones?: string }) => void;
   onCancel?: () => void;
@@ -176,8 +179,8 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   };
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 6 }, (_, i) => currentYear + i);
+  // ✅ CORREGIDO: Usar años del rango válido (2024-2027)
+  const years = [...EXPIRY_YEARS];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">

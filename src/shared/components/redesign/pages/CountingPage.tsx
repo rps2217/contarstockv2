@@ -123,6 +123,11 @@ export const RedesignCountingPage: React.FC = () => {
     })
   }
 
+  // Handler para editar desde la lista
+  const handleEditExpiryFromGrid = (item: any) => {
+    handleEditExpiry(item)
+  }
+
   const handleSaveExpiry = async (data: { mm: number; yyyy: number }) => {
     if (!editExpiryItem) return
     // Aquí se podría agregar lógica para actualizar la fecha en la BD
@@ -298,6 +303,7 @@ export const RedesignCountingPage: React.FC = () => {
           items={sessionData.history}
           activeBarcode={state.activeBarcode}
           onItemClick={actions.selectItem}
+          onEditExpiry={handleEditExpiryFromGrid}
         />
       </div>
 
