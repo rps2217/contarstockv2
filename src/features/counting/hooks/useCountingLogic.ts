@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
+import { toast } from 'sonner';
 import { getSettings } from '../../../services/settings';
 import { scannerReducer } from '../../../services/scannerMachine';
 import { ConsolidatedItem } from '../../../types';
@@ -10,6 +11,12 @@ import * as productService from '../../../services/productService';
 import { normalizeSku } from '../../../services/utils';
 import { shouldPromptForBatch } from '../../../services/uiLogic';
 
+// ✅ Auto-save
+import { useAutoSave, useAutoSaveRecovery } from '@/shared/hooks/auto-save';
+
+// ✅ Configuración de vencimiento
+import { isNoDateRecord } from '@/lib/expiryConfig';
+
 // Domain (Lego Architecture)
 import { shouldPromptBatch, findItemByBarcode, evaluateProduct } from '../domain/countingDomain';
 
@@ -18,6 +25,22 @@ import { useCountingSync } from './useCountingSync';
 import { useExpiryTracker } from './useExpiryTracker';
 import { useCountingQueries } from './useCountingQueries';
 import { useCountingAI } from './useCountingAI';
+
+// ============================================================================
+// TIPOS PARA AUTO-SAVE
+// ============================================================================
+
+interface CountingSessionSnapshot {
+  sessionId: string;
+  items: ConsolidatedItem[];
+  currentLocation: string;
+  multiplier: number;
+  timestamp: number;
+}
+
+// ============================================================================
+// HOOK PRINCIPAL
+// ============================================================================
 
 export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
   const settings = getSettings();
@@ -28,6 +51,55 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
   const { engine, processScan } = useScanPipeline(1);
   const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
+
+  // ✅ AUTO-SAVE: Configurar guardado automático
+  const autoSaveKey = sessionId ? `counting_session_${sessionId}` : 'counting_session';
+  
+  const {
+    state: autoSaveState,
+    saveData,
+    saveNow,
+    getRecoveredData,
+    clearSavedData,
+  } = useAutoSave<CountingSessionSnapshot>({
+    interval: 30000, // Cada 30 segundos
+    storageKey: autoSaveKey,
+    enabled: !!sessionId,
+    showToasts: false, // No mostrar toasts en cada save
+  });
+
+  // ✅ AUTO-SAVE: Recuperar datos si hay sesión anterior
+  const { recoveredData, clearRecovery } = useAutoSaveRecovery<CountingSessionSnapshot>(autoSaveKey);
+
+  // ✅ AUTO-SAVE: Guardar cuando hay cambios en los items
+  useEffect(() => {
+    if (sessionId && consolidatedHistory) {
+      const snapshot: CountingSessionSnapshot = {
+        sessionId,
+        items: consolidatedHistory,
+        currentLocation,
+        multiplier: engine.multiplier,
+        timestamp: Date.now(),
+      };
+      saveData(snapshot, sessionId);
+    }
+  }, [sessionId, consolidatedHistory, currentLocation, engine.multiplier, saveData]);
+
+  // ✅ AUTO-SAVE: Mostrar toast si hay datos recuperables al montar
+  useEffect(() => {
+    if (recoveredData && sessionId && recoveredData.sessionId === sessionId) {
+      toast.info('📦 Sesión anterior recuperada', {
+        duration: 5000,
+        action: {
+          label: 'Descartar',
+          onClick: () => {
+            clearRecovery();
+            toast.success('Datos descartados');
+          },
+        },
+      });
+    }
+  }, [recoveredData, sessionId, clearRecovery]);
 
   // Composability
   useCountingSync(sessionId);
@@ -98,20 +170,27 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     },
     handlePharmaComplete: async (m?: number, y?: number, b?: string) => {
       if (engine.activeBarcode && m !== undefined && y !== undefined) {
-        // Guardar en expiry tracker
-        await saveExpiry({
-          barcode: engine.activeBarcode,
-          productName: engine.activeProduct?.name,
-          mm: m,
-          yyyy: y,
-          sessionId: sessionId
-        });
-        // Sincronizar a la nube si hay conexión
-        const entry = await getExpiryForBarcode(engine.activeBarcode);
-        if (entry) {
-          syncExpiry(entry);
+        // Verificar si es "omitir" (m=0 o y=9999)
+        const isSkip = isNoDateRecord(m, y);
+        
+        // Solo guardar en expiry si NO es omitir
+        if (!isSkip) {
+          // Registrar vencimiento
+          await saveExpiry({
+            barcode: engine.activeBarcode,
+            productName: engine.activeProduct?.name,
+            mm: m,
+            yyyy: y,
+            sessionId: sessionId
+          });
+          // Sincronizar a la nube si hay conexión
+          const entry = await getExpiryForBarcode(engine.activeBarcode);
+          if (entry) {
+            syncExpiry(entry);
+          }
         }
-        // Continuar con el flujo normal
+        
+        // Continuar con el flujo normal (para contar el producto)
         finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
       }
     },
@@ -148,6 +227,34 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     dismissPotentialMatch: () => setPotentialMatch(null)
   }), [engine.setMultiplier, setCurrentLocation, finalizeScanPipeline, resetSession, engine.actions, engine.activeBarcode, engine.multiplier, sessionId, session, potentialMatch, setPotentialMatch]);
 
+  // ✅ AUTO-SAVE: Guardar y limpiar al desmontar o salir
+  useEffect(() => {
+    return () => {
+      // Guardar datos pendientes antes de desmontar
+      if (autoSaveState.hasPendingChanges && sessionId) {
+        saveNow();
+      }
+      // Limpiar datos guardados al salir
+      if (recoveredData && sessionId === recoveredData.sessionId) {
+        clearSavedData();
+      }
+    };
+  }, [autoSaveState.hasPendingChanges, sessionId, saveNow, recoveredData, clearSavedData]);
+
+  // ✅ AUTO-SAVE: Confirmar antes de salir si hay cambios pendientes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (autoSaveState.hasPendingChanges) {
+        e.preventDefault();
+        e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de salir?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [autoSaveState.hasPendingChanges]);
+
   return {
     state: { 
       isLoading: session === undefined,
@@ -159,7 +266,13 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
       activeBarcode: engine.activeBarcode, 
       activeProduct: engine.activeProduct,
       optimisticQty: engine.optimisticQty || 0,
-      potentialMatch
+      potentialMatch,
+      // ✅ AUTO-SAVE: Exportar estado
+      autoSave: {
+        hasPendingChanges: autoSaveState.hasPendingChanges,
+        lastSaveTime: autoSaveState.lastSaveTime,
+        isSaving: autoSaveState.isSaving,
+      },
     },
     sessionData: { session, history: consolidatedHistory || [] },
     actions

@@ -1,38 +1,69 @@
+/**
+ * =============================================================================
+ * TestModeExpiryModal - Modal para registrar fecha de vencimiento en conteo
+ * =============================================================================
+ * 
+ * SIMPLIFICADO según feedback:
+ * - Solo muestra años válidos (2025-2027)
+ * - Botón "Omitir" para productos sin fecha de interés
+ * - Si selecciona año válido → se registra el vencimiento
+ * - Si presiona omitir → solo se cuenta el producto
+ * 
+ * @since 2026-07-07
+ */
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Check, X, Zap, Calendar } from 'lucide-react';
+import { Check, X, Zap, Calendar, SkipForward } from 'lucide-react';
+import { EXPIRY_MIN_YEAR, EXPIRY_MAX_YEAR } from '@/lib/expiryConfig';
 
 interface TestModeExpiryModalProps {
   barcode: string;
   productName: string;
   onComplete: (data: { mm: number; yyyy: number }) => void;
   onCancel: () => void;
+  /** Callback cuando se omite el registro de fecha */
+  onSkip?: () => void;
 }
 
 export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
   barcode,
   productName,
   onComplete,
-  onCancel
+  onCancel,
+  onSkip,
 }) => {
   const [selectedMm, setSelectedMm] = useState<number | null>(null);
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 6 }, (_, i) => currentYear + i);
+  
+  // Solo años válidos para registrar (2025-2027)
+  const years = Array.from(
+    { length: EXPIRY_MAX_YEAR - EXPIRY_MIN_YEAR + 1 }, 
+    (_, i) => EXPIRY_MIN_YEAR + i
+  );
+
+  // Verificar si podemos confirmar
+  const canConfirm = selectedMm !== null && selectedYyyy !== null;
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
-      if (e.key === 'Enter' && selectedMm && selectedYyyy) {
+      if (e.key === 'Enter' && canConfirm) {
+        e.preventDefault();
         onComplete({ mm: selectedMm, yyyy: selectedYyyy });
+      }
+      // Omitir con Shift+Enter
+      if (e.shiftKey && e.key === 'Enter' && onSkip) {
+        e.preventDefault();
+        onSkip();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedMm, selectedYyyy, onCancel, onComplete]);
+  }, [selectedMm, selectedYyyy, canConfirm, onCancel, onComplete, onSkip]);
 
   const handleSave = () => {
     if (selectedMm && selectedYyyy) {
@@ -54,8 +85,8 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
               <Zap className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">REGISTRO VENCIMIENTO</h2>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest">Picking Mode</p>
+              <h2 className="text-lg font-black text-white uppercase tracking-wider">FECHA VENCIMIENTO</h2>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest">Conteo</p>
             </div>
           </div>
           <button 
@@ -77,11 +108,11 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
 
         {/* CONTENT */}
         <div className="p-6 space-y-6">
-          {/* MONTH SELECTOR */}
+          {/* MES */}
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
               <Calendar className="w-3 h-3" />
-              MES DE VENCIMIENTO
+              MES
             </label>
             <div className="grid grid-cols-4 gap-2">
               {months.map(m => (
@@ -100,18 +131,18 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
             </div>
           </div>
 
-          {/* YEAR SELECTOR */}
+          {/* AÑO - Solo válidos */}
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
               <Calendar className="w-3 h-3" />
-              AÑO DE VENCIMIENTO
+              AÑO ({EXPIRY_MIN_YEAR} - {EXPIRY_MAX_YEAR})
             </label>
             <div className="grid grid-cols-3 gap-2">
               {years.map(y => (
                 <button
                   key={y}
                   onClick={() => setSelectedYyyy(y)}
-                  className={`h-16 rounded-2xl font-black text-xl transition-all border-2 flex items-center justify-center italic tracking-tighter ${
+                  className={`h-16 rounded-2xl font-black text-xl transition-all border-2 ${
                     selectedYyyy === y 
                       ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10' 
                       : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
@@ -123,22 +154,35 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
             </div>
           </div>
 
-          {/* ACTION */}
-          <button
-            disabled={!selectedMm || !selectedYyyy}
-            onClick={handleSave}
-            className={`w-full py-6 rounded-[1.5rem] font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all ${
-              selectedMm && selectedYyyy
-                ? 'bg-white text-black hover:bg-blue-50 shadow-lg cursor-pointer active:scale-[0.98]'
-                : 'bg-white/5 text-white/10 border border-white/5 cursor-not-allowed grayscale'
-            }`}
-          >
-            <Check className="w-6 h-6" />
-            CONFIRMAR
-          </button>
-          <p className="text-center text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-            Presiona <span className="text-muted">ENTER</span> para confirmar
-          </p>
+          {/* ACTIONS */}
+          <div className="space-y-3">
+            {/* Confirmar - Registrar vencimiento */}
+            <button
+              disabled={!canConfirm}
+              onClick={handleSave}
+              className={`w-full py-6 rounded-[1.5rem] font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all ${
+                canConfirm
+                  ? 'bg-white text-black hover:bg-blue-50 shadow-lg cursor-pointer active:scale-[0.98]'
+                  : 'bg-white/5 text-white/10 border border-white/5 cursor-not-allowed grayscale'
+              }`}
+            >
+              <Check className="w-6 h-6" />
+              REGISTRAR
+            </button>
+
+            {/* Omitir - Solo contar sin registro */}
+            <button
+              onClick={onSkip}
+              className="w-full py-5 rounded-[1rem] font-bold text-base uppercase tracking-wider flex items-center justify-center gap-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all"
+            >
+              <SkipForward className="w-5 h-5" />
+              OMITIR - Solo contar
+            </button>
+            
+            <p className="text-center text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+              ENTER = Registrar • SHIFT+ENTER = Omitir • ESC = Cancelar
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

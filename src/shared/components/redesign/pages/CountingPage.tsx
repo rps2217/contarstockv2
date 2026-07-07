@@ -64,6 +64,9 @@ export const RedesignCountingPage: React.FC = () => {
   const { state, sessionData, actions } = useCountingLogic(id, handleExit)
   const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker()
 
+  // ✅ Extraer estado de auto-save
+  const { autoSave } = state
+
   // Productivity stats
   const itemsForStats = sessionData?.history?.map((i: any) => ({
     barcode: i.barcode,
@@ -208,6 +211,7 @@ export const RedesignCountingPage: React.FC = () => {
           onOpenOptions={() => setShowOptions(true)}
           multiplier={state.multiplier}
           onMultiplierChange={actions.setMultiplier}
+          autoSave={autoSave}
         />
       </div>
 
@@ -354,6 +358,10 @@ export const RedesignCountingPage: React.FC = () => {
           }}
           onCancel={() => {
             actions.cancelPharma()
+          }}
+          onSkip={() => {
+            // Omitir registro de fecha - solo contar sin registrar vencimiento
+            actions.handlePharmaComplete(0, 9999)
           }}
         />
       )}

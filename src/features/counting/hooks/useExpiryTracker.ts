@@ -1,8 +1,10 @@
 /**
  * useExpiryTracker - Hook para rastrear fechas de vencimiento
  * 
- * Guarda automáticamente en la tabla expirations cuando se ingresa
- * una fecha de vencimiento desde el modal de pharma.
+ * Ahora usa ExpiryService centralizado para toda la lógica de vencimientos.
+ * Proporciona compatibilidad hacia atrás con la API existente.
+ * 
+ * @deprecated Usar useExpiryService de '@/services/ExpiryService' directamente
  */
 
 import { useCallback } from 'react';
@@ -10,10 +12,24 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { normalizeSku } from '@/services/utils';
 import { enqueueSync } from '@/services/cloud/SyncQueue';
+import { expiryService, ExpiryEntry, SaveExpiryParams as ServiceSaveParams } from '@/services/ExpiryService';
 
-export interface ExpiryEntry {
-  id?: number;
-  claveUnica: string;
+// Re-exportar tipos del servicio centralizado
+export type { ExpiryEntry } from '@/services/ExpiryService';
+
+// Tipos locales para compatibilidad
+interface LegacySaveExpiryParams {
+  barcode: string;
+  productName?: string;
+  mm: number;
+  yyyy: number;
+  quantity?: number;
+  sessionId?: string;
+  providerName?: string;
+  location?: string;
+}
+
+interface LegacySyncParams {
   barcode: string;
   productName?: string;
   mm: number;
@@ -23,70 +39,76 @@ export interface ExpiryEntry {
   timestamp: number;
   sessionId?: string;
   syncStatus: 'synced' | 'pending' | 'error';
-}
-
-interface SaveExpiryParams {
-  barcode: string;
-  productName?: string;
-  mm: number;
-  yyyy: number;
-  quantity?: number;
-  sessionId?: string;
+  claveUnica: string;
 }
 
 export const useExpiryTracker = () => {
   /**
    * Guardar fecha de vencimiento en la tabla local
+   * Usa el servicio centralizado ExpiryService
    */
-  const saveExpiry = useCallback(async (params: SaveExpiryParams) => {
-    const { barcode, productName, mm, yyyy, quantity, sessionId } = params;
-    
-    // Crear clave única: barcode-mm-yyyy
-    const claveUnica = `${normalizeSku(barcode)}-${mm}-${yyyy}`;
-    
-    // Determinar status basado en fecha
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    
-    let status: ExpiryEntry['status'] = 'valid';
-    if (yyyy < currentYear || (yyyy === currentYear && mm < currentMonth)) {
-      status = 'expired';
-    } else if (yyyy === currentYear && mm <= currentMonth + 2) {
-      status = 'warning'; // Próximo a vencer (2 meses)
-    }
-
-    await db.expirations.put({
-      claveUnica,
-      barcode: normalizeSku(barcode),
-      productName,
-      mm,
-      yyyy,
-      status,
-      quantity,
-      timestamp: Date.now(),
-      sessionId,
-      syncStatus: 'pending'
+  const saveExpiry = useCallback(async (params: LegacySaveExpiryParams) => {
+    // Usar el servicio centralizado
+    const entry = await expiryService.save({
+      barcode: params.barcode,
+      productName: params.productName,
+      providerName: params.providerName,
+      location: params.location,
+      mm: params.mm,
+      yyyy: params.yyyy,
+      quantity: params.quantity || 1,
+      sessionId: params.sessionId,
+    }, {
+      // Por defecto, NO saltarse años fuera de rango en conteo
+      // El usuario debe poder registrar cualquier año
+      skipIfOutOfRange: false,
+      silent: true,
     });
 
-    return { claveUnica, status };
+    return { claveUnica: entry?.claveUnica, status: entry?.status };
+  }, []);
+
+  /**
+   * Sincroniza un vencimiento a la nube
+   */
+  const syncExpiry = useCallback(async (entry: LegacySyncParams) => {
+    try {
+      await enqueueSync({
+        type: 'expiry',
+        action: 'upsert',
+        data: entry,
+      });
+      
+      // Actualizar estado de sincronización
+      const existing = await db.expirations.where('claveUnica').equals(entry.claveUnica).first();
+      if (existing?.id) {
+        await db.expirations.update(existing.id, { syncStatus: 'synced' });
+      }
+    } catch (error) {
+      console.error('[useExpiryTracker] Error al sincronizar:', error);
+    }
   }, []);
 
   /**
    * Obtener fecha de vencimiento guardada para un barcode
    * Retorna la más reciente si hay múltiples
    */
-  const getExpiryForBarcode = useCallback(async (barcode: string): Promise<ExpiryEntry | null> => {
-    const normalized = normalizeSku(barcode);
-    const entries = await db.expirations
-      .where('barcode')
-      .equals(normalized)
-      .toArray();
+  const getExpiryForBarcode = useCallback(async (barcode: string): Promise<LegacySyncParams | null> => {
+    const entry = await expiryService.getLatestForBarcode(barcode);
+    if (!entry) return null;
     
-    if (entries.length === 0) return null;
-    
-    // Ordenar por timestamp descendente y retornar el más reciente
-    return entries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+    return {
+      barcode: entry.barcode,
+      productName: entry.productName,
+      mm: entry.mm,
+      yyyy: entry.yyyy,
+      status: entry.status as LegacySyncParams['status'],
+      quantity: entry.quantity,
+      timestamp: entry.timestamp,
+      sessionId: entry.sessionId,
+      syncStatus: entry.syncStatus,
+      claveUnica: entry.claveUnica,
+    };
   }, []);
 
   /**
@@ -94,12 +116,7 @@ export const useExpiryTracker = () => {
    */
   const useExpirations = (limit?: number) => {
     return useLiveQuery(async () => {
-      let query = db.expirations.orderBy('timestamp').reverse();
-      
-      if (limit) {
-        return await query.limit(limit).toArray();
-      }
-      return await query.toArray();
+      return await expiryService.getAll(limit);
     }, [limit]);
   };
 
@@ -108,32 +125,7 @@ export const useExpiryTracker = () => {
    */
   const useExpiringSoon = (monthsAhead: number = 3) => {
     return useLiveQuery(async () => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1;
-      
-      // Calcular fecha límite
-      let limitMonth = currentMonth + monthsAhead;
-      let limitYear = currentYear;
-      while (limitMonth > 12) {
-        limitMonth -= 12;
-        limitYear++;
-      }
-      
-      const all = await db.expirations.toArray();
-      
-      return all.filter(e => {
-        if (e.status === 'expired') return false;
-        if (e.status === 'warning') return true;
-        
-        // Verificar si está en rango
-        if (e.yyyy < limitYear || (e.yyyy === limitYear && e.mm <= limitMonth)) {
-          // Actualizar status
-          db.expirations.update(e.id!, { status: 'warning' });
-          return true;
-        }
-        return false;
-      });
+      return await expiryService.getExpiringSoon(monthsAhead);
     }, [monthsAhead]);
   };
 
@@ -142,30 +134,42 @@ export const useExpiryTracker = () => {
    */
   const useExpired = () => {
     return useLiveQuery(async () => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1;
-      
-      const all = await db.expirations.toArray();
-      
-      return all.filter(e => {
-        if (e.yyyy < currentYear || (e.yyyy === currentYear && e.mm < currentMonth)) {
-          if (e.status !== 'expired') {
-            db.expirations.update(e.id!, { status: 'expired' });
-          }
-          return true;
-        }
-        return false;
-      });
+      return await expiryService.getExpired();
     });
   };
 
+  // ✅ NUEVO: Método para verificar rango de año
+  const checkYearRange = useCallback((yyyy: number) => {
+    return expiryService.checkYearRange(yyyy);
+  }, []);
+
+  // ✅ NUEVO: Obtener años disponibles
+  const getAvailableYears = useCallback(() => {
+    return expiryService.getAvailableYears();
+  }, []);
+
+  // ✅ NUEVO: Obtener años extendidos (incluyendo fuera de rango)
+  const getExtendedYears = useCallback(() => {
+    return expiryService.getExtendedYears();
+  }, []);
+
   return {
+    // Métodos principales
     saveExpiry,
     syncExpiry,
     getExpiryForBarcode,
+    
+    // LiveQueries
     useExpirations,
     useExpiringSoon,
-    useExpired
+    useExpired,
+    
+    // ✅ Nuevos métodos
+    checkYearRange,
+    getAvailableYears,
+    getExtendedYears,
+    
+    // Acceso directo al servicio (para funcionalidades avanzadas)
+    service: expiryService,
   };
 };

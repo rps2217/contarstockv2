@@ -1,9 +1,11 @@
 /**
  * useExpiry - Hook centralizado para gestión de vencimientos
  * 
- * Arquitectura simplificada v2.0 - Un solo hook, una sola responsabilidad
+ * Arquitectura simplificada v3.0 - Un solo hook, una sola responsabilidad
  * Usa cache centralizado para evitar recargas excesivas
  * Usa validación Zod para garantizar integridad de datos
+ * ✅ Clave única corregida para evitar colisiones
+ * ✅ Ahora usa ExpiryService para guardar registros (unificación)
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
@@ -12,10 +14,17 @@ import { db } from '@/db';
 import { useAppStore } from '@/stores';
 import { genericSyncEngine } from '@/services/cloud/GenericSyncEngine';
 import { logger } from '@/services/logger';
+import { normalizeSku } from '@/services/utils';
 import { ExpiryStatus, evaluateExpiry } from '../domain/expiryDomain';
 import { formatExpiryDate, getStatusLabel } from '../domain/expiryDomain';
 import { useCloudCache, clearCache } from '@/shared/hooks/useCloudCache';
 import { validateExpiry, ExpiryRecordSchema, type ValidatedExpiryRecord } from '@/lib/schemas';
+
+// ✅ NUEVO: Import de función para generar clave única
+import { generateExpiryKey } from '../constants';
+
+// ✅ NUEVO: Import del ExpiryService para unificación
+import { expiryService } from '@/services/ExpiryService';
 
 // Cache key para vencimientos
 const EXPIRY_CACHE_KEY = 'expiry-records';
@@ -416,65 +425,59 @@ export const useExpiry = (): UseExpiryReturn => {
       }
       // ====================================
       
-      const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
-      const claveUnica = `${data.barcode}${data.yyyy}${String(data.mm).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`;
-      
-      // Verificar duplicado
-      const existingRecord = await db.table('expirations')
-        .where('claveUnica')
-        .equals(claveUnica)
-        .first();
-      
-      if (existingRecord) {
-        toast.error('Ya existe un vencimiento para este producto y fecha');
-        return null;
-      }
-      
-      const id = crypto.randomUUID();
-      const timestamp = Date.now();
-      const expiryDateObj = new Date(data.yyyy, data.mm - 1, lastDay);
-      const daysLeft = Math.ceil((expiryDateObj.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      const withdrawalDays = data.withdrawalDays ?? 30;
-      const hasCanje = data.hasCanje ?? false;
-      
-      let status: ExpiryStatus;
-      if (daysLeft < 0) status = ExpiryStatus.EXPIRED;
-      else if (daysLeft <= 15) status = ExpiryStatus.CRITICAL;
-      else if (daysLeft <= withdrawalDays) status = ExpiryStatus.WITHDRAWAL;
-      else if (daysLeft <= 90) status = ExpiryStatus.NEXT_EXPIRY;
-      else status = ExpiryStatus.SAFE;
-      
-      const record: ExpiryRecord = {
-        id,
+      // ✅ Usar ExpiryService para guardar (unificación)
+      const entry = await expiryService.save({
         barcode: data.barcode,
         productName: data.productName,
-        providerName: data.providerName || 'SIN PROVEEDOR',
-        providerRut: data.providerRut,
+        providerName: data.providerName,
+        location: data.location,
+        observaciones: data.observaciones,
         mm: data.mm,
         yyyy: data.yyyy,
         quantity: data.quantity,
-        location: data.location,
-        observaciones: data.observaciones,
-        claveUnica,
-        withdrawalDays,
-        hasCanje,
-        timestamp,
-        syncStatus: 'pending',
-        status,
-        daysLeft,
-        expiryDate: expiryDateObj.toISOString(),
-        expiryDateObj,
-        withdrawalDate: new Date(expiryDateObj.getTime() - withdrawalDays * 24 * 60 * 60 * 1000),
+        withdrawalDays: data.withdrawalDays,
         category: 'GENERAL',
-        estado: getStatusLabel(status),
+      }, {
+        skipIfOutOfRange: false,
+        silent: true,
+      });
+
+      if (!entry) {
+        toast.error('Error al crear vencimiento');
+        return null;
+      }
+
+      // Convertir al formato del hook
+      const record: ExpiryRecord = {
+        id: String(entry.id),
+        barcode: entry.barcode,
+        productName: entry.productName || data.productName,
+        providerName: entry.providerName || 'SIN PROVEEDOR',
+        providerRut: data.providerRut,
+        mm: entry.mm,
+        yyyy: entry.yyyy,
+        quantity: entry.quantity,
+        location: entry.location || data.location,
+        observaciones: entry.observaciones || data.observaciones,
+        claveUnica: entry.claveUnica,
+        withdrawalDays: entry.withdrawalDays || 30,
+        hasCanje: entry.hasCanje || false,
+        timestamp: entry.timestamp,
+        syncStatus: entry.syncStatus,
+        status: entry.status as ExpiryStatus,
+        daysLeft: entry.daysLeft || 0,
+        expiryDate: entry.expiryDate,
+        expiryDateObj: entry.expiryDateObj || new Date(),
+        withdrawalDate: entry.withdrawalDate || new Date(),
+        category: entry.category || 'GENERAL',
+        estado: entry.estado || getStatusLabel(ExpiryStatus.SAFE),
         type: 'Individual'
       };
       
-      await db.table('expirations').add(record);
       clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => [...prev, record]);
       toast.success('Vencimiento registrado');
-      return id;
+      return record.id;
     } catch (error) {
       logger.error('useExpiry', 'Error creating record', String(error));
       toast.error('Error al crear vencimiento');
