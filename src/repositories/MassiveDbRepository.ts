@@ -61,6 +61,22 @@ export class MassiveDbRepository {
     return await massiveDb.blindManifests.toCollection().first();
   }
 
+  static async getBlindManifestCountByBatch(batchId: string): Promise<number> {
+    return await massiveDb.blindManifests.where('batchId').equals(batchId).count();
+  }
+
+  static async getBlindScanCountByBatch(batchId: string): Promise<number> {
+    return await massiveDb.blindScans.where('batchId').equals(batchId).count();
+  }
+
+  static async getBatchCounts(batchId: string): Promise<{ scans: number; manifests: number }> {
+    const [scans, manifests] = await Promise.all([
+      this.getBlindScanCountByBatch(batchId),
+      this.getBlindManifestCountByBatch(batchId)
+    ]);
+    return { scans, manifests };
+  }
+
   static async getBatchSummary(batchId: string) {
     const [scans, manifests] = await Promise.all([
       this.getBlindScansByBatch(batchId),

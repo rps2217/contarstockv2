@@ -355,3 +355,84 @@ const { exportLogs, isExporting } = useAuditExport();
 
 ### Commits de Features:
 - `546f9ada` - feat: Implementar características inspiradas en AppSheet
+
+---
+
+## Corrección: Carga Teórica Persistente en Hammer (2026-07-07)
+
+### Problema Identificado
+Al acceder al modo Hammer mediante `/massive` sin batchId, se usaba el batchId por defecto `'CORE'`. Esto causaba que:
+1. Los datos de `blindManifests` y `blindScans` se persistían con batchId `'CORE'`
+2. Al volver a entrar, los mismos datos se recuperaban automáticamente
+3. El modal de sesión existente preguntaba si continuar, pero no distinguía entre escaneos y carga teórica
+
+### Causa Raíz
+```typescript
+// ANTES: batchId por defecto era 'CORE'
+const { batchId = 'CORE' } = useParams()
+```
+
+Cada vez que el usuario accedía a `/massive`, se reutilizaba el mismo `'CORE'`, trayendo datos de sesiones anteriores.
+
+### Solución Implementada
+
+**1. Generación de batchId único automático:**
+```typescript
+// Función para generar un batchId único basado en UUID
+const generateHammerBatchId = (): string => {
+  const uuid = generateUUID();
+  return `HM-${uuid.substring(0, 8).toUpperCase()}`;
+};
+
+// En el componente:
+const [effectiveBatchId] = useState(() => {
+  const paramBatchId = params.batchId;
+  if (paramBatchId && paramBatchId !== 'CORE' && paramBatchId.trim() !== '') {
+    return paramBatchId;
+  }
+  return generateHammerBatchId();
+});
+
+// Redirigir a la nueva URL si es 'CORE' o vacío
+useEffect(() => {
+  if (params.batchId === 'CORE' || !params.batchId || params.batchId.trim() === '') {
+    window.history.replaceState(null, '', `/massive/${effectiveBatchId}`);
+  }
+}, [params.batchId, effectiveBatchId]);
+```
+
+**2. Separación de escaneos vs carga teórica:**
+```typescript
+// Nuevo estado para mostrar al usuario
+const [sessionCounts, setSessionCounts] = useState({ scans: 0, manifests: 0 });
+
+// Al detectar sesión existente, obtener conteos separados
+const counts = await MassiveDbRepository.getBatchCounts(effectiveBatchId);
+setSessionCounts(counts);
+```
+
+**3. Opción para limpiar solo la carga teórica:**
+```typescript
+// Limpiar solo la carga teórica (manifests) pero mantener los escaneos
+const handleClearTheoreticalOnly = async () => {
+  await MassiveDbRepository.deleteBlindManifestsByBatch(batchId)
+  setShowSessionModal(false)
+  toast.success('Carga teórica eliminada. Los escaneos se mantienen.')
+}
+```
+
+**4. Modal mejorado con información clara:**
+- Muestra: "Escaneos guardados: X" y "Carga teórica importada: Y"
+- Opciones: Continuar, Descartar carga teórica, Limpiar todo, Nueva sesión
+
+### Archivos Modificados
+- `src/repositories/MassiveDbRepository.ts` - Métodos `getBatchCounts`, `getBlindManifestCountByBatch`, `getBlindScanCountByBatch`
+- `src/shared/components/redesign/pages/HammerPage.tsx` - Generación de batchId único, modal mejorado, opción de limpiar solo teórica
+
+### Flujo Corregido
+1. Usuario accede a `/massive` → Se genera `HM-A1B2C3D4` automáticamente
+2. Usuario importa carga teórica → Se guarda con ese batchId
+3. Usuario cierra navegador y vuelve a entrar
+4. Si accede a `/massive` (sin batchId) → Se genera NUEVO batchId → Sesión limpia
+5. Si comparte/enlaza a `/massive/HM-A1B2C3D4` → Recupera la sesión original
+
