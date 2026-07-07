@@ -18,6 +18,7 @@ import { useAppStore } from '@/stores'
 import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '@/services/massiveSync'
 import { exportHammerToExcel } from '@/services/export'
 import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
+import { MassiveDbRepository } from '@/repositories/MassiveDbRepository'
 import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository'
 import type { ExpectedOrder } from '@/types'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -524,9 +525,32 @@ export const RedesignHammerPage: React.FC = () => {
 
   // Empezar nueva sesión (limpiar datos)
   const handleNewSession = async () => {
-    await actions.removeItem('ALL') // Eliminar todos los items
-    setShowSessionModal(false)
-    toast.success('Sesión limpiada')
+    try {
+      // 1. Eliminar todos los escaneos
+      await MassiveDbRepository.deleteBlindScansByBatch(batchId)
+      
+      // 2. ELIMINAR también la carga teórica (manifests)
+      // Esto es lo que faltaba - los manifests nunca se eliminaban
+      await MassiveDbRepository.deleteBlindManifestsByBatch(batchId)
+      
+      // 3. Recargar la página para reiniciar todo desde cero
+      window.location.reload()
+    } catch (error) {
+      console.error('Error al limpiar sesión:', error)
+      toast.error('Error al limpiar sesión')
+    }
+  }
+
+  // Empezar nueva sesión con ID único (para no reutilizar datos)
+  const handleNewSessionWithNewId = () => {
+    // Generar un nuevo batchId único
+    const newBatchId = `HAMMER-${Date.now()}`
+    
+    // Guardar en localStorage para que el router lo use
+    localStorage.setItem('hammer_last_batch', newBatchId)
+    
+    // Navegar a la nueva sesión
+    navigate(`/hammer/${newBatchId}`)
   }
 
   const handleManualScan = () => {
@@ -894,7 +918,7 @@ export const RedesignHammerPage: React.FC = () => {
               <h3 className="text-lg font-bold text-primary mb-2 text-center">
                 Sesión Anterior Detectada
               </h3>
-              <p className="text-sm text-muted text-center mb-6">
+              <p className="text-sm text-muted text-center mb-4">
                 Hay <span className="font-bold text-primary">{state.items.length}</span> productos contados previamente. ¿Qué deseas hacer?
               </p>
               
@@ -912,7 +936,15 @@ export const RedesignHammerPage: React.FC = () => {
                   className="w-full py-3 px-4 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw className="w-5 h-5" />
-                  Empezar nueva sesión
+                  Limpiar y empezar de nuevo
+                </button>
+                
+                <button
+                  onClick={handleNewSessionWithNewId}
+                  className="w-full py-3 px-4 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Hammer className="w-5 h-5" />
+                  Nueva sesión (lote nuevo)
                 </button>
                 
                 <button

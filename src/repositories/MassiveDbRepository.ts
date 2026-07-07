@@ -27,6 +27,10 @@ export class MassiveDbRepository {
     await massiveDb.blindScans.where('batchId').equals(batchId).delete();
   }
 
+  static async deleteBlindManifestsByBatch(batchId: string) {
+    await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+  }
+
   static async deleteBlindScan(batchId: string, barcode: string) {
     // Borrar todos los registros de ese barcode en ese lote
     await massiveDb.blindScans.where({ batchId, barcode }).delete();
