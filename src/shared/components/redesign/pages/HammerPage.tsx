@@ -24,6 +24,7 @@ import type { ExpectedOrder } from '@/types'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal'
+import { generateUUID } from '@/services/utils'
 
 // ============================================================================
 // Componentes de UI
@@ -458,13 +459,39 @@ const ImportModal: React.FC<ImportModalProps> = ({
 // ============================================================================
 // Componente principal
 // ============================================================================
+
+// Función para generar un batchId único basado en UUID
+const generateHammerBatchId = (): string => {
+  const uuid = generateUUID();
+  return `HM-${uuid.substring(0, 8).toUpperCase()}`;
+};
+
 export const RedesignHammerPage: React.FC = () => {
   const navigate = useNavigate()
-  const { batchId = 'CORE' } = useParams()
+  const params = useParams()
+  
+  // Generar un batchId único si no se proporciona uno, para evitar recuperar datos de sesiones anteriores
+  const [effectiveBatchId] = useState(() => {
+    const paramBatchId = params.batchId;
+    if (paramBatchId && paramBatchId !== 'CORE' && paramBatchId.trim() !== '') {
+      return paramBatchId;
+    }
+    // Generar un nuevo batchId único
+    return generateHammerBatchId();
+  });
+  
+  // Si el batchId proporcionado es 'CORE' o está vacío, redirigir a uno nuevo
+  useEffect(() => {
+    if (params.batchId === 'CORE' || !params.batchId || params.batchId.trim() === '') {
+      // Actualizar la URL con el nuevo batchId sin recargar la página
+      window.history.replaceState(null, '', `/massive/${effectiveBatchId}`);
+    }
+  }, [params.batchId, effectiveBatchId]);
+
   const { settings, updateSetting } = useAppStore()
 
-  const { state, actions } = useHammerLogic(batchId)
-  const locManager = useLocationManager(`hammer_loc_${batchId}`)
+  const { state, actions } = useHammerLogic(effectiveBatchId)
+  const locManager = useLocationManager(`hammer_loc_${effectiveBatchId}`)
 
   const [isManualMode, setIsManualMode] = useState(false)
   const [manualBarcode, setManualBarcode] = useState('')
@@ -472,16 +499,25 @@ export const RedesignHammerPage: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isMigrating, setIsMigrating] = useState(false)
   
-  // Modal de sesión existente
+  // Modal de sesión existente - también guarda los conteos para mostrar al usuario
   const [showSessionModal, setShowSessionModal] = useState(false)
+  const [sessionCounts, setSessionCounts] = useState({ scans: 0, manifests: 0 })
 
   // Verificar si hay datos existentes al cargar
   useEffect(() => {
-    // Solo mostrar si hay items existentes
-    if (state.items && state.items.length > 0) {
-      setShowSessionModal(true)
-    }
+    const checkExistingSession = async () => {
+      if (state.items && state.items.length > 0) {
+        // Obtener los conteos reales de la base de datos
+        const counts = await MassiveDbRepository.getBatchCounts(effectiveBatchId);
+        setSessionCounts(counts);
+        setShowSessionModal(true)
+      }
+    };
+    checkExistingSession();
   }, []) // Solo al montar
+
+  // Alias para mantener compatibilidad con el resto del código
+  const batchId = effectiveBatchId;
 
   // HID Scanner
   useHIDScanner({
@@ -541,16 +577,28 @@ export const RedesignHammerPage: React.FC = () => {
     }
   }
 
+  // Limpiar solo la carga teórica (manifests) pero mantener los escaneos
+  const handleClearTheoreticalOnly = async () => {
+    try {
+      await MassiveDbRepository.deleteBlindManifestsByBatch(batchId)
+      setShowSessionModal(false)
+      toast.success('Carga teórica eliminada. Los escaneos se mantienen.')
+    } catch (error) {
+      console.error('Error al limpiar carga teórica:', error)
+      toast.error('Error al limpiar carga teórica')
+    }
+  }
+
   // Empezar nueva sesión con ID único (para no reutilizar datos)
   const handleNewSessionWithNewId = () => {
     // Generar un nuevo batchId único
-    const newBatchId = `HAMMER-${Date.now()}`
+    const newBatchId = generateHammerBatchId()
     
     // Guardar en localStorage para que el router lo use
     localStorage.setItem('hammer_last_batch', newBatchId)
     
     // Navegar a la nueva sesión
-    navigate(`/hammer/${newBatchId}`)
+    navigate(`/massive/${newBatchId}`)
   }
 
   const handleManualScan = () => {
@@ -915,11 +963,25 @@ export const RedesignHammerPage: React.FC = () => {
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-base border border-subtle rounded-2xl p-6 max-w-sm w-full"
             >
-              <h3 className="text-lg font-bold text-primary mb-2 text-center">
+              <h3 className="text-lg font-bold text-primary mb-2 text-center flex items-center justify-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
                 Sesión Anterior Detectada
               </h3>
+              
+              {/* Detalle de lo que hay guardado */}
+              <div className="bg-surface rounded-xl p-3 mb-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">Escaneos guardados:</span>
+                  <span className="font-bold text-primary">{sessionCounts.scans}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">Carga teórica importada:</span>
+                  <span className="font-bold text-primary">{sessionCounts.manifests}</span>
+                </div>
+              </div>
+              
               <p className="text-sm text-muted text-center mb-4">
-                Hay <span className="font-bold text-primary">{state.items.length}</span> productos contados previamente. ¿Qué deseas hacer?
+                ¿Qué deseas hacer con esta sesión?
               </p>
               
               <div className="space-y-3">
@@ -931,12 +993,23 @@ export const RedesignHammerPage: React.FC = () => {
                   Continuar con esta sesión
                 </button>
                 
+                {/* Opción para limpiar solo la carga teórica pero mantener escaneos */}
+                {sessionCounts.manifests > 0 && (
+                  <button
+                    onClick={handleClearTheoreticalOnly}
+                    className="w-full py-3 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                    Descartar carga teórica (mantener escaneos)
+                  </button>
+                )}
+                
                 <button
                   onClick={handleNewSession}
                   className="w-full py-3 px-4 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
-                  <RefreshCw className="w-5 h-5" />
-                  Limpiar y empezar de nuevo
+                  <Trash2 className="w-5 h-5" />
+                  Limpiar todo y empezar de nuevo
                 </button>
                 
                 <button
