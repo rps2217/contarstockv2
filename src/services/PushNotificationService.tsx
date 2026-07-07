@@ -55,7 +55,7 @@ const DEFAULT_CONFIG: PushNotificationConfig = {
   alertTypes: {
     expiryAlerts: true,
     syncAlerts: true,
-    integrityAlerts: true,
+    integrityAlerts: false, // Deshabilitado por defecto - generar ruido en producción
   },
   checkInterval: 60, // Cada 60 minutos
 };
@@ -110,7 +110,11 @@ export class PushNotificationService {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+        const config = { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+        // Deshabilitar alertas de integridad en producción (generan ruido)
+        // El IntegrityService ya solo se ejecuta en desarrollo
+        config.alertTypes.integrityAlerts = false;
+        return config;
       }
     } catch {
       // Ignore errors
