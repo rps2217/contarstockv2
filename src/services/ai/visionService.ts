@@ -1,16 +1,26 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
 import { VisualGuide } from "../../types";
 
-// Inicialización diferida para evitar errores si la API KEY no está lista al cargar el módulo
-let aiInstance: GoogleGenAI | null = null;
+// Lazy loading de google genai
+let genaiModule: { GoogleGenAI: any; Type: any } | null = null;
 
-const getAI = () => {
+async function loadGenAI() {
+  if (!genaiModule) {
+    genaiModule = await import("@google/genai");
+  }
+  return genaiModule;
+}
+
+// Inicialización diferida para evitar errores si la API KEY no está lista al cargar el módulo
+let aiInstance: any = null;
+
+const getAI = async () => {
   if (!aiInstance) {
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
       throw new Error("API de IA no configurada. Por favor, agrega GEMINI_API_KEY en los Secrets.");
     }
+    const { GoogleGenAI } = await loadGenAI();
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
@@ -22,7 +32,8 @@ const getAI = () => {
  */
 export const visionService = {
   async processGuidePhoto(base64Image: string): Promise<Partial<VisualGuide>> {
-    const ai = getAI();
+    const { Type } = await loadGenAI();
+    const ai = await getAI();
     
     // Limpiar el prefijo data:image/jpeg;base64, si existe
     const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
