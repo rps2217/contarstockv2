@@ -3,6 +3,23 @@ import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, ExpectedOrder, VisualGuide, ErpOrderSession, Provider, Customer, MessageTemplate } from './types';
 import { DbMigrator } from './db/migrations/DbMigrator';
 
+// ============================================================================
+// Tipos de Eventos
+// ============================================================================
+export interface InventoryEvent {
+  id?: number;
+  type: 'info' | 'warning' | 'error' | 'success';
+  frcNumber: string;
+  barcode: string;
+  productName: string;
+  batch: string;
+  expiryDate: string;
+  resolution: string;
+  status: 'active' | 'resolved' | 'dismissed';
+  createdAt: number;
+  updatedAt?: number;
+}
+
 export interface SystemLog {
   id?: number;
   level: 'info' | 'warn' | 'error' | 'success';
@@ -118,6 +135,7 @@ export class LogiCountDB extends Dexie {
   messageTemplates!: Table<MessageTemplate>;
   dynamic_data!: Table<DynamicRecord>;
   productProviders!: Table<ProductProvider>;
+  events!: Table<InventoryEvent>;
   blindScans!: Table<{
     id?: number;
     batchId: string;

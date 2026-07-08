@@ -2,17 +2,21 @@ import React, { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle, Info, X, Plus, Search,
-  Filter, Bell, Clock, User, MapPin, Package, ChevronRight, RefreshCw
+  Filter, Bell, Clock, User, MapPin, Package, ChevronRight, RefreshCw,
+  List, Upload
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { EventsImporter } from '../components/EventsImporter'
 
 // ============================================================================
 // Tipos
 // ============================================================================
 type EventType = 'info' | 'warning' | 'error' | 'success'
 type EventStatus = 'active' | 'resolved' | 'dismissed'
+type TabType = 'list' | 'import'
 
 interface EventRecord {
   id: string
@@ -25,6 +29,9 @@ interface EventRecord {
   userName?: string
   timestamp?: number
   status: EventStatus
+  batch?: string
+  expiryDate?: string
+  frcNumber?: string
 }
 
 // ============================================================================
@@ -132,18 +139,25 @@ const formatTimeAgo = (timestamp: number): string => {
 export const RedesignEventsPage: React.FC = () => {
   const [filter, setFilter] = useState<EventType | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<TabType>('list')
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // Datos de eventos (usando sessions como proxy ya que no hay tabla events)
+  // Datos de eventos
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
-    const sessions = await db.sessions.toArray()
-    return sessions.map(s => ({
-      id: s.id?.toString() || Math.random().toString(),
-      type: (s.sessionType === 'hammer' ? 'warning' : 'info') as EventType,
-      title: `Sesión ${s.sessionType || 'general'}`,
-      description: s.sessionType ? `Tipo: ${s.sessionType}` : '',
-      status: (s.syncStatus === 'synced' ? 'resolved' : 'active') as EventStatus
+    const eventsList = await db.events.toArray()
+    return eventsList.map(e => ({
+      id: e.id?.toString() || Math.random().toString(),
+      type: e.type as EventType,
+      title: e.productName || e.frcNumber || 'Evento',
+      description: e.resolution || '',
+      barcode: e.barcode,
+      batch: e.batch,
+      expiryDate: e.expiryDate,
+      frcNumber: e.frcNumber,
+      status: e.status as EventStatus,
+      timestamp: e.createdAt
     }))
-  }, [])
+  }, [refreshKey])
 
   // Filtrar
   const filtered = useMemo(() => {
@@ -169,8 +183,33 @@ export const RedesignEventsPage: React.FC = () => {
   }, [events])
 
   const handleDismiss = async (id: string) => {
-    // Implementar dismiss si hay tabla de eventos
     console.log('Dismiss event:', id)
+  }
+
+  const handleImportSave = async (parsedEvents: any[]) => {
+    try {
+      // Guardar en la tabla events
+      for (const event of parsedEvents) {
+        await db.events.add({
+          type: event.type,
+          frcNumber: event.frcNumber,
+          barcode: event.barcode,
+          productName: event.productName,
+          batch: event.batch,
+          expiryDate: event.expiryDate,
+          resolution: event.resolution,
+          status: 'active',
+          createdAt: Date.now()
+        })
+      }
+      
+      toast.success(`${parsedEvents.length} eventos importados exitosamente`)
+      setActiveTab('list')
+      setRefreshKey(k => k + 1)
+    } catch (err) {
+      console.error('Error guardando eventos:', err)
+      toast.error('Error al guardar eventos')
+    }
   }
 
   if (!events) {
@@ -194,9 +233,45 @@ export const RedesignEventsPage: React.FC = () => {
             </h1>
             <p className="text-secondary text-sm mt-2">Registro de incidencias y actividades.</p>
           </div>
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
-            <Plus className="w-4 h-4" />
-            Nuevo
+          <button 
+            onClick={() => setActiveTab(activeTab === 'list' ? 'import' : 'list')}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
+          >
+            {activeTab === 'list' ? (
+              <>
+                <Upload className="w-4 h-4" />
+                Importar
+              </>
+            ) : (
+              <>
+                <List className="w-4 h-4" />
+                Ver Lista
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 bg-surface rounded-xl border border-subtle max-w-xs">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={cn(
+              "flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors",
+              activeTab === 'list' ? 'bg-blue-600 text-white' : 'text-muted hover:text-white'
+            )}
+          >
+            <List className="w-4 h-4" />
+            Lista
+          </button>
+          <button
+            onClick={() => setActiveTab('import')}
+            className={cn(
+              "flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors",
+              activeTab === 'import' ? 'bg-blue-600 text-white' : 'text-muted hover:text-white'
+            )}
+          >
+            <Upload className="w-4 h-4" />
+            Importar
           </button>
         </div>
       </div>
@@ -204,53 +279,71 @@ export const RedesignEventsPage: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-24">
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {STATUS_ORDER.map(type => (
-              <StatCard key={type} type={type} count={stats[type]} />
-            ))}
-          </div>
-
-          {/* Search & Filter */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar eventos..."
-                className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setFilter('all')}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                  filter === 'all' ? 'bg-blue-600 text-white' : 'bg-surface text-secondary border border-subtle')}>
-                Todos
-              </button>
-              <button onClick={() => setFilter('error')}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                  filter === 'error' ? 'bg-rose-500 text-white' : 'bg-surface text-secondary border border-subtle')}>
-                Errores
-              </button>
-              <button onClick={() => setFilter('warning')}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                  filter === 'warning' ? 'bg-amber-500 text-white' : 'bg-surface text-secondary border border-subtle')}>
-                Alertas
-              </button>
-            </div>
-          </div>
-
-          {/* Events List */}
-          <div className="flex flex-col gap-2">
-            {filtered.length === 0 ? (
-              <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
-                <Bell className="w-12 h-12 text-muted mx-auto mb-4" />
-                <p className="text-sm text-muted">No hay eventos registrados</p>
+          {activeTab === 'list' ? (
+            <>
+              {/* Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {STATUS_ORDER.map(type => (
+                  <StatCard key={type} type={type} count={stats[type]} />
+                ))}
               </div>
-            ) : (
-              filtered.map(event => (
-                <EventRow key={event.id} event={event} onDismiss={handleDismiss} />
-              ))
-            )}
-          </div>
+
+              {/* Search & Filter */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar eventos..."
+                    className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setFilter('all')}
+                    className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+                      filter === 'all' ? 'bg-blue-600 text-white' : 'bg-surface text-secondary border border-subtle')}>
+                    Todos
+                  </button>
+                  <button onClick={() => setFilter('error')}
+                    className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+                      filter === 'error' ? 'bg-rose-500 text-white' : 'bg-surface text-secondary border border-subtle')}>
+                    Errores
+                  </button>
+                  <button onClick={() => setFilter('warning')}
+                    className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+                      filter === 'warning' ? 'bg-amber-500 text-white' : 'bg-surface text-secondary border border-subtle')}>
+                    Alertas
+                  </button>
+                </div>
+              </div>
+
+              {/* Events List */}
+              <div className="flex flex-col gap-2">
+                {filtered.length === 0 ? (
+                  <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
+                    <Bell className="w-12 h-12 text-muted mx-auto mb-4" />
+                    <p className="text-sm text-muted">No hay eventos registrados</p>
+                    <button 
+                      onClick={() => setActiveTab('import')}
+                      className="mt-4 text-blue-500 hover:text-blue-400 text-sm font-medium"
+                    >
+                      Importar eventos desde texto
+                    </button>
+                  </div>
+                ) : (
+                  filtered.map(event => (
+                    <EventRow key={event.id} event={event} onDismiss={handleDismiss} />
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Import Tab */}
+              <EventsImporter 
+                onSave={handleImportSave}
+                onCancel={() => setActiveTab('list')}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
