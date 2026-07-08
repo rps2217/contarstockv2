@@ -144,19 +144,25 @@ export const RedesignEventsPage: React.FC = () => {
 
   // Datos de eventos
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
-    const eventsList = await db.events.toArray()
-    return eventsList.map(e => ({
-      id: e.id?.toString() || Math.random().toString(),
-      type: e.type as EventType,
-      title: e.productName || e.frcNumber || 'Evento',
-      description: e.resolution || '',
-      barcode: e.barcode,
-      batch: e.batch,
-      expiryDate: e.expiryDate,
-      frcNumber: e.frcNumber,
-      status: e.status as EventStatus,
-      timestamp: e.createdAt
-    }))
+    try {
+      if (!db.events) return []
+      const eventsList = await db.events.toArray()
+      return eventsList.map(e => ({
+        id: e.id?.toString() || Math.random().toString(),
+        type: e.type as EventType,
+        title: e.productName || e.frcNumber || 'Evento',
+        description: e.resolution || '',
+        barcode: e.barcode,
+        batch: e.batch,
+        expiryDate: e.expiryDate,
+        frcNumber: e.frcNumber,
+        status: e.status as EventStatus,
+        timestamp: e.createdAt
+      }))
+    } catch (error) {
+      console.error('Error loading events:', error)
+      return []
+    }
   }, [refreshKey])
 
   // Filtrar
@@ -188,6 +194,10 @@ export const RedesignEventsPage: React.FC = () => {
 
   const handleImportSave = async (parsedEvents: any[]) => {
     try {
+      if (!db.events) {
+        toast.error('Tabla de eventos no disponible. Recarga la página.')
+        return
+      }
       // Guardar en la tabla events
       for (const event of parsedEvents) {
         await db.events.add({
