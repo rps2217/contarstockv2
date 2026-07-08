@@ -776,6 +776,9 @@ export const RedesignHammerPage: React.FC = () => {
 
   const [showStartModal, setShowStartModal] = useState(false)
   
+  // Estado para saber si debemos omitir el modal (viene de StartCountingModal)
+  const [skipModal, setSkipModal] = useState(false)
+  
   // Generar un batchId único si no se proporciona uno, para evitar recuperar datos de sesiones anteriores
   const [effectiveBatchId] = useState(() => {
     const paramBatchId = params.batchId;
@@ -798,16 +801,18 @@ export const RedesignHammerPage: React.FC = () => {
   useEffect(() => {
     // Verificar si skipModal está en la URL (viene de StartCountingModal)
     const urlParams = new URLSearchParams(window.location.search);
-    const skipModal = urlParams.get('skipModal') === 'true';
+    const shouldSkipModal = urlParams.get('skipModal') === 'true';
     
-    if (skipModal) {
+    if (shouldSkipModal) {
+      // Marcar que debemos omitir el modal
+      setSkipModal(true);
       // Limpiar el parámetro de la URL
-      const newUrl = window.location.pathname;
-      window.history.replaceState(null, '', newUrl);
+      window.history.replaceState(null, '', window.location.pathname);
       return; // No mostrar el modal
     }
 
-    if (params.batchId === effectiveBatchId) {
+    // Solo mostrar modal si NO estamos omitiéndolo
+    if (!skipModal && params.batchId === effectiveBatchId) {
       // Solo mostrar si es una sesión nueva sin datos
       HammerDbRepository.getBatchCounts(effectiveBatchId).then(counts => {
         if (counts.scans === 0 && counts.manifests === 0) {
@@ -815,7 +820,7 @@ export const RedesignHammerPage: React.FC = () => {
         }
       });
     }
-  }, [effectiveBatchId, params.batchId]);
+  }, [effectiveBatchId, params.batchId, skipModal]);
 
   // Manejar inicio desde el modal
   const handleStartFromModal = async (config: StartCountingConfig) => {
