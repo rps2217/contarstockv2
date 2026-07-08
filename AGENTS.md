@@ -714,3 +714,153 @@ Despues de deploy, verificar:
 1. `npm run test:run` pasa
 2. `npx tsc --noEmit` no tiene errores
 3. Feature visible en entorno de produccion
+
+---
+
+## Unificación de Módulos de Conteo (2026-07-08)
+
+### Objetivo
+Fusionar los módulos de conteo Hammer (modo ciego) y Counting (modo con carga teórica) en un flujo unificado.
+
+### Archivos Creados
+| Archivo | Descripción |
+|---------|-------------|
+| `src/features/counting/components/StartCountingModal.tsx` | Modal unificado de inicio con wizard |
+| `src/features/counting/components/TheoreticalLoadSelector.tsx` | Selector reutilizable de cargas teóricas |
+| `src/features/counting/components/index.ts` | Exports centralizados |
+| `src/features/counting/hooks/useCountingEngine.ts` | Hook de lógica centralizada |
+
+### Archivos Eliminados
+| Archivo | Razón |
+|---------|--------|
+| `src/features/hammer/components/LoadTheoreticalModal.tsx` | Código muerto, no se usaba |
+
+### Archivos Modificados
+| Archivo | Cambio |
+|---------|--------|
+| `src/features/counting/hooks/index.ts` | Agregados exports del nuevo hook |
+| `src/shared/components/redesign/pages/CountingPage.tsx` | Integrado el modal de inicio |
+| `src/shared/components/redesign/pages/HammerPage.tsx` | Integrado el modal de inicio |
+
+### Características del StartCountingModal
+- Selección visual entre "Conteo Ciego" y "Conteo con Carga Teórica"
+- Toggle opcional para registrar vencimiento en modo ciego
+- Selector de cargas teóricas con tabs (Locales / Nube / Stock)
+- Preview de la carga seleccionada con cantidad de SKUs
+- Indicador de pasos (wizard style)
+- Animaciones fluidas con framer-motion
+
+### API del useCountingEngine
+```typescript
+const {
+  isStarting,           // Estado de carga
+  currentSession,      // Sesión actual
+  startCounting,        // Iniciar conteo (config) => Promise<void>
+  resumeSession,         // Reanudar sesión (sessionId)
+  clearSession,         // Limpiar sesión
+  generateBatchId,      // Generar ID único
+  isBlindMode,          // Detectar modo ciego
+} = useCountingEngine();
+```
+
+### Flujo de Usuario
+```
+/counting (sin ID)
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Nuevo Conteo                               │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  ¿Qué tipo de conteo deseas realizar?                        │
+│                                                              │
+│  ┌──────────────────────────┐  ┌──────────────────────────┐ │
+│  │ 🥽 CONTEO CIEGO          │  │ 📋 CONTEO CON CARGA     │ │
+│  │    (modo ráfaga)         │  │    TEÓRICA              │ │
+│  └──────────────────────────┘  └──────────────────────────┘ │
+│                                                              │
+│  → Si Ciego: ¿Registrar vencimiento? (toggle)             │
+│  → Si Teórico: Seleccionar carga (Locales/Nube/Stock)        │
+│                                                              │
+│  [Cancelar]                              [Iniciar Conteo ▶] │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+/massive/HM-XXXXXXXX (modo ciego)
+    o
+/counting/session-uuid (modo teórico)
+```
+
+### Rutas Actuales
+- `/counting` → CountingPage (muestra modal de inicio)
+- `/counting/:id` → CountingPage (continúa sesión existente)
+- `/massive` → HammerPage (muestra modal de inicio)
+- `/massive/:batchId` → HammerPage (continúa sesión ciego)
+
+### TheoreticalLoadSelector - Componente Reutilizable
+Componente para seleccionar cargas teóricas (usado por StartCountingModal):
+```typescript
+import { TheoreticalLoadSelector } from '@/features/counting/components';
+
+<TheoreticalLoadSelector
+  selectedLoad={selectedLoad}
+  onSelectLoad={setSelectedLoad}
+  isLoading={false}
+  compact={false}
+/>
+```
+
+Props:
+- `selectedLoad`: SelectedLoad | null - Carga seleccionada
+- `onSelectLoad`: (load: SelectedLoad | null) => void
+- `isLoading`: boolean (opcional)
+- `compact`: boolean (opcional) - Modo compacto
+
+### useCountingEngine - API Completa
+```typescript
+const engine = useCountingEngine();
+
+// Estado
+engine.isStarting          // boolean - Cargando
+engine.currentSession       // CountingSessionInfo | null
+
+// Acciones
+engine.startCounting(config)    // Iniciar conteo
+engine.resumeSession(id)        // Reanudar sesión
+engine.clearSession()           // Limpiar sesión
+engine.generateBatchId()        // Generar ID único
+engine.isBlindMode(id)         // Detectar modo ciego
+
+// Hooks adicionales
+useActiveSessions()            // Sesiones activas (blind + theoretical)
+useSessionInfo(id)            // Info de una sesión
+```
+
+### syncConfig.ts - Abstracción de Configuración de Sync
+Archivo centralizado para configuración de sincronización:
+```typescript
+import { getSyncTableConfig, getTargetTable, isBlindSessionId, SYNC_CONSTANTS } from '@/lib/syncConfig';
+
+// Obtener tablas configuradas
+const tables = getSyncTableConfig();
+// { counts: 'CONTEOS', sessions: 'SESIONES_CONTEO', products: 'PRODUCTOS', orders: 'PEDIDOS' }
+
+// Obtener tabla específica
+const countsTable = getTargetTable('counts');
+
+// Verificar tipo de sesión
+isBlindSessionId('HM-12345678') // true
+isBlindSessionId('session-abc') // false
+
+// Constantes
+SYNC_CONSTANTS.BATCH_PREFIX      // 'HM-'
+SYNC_CONSTANTS.BATCH_SIZE        // 100
+SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS  // 24
+```
+
+### Próximos Pasos (Pendientes)
+1. ~~Refactorizar HammerPage ImportModal~~ - Mantenido por funcionalidad específica (preview items, sync status)
+2. ~~Refactorizar Sync Logic~~ - Creado `syncConfig.ts` con abstracción mínima compartida:
+   - `hammerSync.ts`: Migración de datos (hammerDb ↔ db)
+   - `useCountingSync.ts`: Sincronización realtime (Supabase ↔ db)
+   - `syncConfig.ts`: Configuración centralizada para tablas y constantes
+3. ~~Actualizar Sidebar~~ - Hecho: "Capturar" → "/counting"
+4. ~~Agregar tests unitarios~~ - Tests de contrato para useCountingEngine (22 tests)
+5. **UX Review** - Pendiente: Probar flujo completo en ambiente local

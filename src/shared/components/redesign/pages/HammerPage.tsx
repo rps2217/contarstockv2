@@ -7,7 +7,7 @@ import {
   Cloud, CloudOff, Volume2, VolumeX, Play,
   FileSpreadsheet, BarChart3, MapPin, Zap, RotateCcw, Printer,
   HardDrive, Loader2, Eye, ShoppingCart, Search, Calendar, 
-  ChevronRight, Package2, ListChecks, Wifi, WifiOff
+  ChevronRight, Package2, ListChecks, Wifi, WifiOff, ArrowLeft
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -27,6 +27,10 @@ import { db } from '@/db'
 import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal'
 import { formatTimeAgo } from '@/lib/date'
 import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpiryModal'
+
+// Importar modal de inicio unificado
+import { StartCountingModal, type StartCountingConfig } from '@/features/counting/components/StartCountingModal'
+import { useCountingEngine } from '@/features/counting/hooks/useCountingEngine'
 
 // ============================================================================
 // Componentes de UI
@@ -762,6 +766,12 @@ export const RedesignHammerPage: React.FC = () => {
   const navigate = useNavigate()
   const params = useParams()
   
+  // Hook del motor de conteo
+  const { startCounting, isStarting } = useCountingEngine()
+  
+  // Modal de inicio unificado
+  const [showStartModal, setShowStartModal] = useState(false)
+  
   // Generar un batchId único si no se proporciona uno, para evitar recuperar datos de sesiones anteriores
   const [effectiveBatchId] = useState(() => {
     const paramBatchId = params.batchId;
@@ -779,6 +789,29 @@ export const RedesignHammerPage: React.FC = () => {
       window.history.replaceState(null, '', `/massive/${effectiveBatchId}`);
     }
   }, [params.batchId, effectiveBatchId]);
+
+  // Mostrar modal de inicio cuando no hay batchId o es nuevo
+  useEffect(() => {
+    if (params.batchId === effectiveBatchId) {
+      // Solo mostrar si es una sesión nueva sin datos
+      HammerDbRepository.getBatchCounts(effectiveBatchId).then(counts => {
+        if (counts.scans === 0 && counts.manifests === 0) {
+          setShowStartModal(true);
+        }
+      });
+    }
+  }, [effectiveBatchId, params.batchId]);
+
+  // Manejar inicio desde el modal
+  const handleStartFromModal = async (config: StartCountingConfig) => {
+    if (config.mode === 'blind') {
+      // Modo ciego - ya estamos aquí, simplemente continuar
+      setShowStartModal(false);
+    } else {
+      // Modo teórico - redirigir a counting
+      await startCounting(config);
+    }
+  };
 
   const { settings, updateSetting } = useAppStore()
 
@@ -1470,6 +1503,13 @@ export const RedesignHammerPage: React.FC = () => {
           }}
         />
       )}
+
+      {/* Modal de Inicio Unificado */}
+      <StartCountingModal
+        isOpen={showStartModal}
+        onClose={() => setShowStartModal(false)}
+        onStart={handleStartFromModal}
+      />
     </div>
   )
 }
