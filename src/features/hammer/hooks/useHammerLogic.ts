@@ -7,6 +7,7 @@ import { HammerDbRepository } from '../../../repositories/HammerDbRepository';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { pushScansToCloud } from '../../../services/hammerSync';
 import { logger } from '../../../services/logger';
+import { expiryService } from '../../../services/ExpiryService';
 
 export interface HammerItem {
   barcode: string;
@@ -15,6 +16,13 @@ export interface HammerItem {
   totalQuantity: number;
   expectedQty?: number;
   lastTimestamp: number;
+}
+
+// Estado para modal de vencimiento
+export interface AwaitingExpiryState {
+  barcode: string;
+  name: string;
+  quantity: number;
 }
 
 export const useHammerLogic = (batchId: string) => {
@@ -32,10 +40,23 @@ export const useHammerLogic = (batchId: string) => {
   const retryCountRef = useRef(0);
   const MAX_RETRIES = 3;
 
+  // Setting para registrar fecha de vencimiento (default: false)
+  const [registerExpiry, setRegisterExpiry] = useState(() => {
+    return localStorage.getItem('hammer_register_expiry') === 'true';
+  });
+
+  // Estado para el modal de vencimiento
+  const [awaitingExpiry, setAwaitingExpiry] = useState<AwaitingExpiryState | null>(null);
+
   useEffect(() => {
     autoSyncRef.current = autoSyncEnabled;
     localStorage.setItem('hammer_auto_sync', autoSyncEnabled ? 'true' : 'false');
   }, [autoSyncEnabled]);
+
+  // Guardar setting de registerExpiry
+  useEffect(() => {
+    localStorage.setItem('hammer_register_expiry', registerExpiry ? 'true' : 'false');
+  }, [registerExpiry]);
   
   const [optimisticItems, setOptimisticItems] = useState<HammerItem[]>([]);
   const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
@@ -43,6 +64,12 @@ export const useHammerLogic = (batchId: string) => {
   const multiplierRef = useRef(1);
   const locationRef = useRef(currentLocation);
   const instantaneousQtyRef = useRef(new Map<string, number>());
+  const registerExpiryRef = useRef(registerExpiry);
+  
+  // Mantener ref actualizado
+  useEffect(() => {
+    registerExpiryRef.current = registerExpiry;
+  }, [registerExpiry]);
 
   useEffect(() => { multiplierRef.current = engine.multiplier; }, [engine.multiplier]);
   useEffect(() => { 
@@ -289,6 +316,15 @@ export const useHammerLogic = (batchId: string) => {
         writeQueue.current.push({ 
           barcode: cleanBarcode, qty: delta, loc: locationRef.current, ts 
         });
+        
+        // Si está habilitado registerExpiry, mostrar modal de vencimiento
+        if (registerExpiryRef.current) {
+          setAwaitingExpiry({
+            barcode: cleanBarcode,
+            name: product?.name || 'Producto',
+            quantity: delta,
+          });
+        }
       }
     );
   }, [processScan, batchId, engine.actions]);
@@ -306,6 +342,59 @@ export const useHammerLogic = (batchId: string) => {
     }
   };
 
+  // ========================================================================
+  // MANEJO DE VENCIMIENTO (EXPIRY)
+  // ========================================================================
+
+  /**
+   * Completa el registro de vencimiento para el item actual
+   * Si mm/yyyy son 0/9999, se omite el registro (onSkip)
+   */
+  const handleExpiryComplete = useCallback(async (mm: number, yyyy: number) => {
+    if (!awaitingExpiry) return;
+
+    // Si es 0/9999, es un "omitir" - no guardamos vencimiento
+    if (mm === 0 && yyyy === 9999) {
+      logger.info('HAMMER_EXPIRY_SKIP', `Omitido: ${awaitingExpiry.barcode}`);
+    } else {
+      // Guardar vencimiento usando ExpiryService
+      try {
+        await expiryService.save({
+          barcode: awaitingExpiry.barcode,
+          productName: awaitingExpiry.name,
+          mm,
+          yyyy,
+          quantity: awaitingExpiry.quantity,
+          sessionId: batchId,
+          location: currentLocation,
+        }, {
+          skipIfOutOfRange: false,
+          silent: true,
+        });
+        logger.info('HAMMER_EXPIRY_SAVED', `${awaitingExpiry.barcode} → ${mm}/${yyyy}`);
+      } catch (err) {
+        logger.error('HAMMER_EXPIRY_FAIL', String(err));
+      }
+    }
+
+    // Limpiar estado y continuar
+    setAwaitingExpiry(null);
+  }, [awaitingExpiry, batchId, currentLocation]);
+
+  /**
+   * Cancela el registro de vencimiento
+   * Elimina el scan que se había registrado
+   */
+  const handleExpiryCancel = useCallback(async () => {
+    if (!awaitingExpiry) return;
+
+    // Opcional: eliminar el scan asociado
+    await HammerDbRepository.deleteBlindScan(batchId, awaitingExpiry.barcode);
+    setOptimisticItems(prev => prev.filter(i => i.barcode !== awaitingExpiry.barcode));
+    setAwaitingExpiry(null);
+    engine.actions.triggerFeedback('error');
+  }, [awaitingExpiry, batchId, engine.actions]);
+
   return { 
     state: { 
       items: optimisticItems, 
@@ -317,8 +406,10 @@ export const useHammerLogic = (batchId: string) => {
       currentLocation,
       isSyncing,
       autoSyncEnabled,
-      pendingWrites, // Writes pendientes de guardar en BD
-      syncError // Error de sync si existe
+      registerExpiry,
+      awaitingExpiry,
+      pendingWrites,
+      syncError
     },
     actions: { 
       setMultiplier: engine.setMultiplier,
@@ -326,6 +417,7 @@ export const useHammerLogic = (batchId: string) => {
       registerScan, 
       syncToCloud,
       toggleAutoSync: () => setAutoSyncEnabled(p => !p),
+      toggleRegisterExpiry: () => setRegisterExpiry(p => !p),
       removeItem: async (barcode: string) => {
         if (barcode === 'ALL') {
           await HammerDbRepository.deleteBlindScansByBatch(batchId);
@@ -344,7 +436,9 @@ export const useHammerLogic = (batchId: string) => {
         const item = optimisticItems.find(i => i.barcode === b);
         const product = await productRepository.getById(b);
         engine.actions.updateActiveItem(b, product || null, item?.totalQuantity || 0, 0);
-      }
+      },
+      handleExpiryComplete,
+      handleExpiryCancel,
     }
   };
 };

@@ -26,6 +26,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal'
 import { formatTimeAgo } from '@/lib/date'
+import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpiryModal'
 
 // ============================================================================
 // Componentes de UI
@@ -143,12 +144,15 @@ interface ToolsSheetProps {
   isVoiceEnabled: boolean
   onToggleVoice: () => void
   hasManifestItems: boolean
+  registerExpiry: boolean
+  onToggleRegisterExpiry: () => void
 }
 
 const ToolsSheet: React.FC<ToolsSheetProps> = ({
   isOpen, onClose, location, onChangeLocation, onImport, onSync,
   onExport, onPrint, onReset, onStartTestCounting, isSyncing, autoSyncEnabled, 
-  onToggleAutoSync, isVoiceEnabled, onToggleVoice, hasManifestItems
+  onToggleAutoSync, isVoiceEnabled, onToggleVoice, hasManifestItems,
+  registerExpiry, onToggleRegisterExpiry
 }) => {
   return (
     <AnimatePresence>
@@ -269,6 +273,29 @@ const ToolsSheet: React.FC<ToolsSheetProps> = ({
                   <div className={cn(
                     'w-5 h-5 rounded-full bg-white transition-transform absolute top-1',
                     isVoiceEnabled ? 'translate-x-6' : 'translate-x-1'
+                  )} />
+                </button>
+              </div>
+
+              {/* Toggle de Registro de Vencimiento */}
+              <div className="flex items-center justify-between p-4 bg-surface rounded-xl">
+                <div className="flex items-center gap-3">
+                  <Calendar className={cn('w-5 h-5', registerExpiry ? 'text-amber-500' : 'text-muted')} />
+                  <div>
+                    <p className="font-medium text-primary">Registrar Vencimiento</p>
+                    <p className="text-xs text-muted">Solicitar fecha de caducidad</p>
+                  </div>
+                </div>
+                <button
+                  onClick={onToggleRegisterExpiry}
+                  className={cn(
+                    'w-12 h-7 rounded-full transition-colors relative',
+                    registerExpiry ? 'bg-amber-500' : 'bg-subtle'
+                  )}
+                >
+                  <div className={cn(
+                    'w-5 h-5 rounded-full bg-white transition-transform absolute top-1',
+                    registerExpiry ? 'translate-x-6' : 'translate-x-1'
                   )} />
                 </button>
               </div>
@@ -1268,6 +1295,8 @@ export const RedesignHammerPage: React.FC = () => {
         isVoiceEnabled={settings.ttsEnabled}
         onToggleVoice={() => updateSetting('ttsEnabled', !settings.ttsEnabled)}
         hasManifestItems={stats.hasExpected}
+        registerExpiry={state.registerExpiry}
+        onToggleRegisterExpiry={actions.toggleRegisterExpiry}
       />
 
       <ImportModal
@@ -1423,6 +1452,24 @@ export const RedesignHammerPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Fecha de Vencimiento (Hammer) */}
+      {state.awaitingExpiry && (
+        <TestModeExpiryModal
+          barcode={state.awaitingExpiry.barcode}
+          productName={state.awaitingExpiry.name}
+          onComplete={(data) => {
+            actions.handleExpiryComplete(data.mm, data.yyyy)
+          }}
+          onCancel={() => {
+            actions.handleExpiryCancel()
+          }}
+          onSkip={() => {
+            // Omitir - continuar sin registrar vencimiento
+            actions.handleExpiryComplete(0, 9999)
+          }}
+        />
+      )}
     </div>
   )
 }
