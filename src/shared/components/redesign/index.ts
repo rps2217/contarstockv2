@@ -12,6 +12,7 @@ export { useDbReady, safeDbOperation, safeCount } from './hooks/useDbReady';
 
 // Componentes
 export { DbLoader, DbError } from './components/DbLoader';
+export { EventsImporter } from './components/EventsImporter';
 
 // Re-exportar ThemeName para uso en componentes del rediseño
 export type { ThemeName } from './ThemeContext';
