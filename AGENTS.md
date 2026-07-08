@@ -535,3 +535,45 @@ const handleClearTheoreticalOnly = async () => {
 - Nuevo variant "success" con color verde
 - Prop `extraInfo` para mostrar información adicional
 - Icono personalizable con prop `icon`
+
+---
+
+## Registro Opcional de Vencimiento en Hammer (2026-07-07)
+
+### Problema Original
+El modo **Hammer** no solicitaba fecha de vencimiento al escanear, solo conteo rápido.
+
+### Solución Implementada
+Toggle en herramientas de Hammer para activar registro de vencimiento.
+
+### Archivos Modificados
+| Archivo | Cambio |
+|---------|--------|
+| `src/features/hammer/hooks/useHammerLogic.ts` | Estado `registerExpiry`, `awaitingExpiry`, funciones `handleExpiryComplete`, `handleExpiryCancel` |
+| `src/shared/components/redesign/pages/HammerPage.tsx` | Import `TestModeExpiryModal`, toggle UI, modal integrado |
+
+### Flujo de Uso
+1. Abrir **Herramientas** (⚙️) en Hammer
+2. Activar toggle **"Registrar Vencimiento"**
+3. Escanear productos → aparece modal para capturar `mm/yyyy`
+4. Guardar o **Omitir** (no registra vencimiento)
+5. Datos guardados en `expirations` (IndexedDB) vía `ExpiryService`
+
+### Datos Registrados
+```typescript
+{
+  barcode: string
+  productName: string
+  mm: number          // Mes
+  yyyy: number        // Año
+  quantity: number
+  sessionId: string   // batchId de Hammer
+  location: string    // Ubicación actual
+  status: 'valid' | 'warning' | 'expired' | 'critical'
+  timestamp: number
+  syncStatus: 'pending' | 'synced'
+}
+```
+
+### Commits
+- `80c44ede` - feat(hammer): Agregar registro opcional de fecha de vencimiento
