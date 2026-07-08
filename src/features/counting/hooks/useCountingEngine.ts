@@ -104,8 +104,8 @@ export const useCountingEngine = (): UseCountingEngineReturn => {
           createdAt: Date.now(),
         });
 
-        // Navegar al modo ciego
-        navigate(`/massive/${batchId}?expiry=${config.registerExpiry ? '1' : '0'}`);
+        // Navegar al modo ciego con flag para omitir modal de inicio
+        navigate(`/massive/${batchId}?expiry=${config.registerExpiry ? '1' : '0'}&skipModal=true`);
         
         toast.success('Conteo ciego iniciado', {
           description: config.registerExpiry 

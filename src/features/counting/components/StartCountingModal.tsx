@@ -4,16 +4,14 @@
  * Ofrece dos opciones principales:
  * 1. Conteo Ciego (ráfaga) - sin carga teórica
  * 2. Conteo con Carga Teórica - con listado esperado
- * 
- * Usa TheoreticalLoadSelector para la selección de cargas.
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye, EyeOff, FileText,
-  Calendar,
-  Check, ArrowRight
+  Calendar, Zap, ClipboardList,
+  Check, ArrowRight, X, ChevronLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/shared/components/ui/Modal';
@@ -41,7 +39,7 @@ interface StartCountingModalProps {
 }
 
 // ============================================================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL - DISEÑO SIMPLIFICADO
 // ============================================================================
 
 export const StartCountingModal: React.FC<StartCountingModalProps> = ({
@@ -49,35 +47,30 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
   onClose,
   onStart
 }) => {
-  const [step, setStep] = useState<'mode' | 'options'>('mode');
   const [mode, setMode] = useState<CountingMode>('blind');
   const [registerExpiry, setRegisterExpiry] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState<SelectedLoad | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
 
+  // Resetear estado al cerrar
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
-        setStep('mode');
         setMode('blind');
         setRegisterExpiry(false);
         setSelectedLoad(null);
+        setIsStarting(false);
       }, 300);
     }
   }, [isOpen]);
 
-  const handleModeSelect = (selectedMode: CountingMode) => {
-    setMode(selectedMode);
-    setStep('options');
-  };
+  const canProceed = mode === 'blind' || (mode === 'theoretical' && selectedLoad !== null);
 
-  const handleBack = () => {
-    setStep('mode');
-    setSelectedLoad(null);
-  };
+  const handleStart = useCallback(async () => {
+    if (!canProceed || isStarting) return;
 
-  const handleStart = async () => {
-    if (mode === 'theoretical' && !selectedLoad) return;
-
+    setIsStarting(true);
+    
     const config: StartCountingConfig = {
       mode,
       registerExpiry: mode === 'blind' ? registerExpiry : true,
@@ -86,320 +79,268 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
       theoreticalOrderName: mode === 'theoretical' ? selectedLoad?.name : undefined,
     };
 
-    // Primero marcar que estamos iniciando para evitar re-renderizados
-    const startPromise = onStart(config);
-    
-    // Cerrar el modal inmediatamente
-    onClose();
-    
-    // Esperar a que onStart complete (que puede incluir navegación)
     try {
-      await startPromise;
+      // Cerrar modal primero
+      onClose();
+      // Pequeño delay para que el modal se cierre visualmente
+      await new Promise(resolve => setTimeout(resolve, 100));
+      // Luego iniciar el conteo (que puede incluir navegación)
+      await onStart(config);
     } catch (error) {
       console.error('Error starting counting:', error);
+      setIsStarting(false);
     }
-  };
+  }, [canProceed, isStarting, mode, registerExpiry, selectedLoad, onClose, onStart]);
 
-  const getActionButtonText = () => {
+  const getButtonText = () => {
+    if (isStarting) return 'Iniciando...';
     if (mode === 'blind') {
       return registerExpiry ? 'Iniciar con vencimiento' : 'Iniciar conteo';
     }
     return selectedLoad ? `Iniciar con "${selectedLoad.name}"` : 'Selecciona una carga';
   };
 
-  const canProceed = mode === 'blind' || (mode === 'theoretical' && selectedLoad !== null);
-
-  const renderContent = () => {
-    if (step === 'mode') {
-      return (
-        <div className="space-y-6">
-          <p className="text-base text-secondary text-center">
-            Selecciona el tipo de conteo que deseas realizar
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ModeCard
-              icon={EyeOff}
-              iconColor="text-blue-400"
-              iconBg="bg-blue-500/10"
-              title="Conteo Ciego"
-              description="Conteo rápido sin carga teórica. Ideal para inventarios generales o conteos ráfaga."
-              isSelected={mode === 'blind'}
-              onClick={() => handleModeSelect('blind')}
-              badge="Rápido"
-              features={['Sin listado previo', 'Escaneo rápido', 'Sin comparación']}
-            />
-            <ModeCard
-              icon={FileText}
-              iconColor="text-amber-400"
-              iconBg="bg-amber-500/10"
-              title="Con Carga Teórica"
-              description="Comparar contra listado esperado. Muestra diferencias en tiempo real."
-              isSelected={mode === 'theoretical'}
-              onClick={() => handleModeSelect('theoretical')}
-              badge="Preciso"
-              features={['Con listado esperado', 'Comparación en vivo', 'Requiere vencimiento']}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors"
-        >
-          <ArrowRight className="w-4 h-4 rotate-180" />
-          Volver
-        </button>
-
-        {mode === 'blind' ? (
-          <BlindOptions
-            registerExpiry={registerExpiry}
-            onRegisterExpiryChange={setRegisterExpiry}
-          />
-        ) : (
-          <div className="space-y-4">
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center shrink-0">
-                  <FileText className="w-5 h-5 text-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-primary">Conteo con Carga Teórica</h3>
-                  <p className="text-xs text-secondary mt-1">
-                    Se compararán los escaneos contra el listado esperado.
-                    Se requerirá registro de fecha de vencimiento.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <TheoreticalLoadSelector
-              selectedLoad={selectedLoad}
-              onSelectLoad={setSelectedLoad}
-            />
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'mode' ? 'Nuevo Conteo' : mode === 'blind' ? 'Opciones de Conteo Ciego' : 'Seleccionar Carga Teórica'}
+      title="Nuevo Conteo"
       variant="center"
       size="xl"
-      className="bg-base max-w-2xl"
+      className="bg-base max-w-3xl"
     >
-      {/* Progress Steps */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className={cn(
-          'w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300',
-          step === 'mode' 
-            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
-            : 'bg-blue-500/20 text-blue-400'
-        )}>
-          {step === 'mode' ? '1' : <Check className="w-5 h-5" />}
-        </div>
-        <div className="flex-1 h-1.5 bg-elevated rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-400"
-            initial={{ width: '0%' }}
-            animate={{ width: step === 'mode' ? '50%' : '100%' }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-          />
-        </div>
-        <div className={cn(
-          'w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300',
-          step === 'options' 
-            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
-            : 'bg-elevated text-muted'
-        )}>
-          2
-        </div>
-      </div>
+      <div className="space-y-6">
+        {/* Descripción */}
+        <p className="text-center text-secondary">
+          Selecciona el tipo de conteo que deseas realizar
+        </p>
 
-      {/* Content */}
-      {renderContent()}
+        {/* Opciones principales */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Conteo Ciego */}
+          <button
+            onClick={() => setMode('blind')}
+            className={cn(
+              'relative p-6 rounded-2xl border-2 text-left transition-all duration-200',
+              'hover:scale-[1.01] active:scale-[0.99]',
+              mode === 'blind'
+                ? 'bg-blue-500/10 border-blue-500 shadow-lg shadow-blue-500/20'
+                : 'bg-surface border-subtle hover:border-blue-500/30 hover:bg-elevated'
+            )}
+          >
+            {mode === 'blind' && (
+              <div className="absolute top-3 right-3">
+                <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-start gap-4">
+              <div className={cn(
+                'w-14 h-14 rounded-xl flex items-center justify-center shrink-0',
+                mode === 'blind' ? 'bg-blue-500/20' : 'bg-blue-500/10'
+              )}>
+                <EyeOff className={cn('w-7 h-7', mode === 'blind' ? 'text-blue-400' : 'text-blue-400/60')} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className={cn('text-lg font-bold', mode === 'blind' ? 'text-blue-400' : 'text-primary')}>
+                    Conteo Ciego
+                  </h3>
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs font-medium rounded-full',
+                    mode === 'blind' ? 'bg-blue-500 text-white' : 'bg-blue-500/20 text-blue-400'
+                  )}>
+                    Rápido
+                  </span>
+                </div>
+                <p className="text-sm text-secondary">
+                  Sin carga teórica. Ideal para inventarios generales o conteos ráfaga.
+                </p>
+              </div>
+            </div>
 
-      {/* Footer Actions */}
-      <div className="flex gap-4 mt-8 pt-6 border-t border-subtle">
-        <button
-          onClick={onClose}
-          className="px-6 py-3.5 bg-surface hover:bg-elevated text-secondary rounded-xl font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleStart}
-          disabled={!canProceed}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold transition-all duration-200',
-            canProceed
-              ? 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-[0.98]'
-              : 'bg-elevated text-muted cursor-not-allowed'
+            {/* Características */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-elevated rounded-lg text-xs text-muted">
+                <Zap className="w-3 h-3" /> Sin listado
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-elevated rounded-lg text-xs text-muted">
+                <Eye className="w-3 h-3" /> Escaneo rápido
+              </span>
+            </div>
+          </button>
+
+          {/* Con Carga Teórica */}
+          <button
+            onClick={() => setMode('theoretical')}
+            className={cn(
+              'relative p-6 rounded-2xl border-2 text-left transition-all duration-200',
+              'hover:scale-[1.01] active:scale-[0.99]',
+              mode === 'theoretical'
+                ? 'bg-amber-500/10 border-amber-500 shadow-lg shadow-amber-500/20'
+                : 'bg-surface border-subtle hover:border-amber-500/30 hover:bg-elevated'
+            )}
+          >
+            {mode === 'theoretical' && (
+              <div className="absolute top-3 right-3">
+                <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-start gap-4">
+              <div className={cn(
+                'w-14 h-14 rounded-xl flex items-center justify-center shrink-0',
+                mode === 'theoretical' ? 'bg-amber-500/20' : 'bg-amber-500/10'
+              )}>
+                <FileText className={cn('w-7 h-7', mode === 'theoretical' ? 'text-amber-400' : 'text-amber-400/60')} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className={cn('text-lg font-bold', mode === 'theoretical' ? 'text-amber-400' : 'text-primary')}>
+                    Con Carga Teórica
+                  </h3>
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs font-medium rounded-full',
+                    mode === 'theoretical' ? 'bg-amber-500 text-white' : 'bg-amber-500/20 text-amber-400'
+                  )}>
+                    Preciso
+                  </span>
+                </div>
+                <p className="text-sm text-secondary">
+                  Comparar contra listado esperado. Muestra diferencias en tiempo real.
+                </p>
+              </div>
+            </div>
+
+            {/* Características */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-elevated rounded-lg text-xs text-muted">
+                <ClipboardList className="w-3 h-3" /> Con listado
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-elevated rounded-lg text-xs text-muted">
+                <Calendar className="w-3 h-3" /> Requiere vencimiento
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {/* Opciones específicas por modo */}
+        <AnimatePresence mode="wait">
+          {mode === 'blind' && (
+            <motion.div
+              key="blind-options"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="p-4 bg-surface border border-subtle rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-primary">Registrar vencimiento</p>
+                      <p className="text-xs text-secondary">
+                        Solicitar fecha de caducidad (mm/yyyy) al escanear
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={registerExpiry}
+                    onChange={setRegisterExpiry}
+                    size="lg"
+                  />
+                </div>
+                {registerExpiry && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <p className="text-sm text-amber-400 flex items-center gap-2">
+                      <span>ℹ️</span>
+                      Cada escaneo mostrará un campo para registrar el mes y año de vencimiento.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
-        >
-          {canProceed ? (
-            <>
-              {mode === 'blind' ? <Eye className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-              <span className="text-base">{getActionButtonText()}</span>
-              <ArrowRight className="w-5 h-5" />
-            </>
-          ) : (
-            'Selecciona una opción'
+
+          {mode === 'theoretical' && (
+            <motion.div
+              key="theoretical-options"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-primary">Conteo con Carga Teórica</h3>
+                      <p className="text-xs text-secondary mt-1">
+                        Se compararán los escaneos contra el listado esperado.
+                        Se requerirá registro de fecha de vencimiento.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <TheoreticalLoadSelector
+                  selectedLoad={selectedLoad}
+                  onSelectLoad={setSelectedLoad}
+                />
+              </div>
+            </motion.div>
           )}
-        </button>
+        </AnimatePresence>
+
+        {/* Botones de acción */}
+        <div className="flex gap-3 pt-4 border-t border-subtle">
+          <button
+            onClick={onClose}
+            className="px-5 py-3 bg-surface hover:bg-elevated text-secondary rounded-xl font-medium transition-colors"
+            disabled={isStarting}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleStart}
+            disabled={!canProceed || isStarting}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all',
+              canProceed && !isStarting
+                ? 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 text-white shadow-lg shadow-blue-500/30'
+                : 'bg-elevated text-muted cursor-not-allowed'
+            )}
+          >
+            {isStarting ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                />
+                Iniciando...
+              </>
+            ) : (
+              <>
+                {mode === 'blind' ? <Eye className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                {getButtonText()}
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </Modal>
   );
 };
-
-// ============================================================================
-// COMPONENTES INTERNOS
-// ============================================================================
-
-const ModeCard = ({
-  icon: Icon,
-  iconColor,
-  iconBg,
-  title,
-  description,
-  isSelected,
-  onClick,
-  badge,
-  features
-}: {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  title: string;
-  description: string;
-  isSelected: boolean;
-  onClick: () => void;
-  badge?: string;
-  features?: string[];
-}) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      'w-full p-6 rounded-2xl border-2 text-left transition-all duration-200',
-      'hover:scale-[1.01] active:scale-[0.99]',
-      isSelected
-        ? 'bg-blue-500/10 border-blue-500/50 shadow-lg shadow-blue-500/10'
-        : 'bg-surface border-subtle hover:border-blue-500/30 hover:bg-elevated'
-    )}
-  >
-    <div className="flex items-start gap-5">
-      <div className={cn(
-        'w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-colors',
-        iconBg,
-        isSelected && 'ring-2 ring-blue-500/30'
-      )}>
-        <Icon className={cn('w-8 h-8', iconColor)} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-2">
-          <h3 className={cn('text-xl font-bold', isSelected ? 'text-blue-400' : 'text-primary')}>
-            {title}
-          </h3>
-          {badge && (
-            <span className={cn(
-              'px-3 py-1 text-xs font-semibold rounded-full',
-              isSelected ? 'bg-blue-500 text-white' : 'bg-blue-500/20 text-blue-400'
-            )}>
-              {badge}
-            </span>
-          )}
-        </div>
-        <p className="text-sm text-secondary leading-relaxed">{description}</p>
-        
-        {/* Features list */}
-        {features && features.length > 0 && (
-          <ul className="mt-4 space-y-2">
-            {features.map((feature, idx) => (
-              <li key={idx} className="flex items-center gap-2 text-sm text-muted">
-                <div className={cn(
-                  'w-5 h-5 rounded-full flex items-center justify-center shrink-0',
-                  isSelected ? 'bg-blue-500/20 text-blue-400' : 'bg-elevated text-muted'
-                )}>
-                  <Check className="w-3 h-3" />
-                </div>
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className={cn(
-        'w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200',
-        isSelected 
-          ? 'bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30' 
-          : 'border-subtle hover:border-blue-500/30'
-      )}>
-        {isSelected && <Check className="w-4 h-4 text-white" />}
-      </div>
-    </div>
-  </button>
-);
-
-const BlindOptions = ({
-  registerExpiry,
-  onRegisterExpiryChange
-}: {
-  registerExpiry: boolean;
-  onRegisterExpiryChange: (value: boolean) => void;
-}) => (
-  <div className="space-y-5">
-    {/* Info Card */}
-    <div className="p-5 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-2xl">
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
-          <EyeOff className="w-7 h-7 text-blue-400" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-base font-bold text-primary">Conteo Ciego</h3>
-          <p className="text-sm text-secondary mt-1 leading-relaxed">
-            Se registrarán los productos escaneados sin comparar contra ningún listado.
-            Ideal para conteos rápidos o inventarios generales.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    {/* Expiry Toggle */}
-    <div className="p-5 bg-surface border border-subtle rounded-2xl hover:border-blue-500/30 transition-colors">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0">
-            <Calendar className="w-6 h-6 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-base font-semibold text-primary">Registrar vencimiento</p>
-            <p className="text-sm text-secondary">
-              Solicitar fecha de caducidad (mm/yyyy) al escanear
-            </p>
-          </div>
-        </div>
-        <Switch
-          checked={registerExpiry}
-          onChange={onRegisterExpiryChange}
-          size="lg"
-        />
-      </div>
-      {registerExpiry && (
-        <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-          <p className="text-sm text-amber-400 flex items-center gap-2">
-            <span className="text-base">⚠️</span>
-            Cada escaneo mostrará un campo para registrar el mes y año de vencimiento.
-          </p>
-        </div>
-      )}
-    </div>
-  </div>
-);
 
 export default StartCountingModal;
