@@ -112,20 +112,21 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
   const renderContent = () => {
     if (step === 'mode') {
       return (
-        <div className="space-y-4">
-          <p className="text-sm text-secondary text-center">
+        <div className="space-y-6">
+          <p className="text-base text-secondary text-center">
             Selecciona el tipo de conteo que deseas realizar
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ModeCard
               icon={EyeOff}
               iconColor="text-blue-400"
               iconBg="bg-blue-500/10"
               title="Conteo Ciego"
-              description="Conteo rápido sin carga teórica. Ideal para inventarios generales."
+              description="Conteo rápido sin carga teórica. Ideal para inventarios generales o conteos ráfaga."
               isSelected={mode === 'blind'}
               onClick={() => handleModeSelect('blind')}
               badge="Rápido"
+              features={['Sin listado previo', 'Escaneo rápido', 'Sin comparación']}
             />
             <ModeCard
               icon={FileText}
@@ -136,6 +137,7 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
               isSelected={mode === 'theoretical'}
               onClick={() => handleModeSelect('theoretical')}
               badge="Preciso"
+              features={['Con listado esperado', 'Comparación en vivo', 'Requiere vencimiento']}
             />
           </div>
         </div>
@@ -189,38 +191,45 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
       onClose={onClose}
       title={step === 'mode' ? 'Nuevo Conteo' : mode === 'blind' ? 'Opciones de Conteo Ciego' : 'Seleccionar Carga Teórica'}
       variant="center"
-      size="lg"
-      className="bg-base"
+      size="xl"
+      className="bg-base max-w-2xl"
     >
-      <div className="flex items-center gap-2 mb-6">
+      {/* Progress Steps */}
+      <div className="flex items-center gap-3 mb-8">
         <div className={cn(
-          'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors',
-          step === 'mode' ? 'bg-blue-500 text-white' : 'bg-blue-500/20 text-blue-400'
+          'w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300',
+          step === 'mode' 
+            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+            : 'bg-blue-500/20 text-blue-400'
         )}>
-          {step === 'mode' ? '1' : <Check className="w-4 h-4" />}
+          {step === 'mode' ? '1' : <Check className="w-5 h-5" />}
         </div>
-        <div className="flex-1 h-1 bg-elevated rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-elevated rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-blue-500"
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-400"
             initial={{ width: '0%' }}
             animate={{ width: step === 'mode' ? '50%' : '100%' }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
           />
         </div>
         <div className={cn(
-          'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors',
-          step === 'options' ? 'bg-blue-500 text-white' : 'bg-elevated text-muted'
+          'w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300',
+          step === 'options' 
+            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+            : 'bg-elevated text-muted'
         )}>
           2
         </div>
       </div>
 
+      {/* Content */}
       {renderContent()}
 
-      <div className="flex gap-3 mt-6 pt-4 border-t border-subtle">
+      {/* Footer Actions */}
+      <div className="flex gap-4 mt-8 pt-6 border-t border-subtle">
         <button
           onClick={onClose}
-          className="px-4 py-3 bg-surface hover:bg-elevated text-secondary rounded-xl font-medium transition-colors"
+          className="px-6 py-3.5 bg-surface hover:bg-elevated text-secondary rounded-xl font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           Cancelar
         </button>
@@ -228,16 +237,16 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
           onClick={handleStart}
           disabled={!canProceed}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all',
+            'flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold transition-all duration-200',
             canProceed
-              ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/30'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-[0.98]'
               : 'bg-elevated text-muted cursor-not-allowed'
           )}
         >
           {canProceed ? (
             <>
               {mode === 'blind' ? <Eye className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-              {getActionButtonText()}
+              <span className="text-base">{getActionButtonText()}</span>
               <ArrowRight className="w-5 h-5" />
             </>
           ) : (
@@ -261,7 +270,8 @@ const ModeCard = ({
   description,
   isSelected,
   onClick,
-  badge
+  badge,
+  features
 }: {
   icon: React.ElementType;
   iconColor: string;
@@ -271,37 +281,64 @@ const ModeCard = ({
   isSelected: boolean;
   onClick: () => void;
   badge?: string;
+  features?: string[];
 }) => (
   <button
     onClick={onClick}
     className={cn(
-      'w-full p-5 rounded-2xl border-2 text-left transition-all',
-      'hover:scale-[1.02] active:scale-[0.98]',
+      'w-full p-6 rounded-2xl border-2 text-left transition-all duration-200',
+      'hover:scale-[1.01] active:scale-[0.99]',
       isSelected
-        ? 'bg-blue-500/10 border-blue-500/50'
+        ? 'bg-blue-500/10 border-blue-500/50 shadow-lg shadow-blue-500/10'
         : 'bg-surface border-subtle hover:border-blue-500/30 hover:bg-elevated'
     )}
   >
-    <div className="flex items-start gap-4">
-      <div className={cn('w-14 h-14 rounded-xl flex items-center justify-center shrink-0', iconBg)}>
-        <Icon className={cn('w-7 h-7', iconColor)} />
+    <div className="flex items-start gap-5">
+      <div className={cn(
+        'w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-colors',
+        iconBg,
+        isSelected && 'ring-2 ring-blue-500/30'
+      )}>
+        <Icon className={cn('w-8 h-8', iconColor)} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h3 className={cn('text-lg font-bold', isSelected ? 'text-blue-400' : 'text-primary')}>
+        <div className="flex items-center gap-3 mb-2">
+          <h3 className={cn('text-xl font-bold', isSelected ? 'text-blue-400' : 'text-primary')}>
             {title}
           </h3>
           {badge && (
-            <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-medium rounded-full">
+            <span className={cn(
+              'px-3 py-1 text-xs font-semibold rounded-full',
+              isSelected ? 'bg-blue-500 text-white' : 'bg-blue-500/20 text-blue-400'
+            )}>
               {badge}
             </span>
           )}
         </div>
-        <p className="text-sm text-secondary mt-1">{description}</p>
+        <p className="text-sm text-secondary leading-relaxed">{description}</p>
+        
+        {/* Features list */}
+        {features && features.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {features.map((feature, idx) => (
+              <li key={idx} className="flex items-center gap-2 text-sm text-muted">
+                <div className={cn(
+                  'w-5 h-5 rounded-full flex items-center justify-center shrink-0',
+                  isSelected ? 'bg-blue-500/20 text-blue-400' : 'bg-elevated text-muted'
+                )}>
+                  <Check className="w-3 h-3" />
+                </div>
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className={cn(
-        'w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
-        isSelected ? 'bg-blue-500 border-blue-500' : 'border-subtle'
+        'w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200',
+        isSelected 
+          ? 'bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30' 
+          : 'border-subtle hover:border-blue-500/30'
       )}>
         {isSelected && <Check className="w-4 h-4 text-white" />}
       </div>
@@ -316,30 +353,33 @@ const BlindOptions = ({
   registerExpiry: boolean;
   onRegisterExpiryChange: (value: boolean) => void;
 }) => (
-  <div className="space-y-4">
-    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center shrink-0">
-          <EyeOff className="w-5 h-5 text-blue-400" />
+  <div className="space-y-5">
+    {/* Info Card */}
+    <div className="p-5 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-2xl">
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
+          <EyeOff className="w-7 h-7 text-blue-400" />
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-bold text-primary">Conteo Ciego</h3>
-          <p className="text-xs text-secondary mt-1">
+          <h3 className="text-base font-bold text-primary">Conteo Ciego</h3>
+          <p className="text-sm text-secondary mt-1 leading-relaxed">
             Se registrarán los productos escaneados sin comparar contra ningún listado.
             Ideal para conteos rápidos o inventarios generales.
           </p>
         </div>
       </div>
     </div>
-    <div className="p-4 bg-surface border border-subtle rounded-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-amber-500" />
+
+    {/* Expiry Toggle */}
+    <div className="p-5 bg-surface border border-subtle rounded-2xl hover:border-blue-500/30 transition-colors">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0">
+            <Calendar className="w-6 h-6 text-amber-500" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-primary">Registrar vencimiento</p>
-            <p className="text-xs text-secondary">
+            <p className="text-base font-semibold text-primary">Registrar vencimiento</p>
+            <p className="text-sm text-secondary">
               Solicitar fecha de caducidad (mm/yyyy) al escanear
             </p>
           </div>
@@ -347,12 +387,16 @@ const BlindOptions = ({
         <Switch
           checked={registerExpiry}
           onChange={onRegisterExpiryChange}
+          size="lg"
         />
       </div>
       {registerExpiry && (
-        <p className="text-xs text-amber-400 mt-3 pl-13">
-          ⚠️ Cada escaneo mostrará un campo para registrar el mes y año de vencimiento.
-        </p>
+        <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+          <p className="text-sm text-amber-400 flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            Cada escaneo mostrará un campo para registrar el mes y año de vencimiento.
+          </p>
+        </div>
       )}
     </div>
   </div>
