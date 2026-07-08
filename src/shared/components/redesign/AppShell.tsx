@@ -41,12 +41,12 @@ import { RedesignEventsPage } from './pages/EventsPage';
 import { RedesignCustomersPage } from './pages/CustomersPage';
 import { RedesignSuppliersPage } from './pages/SuppliersPage';
 import { RedesignCountingPage } from './pages/CountingPage';
-import { RedesignExpectedOrdersPage } from './pages/ExpectedOrdersPage';
+import { RedesignTheoreticalLoadsPage } from './pages/TheoreticalLoadsPage';
 import { RedesignReceptionPage } from './pages/ReceptionPage';
 import { RedesignDynamicPage } from './pages/DynamicPage';
 import { RedesignSlicesPage } from './pages/SlicesPage';
 
-type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events' | 'customers' | 'suppliers' | 'counting' | 'expected-orders' | 'reception' | 'dynamic' | 'slices';
+type ViewId = 'dashboard' | 'capture' | 'data' | 'expiry' | 'reports' | 'sync' | 'settings' | 'hammer' | 'events' | 'customers' | 'suppliers' | 'counting' | 'theoretical-loads' | 'reception' | 'dynamic' | 'slices';
 
 interface NavItem {
   id: ViewId;
@@ -72,7 +72,7 @@ const DESKTOP_NAV: NavItem[] = [
   { id: 'sync', label: 'Sync', icon: RefreshCw, badge: 3 },
   { id: 'hammer', label: 'Hammer', icon: Zap },
   { id: 'counting', label: 'Conteo', icon: ClipboardList },
-  { id: 'expected-orders', label: 'Órdenes', icon: Package },
+  { id: 'theoretical-loads', label: 'Cargas Teóricas', icon: Package },
   { id: 'reception', label: 'Recepciones', icon: Truck },
   { id: 'events', label: 'Eventos', icon: Bell },
   { id: 'customers', label: 'Clientes', icon: Users },
@@ -138,8 +138,8 @@ export const RedesignAppShell: React.FC<RedesignAppShellProps> = ({
         return <RedesignSuppliersPage />;
       case 'counting':
         return <RedesignCountingPage />;
-      case 'expected-orders':
-        return <RedesignExpectedOrdersPage />;
+      case 'theoretical-loads':
+        return <RedesignTheoreticalLoadsPage />;
       case 'reception':
         return <RedesignReceptionPage />;
       case 'dynamic':

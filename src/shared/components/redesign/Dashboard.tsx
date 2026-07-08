@@ -24,7 +24,6 @@ import {
   Scissors,
   Layers,
   Loader2,
-  ShoppingCart,
   ClipboardList,
   Bell,
   Settings,
@@ -469,14 +468,6 @@ export const RedesignDashboard: React.FC = () => {
               icon={BarChart3}
               delay={0.35}
               onClick={() => navigate('/reports')}
-            />
-
-            <ActionCard
-              title="Órdenes"
-              description="Gestiona órdenes de compra y recepción."
-              icon={ShoppingCart}
-              delay={0.4}
-              onClick={() => navigate('/expected-orders')}
             />
 
             <ActionCard

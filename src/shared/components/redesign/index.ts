@@ -31,7 +31,6 @@ export { RedesignSlicesPage } from './pages/SlicesPage';
 export { RedesignTheoreticalLoadsPage } from './pages/TheoreticalLoadsPage';
 export { RedesignInventoryPage } from './pages/InventoryPage';
 export { RedesignAuditPage } from './pages/AuditPage';
-export { RedesignExpectedOrdersPage } from './pages/ExpectedOrdersPage';
 export { RedesignReceptionPage } from './pages/ReceptionPage';
 export { RedesignDynamicPage } from './pages/DynamicPage';
 export { RedesignCountingPage } from './pages/CountingPage';

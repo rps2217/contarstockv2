@@ -17,7 +17,6 @@ export { RedesignAuditPage } from './AuditPage';
 export { RedesignCapturePage } from './CapturePage';
 export { RedesignDataPage } from './DataPage';
 export { RedesignDynamicPage } from './DynamicPage';
-export { RedesignExpectedOrdersPage } from './ExpectedOrdersPage';
 export { RedesignHammerPage } from './HammerPage';
 export { RedesignReceptionPage } from './ReceptionPage';
 export { RedesignSlicesPage } from './SlicesPage';

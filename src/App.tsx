@@ -56,7 +56,6 @@ const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign')
 const SuppliersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage })));
 const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
 const CountingPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCountingPage })));
-const ExpectedOrdersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpectedOrdersPage })));
 const ReceptionPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReceptionPage })));
 const DynamicPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDynamicPage })));
 
@@ -331,7 +330,6 @@ const AppContent = () => {
               SuppliersPage={SuppliersPage}
               SlicesPage={SlicesPage}
               CountingPage={CountingPage}
-              ExpectedOrdersPage={ExpectedOrdersPage}
               ReceptionPage={ReceptionPage}
               DynamicPage={DynamicPage}
               HammerPage={HammerPage}
@@ -399,7 +397,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
   const { 
     CapturePage, DataPage, SyncPage, ReportsLegacy, ExpiryPage, 
     SettingsPage, CustomersPage, SuppliersPage, SlicesPage, 
-    CountingPage, ExpectedOrdersPage, ReceptionPage, DynamicPage,
+    CountingPage, ReceptionPage, DynamicPage,
     HammerPage, TheoreticalLoadsPage, InventoryPage, AuditPage,
     ThemeDemoPage, RedesignPreviewPage 
   } = pages;
@@ -428,7 +426,6 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       <Route path="/events" element={<ReportsLegacy />} />
       <Route path="/reception" element={<ReceptionPage />} />
       <Route path="/reception/:id" element={<ReceptionPage />} />
-      <Route path="/expected-orders" element={<ExpectedOrdersPage />} />
       <Route path="/dynamic" element={<DynamicPage />} />
       <Route path="/dynamic/:tableKey" element={<DynamicPage />} />
 
