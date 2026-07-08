@@ -20,7 +20,7 @@ import { ROLE_LABELS, UserRole } from '@/stores';
 import { toast } from 'sonner';
 
 export const RoleSettings: React.FC<{ className?: string }> = ({ className }) => {
-  const { role, setRole, isEnabled, enable, disable, user } = usePermissions();
+  const { role, setRole, isEnabled, user } = usePermissions();
   const [expandedSection, setExpandedSection] = useState<string | null>('current');
   const [selectedRole, setSelectedRole] = useState<UserRole>(role);
 
@@ -59,15 +59,11 @@ export const RoleSettings: React.FC<{ className?: string }> = ({ className }) =>
             </p>
           </div>
         </div>
-        <button
-          onClick={() => isEnabled ? disable() : enable()}
-          className={cn('relative w-12 h-6 rounded-full transition-colors', isEnabled ? 'bg-blue-500' : 'bg-elevated')}
-        >
-          <motion.div className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
-            animate={{ left: isEnabled ? 28 : 4 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        <div className={cn('relative w-12 h-6 rounded-full transition-colors', isEnabled ? 'bg-blue-500' : 'bg-elevated')}>
+          <div className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+            style={{ left: isEnabled ? 28 : 4 }}
           />
-        </button>
+        </div>
       </div>
 
       <div className="border border-subtle rounded-xl overflow-hidden">

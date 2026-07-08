@@ -21,10 +21,14 @@ export type AuditAction =
   | 'import'
   | 'permission_change'
   | 'settings_change'
+  | 'approve'
+  | 'reject'
+  | 'submit'
+  | 'cancel'
   | 'error'
   | 'custom';
 
-export type AuditSeverity = 'info' | 'warning' | 'error' | 'critical';
+export type AuditSeverity = 'info' | 'warning' | 'error' | 'critical' | 'success';
 
 export interface AuditLog {
   id: string;
@@ -47,7 +51,7 @@ export interface AuditLog {
   synced: boolean;
 }
 
-interface AuditFilters {
+export interface AuditFilters {
   action?: AuditAction;
   entityType?: string;
   entityId?: string;
@@ -195,6 +199,10 @@ export const useAuditStore = create<AuditState>()(
           import: 0,
           permission_change: 0,
           settings_change: 0,
+          approve: 0,
+          reject: 0,
+          submit: 0,
+          cancel: 0,
           error: 0,
           custom: 0,
         };
@@ -218,6 +226,7 @@ export const useAuditStore = create<AuditState>()(
           warning: 0,
           error: 0,
           critical: 0,
+          success: 0,
         };
 
         logs.forEach((l) => {

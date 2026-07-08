@@ -319,7 +319,6 @@ const InventoryPage: React.FC = () => {
             title="Sin productos"
             description="No hay productos registrados"
             icon={<Package className="w-8 h-8" />}
-            isDark={isDark}
           />
         ) : viewMode === 'kanban' ? (
           <InventoryKanbanView 

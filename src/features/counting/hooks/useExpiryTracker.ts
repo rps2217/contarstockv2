@@ -73,11 +73,13 @@ export const useExpiryTracker = () => {
    */
   const syncExpiry = useCallback(async (entry: LegacySyncParams) => {
     try {
-      await enqueueSync({
-        type: 'expiry',
-        action: 'upsert',
-        data: entry,
-      });
+      await enqueueSync(
+        'expirations',
+        entry.claveUnica,
+        entry.barcode || entry.claveUnica,
+        'update',
+        entry
+      );
       
       // Actualizar estado de sincronización
       const existing = await db.expirations.where('claveUnica').equals(entry.claveUnica).first();

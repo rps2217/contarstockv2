@@ -41,7 +41,8 @@ export function useScanner(options: UseScannerOptions = {}): UseScannerReturn {
   const [isScanning, setIsScanning] = useState(false);
   const lastScanTime = useRef<number>(0);
 
-  const { startListening, stopListening } = useHIDScanner({
+  // useHIDScanner maneja internamente el listener
+  useHIDScanner({
     onScan: (barcode) => {
       if (barcode.length >= minLength) {
         if (prefix && !barcode.startsWith(prefix)) return;
@@ -54,7 +55,7 @@ export function useScanner(options: UseScannerOptions = {}): UseScannerReturn {
         onScan?.(barcode);
       }
     },
-    enabled: enableHID,
+    isEnabled: enableHID,
   });
 
   const scan = useCallback((barcode: string) => {
@@ -62,17 +63,15 @@ export function useScanner(options: UseScannerOptions = {}): UseScannerReturn {
       setLastBarcode(barcode);
       onScan?.(barcode);
     }
-  }, [prefix, minLength, onScan]);
+  }, [minLength, onScan]);
 
   const startListeningCallback = useCallback(() => {
     setIsScanning(true);
-    if (enableHID) startListening();
-  }, [enableHID, startListening]);
+  }, []);
 
   const stopListeningCallback = useCallback(() => {
     setIsScanning(false);
-    if (enableHID) stopListening();
-  }, [enableHID, stopListening]);
+  }, []);
 
   useEffect(() => {
     return () => { stopListeningCallback(); };

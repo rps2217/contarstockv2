@@ -12,7 +12,15 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { db } from '@/db';
 import { useTaskStore } from '@/stores';
 import { toast } from 'sonner';
-import { BulkHistoryEntry, BulkUndoContext } from '../useBulkActionsAdvanced';
+import { BulkHistoryEntry } from '@/db';
+
+export interface BulkUndoContext<T = any> {
+  entry: BulkHistoryEntry;
+  items: T[];
+  previousValues: Map<string, any>;
+  timestamp: number;
+  undoAction?: () => Promise<void>;
+}
 
 const UNDO_TIMEOUT = 30000; // 30 segundos para deshacer
 
@@ -251,7 +259,9 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
           await configRef.current.onUndoAction(entry, items);
         }
       },
-      items
+      items,
+      previousValues: new Map(),
+      timestamp: Date.now(),
     });
   }, []);
 

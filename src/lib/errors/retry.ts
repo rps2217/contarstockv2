@@ -8,7 +8,6 @@ export {
   withRetry,
   sleep,
   calculateBackoff,
-  retryable,
   isRetryableError,
   withSyncRetry,
   withCircuitBreaker,

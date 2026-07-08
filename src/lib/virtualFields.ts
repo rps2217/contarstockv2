@@ -119,9 +119,10 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     type: 'number',
     priority: 3,
     compute: (product, context) => {
-      if (!product.expiryDate) return null;
+      const expiryDate = (product as unknown as Record<string, unknown>).expiryDate;
+      if (!expiryDate) return null;
       const today = context?.today || new Date();
-      const expiry = new Date(product.expiryDate);
+      const expiry = new Date(expiryDate as string);
       const diff = expiry.getTime() - today.getTime();
       return Math.ceil(diff / (1000 * 60 * 60 * 24));
     },

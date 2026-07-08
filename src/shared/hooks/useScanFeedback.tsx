@@ -1,14 +1,14 @@
 "use client";
 /**
  * useScanFeedback - Feedback visual, auditivo y háptico para operaciones de escaneo
- * 
+ *
  * Proporciona:
  * - Feedback visual con colores animados
  * - Sonidos cortos (opcional)
  * - Vibración háptica en móviles
  */
 
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { toast } from 'sonner';
 
 export type ScanFeedbackType = 'success' | 'error' | 'warning' | 'info';
@@ -24,44 +24,43 @@ const FEEDBACK_CONFIG = {
   success: {
     color: 'emerald',
     icon: '✓',
-    sound: 200, // Hz
-    vibration: [50], // ms
+    sound: 200,
+    vibration: [50],
     toastMessage: 'Registrado correctamente',
   },
   error: {
     color: 'rose',
     icon: '✗',
-    sound: 400, // Hz
-    vibration: [100, 50, 100], // patrón
+    sound: 400,
+    vibration: [100, 50, 100],
     toastMessage: 'Error al procesar',
   },
   warning: {
     color: 'amber',
     icon: '⚠',
-    sound: 300, // Hz
+    sound: 300,
     vibration: [50, 30, 50],
     toastMessage: 'Atención requerida',
   },
   info: {
     color: 'blue',
     icon: 'ℹ',
-    sound: 500, // Hz
+    sound: 500,
     vibration: [30],
     toastMessage: 'Información',
   },
 };
 
-// Audio context para generar sonidos
 let audioContext: AudioContext | null = null;
 
-const getAudioContext = () => {
+const getAudioContext = (): AudioContext | null => {
   if (!audioContext && typeof window !== 'undefined') {
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   }
   return audioContext;
 };
 
-const playBeep = (frequency: number, duration: number = 100) => {
+const playBeep = (frequency: number, duration: number = 100): void => {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -80,17 +79,17 @@ const playBeep = (frequency: number, duration: number = 100) => {
 
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + duration / 1000);
-  } catch (e) {
-    console.warn('Audio feedback not available:', e);
+  } catch {
+    console.warn('Audio feedback not available');
   }
 };
 
-const vibrate = (pattern: number | number[]) => {
+const vibrate = (pattern: number | number[]): void => {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
     try {
       navigator.vibrate(pattern);
-    } catch (e) {
-      console.warn('Vibration not available:', e);
+    } catch {
+      console.warn('Vibration not available');
     }
   }
 };
@@ -100,7 +99,7 @@ export function useScanFeedback() {
     type: ScanFeedbackType,
     customMessage?: string,
     options: ScanFeedbackOptions = {}
-  ) => {
+  ): ScanFeedbackType => {
     const {
       enableSound = true,
       enableVibration = true,
@@ -109,20 +108,17 @@ export function useScanFeedback() {
 
     const config = FEEDBACK_CONFIG[type];
 
-    // Feedback háptico
     if (enableVibration) {
       vibrate(config.vibration);
     }
 
-    // Feedback auditivo
     if (enableSound) {
       playBeep(config.sound, 100);
     }
 
-    // Toast (opcional, para casos especiales)
     if (showToast) {
       const message = customMessage || config.toastMessage;
-      
+
       switch (type) {
         case 'success':
           toast.success(message, { duration: 2000 });
@@ -141,20 +137,19 @@ export function useScanFeedback() {
     return type;
   }, []);
 
-  // Métodos shortcuts para casos comunes
-  const scanSuccess = useCallback((message?: string, options?: ScanFeedbackOptions) => {
+  const scanSuccess = useCallback((message?: string, options?: ScanFeedbackOptions): ScanFeedbackType => {
     return provideFeedback('success', message, options);
   }, [provideFeedback]);
 
-  const scanError = useCallback((message?: string, options?: ScanFeedbackOptions) => {
+  const scanError = useCallback((message?: string, options?: ScanFeedbackOptions): ScanFeedbackType => {
     return provideFeedback('error', message, options);
   }, [provideFeedback]);
 
-  const scanWarning = useCallback((message?: string, options?: ScanFeedbackOptions) => {
+  const scanWarning = useCallback((message?: string, options?: ScanFeedbackOptions): ScanFeedbackType => {
     return provideFeedback('warning', message, options);
   }, [provideFeedback]);
 
-  const scanInfo = useCallback((message?: string, options?: ScanFeedbackOptions) => {
+  const scanInfo = useCallback((message?: string, options?: ScanFeedbackOptions): ScanFeedbackType => {
     return provideFeedback('info', message, options);
   }, [provideFeedback]);
 
@@ -167,9 +162,6 @@ export function useScanFeedback() {
     FEEDBACK_CONFIG,
   };
 }
-
-// Componente para feedback visual inline
-import React from 'react';
 
 interface ScanFeedbackProps {
   type: ScanFeedbackType | null;
@@ -189,33 +181,19 @@ export const ScanFeedback: React.FC<ScanFeedbackProps> = ({
       const timer = setTimeout(onClear, duration);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [type, onClear, duration]);
 
   if (!type) return null;
 
   const config = FEEDBACK_CONFIG[type];
 
-  const colorClasses = {
-    success: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400',
-    error: 'bg-rose-500/20 border-rose-500/50 text-rose-400',
-    warning: 'bg-amber-500/20 border-amber-500/50 text-amber-400',
-    info: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
-  };
-
   return (
     <div
-      className={`
-        fixed top-24 left-1/2 -translate-x-1/2 z-50
-        px-6 py-3 rounded-full border-2
-        flex items-center gap-3
-        animate-in fade-in slide-in-from-top-4
-        ${colorClasses[type]}
-      `}
+      className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg bg-${config.color}-500 text-white animate-pulse`}
     >
-      <span className="text-2xl">{config.icon}</span>
-      <span className="font-semibold">
-        {message || config.toastMessage}
-      </span>
+      <span className="mr-2">{config.icon}</span>
+      {message || config.toastMessage}
     </div>
   );
 };

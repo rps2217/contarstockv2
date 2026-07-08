@@ -301,7 +301,7 @@ export const RedesignCountingPage: React.FC = () => {
         {/* Items List - Usa componente refactorizado */}
         <CountingGrid
           items={sessionData.history}
-          activeBarcode={state.activeBarcode}
+          activeBarcode={state.activeBarcode ?? undefined}
           onItemClick={actions.selectItem}
           onEditExpiry={handleEditExpiryFromGrid}
         />

@@ -68,7 +68,7 @@ export class PushNotificationService {
   private static instance: PushNotificationService;
   private config: PushNotificationConfig;
   private checkIntervalId: ReturnType<typeof setInterval> | null = null;
-  private isSupported: boolean;
+  isSupported: boolean;
 
   private constructor() {
     this.config = this.loadConfig();
@@ -80,6 +80,10 @@ export class PushNotificationService {
       PushNotificationService.instance = new PushNotificationService();
     }
     return PushNotificationService.instance;
+  }
+
+  getIsSupported(): boolean {
+    return this.isSupported;
   }
 
   // ==========================================================================

@@ -32,7 +32,7 @@ export interface AuditExportOptions {
  * Fila de exportación
  */
 interface ExportRow {
-  ID: number;
+  ID: string | number;
   Timestamp: string;
   Date: string;
   Time: string;
@@ -109,6 +109,9 @@ function getActionLabel(action: AuditAction): string {
     reject: 'Rechazar',
     submit: 'Enviar',
     cancel: 'Cancelar',
+    custom: 'Personalizada',
+    permission_change: 'Cambio de permisos',
+    settings_change: 'Cambio de configuración',
   };
   return labels[action] || action;
 }
@@ -174,15 +177,15 @@ function transformToExportRow(log: AuditLog, options: AuditExportOptions): Expor
     Time: formatTime(timestamp),
     User: log.userId || 'Sistema',
     Action: getActionLabel(log.action),
-    Table: log.tableName || '-',
-    Record: log.recordId || '-',
+    Table: log.entityType || '-',
+    Record: log.entityId || '-',
     Severity: getSeverityLabel(log.severity || 'info'),
-    Details: formatDetails(log.details),
+    Details: formatDetails(log.description),
   };
 
   // Incluir cambios si está habilitado
   if (options.includeChanges && log.changes) {
-    baseRow.OldValue = formatChanges(log.changes);
+    baseRow.OldValue = formatChanges(log.changes as Record<string, { old: any; new: any }> | undefined);
     baseRow.NewValue = '';
   }
 
@@ -357,7 +360,7 @@ export function generateAuditSummary(
 
   // Contar por tabla
   const byTable = logs.reduce((acc, log) => {
-    const table = log.tableName || 'unknown';
+    const table = log.entityType || 'unknown';
     acc[table] = (acc[table] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);

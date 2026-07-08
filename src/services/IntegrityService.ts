@@ -157,7 +157,7 @@ export class IntegrityService {
             table: 'expirations',
             description: `Clave única "${clave}" tiene ${records.length} duplicados`,
             count: records.length,
-            sampleRecords: records.slice(0, maxSamples) as Record<string, unknown>[],
+            sampleRecords: records.slice(0, maxSamples) as unknown as Record<string, unknown>[],
             suggestion: 'Considerar fusionar registros o eliminar duplicados',
             timestamp: Date.now(),
           });
@@ -176,7 +176,7 @@ export class IntegrityService {
           table: 'expirations',
           description: `${orphanExpirations.length} vencimientos sin barcode válido`,
           count: orphanExpirations.length,
-          sampleRecords: orphanExpirations.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: orphanExpirations.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Revisar y eliminar o corregir registros sin barcode',
           timestamp: Date.now(),
         });
@@ -194,7 +194,7 @@ export class IntegrityService {
           table: 'expirations',
           description: `${invalidDates.length} vencimientos con fecha fuera del rango válido (2024-2027)`,
           count: invalidDates.length,
-          sampleRecords: invalidDates.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: invalidDates.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Corregir fechas de vencimiento',
           timestamp: Date.now(),
         });
@@ -250,7 +250,7 @@ export class IntegrityService {
           table: 'scans',
           description: `${orphanScans.length} scans sin session asociada`,
           count: orphanScans.length,
-          sampleRecords: orphanScans.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: orphanScans.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Asociar scans a sesiones o eliminar los huérfanos',
           timestamp: Date.now(),
         });
@@ -268,7 +268,7 @@ export class IntegrityService {
           table: 'scans',
           description: `${invalidBarcodeScans.length} scans con barcode inválido`,
           count: invalidBarcodeScans.length,
-          sampleRecords: invalidBarcodeScans.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: invalidBarcodeScans.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Revisar y corregir barcodes',
           timestamp: Date.now(),
         });
@@ -286,7 +286,7 @@ export class IntegrityService {
           table: 'scans',
           description: `${invalidQuantity.length} scans con cantidad inválida`,
           count: invalidQuantity.length,
-          sampleRecords: invalidQuantity.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: invalidQuantity.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Corregir cantidades a valores válidos (1-99999)',
           timestamp: Date.now(),
         });
@@ -317,7 +317,7 @@ export class IntegrityService {
           table: 'products',
           description: `${unnamedProducts.length} productos sin nombre válido`,
           count: unnamedProducts.length,
-          sampleRecords: unnamedProducts.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: unnamedProducts.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Revisar y corregir nombres de productos',
           timestamp: Date.now(),
         });
@@ -343,7 +343,7 @@ export class IntegrityService {
             table: 'products',
             description: `Barcode "${barcode}" tiene ${records.length} productos duplicados`,
             count: records.length,
-            sampleRecords: records.slice(0, maxSamples) as Record<string, unknown>[],
+            sampleRecords: records.slice(0, maxSamples) as unknown as Record<string, unknown>[],
             suggestion: 'Mantener un solo registro por barcode',
             timestamp: Date.now(),
           });
@@ -362,7 +362,7 @@ export class IntegrityService {
           table: 'products',
           description: `${invalidPrices.length} productos con precio negativo`,
           count: invalidPrices.length,
-          sampleRecords: invalidPrices.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: invalidPrices.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Corregir precios a valores positivos',
           timestamp: Date.now(),
         });
@@ -393,7 +393,7 @@ export class IntegrityService {
           table: 'sessions',
           description: `${noOrderSessions.length} sesiones sin orden ERP`,
           count: noOrderSessions.length,
-          sampleRecords: noOrderSessions.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: noOrderSessions.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Considerar asignar orden ERP a estas sesiones',
           timestamp: Date.now(),
         });
@@ -444,7 +444,7 @@ export class IntegrityService {
           table: 'syncQueue',
           description: `${failedOperations.length} operaciones con 3+ reintentos fallidos`,
           count: failedOperations.length,
-          sampleRecords: failedOperations.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: failedOperations.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Revisar errores y решить si reintentar o eliminar',
           timestamp: Date.now(),
         });
@@ -463,7 +463,7 @@ export class IntegrityService {
           table: 'syncQueue',
           description: `${oldOperations.length} operaciones pendientes por más de 24 horas`,
           count: oldOperations.length,
-          sampleRecords: oldOperations.slice(0, maxSamples) as Record<string, unknown>[],
+          sampleRecords: oldOperations.slice(0, maxSamples) as unknown as Record<string, unknown>[],
           suggestion: 'Verificar conexión y reintentar sincronización',
           timestamp: Date.now(),
         });

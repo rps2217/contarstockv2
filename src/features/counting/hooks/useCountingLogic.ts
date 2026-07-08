@@ -71,19 +71,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
   // ✅ AUTO-SAVE: Recuperar datos si hay sesión anterior
   const { recoveredData, clearRecovery } = useAutoSaveRecovery<CountingSessionSnapshot>(autoSaveKey);
 
-  // ✅ AUTO-SAVE: Guardar cuando hay cambios en los items
-  useEffect(() => {
-    if (sessionId && consolidatedHistory) {
-      const snapshot: CountingSessionSnapshot = {
-        sessionId,
-        items: consolidatedHistory,
-        currentLocation,
-        multiplier: engine.multiplier,
-        timestamp: Date.now(),
-      };
-      saveData(snapshot, sessionId);
-    }
-  }, [sessionId, consolidatedHistory, currentLocation, engine.multiplier, saveData]);
+
 
   // ✅ AUTO-SAVE: Mostrar toast si hay datos recuperables al montar
   useEffect(() => {
@@ -104,6 +92,20 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
   // Composability
   useCountingSync(sessionId);
   const { session, consolidatedHistory } = useCountingQueries(sessionId, engine.activeBarcode, itemsRef);
+
+  // ✅ AUTO-SAVE: Guardar cuando hay cambios en los items
+  useEffect(() => {
+    if (sessionId && consolidatedHistory) {
+      const snapshot: CountingSessionSnapshot = {
+        sessionId,
+        items: consolidatedHistory,
+        currentLocation,
+        multiplier: engine.multiplier,
+        timestamp: Date.now(),
+      };
+      saveData(snapshot, sessionId);
+    }
+  }, [sessionId, consolidatedHistory, currentLocation, engine.multiplier, saveData]);
   const { potentialMatch, setPotentialMatch } = useCountingAI(consolidatedHistory, session, settings);
   const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker();
 

@@ -189,7 +189,7 @@ export function useDynamicVirtualList<T>({
   estimatedItemHeight = 72,
   overscan = 3,
   containerRef: externalContainerRef,
-}: Omit<UseVirtualListOptions<T>, 'itemHeight'>) {
+}: Omit<UseVirtualListOptions<T>, 'itemHeight'> & { estimatedItemHeight?: number; }) {
   
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = externalContainerRef || internalContainerRef;

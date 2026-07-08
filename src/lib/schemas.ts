@@ -348,12 +348,12 @@ export function validateEvent(data: unknown): ValidatedEvent {
  * Valida un barcode (SKU)
  */
 export function validateBarcode(data: unknown): string {
-  return validate(barcodeSchema, data, 'Barcode');
+  return validate(barcodeSchema, data, 'Barcode') as string;
 }
 
 /**
  * Valida un RUT chileno
  */
 export function validateRut(data: unknown): string {
-  return validate(rutSchema, data, 'RUT');
+  return validate(rutSchema, data, 'RUT') as string;
 }

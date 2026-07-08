@@ -233,18 +233,20 @@ export const getTableFilter = <T>(
   }
   
   // Filtro por ubicación
-  if (config.locationField && context.currentWarehouse) {
+  const locationField = config.locationField;
+  if (locationField && context.currentWarehouse) {
     return (record: T) => {
       const typedRecord = record as Record<string, any>;
-      return typedRecord[config.locationField] === context.currentWarehouse;
+      return typedRecord[locationField] === context.currentWarehouse;
     };
   }
   
   // Filtro por propietario
-  if (config.ownerField && context.userId !== 'default') {
+  const ownerField = config.ownerField;
+  if (ownerField && context.userId !== 'default') {
     return (record: T) => {
       const typedRecord = record as Record<string, any>;
-      return typedRecord[config.ownerField] === context.userId;
+      return typedRecord[ownerField] === context.userId;
     };
   }
   

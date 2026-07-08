@@ -67,14 +67,14 @@ export const useAutoSync = () => {
       );
 
       if (result.success) {
-        const uploaded = result.uploaded || 0;
-        const downloaded = result.downloaded || 0;
+        const uploaded = result.data?.uploaded || 0;
+        const downloaded = result.data?.downloaded || 0;
 
         if (uploaded > 0 || downloaded > 0) {
           addToast(`Sync completada: ↑${uploaded} ↓${downloaded}`, 'success');
         }
-      } else if (result.errors && result.errors.length > 0) {
-        const visibleErrors = result.errors.filter(e =>
+      } else if (result.data?.errors && result.data?.errors.length > 0) {
+        const visibleErrors = result.data?.errors.filter(e =>
           !e.includes('Table not found') && !e.includes('does not exist')
         );
         if (visibleErrors.length > 0) {

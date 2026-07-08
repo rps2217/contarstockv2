@@ -40,7 +40,7 @@ import { integrityService, IntegrityCheckResult } from '@/services/IntegrityServ
 interface HealthDashboardProps {
   isOpen: boolean;
   onClose: () => void;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | string;
 }
 
 export const HealthDashboard: React.FC<HealthDashboardProps> = ({
@@ -646,7 +646,7 @@ interface MetricCardProps {
   label: string;
   value: number;
   subValue?: string;
-  theme: 'dark' | 'light';
+  theme?: 'dark' | 'light' | string;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, subValue, theme }) => {
@@ -679,7 +679,7 @@ interface AlertCardProps {
   value: number | string;
   icon: React.ReactNode;
   color: 'green' | 'amber' | 'red' | 'blue';
-  theme: 'dark' | 'light';
+  theme?: 'dark' | 'light' | string;
 }
 
 const AlertCard: React.FC<AlertCardProps> = ({ title, value, icon, color, theme }) => {

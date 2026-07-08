@@ -62,7 +62,7 @@ export interface UseGlobalSearchReturn {
   quickSearch: (query: string) => void;
 }
 
-const DEFAULT_TABLES = ['products', 'sessions'] as const;
+const DEFAULT_TABLES: ('products' | 'customers' | 'sessions' | 'events' | 'expiry')[] = ['products', 'sessions'];
 const DEFAULT_MAX_RESULTS = 10;
 
 export function useGlobalSearch(
@@ -98,9 +98,9 @@ export function useGlobalSearch(
     try {
       const products = await db.products
         .filter(p => 
-          p.barcode?.toLowerCase().includes(normalizedQ) ||
-          p.name?.toLowerCase().includes(normalizedQ) ||
-          p.sku?.toLowerCase().includes(normalizedQ)
+          Boolean(p.barcode?.toLowerCase().includes(normalizedQ)) ||
+          Boolean(p.name?.toLowerCase().includes(normalizedQ)) ||
+          Boolean(p.sku?.toLowerCase().includes(normalizedQ))
         )
         .limit(maxResults)
         .toArray();
@@ -110,7 +110,7 @@ export function useGlobalSearch(
         id: p.id?.toString() || '',
         title: p.name || 'Sin nombre',
         subtitle: p.barcode ? `Barcode: ${p.barcode}` : undefined,
-        metadata: { sku: p.sku, quantity: p.quantity },
+        metadata: { sku: p.sku, quantity: p.stock },
       }));
     } catch {
       return [];
@@ -127,9 +127,9 @@ export function useGlobalSearch(
     try {
       const customers = await db.customers
         .filter(c =>
-          c.name?.toLowerCase().includes(normalizedQ) ||
-          c.email?.toLowerCase().includes(normalizedQ) ||
-          c.rut?.toLowerCase().includes(normalizedQ)
+          (c.firstName?.toLowerCase().includes(normalizedQ) ?? false) ||
+          (c.lastName?.toLowerCase().includes(normalizedQ) ?? false) ||
+          (c.phone?.toLowerCase().includes(normalizedQ) ?? false)
         )
         .limit(maxResults)
         .toArray();
@@ -137,9 +137,9 @@ export function useGlobalSearch(
       return customers.map(c => ({
         type: 'customer' as const,
         id: c.id?.toString() || '',
-        title: c.name || 'Sin nombre',
-        subtitle: c.email || c.rut,
-        metadata: { rut: c.rut },
+        title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Sin nombre',
+        subtitle: c.phone || '',
+        metadata: { phone: c.phone },
       }));
     } catch {
       return [];

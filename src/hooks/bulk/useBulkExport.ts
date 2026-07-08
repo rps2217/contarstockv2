@@ -9,7 +9,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { BulkHistoryEntry } from '../useBulkActionsAdvanced';
+import { BulkHistoryEntry } from '@/db';
 
 export interface UseBulkExportReturn {
   exportHistoryToCSV: (entries: BulkHistoryEntry[]) => void;

@@ -10,9 +10,10 @@ import React, { Component, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+type FallbackProps = { error: Error | null; resetError: () => void };
 interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: ReactNode | ((props: FallbackProps) => ReactNode);
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   level?: 'page' | 'section' | 'component';
 }

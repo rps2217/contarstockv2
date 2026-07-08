@@ -202,8 +202,8 @@ export const THEME_PRESETS = {
 export const THEMES: Theme[] = [
   { name: 'dark', label: 'Oscuro', icon: '🌙', preset: 'default' },
   { name: 'light', label: 'Claro', icon: '☀️', preset: 'corporate' },
-  { name: 'night', label: 'Noche', icon: '🌑', preset: 'night' },
-  { name: 'gray', label: 'Gris', icon: '🌫️', preset: 'gray' },
+  { name: 'night', label: 'Noche', icon: '🌑', preset: 'default' },
+  { name: 'gray', label: 'Gris', icon: '🌫️', preset: 'default' },
   { name: 'high-contrast', label: 'Alto Contraste', icon: '🔳', preset: 'default' },
   { name: 'appsheet-dark', label: 'AppSheet', icon: '📱', preset: 'default' },
 ];

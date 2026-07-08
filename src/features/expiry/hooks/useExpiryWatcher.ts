@@ -1,14 +1,13 @@
 
 import { useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/stores';
 import { useExpiryStore } from '@/stores';
 import { useToastStore } from '@/stores';
-import { processExpiryItem } from '../features/expiry/utils/expiryProcessor';
-import { productRepository } from '../repositories/DexieProductRepository';
-import { normalizeSku } from '../services/utils';
-import { db as dexieDb } from '../db';
-import { logger } from '../services/logger';
+import { processExpiryItem } from '@/features/expiry/utils/expiryProcessor';
+import { productRepository } from '@/repositories/DexieProductRepository';
+import { normalizeSku } from '@/shared/utils/common';
+import { db } from '@/db';
 
 /**
  * useExpiryWatcher: Background service that monitors the expiry table in Supabase
@@ -57,7 +56,7 @@ export const useExpiryWatcher = () => {
         // 2. Get context data from local DB
         const [allProducts, allProviders] = await Promise.all([
           productRepository.getAll(),
-          dexieDb.providers.toArray()
+          db.providers.toArray()
         ]);
 
         const productMap = new Map();

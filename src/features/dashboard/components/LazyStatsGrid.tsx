@@ -126,6 +126,7 @@ export const LazyStatsGrid = memo(({
       return () => clearTimeout(timer);
     } else {
       setShouldShowSkeleton(false);
+      return undefined;
     }
   }, [loading, fallbackDelay]);
 

@@ -22,7 +22,7 @@ export {
   withRetry, 
   calculateBackoff, 
   sleep, 
-  retryable 
+ 
 } from './retry';
 export type { RetryOptions } from './retry';
 

@@ -42,7 +42,7 @@ export interface RetryResult<T> {
 }
 
 /** Errores que típicamente son transitorios y deben reintentarse */
-const DEFAULT_RETRYABLE_ERRORS = [
+export const DEFAULT_RETRYABLE_ERRORS = [
   'Failed to fetch',
   'Network request failed',
   'NetworkError',
@@ -67,7 +67,7 @@ const NON_RETRYABLE_ERRORS = [
   'unique constraint',
 ];
 
-const DEFAULT_OPTIONS: Required<RetryOptions> = {
+export const DEFAULT_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   baseDelay: 1000,
   maxDelay: 30000,

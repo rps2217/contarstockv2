@@ -19,8 +19,8 @@ export { useUIStore, selectActiveView, selectIsSidebarOpen, selectGlobalSearch }
 export { useSettingsStore } from '@/features/settings/store';
 
 // Arquitectura Stores (Sistema)
-export { usePermissionStore, type Permission, type UserRole, type Role, ROLE_LABELS } from '@/store/usePermissionStore';
-export { useConflictStore, type ConflictRecord, type ConflictResolution } from '@/store/useConflictStore';
+export { usePermissionStore, type Permission, type UserRole, ROLE_LABELS } from '@/store/usePermissionStore';
+export { useConflictStore, type ConflictRecord } from '@/store/useConflictStore';
 export { useAuditStore, type AuditLog, type AuditAction, type AuditSeverity, auditCreate, auditUpdate, auditDelete, auditError, auditSync } from '@/store/useAuditStore';
 export { useUndoRedoStore, type UndoableAction, type ActionType, useUndoRedo, createProductAction, createInventoryAction, createScanAction } from '@/store/useUndoRedoStore';
 

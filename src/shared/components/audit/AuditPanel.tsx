@@ -19,6 +19,9 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle2,
+  Send,
+  XCircle,
+  X,
   Info,
   FileSpreadsheet,
   FileJson,
@@ -45,6 +48,10 @@ const ACTION_ICONS: Record<AuditAction, React.ReactNode> = {
   import: <Download className="w-4 h-4" />,
   permission_change: <Shield className="w-4 h-4" />,
   settings_change: <Shield className="w-4 h-4" />,
+  approve: <CheckCircle2 className="w-4 h-4" />,
+  reject: <XCircle className="w-4 h-4" />,
+  submit: <Send className="w-4 h-4" />,
+  cancel: <X className="w-4 h-4" />,
   error: <AlertTriangle className="w-4 h-4" />,
   custom: <Info className="w-4 h-4" />,
 };
@@ -54,6 +61,7 @@ const SEVERITY_CONFIG: Record<AuditSeverity, { color: string; bg: string; label:
   warning: { color: 'text-amber-400', bg: 'bg-amber-500/20', label: 'Advertencia' },
   error: { color: 'text-rose-400', bg: 'bg-rose-500/20', label: 'Error' },
   critical: { color: 'text-red-400', bg: 'bg-red-500/20', label: 'Crítico' },
+  success: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Éxito' },
 };
 
 const ACTION_LABELS: Record<AuditAction, string> = {
@@ -68,6 +76,10 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   import: 'Importación',
   permission_change: 'Cambio de permisos',
   settings_change: 'Cambio de configuración',
+  approve: 'Aprobación',
+  reject: 'Rechazo',
+  submit: 'Envío',
+  cancel: 'Cancelación',
   error: 'Error',
   custom: 'Personalizada',
 };

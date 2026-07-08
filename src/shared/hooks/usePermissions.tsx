@@ -9,7 +9,7 @@
 
 
 import React from 'react';
-import { usePermissionStore } from '@/stores';
+import { usePermissionStore, type Permission, type UserRole, ROLE_LABELS } from '@/stores';
 
 export const usePermissions = () => {
   const {

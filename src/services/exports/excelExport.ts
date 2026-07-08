@@ -80,13 +80,13 @@ export async function exportHammerToExcel(
   }));
 
   const columns: ExportColumn[] = [
-    { header: 'Código/SKU', width: 20 },
-    { header: 'Descripción', width: 45 },
-    { header: 'Ubicación', width: 15 },
-    { header: 'Cantidad Escaneada', width: 18 },
-    { header: 'Cantidad Esperada (Teórica)', width: 18 },
-    { header: 'Diferencia', width: 12 },
-    { header: 'Último Escaneo', width: 22 },
+    { key: 'barcode', header: 'Código/SKU', width: 20 },
+    { key: 'name', header: 'Descripción', width: 45 },
+    { key: 'loc', header: 'Ubicación', width: 15 },
+    { key: 'totalQuantity', header: 'Cantidad Escaneada', width: 18 },
+    { key: 'expectedQty', header: 'Cantidad Esperada (Teórica)', width: 18 },
+    { key: 'difference', header: 'Diferencia', width: 12 },
+    { key: 'lastTimestamp', header: 'Último Escaneo', width: 22 },
   ];
 
   const { workbook } = await createWorkbook(data, 'Auditoría', columns);
@@ -137,13 +137,13 @@ export async function exportSessionToExcel(
   });
 
   const columns: ExportColumn[] = [
-    { header: 'Código/SKU', width: 20 },
-    { header: 'Descripción', width: 40 },
-    { header: 'Cantidad Total', width: 15 },
-    { header: 'Conteo de Escaneos', width: 15 },
-    { header: 'Esperado/ERP', width: 15 },
-    { header: 'Diferencia/Etiqueta', width: 15 },
-    { header: 'Fecha', width: 15 },
+    { key: 'barcode', header: 'Código/SKU', width: 20 },
+    { key: 'name', header: 'Descripción', width: 40 },
+    { key: 'totalQuantity', header: 'Cantidad Total', width: 15 },
+    { key: 'scans', header: 'Conteo de Escaneos', width: 15 },
+    { key: 'expected', header: 'Esperado/ERP', width: 15 },
+    { key: 'difference', header: 'Diferencia/Etiqueta', width: 15 },
+    { key: 'date', header: 'Fecha', width: 15 },
   ];
 
   const { workbook } = await createWorkbook(data, 'Conteo', columns);

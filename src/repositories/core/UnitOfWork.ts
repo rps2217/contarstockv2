@@ -15,6 +15,7 @@
 import { db } from '../../db';
 import { Transaction } from 'dexie';
 import { logger } from '@/services/logger';
+import type { Product, CountingSession, ScanRecord } from '@/types';
 
 export type OperationType = 'CREATE' | 'UPDATE' | 'DELETE';
 export type EntityType = 'scan' | 'expiry' | 'session' | 'product' | 'event';
@@ -225,10 +226,10 @@ export class UnitOfWork {
     
     switch (type) {
       case 'CREATE':
-        await db.scans.add(entity);
+        await db.scans.add(entity as unknown as ScanRecord);
         break;
       case 'UPDATE':
-        await db.scans.update(id, entity);
+        await db.scans.update(id, entity as unknown as Partial<ScanRecord>);
         break;
       case 'DELETE':
         await db.scans.delete(id);
@@ -257,10 +258,10 @@ export class UnitOfWork {
     
     switch (type) {
       case 'CREATE':
-        await db.sessions.add(entity);
+        await db.sessions.add(entity as unknown as CountingSession);
         break;
       case 'UPDATE':
-        await db.sessions.update(id, entity);
+        await db.sessions.update(id, entity as unknown as Partial<CountingSession>);
         break;
       case 'DELETE':
         await db.sessions.delete(id);
@@ -289,10 +290,10 @@ export class UnitOfWork {
     
     switch (type) {
       case 'CREATE':
-        await db.products.add(entity);
+        await db.products.add(entity as unknown as Product);
         break;
       case 'UPDATE':
-        await db.products.update(id, entity);
+        await db.products.update(id, entity as unknown as Partial<Product>);
         break;
       case 'DELETE':
         await db.products.delete(id);

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 type IllustrationType = 'no-data' | 'no-results' | 'offline' | 'error';
 
 interface EmptyStateProps {
-  icon?: LucideIcon;
+  icon?: LucideIcon | React.ReactElement;
   title: string;
   description?: string;
   action?: {
@@ -93,13 +93,20 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   className,
   compact = false,
 }) => {
-  const Icon = icon || defaultIcons[illustration];
+  const IconComponent = icon || defaultIcons[illustration];
+  const renderIcon = (size: string) => {
+    if (React.isValidElement(IconComponent)) {
+      return IconComponent;
+    }
+    const Icon = IconComponent as LucideIcon;
+    return <Icon className={size} />;
+  };
 
   if (compact) {
     return (
       <div className={cn('flex flex-col items-center justify-center py-8 px-4', className)}>
         <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mb-3">
-          <Icon className="w-6 h-6 text-muted" />
+          {renderIcon('w-6 h-6 text-muted')}
         </div>
         <p className="text-sm text-secondary text-center">{title}</p>
         {description && (
@@ -119,7 +126,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <EmptyIllustration type={illustration} className="w-40 h-40 text-muted/20" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center">
-            <Icon className="w-8 h-8 text-muted" />
+            {renderIcon('w-8 h-8 text-muted')}
           </div>
         </div>
       </div>

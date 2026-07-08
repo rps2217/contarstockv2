@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SkipLinks, useKeyboardNavigation } from './SkipLinks';
+import { SkipLinks, SkipLinksProvider, useKeyboardNavigation } from './SkipLinks';
 import React from 'react';
 
 // Mock lucide-react

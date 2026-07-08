@@ -224,7 +224,8 @@ export class ExpiryService {
    * Guarda un vencimiento en la base de datos
    */
   async save(params: SaveExpiryParams, options: SaveExpiryOptions = {}): Promise<ExpiryEntry | null> {
-    const { barcode, mm, yyyy, skipIfOutOfRange = false, silent = false } = params;
+    const { barcode, mm, yyyy } = params;
+    const { skipIfOutOfRange = false, silent = false } = options;
     
     // Verificar rango de años
     const rangeCheck = this.checkYearRange(yyyy);
@@ -251,8 +252,21 @@ export class ExpiryService {
     const withdrawalDays = params.withdrawalDays ?? 30;
     const withdrawalDate = new Date(expiryDate.getTime() - withdrawalDays * 24 * 60 * 60 * 1000);
     
-    // Crear entrada
-    const entry: ExpiryEntry = {
+    // Crear entrada con tipo ExpandedExpiryEntry (incluye campos adicionales)
+    const entry: ExpiryEntry & {
+      providerName?: string;
+      location?: string;
+      observaciones?: string;
+      withdrawalDays?: number;
+      hasCanje?: boolean;
+      daysLeft?: number;
+      expiryDate?: string;
+      expiryDateObj?: Date;
+      withdrawalDate?: Date;
+      category?: string;
+      estado?: string;
+      type?: string;
+    } = {
       claveUnica: this.generateClaveUnica(barcode, mm, yyyy),
       barcode: normalizeSku(barcode),
       productName: params.productName,
@@ -277,11 +291,9 @@ export class ExpiryService {
       type: 'Individual',
     };
     
-    // Guardar en IndexedDB
-    await db.expirations.put(entry);
-    
-    // Encolar para sincronización
-    await this.enqueueForSync(entry);
+    // Guardar en IndexedDB y sincronizar
+    await db.expirations.put(entry as unknown as Parameters<typeof db.expirations.put>[0]);
+    await this.enqueueForSync(entry as ExpiryEntry);
     
     return entry;
   }
@@ -303,7 +315,7 @@ export class ExpiryService {
    * Obtiene un vencimiento por clave única
    */
   async getByClaveUnica(claveUnica: string): Promise<ExpiryEntry | undefined> {
-    return await db.expirations.where('claveUnica').equals(claveUnica).first();
+    return (await db.expirations.where('claveUnica').equals(claveUnica).first()) as unknown as ExpiryEntry | undefined;
   }
 
   /**
@@ -311,10 +323,10 @@ export class ExpiryService {
    */
   async getByBarcode(barcode: string): Promise<ExpiryEntry[]> {
     const normalized = normalizeSku(barcode);
-    return await db.expirations
+    return (await db.expirations
       .where('barcode')
       .equals(normalized)
-      .toArray();
+      .toArray()) as unknown as ExpiryEntry[];
   }
 
   /**
@@ -334,9 +346,9 @@ export class ExpiryService {
     let query = db.expirations.orderBy('timestamp').reverse();
     
     if (limit) {
-      return await query.limit(limit).toArray();
+      return (await query.limit(limit).toArray()) as unknown as ExpiryEntry[];
     }
-    return await query.toArray();
+    return (await query.toArray()) as unknown as ExpiryEntry[];
   }
 
   /**
@@ -348,10 +360,10 @@ export class ExpiryService {
     
     const all = await db.expirations.toArray();
     
-    return all.filter(e => {
+    return (all.filter(e => {
       const expiryDate = new Date(e.yyyy, e.mm - 1, 1);
       return expiryDate <= limitDate && expiryDate >= now;
-    });
+    }) as unknown as ExpiryEntry[]);
   }
 
   /**
@@ -364,12 +376,12 @@ export class ExpiryService {
     
     const all = await db.expirations.toArray();
     
-    return all.filter(e => {
+    return (all.filter(e => {
       if (e.yyyy < currentYear || (e.yyyy === currentYear && e.mm < currentMonth)) {
         return true;
       }
       return false;
-    });
+    }) as unknown as ExpiryEntry[]);
   }
 
   /**
@@ -398,11 +410,13 @@ export class ExpiryService {
    */
   private async enqueueForSync(entry: ExpiryEntry): Promise<void> {
     try {
-      await enqueueSync({
-        type: 'expiry',
-        action: 'upsert',
-        data: entry,
-      });
+      await enqueueSync(
+        'expirations',
+        entry.claveUnica,
+        entry.barcode,
+        'update',
+        entry as unknown as Record<string, any>
+      );
     } catch (error) {
       console.error('[ExpiryService] Error al encolar para sync:', error);
     }
@@ -413,11 +427,13 @@ export class ExpiryService {
    */
   async syncEntry(entry: ExpiryEntry): Promise<void> {
     try {
-      await enqueueSync({
-        type: 'expiry',
-        action: 'upsert',
-        data: entry,
-      });
+      await enqueueSync(
+        'expirations',
+        entry.claveUnica,
+        entry.barcode,
+        'update',
+        entry as unknown as Record<string, any>
+      );
       
       // Marcar como sincronizado
       if (entry.id) {
@@ -439,10 +455,10 @@ export class ExpiryService {
    * Obtiene vencimientos de una sesión
    */
   async getBySession(sessionId: string): Promise<ExpiryEntry[]> {
-    return await db.expirations
+    return (await db.expirations
       .where('sessionId')
       .equals(sessionId)
-      .toArray();
+      .toArray()) as unknown as ExpiryEntry[];
   }
 
   /**

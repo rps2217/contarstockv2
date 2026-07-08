@@ -163,7 +163,7 @@ const AppContent = () => {
         // También cargar ubicaciones únicas de productos
         const products = await db.products.toArray();
         const uniqueLocations = [...new Set(products.map(p => p.location).filter(Boolean))];
-        uniqueLocations.forEach(loc => rlsStore.addWarehouse(loc));
+        uniqueLocations.forEach(loc => { if (loc) rlsStore.addWarehouse(loc as string); });
       } catch (err) {
         console.warn('Error cargando ubicaciones:', err);
       }
