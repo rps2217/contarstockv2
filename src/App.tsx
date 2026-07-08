@@ -64,6 +64,7 @@ const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/red
 const HammerPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignHammerPage })));
 const InventoryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignInventoryPage })));
 const AuditPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignAuditPage })));
+const EventsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignEventsPage })));
 
 // Componentes pesados - Solo carga cuando se necesitan (y solo en desktop)
 const Sidebar = lazyWithRetry(() => import('@/components/Sidebar').then(m => ({ default: m.Sidebar })));
@@ -336,6 +337,7 @@ const AppContent = () => {
               TheoreticalLoadsPage={TheoreticalLoadsPage}
               InventoryPage={InventoryPage}
               AuditPage={AuditPage}
+              EventsPage={EventsPage}
               ThemeDemoPage={ThemeDemoPage}
               RedesignPreviewPage={RedesignPreviewPage}
             />
@@ -399,6 +401,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
     SettingsPage, CustomersPage, SuppliersPage, SlicesPage, 
     CountingPage, ReceptionPage, DynamicPage,
     HammerPage, TheoreticalLoadsPage, InventoryPage, AuditPage,
+    EventsPage,
     ThemeDemoPage, RedesignPreviewPage 
   } = pages;
 
@@ -425,7 +428,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       {/* PÁGINAS DE MÓDULOS */}
       <Route path="/counting" element={<CountingPage />} />
       <Route path="/counting/:id" element={<CountingPage />} />
-      <Route path="/events" element={<ReportsLegacy />} />
+      <Route path="/events" element={<EventsPage />} />
       <Route path="/reception" element={<ReceptionPage />} />
       <Route path="/reception/:id" element={<ReceptionPage />} />
       <Route path="/dynamic" element={<DynamicPage />} />

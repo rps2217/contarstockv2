@@ -27,6 +27,7 @@ import {
   ClipboardList,
   Bell,
   Settings,
+  AlertCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -476,6 +477,14 @@ export const RedesignDashboard: React.FC = () => {
               icon={Users}
               delay={0.45}
               onClick={() => navigate('/customers')}
+            />
+
+            <ActionCard
+              title="Eventos"
+              description="Registro de incidencias y actividades."
+              icon={AlertCircle}
+              delay={0.5}
+              onClick={() => navigate('/events')}
             />
           </div>
         </div>
