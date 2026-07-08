@@ -577,3 +577,104 @@ Toggle en herramientas de Hammer para activar registro de vencimiento.
 
 ### Commits
 - `80c44ede` - feat(hammer): Agregar registro opcional de fecha de vencimiento
+
+---
+
+## Sistema de Feature Flags (2026-07-07)
+
+### Propósito
+Centralizar toggles de features para permitir activacion/desactivacion sin redeploy.
+
+### Archivo
+`src/config/features.ts`
+
+### Uso
+```typescript
+import { isFeatureEnabled, toggleFeature, useFeature } from '@/config/features'
+
+// Verificar si una feature está activa
+if (isFeatureEnabled('HAMMER_EXPIRY')) {
+  // Mostrar feature
+}
+
+// Togglear una feature
+toggleFeature('HAMMER_EXPIRY')
+
+// Hook para React
+const isEnabled = useFeature('HAMMER_EXPIRY')
+```
+
+### Features Registradas
+| Key | Label | Default | Category |
+|-----|-------|---------|----------|
+| HAMMER_EXPIRY | Registro de Vencimiento en Hammer | false | core |
+| COUNTING_PHARMA | Vencimiento en Modo Conteo | true | core |
+| REDESIGN_PAGES | Paginas Redesignadas | true | core |
+| EXPORTS_EXCEL | Exportacion a Excel | true | integrations |
+| THERMAL_PRINTER | Impresion Termica | true | integrations |
+| CLOUD_SYNC | Sincronizacion en la Nube | true | integrations |
+| AI_ASSISTANT | Asistente AI | false | experimental |
+| ADVANCED_FILTERS | Filtros Avanzados | true | core |
+| ROW_LEVEL_SECURITY | Seguridad a Nivel de Fila | false | security |
+| VIRTUAL_FIELDS | Campos Virtuales | false | experimental |
+| AUDIT_LOGS | Logs de Auditoria | true | security |
+
+### Agregar Nueva Feature
+1. Agregar entrada en `FEATURES_REGISTRY` en `features.ts`
+2. Usar `isFeatureEnabled('MI_FEATURE')` en el codigo
+3. Agregar test de contrato en `src/__tests__/contracts/`
+
+---
+
+## Workflow para Agentes AI (2026-07-07)
+
+### Antes de Modificar Archivos
+1. **Analizar dependencias**: `grep -r "archivo" src/ --include="*.tsx"`
+2. **Verificar contratos existentes**: Revisar `src/__tests__/contracts/`
+3. **Identificar feature flag**: Si es feature nueva, agregar a `features.ts`
+
+### Estructura de Commits
+```
+<tipo>(<modulo>): <descripcion corta>
+
+CONTRATO:
+- <campo agregado/removido/modificado>
+- <riesgo de regresion>
+
+ROLLBACK: git revert <commit>
+```
+
+### Tipos de Commit
+- `feat`: Nueva funcionalidad
+- `fix`: Corrección de bug
+- `refactor`: Refactorización sin cambio de funcionalidad
+- `docs`: Documentación
+- `test`: Tests
+
+### Tests de Contrato
+Ubicacion: `src/__tests__/contracts/*.contract.test.ts`
+
+Ejecutar antes de commits:
+```bash
+npm run test:run -- src/__tests__/contracts/
+```
+
+### Feature Flags
+- **NUNCA** hardcodear features como booleanos sueltos
+- **SIEMPRE** usar `isFeatureEnabled('FEATURE_KEY')`
+- **NUEVAS** features van en `FEATURES_REGISTRY` con `defaultEnabled`
+
+### Rollback Rapido
+```bash
+# Deshabilitar feature sin revert
+setFeature('MI_FEATURE', false)
+
+# Revert completo
+git revert HEAD
+```
+
+### Monitoreo Post-Deploy
+Despues de deploy, verificar:
+1. `npm run test:run` pasa
+2. `npx tsc --noEmit` no tiene errores
+3. Feature visible en entorno de produccion

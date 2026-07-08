@@ -8,6 +8,7 @@ import { productRepository } from '../../../repositories/DexieProductRepository'
 import { pushScansToCloud } from '../../../services/hammerSync';
 import { logger } from '../../../services/logger';
 import { expiryService } from '../../../services/ExpiryService';
+import { isFeatureEnabled, toggleFeature, FeatureKey } from '@/config/features';
 
 export interface HammerItem {
   barcode: string;
@@ -40,10 +41,9 @@ export const useHammerLogic = (batchId: string) => {
   const retryCountRef = useRef(0);
   const MAX_RETRIES = 3;
 
-  // Setting para registrar fecha de vencimiento (default: false)
-  const [registerExpiry, setRegisterExpiry] = useState(() => {
-    return localStorage.getItem('hammer_register_expiry') === 'true';
-  });
+  // Feature flag para registrar fecha de vencimiento
+  const registerExpiry = isFeatureEnabled('HAMMER_EXPIRY');
+  const registerExpiryRef = useRef(registerExpiry);
 
   // Estado para el modal de vencimiento
   const [awaitingExpiry, setAwaitingExpiry] = useState<AwaitingExpiryState | null>(null);
@@ -52,11 +52,6 @@ export const useHammerLogic = (batchId: string) => {
     autoSyncRef.current = autoSyncEnabled;
     localStorage.setItem('hammer_auto_sync', autoSyncEnabled ? 'true' : 'false');
   }, [autoSyncEnabled]);
-
-  // Guardar setting de registerExpiry
-  useEffect(() => {
-    localStorage.setItem('hammer_register_expiry', registerExpiry ? 'true' : 'false');
-  }, [registerExpiry]);
   
   const [optimisticItems, setOptimisticItems] = useState<HammerItem[]>([]);
   const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
@@ -64,12 +59,11 @@ export const useHammerLogic = (batchId: string) => {
   const multiplierRef = useRef(1);
   const locationRef = useRef(currentLocation);
   const instantaneousQtyRef = useRef(new Map<string, number>());
-  const registerExpiryRef = useRef(registerExpiry);
   
   // Mantener ref actualizado
   useEffect(() => {
-    registerExpiryRef.current = registerExpiry;
-  }, [registerExpiry]);
+    registerExpiryRef.current = isFeatureEnabled('HAMMER_EXPIRY');
+  });
 
   useEffect(() => { multiplierRef.current = engine.multiplier; }, [engine.multiplier]);
   useEffect(() => { 
@@ -417,7 +411,7 @@ export const useHammerLogic = (batchId: string) => {
       registerScan, 
       syncToCloud,
       toggleAutoSync: () => setAutoSyncEnabled(p => !p),
-      toggleRegisterExpiry: () => setRegisterExpiry(p => !p),
+      toggleRegisterExpiry: () => toggleFeature('HAMMER_EXPIRY'),
       removeItem: async (barcode: string) => {
         if (barcode === 'ALL') {
           await HammerDbRepository.deleteBlindScansByBatch(batchId);
