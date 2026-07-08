@@ -114,5 +114,48 @@ export class MassiveDbRepository {
 
     return Array.from(summary.values());
   }
+
+  /**
+   * Obtiene información detallada de la sesión para el modal de sesión existente
+   * Incluye conteos, última actividad y total de unidades escaneadas
+   */
+  static async getBatchSessionInfo(batchId: string): Promise<{
+    scans: number;
+    manifests: number;
+    totalScannedUnits: number;
+    totalExpectedUnits: number;
+    lastScanTimestamp: number | null;
+    lastManifestTimestamp: number | null;
+    hasData: boolean;
+  }> {
+    const [scans, manifests] = await Promise.all([
+      this.getBlindScansByBatch(batchId),
+      this.getBlindManifestsByBatch(batchId)
+    ]);
+
+    const totalScannedUnits = scans.reduce((sum, s) => sum + s.quantity, 0);
+    const totalExpectedUnits = manifests.reduce((sum, m) => sum + m.expectedQty, 0);
+
+    const lastScan = scans.length > 0
+      ? scans.reduce((latest, s) => s.timestamp > latest.timestamp ? s : latest, scans[0])
+      : null;
+
+    const lastManifest = manifests.length > 0
+      ? manifests.reduce((latest, m) => {
+          // Usar barcode como proxy de timestamp si no existe
+          return m;
+        }, manifests[0])
+      : null;
+
+    return {
+      scans: scans.length,
+      manifests: manifests.length,
+      totalScannedUnits,
+      totalExpectedUnits,
+      lastScanTimestamp: lastScan?.timestamp || null,
+      lastManifestTimestamp: lastManifest ? Date.now() : null, // Manifests no tienen timestamp
+      hasData: scans.length > 0 || manifests.length > 0
+    };
+  }
 }
 

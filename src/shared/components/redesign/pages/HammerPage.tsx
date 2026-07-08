@@ -24,6 +24,7 @@ import type { ExpectedOrder } from '@/types'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal'
+import { formatTimeAgo } from '@/lib/date'
 
 // ============================================================================
 // Componentes de UI
@@ -501,20 +502,95 @@ export const RedesignHammerPage: React.FC = () => {
   
   // Modal de sesión existente - también guarda los conteos para mostrar al usuario
   const [showSessionModal, setShowSessionModal] = useState(false)
-  const [sessionCounts, setSessionCounts] = useState({ scans: 0, manifests: 0 })
+  const [sessionCounts, setSessionCounts] = useState({ 
+    scans: 0, 
+    manifests: 0,
+    totalScannedUnits: 0,
+    totalExpectedUnits: 0,
+    lastScanTimestamp: null as number | null
+  })
 
-  // Verificar si hay datos existentes al cargar
+  // Verificar si hay datos existentes al cargar y auto-descartar carga teórica antigua
   useEffect(() => {
     const checkExistingSession = async () => {
-      if (state.items && state.items.length > 0) {
-        // Obtener los conteos reales de la base de datos
-        const counts = await MassiveDbRepository.getBatchCounts(effectiveBatchId);
-        setSessionCounts(counts);
-        setShowSessionModal(true)
+      // Usar getBatchSessionInfo para obtener información más detallada
+      const sessionInfo = await MassiveDbRepository.getBatchSessionInfo(effectiveBatchId);
+      
+      // Si no hay datos, no mostrar modal
+      if (!sessionInfo.hasData) {
+        return;
       }
+
+      // Auto-descartar carga teórica si:
+      // 1. La sesión tiene más de 24 horas
+      // 2. Tiene manifests pero NO tiene escaneos (nunca se usó)
+      // 3. Tiene manifests con más de 7 días
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const sessionAge = sessionInfo.lastScanTimestamp 
+        ? now - sessionInfo.lastScanTimestamp 
+        : ONE_DAY_MS; // Si no hay escaneos, considerar como 1 día
+
+      const hasOldManifests = sessionInfo.manifests > 0 && (
+        sessionAge > ONE_DAY_MS || 
+        (sessionInfo.scans === 0 && sessionInfo.manifests > 0)
+      );
+
+      // Si tiene manifests sin escaneos (sesión nunca usada) o manifests muy antiguos
+      if (sessionInfo.manifests > 0 && sessionInfo.scans === 0) {
+        // Descartar automáticamente los manifests que nunca se usaron
+        await MassiveDbRepository.deleteBlindManifestsByBatch(effectiveBatchId);
+        toast.info('Carga teórica antigua descartada automáticamente');
+        setSessionCounts({
+          scans: 0,
+          manifests: 0,
+          totalScannedUnits: 0,
+          totalExpectedUnits: 0,
+          lastScanTimestamp: null
+        });
+        return;
+      }
+
+      // Si tiene manifests antiguos con escaneos, ofrecer descartarlos
+      if (hasOldManifests && sessionInfo.scans > 0) {
+        // Actualizar los counts
+        setSessionCounts({
+          scans: sessionInfo.scans,
+          manifests: sessionInfo.manifests,
+          totalScannedUnits: sessionInfo.totalScannedUnits,
+          totalExpectedUnits: sessionInfo.totalExpectedUnits,
+          lastScanTimestamp: sessionInfo.lastScanTimestamp
+        });
+        setShowSessionModal(true);
+        return;
+      }
+
+      // Si tiene solo escaneos (sin carga teórica), no mostrar modal de manifests
+      if (sessionInfo.scans > 0 && sessionInfo.manifests === 0) {
+        setSessionCounts({
+          scans: sessionInfo.scans,
+          manifests: 0,
+          totalScannedUnits: sessionInfo.totalScannedUnits,
+          totalExpectedUnits: 0,
+          lastScanTimestamp: sessionInfo.lastScanTimestamp
+        });
+        setShowSessionModal(true);
+        return;
+      }
+
+      // Si tiene ambos, mostrar modal con toda la información
+      setSessionCounts({
+        scans: sessionInfo.scans,
+        manifests: sessionInfo.manifests,
+        totalScannedUnits: sessionInfo.totalScannedUnits,
+        totalExpectedUnits: sessionInfo.totalExpectedUnits,
+        lastScanTimestamp: sessionInfo.lastScanTimestamp
+      });
+      setShowSessionModal(true);
     };
     checkExistingSession();
-  }, []) // Solo al montar
+  }, [effectiveBatchId]) // Solo al montar
 
   // Alias para mantener compatibilidad con el resto del código
   const batchId = effectiveBatchId;
@@ -961,7 +1037,7 @@ export const RedesignHammerPage: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-base border border-subtle rounded-2xl p-6 max-w-sm w-full"
+              className="bg-base border border-subtle rounded-2xl p-6 max-w-md w-full"
             >
               <h3 className="text-lg font-bold text-primary mb-2 text-center flex items-center justify-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -969,22 +1045,54 @@ export const RedesignHammerPage: React.FC = () => {
               </h3>
               
               {/* Detalle de lo que hay guardado */}
-              <div className="bg-surface rounded-xl p-3 mb-4 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">Escaneos guardados:</span>
-                  <span className="font-bold text-primary">{sessionCounts.scans}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">Carga teórica importada:</span>
-                  <span className="font-bold text-primary">{sessionCounts.manifests}</span>
-                </div>
+              <div className="bg-surface rounded-xl p-4 mb-4 space-y-3">
+                {/* Sección de Escaneos */}
+                {sessionCounts.scans > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Scan className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm text-secondary">Escaneos</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-emerald-500">{sessionCounts.scans} SKUs</span>
+                      <span className="text-xs text-muted ml-2">({sessionCounts.totalScannedUnits} unidades)</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Sección de Carga Teórica */}
+                {sessionCounts.manifests > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-amber-500" />
+                      <span className="text-sm text-secondary">Carga Teórica</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-amber-500">{sessionCounts.manifests} SKUs</span>
+                      <span className="text-xs text-muted ml-2">({sessionCounts.totalExpectedUnits} unidades)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Información de última actividad */}
+                {sessionCounts.lastScanTimestamp && (
+                  <div className="text-xs text-muted text-center pt-2 border-t border-subtle">
+                    Última actividad: hace {formatTimeAgo(sessionCounts.lastScanTimestamp)}
+                  </div>
+                )}
               </div>
               
+              {/* Mensaje explicativo */}
               <p className="text-sm text-muted text-center mb-4">
-                ¿Qué deseas hacer con esta sesión?
+                {sessionCounts.scans > 0 && sessionCounts.manifests > 0
+                  ? 'Esta sesión tiene escaneos y carga teórica. ¿Qué deseas hacer?'
+                  : sessionCounts.scans > 0
+                    ? 'Esta sesión tiene escaneos guardados. ¿Deseas continuar?'
+                    : '¿Deseas usar esta carga teórica para el conteo?'}
               </p>
               
               <div className="space-y-3">
+                {/* Opción principal: Continuar con lo que hay */}
                 <button
                   onClick={handleContinueSession}
                   className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
@@ -994,27 +1102,45 @@ export const RedesignHammerPage: React.FC = () => {
                 </button>
                 
                 {/* Opción para limpiar solo la carga teórica pero mantener escaneos */}
-                {sessionCounts.manifests > 0 && (
+                {sessionCounts.manifests > 0 && sessionCounts.scans > 0 && (
                   <button
                     onClick={handleClearTheoreticalOnly}
                     className="w-full py-3 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
                     <FileSpreadsheet className="w-5 h-5" />
-                    Descartar carga teórica (mantener escaneos)
+                    Descartar carga teórica (mantener {sessionCounts.scans} escaneos)
+                  </button>
+                )}
+
+                {/* Opción para importar carga teórica si no tiene */}
+                {sessionCounts.manifests === 0 && sessionCounts.scans > 0 && (
+                  <button
+                    onClick={() => {
+                      setShowSessionModal(false);
+                      setIsImportModalOpen(true);
+                    }}
+                    className="w-full py-3 px-4 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
+                    Importar carga teórica
                   </button>
                 )}
                 
-                <button
-                  onClick={handleNewSession}
-                  className="w-full py-3 px-4 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  Limpiar todo y empezar de nuevo
-                </button>
+                {/* Limpiar todo */}
+                {sessionCounts.scans > 0 && (
+                  <button
+                    onClick={handleNewSession}
+                    className="w-full py-3 px-4 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    Limpiar todo y empezar de nuevo
+                  </button>
+                )}
                 
+                {/* Nueva sesión con nuevo lote */}
                 <button
                   onClick={handleNewSessionWithNewId}
-                  className="w-full py-3 px-4 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-surface hover:bg-elevated text-secondary font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   <Hammer className="w-5 h-5" />
                   Nueva sesión (lote nuevo)
@@ -1022,7 +1148,7 @@ export const RedesignHammerPage: React.FC = () => {
                 
                 <button
                   onClick={() => navigate('/dashboard')}
-                  className="w-full py-3 px-4 bg-surface hover:bg-elevated text-muted font-medium rounded-xl transition-colors"
+                  className="w-full py-3 px-4 text-muted font-medium rounded-xl transition-colors"
                 >
                   Volver al inicio
                 </button>
