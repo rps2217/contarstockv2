@@ -8,7 +8,7 @@
  * de forma unificada (modo ciego o con carga teórica).
  */
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -68,18 +68,34 @@ export const RedesignCountingPage: React.FC = () => {
   
   // Modal de inicio unificado
   const [showStartModal, setShowStartModal] = useState(false)
+  
+  // Ref para evitar que el modal se reabra durante navegación
+  const isNavigatingRef = useRef(false);
 
   // Hook del motor de conteo unificado
   const { startCounting, isStarting } = useCountingEngine()
+  
+  // Wrapper para startCounting que marca navegación
+  const handleStartCounting = async (config: any) => {
+    isNavigatingRef.current = true;
+    try {
+      await startCounting(config);
+    } finally {
+      // Resetear después de un delay para permitir re-abrir el modal si es necesario
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 1000);
+    }
+  };
 
   // Hook de counting (para cuando hay sesión activa)
   const handleExit = () => navigate('/dashboard')
   const { state, sessionData, actions } = useCountingLogic(id, handleExit)
   const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker()
 
-  // Mostrar modal de inicio cuando no hay ID
+  // Mostrar modal de inicio cuando no hay ID (pero no durante navegación)
   useEffect(() => {
-    if (!id) {
+    if (!id && !isNavigatingRef.current) {
       setShowStartModal(true)
     }
   }, [id])
@@ -257,7 +273,7 @@ export const RedesignCountingPage: React.FC = () => {
         <StartCountingModal
           isOpen={showStartModal}
           onClose={() => setShowStartModal(false)}
-          onStart={startCounting}
+          onStart={handleStartCounting}
         />
       </div>
     )

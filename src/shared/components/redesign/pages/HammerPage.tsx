@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -770,6 +770,10 @@ export const RedesignHammerPage: React.FC = () => {
   const { startCounting, isStarting } = useCountingEngine()
   
   // Modal de inicio unificado
+
+  // Ref para evitar que el modal se reabra durante navegación
+  const isNavigatingRef = useRef(false);
+
   const [showStartModal, setShowStartModal] = useState(false)
   
   // Generar un batchId único si no se proporciona uno, para evitar recuperar datos de sesiones anteriores
@@ -804,12 +808,23 @@ export const RedesignHammerPage: React.FC = () => {
 
   // Manejar inicio desde el modal
   const handleStartFromModal = async (config: StartCountingConfig) => {
-    if (config.mode === 'blind') {
-      // Modo ciego - ya estamos aquí, simplemente continuar
-      setShowStartModal(false);
-    } else {
-      // Modo teórico - redirigir a counting
-      await startCounting(config);
+    // Marcar que estamos iniciando para evitar re-renderizados
+    isNavigatingRef.current = true;
+    
+    try {
+      if (config.mode === 'blind') {
+        // Modo ciego - ya estamos aquí, simplemente continuar
+        setShowStartModal(false);
+      } else {
+        // Modo teórico - redirigir a counting
+        setShowStartModal(false);
+        await startCounting(config);
+      }
+    } finally {
+      // Resetear después de un delay para permitir re-abrir el modal si es necesario
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 1000);
     }
   };
 

@@ -75,7 +75,7 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
     setSelectedLoad(null);
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (mode === 'theoretical' && !selectedLoad) return;
 
     const config: StartCountingConfig = {
@@ -86,8 +86,18 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
       theoreticalOrderName: mode === 'theoretical' ? selectedLoad?.name : undefined,
     };
 
-    onStart(config);
+    // Primero marcar que estamos iniciando para evitar re-renderizados
+    const startPromise = onStart(config);
+    
+    // Cerrar el modal inmediatamente
     onClose();
+    
+    // Esperar a que onStart complete (que puede incluir navegación)
+    try {
+      await startPromise;
+    } catch (error) {
+      console.error('Error starting counting:', error);
+    }
   };
 
   const getActionButtonText = () => {
