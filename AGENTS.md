@@ -499,3 +499,22 @@ const handleClearTheoreticalOnly = async () => {
 - **Tests actuales**: 653 tests pasando
 - **Tests nuevos**: 9 tests para HammerDbRepository
 - **Pendientes**: Integrar tests fallidos de SyncFSM, Tooltip
+
+
+### Mejora UI: Modal de Importación
+**Commit**: `13668dd2`
+
+**Mejoras**:
+- Cards con iconos grandes y badges de estado (Nube, ERP, Offline)
+- Campo de búsqueda para filtrar órdenes locales
+- Preview de items al seleccionar una orden
+- Indicador visual de sincronización con nube
+- Animaciones spring más fluidas con framer-motion
+- Toast de confirmación al importar
+- Diseño moderno con gradientes sutiles
+
+**Vista mejorada**:
+- Header con título e icono
+- Tabs: "Nueva Importación" | "Locales (N)"
+- Cards expandibles con preview de productos
+- Footer con acciones contextuales
