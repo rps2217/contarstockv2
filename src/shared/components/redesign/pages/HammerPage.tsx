@@ -1014,15 +1014,17 @@ export const RedesignHammerPage: React.FC = () => {
         onImportLocal={handleImportLocal}
       />
 
-      <LocationSelectorModal
-        isOpen={locManager.isModalOpen || false}
-        onClose={() => locManager.closeModal?.()}
-        currentLocation={locManager.location || 'ZONA-A'}
-        onSelect={(loc) => {
-          locManager.setLocation?.(loc)
-          locManager.closeModal?.()
-        }}
-      />
+      {locManager.isModalOpen && (
+        <LocationSelectorModal
+          isOpen={true}
+          onClose={() => locManager.closeModal?.()}
+          currentLocation={locManager.location || 'ZONA-A'}
+          onSelect={(loc) => {
+            locManager.setLocation?.(loc)
+            locManager.closeModal?.()
+          }}
+        />
+      )}
 
       {/* Modal de Sesión Existente */}
       <AnimatePresence>
