@@ -619,10 +619,20 @@ const isEnabled = useFeature('HAMMER_EXPIRY')
 | VIRTUAL_FIELDS | Campos Virtuales | false | experimental |
 | AUDIT_LOGS | Logs de Auditoria | true | security |
 
+### Panel de Administracion
+Ubicacion: `Settings > Sistema > Feature Flags`
+
+El panel permite:
+- Ver todas las features por categoria
+- Toggle individual de cada feature
+- Resetear todas a valores default
+- Ver warnings de modo experimental
+
 ### Agregar Nueva Feature
-1. Agregar entrada en `FEATURES_REGISTRY` en `features.ts`
+1. Agregar entrada en `FEATURES_REGISTRY` en `src/config/features.ts`
 2. Usar `isFeatureEnabled('MI_FEATURE')` en el codigo
 3. Agregar test de contrato en `src/__tests__/contracts/`
+4. La feature aparecera automaticamente en el panel
 
 ---
 
