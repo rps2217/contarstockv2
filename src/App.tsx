@@ -407,8 +407,10 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       {/* RUTAS PRINCIPALES */}
       <Route path="/" element={<Dashboard />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/capture" element={<CapturePage />} />
-      <Route path="/capture/:tab" element={<CapturePage />} />
+      {/* Redirección: /capture ahora es /counting (flujo unificado) */}
+      <Route path="/capture" element={<Navigate to="/counting" replace />} />
+      <Route path="/capture/:tab" element={<Navigate to="/counting" replace />} />
+      <Route path="/counting" element={<CountingPage />} />
       <Route path="/data" element={<DataPage />} />
       <Route path="/data/:table" element={<DataPage />} />
       <Route path="/data/:table/:id" element={<DataPage />} />

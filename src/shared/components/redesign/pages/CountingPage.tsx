@@ -3,14 +3,17 @@
  * 
  * Componente orchestrator que usa componentes separados.
  * La lógica de negocio está en useCountingLogic.
+ * 
+ * Ahora incluye StartCountingModal para iniciar nuevos conteos
+ * de forma unificada (modo ciego o con carga teórica).
  */
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   X, Check,
-  AlertTriangle, Scan, Keyboard, CheckCircle2, ClipboardList, Loader2
+  AlertTriangle, Scan, Keyboard, CheckCircle2, ClipboardList, Loader2, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -22,6 +25,10 @@ import { useCountingLogic } from '@/features/counting/hooks/useCountingLogic'
 import { useProductivity } from '@/shared/hooks'
 import { useExpiryTracker } from '@/features/counting/hooks/useExpiryTracker'
 import { SessionRepository } from '@/repositories/SessionRepository'
+
+// Importar hook de motor unificado y modal de inicio
+import { useCountingEngine } from '@/features/counting/hooks/useCountingEngine'
+import { StartCountingModal, type StartCountingConfig } from '@/features/counting/components/StartCountingModal'
 
 // ============================================================================
 // COMPONENTES DE ESTADO (Loading/Empty/Error)
@@ -58,11 +65,24 @@ export const RedesignCountingPage: React.FC = () => {
   const [manualBarcode, setManualBarcode] = useState('')
   const [isFinishing, setIsFinishing] = useState(false)
   const [editExpiryItem, setEditExpiryItem] = useState<{barcode: string; name: string; mm?: number; yyyy?: number} | null>(null)
+  
+  // Modal de inicio unificado
+  const [showStartModal, setShowStartModal] = useState(false)
 
-  // Hook de counting
+  // Hook del motor de conteo unificado
+  const { startCounting, isStarting } = useCountingEngine()
+
+  // Hook de counting (para cuando hay sesión activa)
   const handleExit = () => navigate('/dashboard')
   const { state, sessionData, actions } = useCountingLogic(id, handleExit)
   const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker()
+
+  // Mostrar modal de inicio cuando no hay ID
+  useEffect(() => {
+    if (!id) {
+      setShowStartModal(true)
+    }
+  }, [id])
 
   // ✅ Extraer estado de auto-save
   const { autoSave } = state
@@ -164,8 +184,10 @@ export const RedesignCountingPage: React.FC = () => {
   }
 
   if (!sessionData?.session) {
+    // Si no hay sesión activa, mostrar estado vacío con opción de iniciar
     return (
       <div className="h-full flex flex-col bg-base">
+        {/* Header */}
         <div className="pt-6 px-4 sm:px-6 shrink-0 bg-base border-b border-subtle">
           <div className="flex justify-end mb-2">
             <button 
@@ -176,16 +198,66 @@ export const RedesignCountingPage: React.FC = () => {
             </button>
           </div>
         </div>
-        <EmptyState
-          icon={ClipboardList}
-          title="No hay sesión activa"
-          description="Crea una nueva sesión de conteo para comenzar"
-          action={{
-            label: "Crear sesión",
-            onClick: () => navigate('/'),
-            variant: 'primary'
-          }}
-          illustration="no-data"
+        
+        {/* Estado vacío con botón para iniciar conteo */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center max-w-md"
+          >
+            <div className="w-20 h-20 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Zap className="w-10 h-10 text-blue-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-primary mb-2">
+              ¿Listo para contar?
+            </h2>
+            <p className="text-secondary mb-8">
+              Inicia un nuevo conteo seleccionando el tipo que mejor se adapte a tus necesidades.
+            </p>
+            
+            {/* Botones de acción rápida */}
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowStartModal(true)}
+                disabled={isStarting}
+                className="w-full py-4 px-6 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {isStarting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    Nuevo Conteo
+                  </>
+                )}
+              </button>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => navigate('/massive')}
+                  className="flex-1 py-3 px-4 bg-surface hover:bg-elevated text-primary rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  Modo Ráfaga
+                </button>
+                <button
+                  onClick={() => navigate('/theoretical-loads')}
+                  className="flex-1 py-3 px-4 bg-surface hover:bg-elevated text-primary rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  Cargas Teóricas
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Modal de inicio de conteo */}
+        <StartCountingModal
+          isOpen={showStartModal}
+          onClose={() => setShowStartModal(false)}
+          onStart={startCounting}
         />
       </div>
     )
