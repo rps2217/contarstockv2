@@ -26,12 +26,14 @@ import {
   ArrowLeft,
   Activity,
   AlertTriangle,
+  FlaskConical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores'
 import { useTheme, ThemeName } from '../ThemeContext'
 import { RoleSettings } from '@/shared/components/settings/RoleSettings'
 import { AuditPanel } from '@/shared/components/audit/AuditPanel'
+import { FeatureFlagsPanel } from '@/shared/components/settings/FeatureFlagsPanel'
 import { usePermissions } from '@/shared/hooks/usePermissions'
 import { toast } from 'sonner'
 
@@ -40,7 +42,7 @@ import { HealthDashboard } from '@/shared/components/ui/health'
 import { integrityService, IntegrityCheckResult } from '@/services/IntegrityService'
 import { healthService } from '@/services/HealthService'
 
-type SettingsSection = 'main' | 'permissions' | 'audit';
+type SettingsSection = 'main' | 'permissions' | 'audit' | 'experimental';
 
 // ============================================================================
 // Componentes base
@@ -314,6 +316,20 @@ export const RedesignSettingsPage: React.FC = () => {
     </div>
   )
 
+  // Renderizar sección de Feature Flags
+  const renderExperimentalSection = () => (
+    <div className="space-y-4">
+      <button
+        onClick={() => setActiveSection('main')}
+        className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-400 mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Volver a configuración
+      </button>
+      <FeatureFlagsPanel />
+    </div>
+  )
+
   return (
     <div className="h-full flex flex-col bg-base">
       {/* Header */}
@@ -328,6 +344,15 @@ export const RedesignSettingsPage: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
         <div className="max-w-2xl mx-auto">
+
+          {/* Renderizar sección según activeSection */}
+          {activeSection === 'permissions' && renderPermissionsSection()}
+          {activeSection === 'audit' && renderAuditSection()}
+          {activeSection === 'experimental' && renderExperimentalSection()}
+
+          {/* Contenido principal solo en main */}
+          {activeSection === 'main' && (
+          <>
           
           {/* Perfil Card */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-3xl p-6 flex items-center gap-5 mb-8 shadow-lg shadow-blue-900/20">
@@ -470,6 +495,18 @@ export const RedesignSettingsPage: React.FC = () => {
                   description="Logs de actividad del sistema"
                   onClick={() => setActiveSection('audit')}
                 />
+                {/* ✅ Feature Flags */}
+                <SettingsItem
+                  icon={FlaskConical}
+                  label="Feature Flags"
+                  description="Toggles de funcionalidades experimentales"
+                  onClick={() => setActiveSection('experimental')}
+                  rightElement={
+                    <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium">
+                      BETA
+                    </span>
+                  }
+                />
                 {/* ✅ Opción de Salud del Sistema */}
                 <SettingsItem
                   icon={Activity}
@@ -510,6 +547,8 @@ export const RedesignSettingsPage: React.FC = () => {
             <p className="text-xs text-muted">ContarStock v2.0.0</p>
             <p className="text-xs text-muted mt-1">© 2024 LogiCount Pro</p>
           </div>
+          </>
+          )}
         </div>
       </div>
 
