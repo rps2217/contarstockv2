@@ -518,3 +518,20 @@ const handleClearTheoreticalOnly = async () => {
 - Tabs: "Nueva Importación" | "Locales (N)"
 - Cards expandibles con preview de productos
 - Footer con acciones contextuales
+
+
+### Mejora UI: Modales de TheoreticalLoadsPage
+**Commit**: `a2c9e8c0`
+
+**OrderDetailModal mejorado**:
+- Header con icono grande y badges (tipo documento, sincronizado)
+- Stats en cards grandes (SKUs y unidades)
+- Sección de información estructurada
+- Preview de items (primeros 5)
+- Botón "Iniciar Conteo" directo
+
+**ConfirmModal mejorado**:
+- Animaciones spring más fluidas
+- Nuevo variant "success" con color verde
+- Prop `extraInfo` para mostrar información adicional
+- Icono personalizable con prop `icon`
