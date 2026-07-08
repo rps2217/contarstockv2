@@ -3,13 +3,14 @@ import { motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle, Info, X, Plus, Search,
   Filter, Bell, Clock, User, MapPin, Package, ChevronRight, RefreshCw,
-  List, Upload
+  List, Upload, Settings2, Table2, Edit3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { EventsImporter } from '../components/EventsImporter'
+import { EventsModal } from '../components/EventsModal'
 
 // ============================================================================
 // Tipos
@@ -141,6 +142,7 @@ export const RedesignEventsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('list')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Datos de eventos
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
@@ -259,6 +261,13 @@ export const RedesignEventsPage: React.FC = () => {
               </>
             )}
           </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-amber-900/20"
+          >
+            <Table2 className="w-4 h-4" />
+            Gestionar
+          </button>
         </div>
 
         {/* Tabs */}
@@ -356,6 +365,9 @@ export const RedesignEventsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Gestión de Eventos */}
+      <EventsModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   )
 }
