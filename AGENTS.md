@@ -636,6 +636,32 @@ El panel permite:
 
 ---
 
+## Modularización: Cargas Teóricas (2026-07-07)
+
+### Módulo Unificado
+**Ruta:** `/theoretical-loads` (anteriormente `/expected-orders`)
+
+**Ubicación en menú:** `Cargas Teóricas` (lateral)
+
+**Componente:** `TheoreticalLoadsPage`
+
+### Funcionalidades Integradas
+| Funcionalidad | Implementación |
+|---------------|----------------|
+| Lista de órdenes locales | `ExpectedOrderRepository.getAll()` |
+| Importación CSV | `NewOrderForm` component |
+| Importación paste | `NewOrderForm` component |
+| Envío a Hammer | `importLocalExpectedOrderToHammer()` |
+| Impresión térmica | `thermalPrinter` service |
+| Manifiestos ERP | `erpService` |
+
+### Archivos Eliminados
+- `ExpectedOrdersPage.tsx` (duplicado)
+- `useExpectedOrders.ts` (reemplazado por `NewOrderForm`)
+- Ruta `/expected-orders` (redirigida)
+
+---
+
 ## Workflow para Agentes AI (2026-07-07)
 
 ### Antes de Modificar Archivos
