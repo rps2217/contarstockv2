@@ -474,3 +474,28 @@ const handleClearTheoreticalOnly = async () => {
 - `efad2a1c` - chore: Refactorizaciones y mejoras del codebase
 - `f12febde` - fix(hammer): Auto-descartar carga teórica antigua
 
+
+
+### Fix Modal Ubicación
+**Commit**: `99b9f57e`
+
+**Problema**: El modal de ubicación se abría automáticamente al entrar al módulo Hammer.
+
+**Solución**:
+- LocationSelectorModal ahora se renderiza condicionalmente
+- Solo se muestra cuando `locManager.isModalOpen` es `true`
+
+### Tests Unitarios: HammerDbRepository
+**Commit**: `41f113d2`
+
+**Tests agregados** (9 tests):
+- `getBlindScansByBatch`: Retorna escaneos por batchId
+- `bulkAddBlindScans`: Agrega múltiples escaneos
+- `getBatchCounts`: Retorna conteos de escaneos y manifests
+- `getBatchSessionInfo`: Información detallada de sesión
+- `getBatchSummary`: Combina escaneos y manifests
+
+### Cobertura de Tests
+- **Tests actuales**: 653 tests pasando
+- **Tests nuevos**: 9 tests para HammerDbRepository
+- **Pendientes**: Integrar tests fallidos de SyncFSM, Tooltip
