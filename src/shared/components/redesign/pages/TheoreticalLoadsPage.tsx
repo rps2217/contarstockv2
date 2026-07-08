@@ -5,7 +5,9 @@ import {
   Search, Package, Download, Loader2,
   CheckCircle2, AlertTriangle, Database, Layers,
   Play, Send, Calendar, Clock, ArrowRight, Printer,
-  Eye, ShoppingCart, X, Plus, ChevronDown, ChevronUp
+  Eye, ShoppingCart, X, Plus, ChevronDown, ChevronUp,
+  MapPin, Zap, Scan, ClipboardCheck, ChevronRight, Package2,
+  Wifi, WifiOff, ListChecks
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -240,21 +242,27 @@ const CloudManifestCard = ({
 // ============================================================================
 // MODAL DE DETALLE DE ORDEN
 // ============================================================================
+// ============================================================================
+// MODAL DE DETALLE DE ORDEN - MEJORADO
+// ============================================================================
 const OrderDetailModal = ({
   isOpen,
   onClose,
   order,
-  onDelete
+  onDelete,
+  onStartCount
 }: {
   isOpen: boolean
   onClose: () => void
   order: ExpectedOrder | null
   onDelete: () => void
+  onStartCount?: () => void
 }) => {
   if (!isOpen || !order) return null
 
   const skuCount = order.items?.length || 0
   const totalQty = order.items?.reduce((acc, i) => acc + (i.expectedQty || i.quantity || 0), 0) || 0
+  const displayName = order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id
 
   return (
     <motion.div
@@ -263,52 +271,132 @@ const OrderDetailModal = ({
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="bg-base border border-subtle rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-subtle flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-emerald-500" />
+        {/* Header */}
+        <div className="p-5 border-b border-subtle shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <ShoppingCart className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary">{displayName}</h3>
+                <p className="text-xs text-muted font-mono">{order.id}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-primary">{order.metadata?.documentType || 'Carga Teorica'}</h3>
-              <p className="text-xs text-muted font-mono">{order.id}</p>
-            </div>
+            <button onClick={onClose} className="p-2 hover:bg-surface rounded-lg transition-colors">
+              <X className="w-5 h-5 text-muted" />
+            </button>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-surface rounded-lg transition-colors">
-            <X className="w-5 h-5 text-muted" />
-          </button>
+          
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {order.metadata?.documentType && (
+              <span className="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold">
+                {order.metadata.documentType}
+              </span>
+            )}
+            {order._syncedFromCloud && (
+              <span className="px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-semibold flex items-center gap-1">
+                <Cloud className="w-3 h-3" /> Sincronizado
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="bg-surface rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-black uppercase text-muted tracking-widest">Informacion</h4>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-muted text-xs">Tipo</span>
-                <p className="font-medium">{order.metadata?.documentType || 'Picking List'}</p>
-              </div>
-              <div>
-                <span className="text-muted text-xs">Orden Compra</span>
-                <p className="font-medium font-mono">{order.metadata?.purchaseOrder || '---'}</p>
-              </div>
-            </div>
-          </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-500/10 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-blue-500">{skuCount}</p>
-              <p className="text-xs text-muted">SKUs</p>
+            <div className="bg-blue-500/10 rounded-xl p-4 text-center">
+              <p className="text-3xl font-bold text-blue-500">{skuCount}</p>
+              <p className="text-xs text-muted mt-1">SKUs</p>
             </div>
-            <div className="bg-amber-500/10 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-amber-500">{totalQty}</p>
-              <p className="text-xs text-muted">Unidades</p>
+            <div className="bg-amber-500/10 rounded-xl p-4 text-center">
+              <p className="text-3xl font-bold text-amber-500">{totalQty.toLocaleString()}</p>
+              <p className="text-xs text-muted mt-1">Unidades</p>
             </div>
           </div>
+
+          {/* Info */}
+          <div className="bg-surface rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-bold uppercase text-muted tracking-wider">Información</h4>
+            <div className="space-y-2">
+              {order.metadata?.purchaseOrder && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">Orden de Compra</span>
+                  <span className="text-primary font-mono">{order.metadata.purchaseOrder}</span>
+                </div>
+              )}
+              {order.metadata?.date && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">Fecha</span>
+                  <span className="text-primary">{order.metadata.date}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> Importado
+                </span>
+                <span className="text-primary">{formatDetailDateTime(order.importedAt)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview Items */}
+          {order.items && order.items.length > 0 && (
+            <div className="bg-surface rounded-xl p-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase text-muted tracking-wider">Preview (primeros 5)</h4>
+              <div className="space-y-2">
+                {order.items.slice(0, 5).map((item, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm bg-black/20 rounded-lg px-3 py-2">
+                    <span className="text-secondary truncate flex-1">{item.name || item.barcode}</span>
+                    <span className="text-muted ml-2 font-mono">{item.expectedQty || item.quantity} und</span>
+                  </div>
+                ))}
+                {order.items.length > 5 && (
+                  <p className="text-xs text-muted text-center pt-1">
+                    + {order.items.length - 5} productos más...
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="p-4 border-t border-subtle flex gap-3 shrink-0">
-          <button onClick={onDelete} className="flex-1 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl font-medium text-sm transition-colors">Eliminar</button>
-          <button onClick={onClose} className="flex-1 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium text-sm transition-colors">Cerrar</button>
+
+        {/* Footer */}
+        <div className="p-5 border-t border-subtle shrink-0">
+          <div className="flex gap-3">
+            {onStartCount && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onStartCount}
+                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Iniciar Conteo
+              </motion.button>
+            )}
+            <button 
+              onClick={onDelete} 
+              className="px-4 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl font-medium transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={onClose} 
+              className="px-4 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>
@@ -317,7 +405,7 @@ const OrderDetailModal = ({
 
 
 // ============================================================================
-// MODAL DE CONFIRMACIÓN
+// MODAL DE CONFIRMACIÓN - MEJORADO
 // ============================================================================
 const ConfirmModal = ({ 
   isOpen, 
@@ -327,7 +415,9 @@ const ConfirmModal = ({
   description,
   confirmText = 'Confirmar',
   loading = false,
-  variant = 'default'
+  variant = 'default',
+  icon: CustomIcon,
+  extraInfo
 }: {
   isOpen: boolean
   onClose: () => void
@@ -336,15 +426,20 @@ const ConfirmModal = ({
   description: string
   confirmText?: string
   loading?: boolean
-  variant?: 'default' | 'danger' | 'warning'
+  variant?: 'default' | 'danger' | 'warning' | 'success'
+  icon?: React.ElementType
+  extraInfo?: React.ReactNode
 }) => {
   if (!isOpen) return null
 
-  const variantStyles = {
-    default: 'bg-blue-600 hover:bg-blue-500',
-    danger: 'bg-rose-600 hover:bg-rose-500',
-    warning: 'bg-amber-600 hover:bg-amber-500'
+  const variantConfig = {
+    default: { bg: 'bg-blue-500/10', icon: 'text-blue-500', btn: 'bg-blue-600 hover:bg-blue-500', Icon: CustomIcon || Download },
+    danger: { bg: 'bg-rose-500/10', icon: 'text-rose-500', btn: 'bg-rose-600 hover:bg-rose-500', Icon: CustomIcon || AlertTriangle },
+    warning: { bg: 'bg-amber-500/10', icon: 'text-amber-500', btn: 'bg-amber-600 hover:bg-amber-500', Icon: CustomIcon || Database },
+    success: { bg: 'bg-emerald-500/10', icon: 'text-emerald-500', btn: 'bg-emerald-600 hover:bg-emerald-500', Icon: CustomIcon || CheckCircle2 }
   }
+
+  const config = variantConfig[variant]
 
   return (
     <motion.div
@@ -353,46 +448,58 @@ const ConfirmModal = ({
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-base border border-subtle rounded-2xl w-full max-w-md p-6"
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="bg-base border border-subtle rounded-2xl w-full max-w-md overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="text-center">
-          <div className={cn(
-            'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4',
-            variant === 'danger' ? 'bg-rose-500/10' : 
-            variant === 'warning' ? 'bg-amber-500/10' : 'bg-blue-500/10'
-          )}>
-            {variant === 'danger' ? (
-              <AlertTriangle className="w-8 h-8 text-rose-500" />
-            ) : variant === 'warning' ? (
-              <Database className="w-8 h-8 text-amber-500" />
-            ) : (
-              <Download className="w-8 h-8 text-blue-500" />
+        <div className="p-6 text-center">
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+            className={cn(
+              'w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4',
+              config.bg
             )}
-          </div>
-          <h3 className="text-lg font-bold text-primary">{title}</h3>
-          <p className="text-sm text-secondary mt-2">{description}</p>
+          >
+            <config.Icon className={cn('w-8 h-8', config.icon)} />
+          </motion.div>
+          <h3 className="text-xl font-bold text-primary">{title}</h3>
+          <p className="text-sm text-secondary mt-2 leading-relaxed">{description}</p>
+          
+          {extraInfo && (
+            <div className="mt-4 p-3 bg-surface rounded-xl">
+              {extraInfo}
+            </div>
+          )}
         </div>
-        <div className="flex gap-3 mt-6">
+        
+        <div className="flex gap-3 p-4 pt-0">
           <button
             onClick={onClose}
             className="flex-1 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium transition-colors"
           >
             Cancelar
           </button>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={onConfirm}
             disabled={loading}
             className={cn(
-              'flex-1 py-3 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50',
-              variantStyles[variant]
+              'flex-1 py-3 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50',
+              config.btn
             )}
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {confirmText}
-          </button>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              confirmText
+            )}
+          </motion.button>
         </div>
       </motion.div>
     </motion.div>
@@ -434,7 +541,9 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     description: string
     action: () => Promise<void>
     confirmText: string
-    variant: 'default' | 'danger' | 'warning'
+    variant: 'default' | 'danger' | 'warning' | 'success'
+    icon?: React.ElementType
+    extraInfo?: React.ReactNode
   }>({
     open: false,
     title: '',
@@ -655,6 +764,36 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         }
       })
     }
+  }
+
+  // Iniciar conteo desde modal de detalle
+  const handleStartCountFromDetail = () => {
+    if (!detailModal.order) return
+    
+    const order = detailModal.order
+    setConfirmModal({
+      open: true,
+      title: 'Iniciar Conteo de Prueba',
+      description: `Se creará una sesión de conteo con ${order.items?.length || 0} SKUs de esta carga teórica.`,
+      confirmText: 'Iniciar',
+      variant: 'success',
+      icon: Play,
+      extraInfo: (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted">SKUs a contar</span>
+            <span className="text-primary font-bold">{order.items?.length || 0}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted">Unidades totales</span>
+            <span className="text-primary font-bold">
+              {order.items?.reduce((acc, i) => acc + (i.expectedQty || i.quantity || 0), 0) || 0}
+            </span>
+          </div>
+        </div>
+      ),
+      action: () => startCountFromLocal(order)
+    })
   }
 
   const handleImportCloud = (manifestId: string) => {
@@ -1030,6 +1169,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         onClose={() => setDetailModal({ open: false, order: null })}
         order={detailModal.order}
         onDelete={handleDeleteFromDetail}
+        onStartCount={handleStartCountFromDetail}
       />
 
       {/* Modal de Confirmación */}
@@ -1044,6 +1184,8 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         description={confirmModal.description}
         confirmText={confirmModal.confirmText}
         variant={confirmModal.variant}
+        icon={confirmModal.icon}
+        extraInfo={confirmModal.extraInfo}
         loading={loadingLocal || loadingCloud}
       />
     </div>
