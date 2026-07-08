@@ -37,7 +37,7 @@ El rediseño implementa un sistema de tokens de diseño unificados:
 
 ---
 
-## Optimización de Bundles y Performance (2026-06-27)
+## Optimización de Bundles y Performance (2026-06-27, Actualizado 2026-07-07)
 
 ### Configuración de Chunks en vite.config.ts
 ```typescript
@@ -435,4 +435,42 @@ const handleClearTheoreticalOnly = async () => {
 3. Usuario cierra navegador y vuelve a entrar
 4. Si accede a `/massive` (sin batchId) → Se genera NUEVO batchId → Sesión limpia
 5. Si comparte/enlaza a `/massive/HM-A1B2C3D4` → Recupera la sesión original
+
+
+---
+
+## Mejoras de Julio 2026 (2026-07-07)
+
+### Fix Hammer: Auto-descartar Carga Teórica Antigua
+**Commit**: `f12febde`
+
+**Problema**: Al comenzar un conteo, se recuperaba automáticamente una carga teórica descartada.
+
+**Solución**:
+- Nuevo método `getBatchSessionInfo()` para información detallada de sesiones
+- Auto-descarte de carga teórica si tiene más de 24h o nunca fue usada
+- Modal de sesión mejorado con información contextual
+
+### Refactorización: Nomenclatura (massiveDb → hammerDb)
+**Commit**: `2c492062`
+
+**Cambios**:
+- `MassiveDbRepository` → `HammerDbRepository`
+- `massiveSync.ts` → `hammerSync.ts`
+- `massiveDb` → `hammerDb` en todo el codebase
+- 37 archivos actualizados
+
+### Optimización Bundle: Lazy Loading de IA
+**Commit**: `0dda50ac`
+
+**Mejoras**:
+- `localBrain.ts`: Import dinámico de `@xenova/transformers`
+- `visionService.ts`: Import dinámico de `@google/genai`
+- Los módulos de IA ahora solo se cargan cuando se necesitan
+
+### Commits Recientes
+- `0dda50ac` - perf: Convertir imports estáticos a dinámicos
+- `2c492062` - refactor: Renombrar massiveDb a hammerDb
+- `efad2a1c` - chore: Refactorizaciones y mejoras del codebase
+- `f12febde` - fix(hammer): Auto-descartar carga teórica antigua
 
