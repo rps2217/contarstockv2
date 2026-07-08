@@ -636,21 +636,6 @@ export const RedesignExpiryPage: React.FC = () => {
             </motion.div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-surface border border-subtle rounded-xl p-3 text-center">
-              <p className="text-lg font-bold text-primary">{totalRecords}</p><p className="text-xs text-muted">Total</p>
-            </div>
-            <div className="bg-surface border border-subtle rounded-xl p-3 text-center">
-              <p className="text-lg font-bold text-rose-500">{counts.expired}</p><p className="text-xs text-muted">Vencidos</p>
-            </div>
-            <div className="bg-surface border border-subtle rounded-xl p-3 text-center">
-              <p className="text-lg font-bold text-amber-500">{counts.critical + counts.withdrawal}</p><p className="text-xs text-muted">A retirar</p>
-            </div>
-            <div className="bg-surface border border-subtle rounded-xl p-3 text-center">
-              <p className="text-lg font-bold text-emerald-500">{counts.next + counts.safe}</p><p className="text-xs text-muted">Vigentes</p>
-            </div>
-          </div>
-
           {allRecords.length === 0 ? (
             <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
               <CalendarClock className="w-12 h-12 text-muted mx-auto mb-4" />
