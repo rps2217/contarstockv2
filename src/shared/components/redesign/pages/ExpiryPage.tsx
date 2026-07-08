@@ -567,15 +567,6 @@ export const RedesignExpiryPage: React.FC = () => {
                 title={viewMode === 'cards' ? 'Vista tabla' : viewMode === 'table' ? 'Vista Kanban' : 'Vista cards'}>
                 {viewMode === 'cards' ? <List className="w-4 h-4" /> : viewMode === 'table' ? <Columns3 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
               </button>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                {FILTERS.map((f) => (
-                  <button key={f.value} onClick={() => handleFilterClick(f.value)}
-                    className={cn('px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors shrink-0',
-                      filter === f.value ? 'bg-blue-600 text-white' : 'bg-surface text-secondary hover:bg-elevated hover:text-primary border border-subtle')}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
