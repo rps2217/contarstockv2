@@ -1,48 +1,48 @@
-import { massiveDb } from '../db';
+import { hammerDb } from '../db';
 import { BlindScan } from '../types';
 
-export class MassiveDbRepository {
+export class HammerDbRepository {
   static async getBlindScansByBatch(batchId: string): Promise<BlindScan[]> {
-    return await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
+    return await hammerDb.blindScans.where('batchId').equals(batchId).toArray();
   }
 
   static async getBlindManifestsByBatch(batchId: string) {
-    return await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
+    return await hammerDb.blindManifests.where('batchId').equals(batchId).toArray();
   }
 
   static async bulkAddBlindScans(scans: Omit<BlindScan, 'id'>[]) {
     try {
-      await massiveDb.blindScans.bulkAdd(scans as BlindScan[]);
+      await hammerDb.blindScans.bulkAdd(scans as BlindScan[]);
     } catch (error) {
-      console.error('[MassiveDbRepository] Error in bulkAdd:', error);
+      console.error('[HammerDbRepository] Error in bulkAdd:', error);
       throw error;
     }
   }
 
   static async addSingleScan(scan: Omit<BlindScan, 'id'>) {
-    return await massiveDb.blindScans.add(scan as BlindScan);
+    return await hammerDb.blindScans.add(scan as BlindScan);
   }
 
   static async deleteBlindScansByBatch(batchId: string) {
-    await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+    await hammerDb.blindScans.where('batchId').equals(batchId).delete();
   }
 
   static async deleteBlindManifestsByBatch(batchId: string) {
-    await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+    await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
   }
 
   static async deleteBlindScan(batchId: string, barcode: string) {
     // Borrar todos los registros de ese barcode en ese lote
-    await massiveDb.blindScans.where({ batchId, barcode }).delete();
+    await hammerDb.blindScans.where({ batchId, barcode }).delete();
   }
 
   static async updateScanQuantity(batchId: string, barcode: string, newTotal: number, location: string) {
-    return await massiveDb.transaction('rw', massiveDb.blindScans, async () => {
+    return await hammerDb.transaction('rw', hammerDb.blindScans, async () => {
       // 1. Borrar registros previos del mismo barcode en ese lote
-      await massiveDb.blindScans.where({ batchId, barcode }).delete();
+      await hammerDb.blindScans.where({ batchId, barcode }).delete();
       // 2. Insertar un único registro consolidado con la nueva cantidad
       if (newTotal > 0) {
-        await massiveDb.blindScans.add({
+        await hammerDb.blindScans.add({
           batchId,
           barcode,
           quantity: newTotal,
@@ -54,19 +54,19 @@ export class MassiveDbRepository {
   }
 
   static async getLastBlindScan() {
-    return await massiveDb.blindScans.orderBy('timestamp').reverse().first();
+    return await hammerDb.blindScans.orderBy('timestamp').reverse().first();
   }
 
   static async getFirstBlindManifest() {
-    return await massiveDb.blindManifests.toCollection().first();
+    return await hammerDb.blindManifests.toCollection().first();
   }
 
   static async getBlindManifestCountByBatch(batchId: string): Promise<number> {
-    return await massiveDb.blindManifests.where('batchId').equals(batchId).count();
+    return await hammerDb.blindManifests.where('batchId').equals(batchId).count();
   }
 
   static async getBlindScanCountByBatch(batchId: string): Promise<number> {
-    return await massiveDb.blindScans.where('batchId').equals(batchId).count();
+    return await hammerDb.blindScans.where('batchId').equals(batchId).count();
   }
 
   static async getBatchCounts(batchId: string): Promise<{ scans: number; manifests: number }> {

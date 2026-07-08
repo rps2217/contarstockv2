@@ -15,10 +15,10 @@ import { useHammerLogic, HammerItem } from '@/features/hammer/hooks/useHammerLog
 import { useLocationManager } from '@/shared/hooks/useLocationManager'
 import { useHIDScanner } from '@/hooks/useHIDScanner'
 import { useAppStore } from '@/stores'
-import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '@/services/massiveSync'
+import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '@/services/hammerSync'
 import { exportHammerToExcel } from '@/services/export'
 import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
-import { MassiveDbRepository } from '@/repositories/MassiveDbRepository'
+import { HammerDbRepository } from '@/repositories/HammerDbRepository'
 import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository'
 import type { ExpectedOrder } from '@/types'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -514,7 +514,7 @@ export const RedesignHammerPage: React.FC = () => {
   useEffect(() => {
     const checkExistingSession = async () => {
       // Usar getBatchSessionInfo para obtener información más detallada
-      const sessionInfo = await MassiveDbRepository.getBatchSessionInfo(effectiveBatchId);
+      const sessionInfo = await HammerDbRepository.getBatchSessionInfo(effectiveBatchId);
       
       // Si no hay datos, no mostrar modal
       if (!sessionInfo.hasData) {
@@ -540,7 +540,7 @@ export const RedesignHammerPage: React.FC = () => {
       // Si tiene manifests sin escaneos (sesión nunca usada) o manifests muy antiguos
       if (sessionInfo.manifests > 0 && sessionInfo.scans === 0) {
         // Descartar automáticamente los manifests que nunca se usaron
-        await MassiveDbRepository.deleteBlindManifestsByBatch(effectiveBatchId);
+        await HammerDbRepository.deleteBlindManifestsByBatch(effectiveBatchId);
         toast.info('Carga teórica antigua descartada automáticamente');
         setSessionCounts({
           scans: 0,
@@ -639,11 +639,11 @@ export const RedesignHammerPage: React.FC = () => {
   const handleNewSession = async () => {
     try {
       // 1. Eliminar todos los escaneos
-      await MassiveDbRepository.deleteBlindScansByBatch(batchId)
+      await HammerDbRepository.deleteBlindScansByBatch(batchId)
       
       // 2. ELIMINAR también la carga teórica (manifests)
       // Esto es lo que faltaba - los manifests nunca se eliminaban
-      await MassiveDbRepository.deleteBlindManifestsByBatch(batchId)
+      await HammerDbRepository.deleteBlindManifestsByBatch(batchId)
       
       // 3. Recargar la página para reiniciar todo desde cero
       window.location.reload()
@@ -656,7 +656,7 @@ export const RedesignHammerPage: React.FC = () => {
   // Limpiar solo la carga teórica (manifests) pero mantener los escaneos
   const handleClearTheoreticalOnly = async () => {
     try {
-      await MassiveDbRepository.deleteBlindManifestsByBatch(batchId)
+      await HammerDbRepository.deleteBlindManifestsByBatch(batchId)
       setShowSessionModal(false)
       toast.success('Carga teórica eliminada. Los escaneos se mantienen.')
     } catch (error) {

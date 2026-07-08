@@ -3,9 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { sanitizeBarcode } from '../../../services/utils';
 import { useScanPipeline } from '../../../shared/hooks/useScanPipeline';
 import { Product } from '../../../types';
-import { MassiveDbRepository } from '../../../repositories/MassiveDbRepository';
+import { HammerDbRepository } from '../../../repositories/HammerDbRepository';
 import { productRepository } from '../../../repositories/DexieProductRepository';
-import { pushScansToCloud } from '../../../services/massiveSync';
+import { pushScansToCloud } from '../../../services/hammerSync';
 import { logger } from '../../../services/logger';
 
 export interface HammerItem {
@@ -54,8 +54,8 @@ export const useHammerLogic = (batchId: string) => {
     if (!batchId) return [];
     
     const [rawScans, manifests] = await Promise.all([
-      MassiveDbRepository.getBlindScansByBatch(batchId),
-      MassiveDbRepository.getBlindManifestsByBatch(batchId)
+      HammerDbRepository.getBlindScansByBatch(batchId),
+      HammerDbRepository.getBlindManifestsByBatch(batchId)
     ]);
     
     const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
@@ -134,7 +134,7 @@ export const useHammerLogic = (batchId: string) => {
         const mergedScans = Object.values(aggregatedBatch).filter(b => b.qty !== 0);
 
         if (mergedScans.length > 0) {
-          await MassiveDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
+          await HammerDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
             batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
           })));
           
@@ -228,7 +228,7 @@ export const useHammerLogic = (batchId: string) => {
         engine.actions.updateActiveItem(clean, null, finalQty, 0);
         engine.actions.triggerFeedback('success');
 
-        await MassiveDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
+        await HammerDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
         
         // Background push manual edit immediately if enabled
         if (autoSyncRef.current) {
@@ -328,10 +328,10 @@ export const useHammerLogic = (batchId: string) => {
       toggleAutoSync: () => setAutoSyncEnabled(p => !p),
       removeItem: async (barcode: string) => {
         if (barcode === 'ALL') {
-          await MassiveDbRepository.deleteBlindScansByBatch(batchId);
+          await HammerDbRepository.deleteBlindScansByBatch(batchId);
           setOptimisticItems([]);
         } else {
-          await MassiveDbRepository.deleteBlindScan(batchId, barcode);
+          await HammerDbRepository.deleteBlindScan(batchId, barcode);
           setOptimisticItems(prev => prev.filter(i => i.barcode !== barcode));
           
           if (autoSyncRef.current) {

@@ -5,8 +5,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MassiveDbRepository } from '../../../repositories/MassiveDbRepository';
-import { pushScansToCloud } from '../../../services/massiveSync';
+import { HammerDbRepository } from '../../../repositories/HammerDbRepository';
+import { pushScansToCloud } from '../../../services/hammerSync';
 
 interface WriteQueueItem {
   barcode: string;
@@ -92,7 +92,7 @@ export function useWriteQueue({
       const mergedScans = Object.values(aggregatedBatch).filter(b => b.qty !== 0);
 
       if (mergedScans.length > 0) {
-        await MassiveDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
+        await HammerDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
           batchId,
           barcode: b.barcode,
           quantity: b.qty,

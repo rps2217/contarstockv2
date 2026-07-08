@@ -27,5 +27,5 @@ export { EmailTemplateRepository } from './EmailTemplateRepository';
 export { SystemRepository } from './SystemRepository';
 export { SystemLogRepository } from './SystemLogRepository';
 export { DatabaseSanitizer } from './DatabaseSanitizer';
-export { MassiveDbRepository } from './MassiveDbRepository';
+export { HammerDbRepository } from './HammerDbRepository';
 export { DynamicDataRepository } from './DynamicDataRepository';

@@ -180,5 +180,5 @@ export class LogiCountDB extends Dexie {
 }
 
 export const db = new LogiCountDB();
-export const massiveDb = db; // Shortcut for transition
+export const hammerDb = db; // Shortcut for transition
 

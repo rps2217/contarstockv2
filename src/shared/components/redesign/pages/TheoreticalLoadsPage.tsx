@@ -477,7 +477,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
   const importLocalToHammer = useCallback(async (orderId: string) => {
     setLoadingLocal(true)
     try {
-      const { importLocalExpectedOrderToHammer } = await import('@/services/massiveSync')
+      const { importLocalExpectedOrderToHammer } = await import('@/services/hammerSync')
       const count = await importLocalExpectedOrderToHammer(batchId, orderId)
       SoundFX.play('success')
       toast.success(`${count} SKUs enviados al modo ráfaga`)
@@ -496,7 +496,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     setImportingId(manifestId)
     setLoadingCloud(true)
     try {
-      const { importExpectedOrderFromCloud } = await import('@/services/massiveSync')
+      const { importExpectedOrderFromCloud } = await import('@/services/hammerSync')
       const count = await importExpectedOrderFromCloud(batchId, manifestId)
       SoundFX.play('success')
       toast.success(`${count} SKUs descargados desde la nube`)
@@ -515,7 +515,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
   const importGeneralStock = useCallback(async () => {
     setLoadingLocal(true)
     try {
-      const { importManifestFromCloud } = await import('@/services/massiveSync')
+      const { importManifestFromCloud } = await import('@/services/hammerSync')
       const count = await importManifestFromCloud(batchId)
       SoundFX.play('success')
       toast.success(`${count} SKUs del stock general importados`)
@@ -534,7 +534,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     setImportingId(order.id)
     setLoadingLocal(true)
     try {
-      const { loadHammerManifestAsTestSession } = await import('@/services/massiveSync')
+      const { loadHammerManifestAsTestSession } = await import('@/services/hammerSync')
       const result = await loadHammerManifestAsTestSession(batchId, order.id)
       const sessionId = result.sessionId
       SoundFX.play('success')

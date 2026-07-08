@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { massiveDb } from '../db';
+import { hammerDb } from '../db';
 import { createSession, updateSessionMetadata } from './sessionService';
 import { logger } from './logger';
 import { handleError } from './types';
@@ -13,8 +13,8 @@ import { getSettings } from './settings';
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
   const startTime = performance.now();
   try {
-    const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
-    const manifestItems = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
+    const rawScans = await hammerDb.blindScans.where('batchId').equals(batchId).toArray();
+    const manifestItems = await hammerDb.blindManifests.where('batchId').equals(batchId).toArray();
     
     if (rawScans.length === 0) throw new Error("No hay datos para migrar.");
 
@@ -53,8 +53,8 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
       await updateSessionMetadata(session.id);
     });
 
-    await massiveDb.blindScans.where('batchId').equals(batchId).delete();
-    await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+    await hammerDb.blindScans.where('batchId').equals(batchId).delete();
+    await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
 
     // AUTO-SYNC EN FIN_DE_PROCESO: Sincronizar de forma inmediata con Supabase para visibilidad multi-dispositivo
     try {
@@ -112,7 +112,7 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 export const pushScansToCloud = async (batchId: string): Promise<void> => {
   const startTime = performance.now();
   try {
-    const scans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
+    const scans = await hammerDb.blindScans.where('batchId').equals(batchId).toArray();
     if (scans.length === 0) return;
 
     logger.info('CLOUD_SYNC', `Sincronizando ${scans.length} registros para lote: ${batchId}`);
@@ -126,7 +126,7 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
         barcode: s.barcode,
         quantity: s.quantity,
         location: s.location || '',
-        timestamp: s.timestamp  // Ya es número epoch en massiveDb
+        timestamp: s.timestamp  // Ya es número epoch en hammerDb
       };
     });
 
@@ -189,9 +189,9 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
       throw new Error("No se encontraron registros con Stock mayor a 0 en el Excel.");
     }
 
-    await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
-      await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-      await massiveDb.blindManifests.bulkAdd(itemsToSave);
+    await (hammerDb as any).transaction('rw', hammerDb.blindManifests, async () => {
+      await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
+      await hammerDb.blindManifests.bulkAdd(itemsToSave);
     });
 
     const duration = performance.now() - startTime;
@@ -245,9 +245,9 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
       loc: ''
     }));
 
-    await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
-      await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-      await massiveDb.blindManifests.bulkAdd(itemsToSave);
+    await (hammerDb as any).transaction('rw', hammerDb.blindManifests, async () => {
+      await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
+      await hammerDb.blindManifests.bulkAdd(itemsToSave);
     });
 
     const duration = performance.now() - startTime;
@@ -286,9 +286,9 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
       loc: ''
     }));
 
-    await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
-      await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-      await massiveDb.blindManifests.bulkAdd(itemsToSave);
+    await (hammerDb as any).transaction('rw', hammerDb.blindManifests, async () => {
+      await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
+      await hammerDb.blindManifests.bulkAdd(itemsToSave);
     });
 
     const duration = performance.now() - startTime;
@@ -309,9 +309,9 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
  * MIGRAR MANIFEST DE HAMMER A EXPECTED ORDERS (PARA MODO PRUEBA)
  * 
  * Esta función permite que el "modo prueba" (StartSessionModal) pueda ver
- * las cargas teóricas que se importaron en Hammer (massiveDb).
+ * las cargas teóricas que se importaron en Hammer (hammerDb).
  * 
- * Sin esta migración, Hammer guarda en massiveDb.blindManifests y 
+ * Sin esta migración, Hammer guarda en hammerDb.blindManifests y 
  * StartSessionModal busca en db.expectedOrders, causando desconexión.
  */
 export const migrateHammerManifestToExpectedOrders = async (batchId: string, orderId?: string): Promise<string> => {
@@ -320,7 +320,7 @@ export const migrateHammerManifestToExpectedOrders = async (batchId: string, ord
     logger.info('MANIFEST_MIGRATION', `Migrando manifest de Hammer a ExpectedOrders para lote: ${batchId}`);
 
     // Obtener los manifests del batch
-    const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
+    const manifests = await hammerDb.blindManifests.where('batchId').equals(batchId).toArray();
 
     if (manifests.length === 0) {
       throw new Error(`No hay manifests en el lote ${batchId} para migrar.`);

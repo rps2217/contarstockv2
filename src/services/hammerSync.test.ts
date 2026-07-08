@@ -1,5 +1,5 @@
 /**
- * massiveSync Tests
+ * hammerSync Tests
  * 
  * Tests para funciones de sincronización masiva y migración de datos
  */
@@ -62,10 +62,10 @@ vi.mock('../db', () => ({
 }));
 
 vi.mock('../db', () => ({
-  massiveDb: mockMassiveDb
+  hammerDb: mockMassiveDb
 }));
 
-describe('massiveSync', () => {
+describe('hammerSync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -190,7 +190,7 @@ describe('massiveSync', () => {
     });
   });
 
-  describe('Manifest loading from massiveDb', () => {
+  describe('Manifest loading from hammerDb', () => {
     it('should query blindManifests by batchId', async () => {
       const batchId = 'TEST123';
       const manifests = [

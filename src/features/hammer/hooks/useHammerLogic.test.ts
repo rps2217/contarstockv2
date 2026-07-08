@@ -33,8 +33,8 @@ vi.mock('../../../services/utils', () => ({
   sanitizeBarcode: vi.fn((code: string) => code.trim())
 }));
 
-vi.mock('../../../repositories/MassiveDbRepository', () => ({
-  MassiveDbRepository: {
+vi.mock('../../../repositories/HammerDbRepository', () => ({
+  HammerDbRepository: {
     getBlindScansByBatch: vi.fn(),
     getBlindManifestsByBatch: vi.fn(),
     bulkAddBlindScans: vi.fn(),
@@ -50,7 +50,7 @@ vi.mock('../../../repositories/DexieProductRepository', () => ({
   }
 }));
 
-vi.mock('../../../services/massiveSync', () => ({
+vi.mock('../../../services/hammerSync', () => ({
   pushScansToCloud: vi.fn()
 }));
 
