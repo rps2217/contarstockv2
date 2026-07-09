@@ -1,12 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Database,
   Users,
   Truck,
   ClipboardList,
-  Search,
-  Filter,
   Package,
   AlertCircle,
   Pencil,
@@ -23,6 +21,10 @@ import { CustomerForm } from '../components/forms/CustomerForm'
 import { ProviderForm } from '../components/forms/ProviderForm'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
+import { FAB } from '@/shared/components/ui/FAB'
+import { EmptyState } from '@/shared/components/ui/EmptyState'
 
 const TABS = [
   { id: 'inventario', label: 'Inventario', icon: Database },
@@ -30,27 +32,6 @@ const TABS = [
   { id: 'proveedores', label: 'Proveedores', icon: Truck },
   { id: 'ordenes', label: 'Órdenes', icon: ClipboardList },
 ]
-
-// ============================================================================
-// Componentes de UI - Estilo HammerPage
-// ============================================================================
-const StatCard = ({ icon: Icon, label, value, color = 'text-primary' }: {
-  icon: React.ElementType; label: string; value: number | string; color?: string
-}) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    className="bg-surface border border-subtle rounded-xl p-3 flex items-center gap-3"
-  >
-    <div className="w-10 h-10 rounded-lg bg-elevated flex items-center justify-center shrink-0">
-      <Icon className={cn('w-5 h-5', color)} />
-    </div>
-    <div className="min-w-0">
-      <p className={cn('text-lg font-bold', color)}>{value}</p>
-      <p className="text-xs text-muted">{label}</p>
-    </div>
-  </motion.div>
-)
 
 // ============================================================================
 // Card de Producto - Estilo ReceptionPage
@@ -308,13 +289,13 @@ export const RedesignDataPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Stats - solo para inventario */}
+        {/* Stats - usando componente compartido */}
         {activeTab === 'inventario' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-4">
-            <StatCard icon={Package} label="Total" value={inventoryStats.total} />
-            <StatCard icon={Database} label="Con Stock" value={inventoryStats.inStock} color="text-emerald-500" />
-            <StatCard icon={AlertCircle} label="Bajo Stock" value={inventoryStats.lowStock} color="text-amber-500" />
-            <StatCard icon={X} label="Sin Stock" value={inventoryStats.outOfStock} color="text-rose-500" />
+            <HorizontalStatCard icon={Package} label="Total" value={inventoryStats.total} />
+            <HorizontalStatCard icon={Database} label="Con Stock" value={inventoryStats.inStock} color="text-emerald-500" />
+            <HorizontalStatCard icon={AlertCircle} label="Bajo Stock" value={inventoryStats.lowStock} color="text-amber-500" />
+            <HorizontalStatCard icon={X} label="Sin Stock" value={inventoryStats.outOfStock} color="text-rose-500" />
           </div>
         )}
 
@@ -348,36 +329,23 @@ export const RedesignDataPage: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre o código..."
-              className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
+          {/* Search - usando componente compartido */}
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Buscar por nombre o código..."
+          />
 
           {/* Data Content */}
           {activeTab === 'inventario' && (
             <div className="flex flex-col gap-3">
               {products.length === 0 ? (
-                <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
-                  <Package className="w-12 h-12 text-muted mx-auto mb-4" />
-                  <p className="text-muted mb-2">
-                    {searchQuery ? 'No se encontraron productos' : 'No hay productos en el inventario'}
-                  </p>
-                  {!searchQuery && (
-                    <button
-                      onClick={handleCreate}
-                      className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition-colors"
-                    >
-                      Crear primer producto
-                    </button>
-                  )}
-                </div>
+                <EmptyState
+                  icon={Package}
+                  title={searchQuery ? 'No se encontraron productos' : 'No hay productos en el inventario'}
+                  description={!searchQuery ? 'Comienza agregando tu primer producto al inventario' : undefined}
+                  action={!searchQuery ? { label: 'Crear primer producto', onClick: handleCreate } : undefined}
+                />
               ) : (
                 products.map((product) => (
                   <ProductCard
@@ -419,13 +387,11 @@ export const RedesignDataPage: React.FC = () => {
       </div>
 
       {/* FAB para móvil */}
-      <button
-        onClick={handleCreate}
-        className="md:hidden fixed bottom-24 right-6 w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40"
-        style={{ backgroundColor: tabColors[activeTab] }}
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      <FAB 
+        onClick={handleCreate} 
+        visible={true}
+        color={tabColors[activeTab]}
+      />
 
       {/* Modales de formularios */}
       {showProductForm && (
