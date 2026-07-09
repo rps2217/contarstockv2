@@ -9,7 +9,6 @@ import { ErrorProvider } from '@/lib/errors';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
 import { Toaster } from 'sonner';
-import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
 import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
@@ -291,7 +290,6 @@ const AppContent = () => {
         </Suspense>
       )}
       
-      <OfflineBanner />
       <Toaster position="bottom-center" />
       
       <div className="flex-1 flex overflow-hidden relative">

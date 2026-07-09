@@ -156,7 +156,7 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
           initial="hidden"
           animate="visible"
           exit="hidden"
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
           {/* Overlay */}
           <div 
@@ -172,9 +172,9 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
             animate="visible"
             exit="exit"
             className={cn(
-              'relative w-full bg-base rounded-t-3xl sm:rounded-2xl overflow-hidden',
-              'sm:max-w-2xl sm:max-h-[90vh] flex flex-col',
-              'max-h-[95vh] sm:max-h-[85vh]'
+              'relative w-full bg-base rounded-2xl overflow-hidden shadow-2xl',
+              'max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col',
+              'max-h-[calc(100vh-8rem)]' // Account for dock (4rem) + safe area + padding
             )}
           >
             {/* Header */}
@@ -440,7 +440,7 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 p-4 sm:p-6 border-t border-subtle bg-surface/50">
+            <div className="shrink-0 p-4 sm:p-6 pb-safe border-t border-subtle bg-surface/50">
               <div className="flex gap-3">
                 {step === 2 && (
                   <button
