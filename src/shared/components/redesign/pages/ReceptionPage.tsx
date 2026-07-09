@@ -1,15 +1,18 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  PackageCheck, Plus, Search, Upload, Camera, List, Grid, X, Check,
-  Clock, MapPin, User, Package, MoreVertical, ChevronRight, Truck,
-  Trash2, Pencil, Eye, AlertCircle, CheckCircle2, XCircle
+  PackageCheck, Plus, Upload, X, Clock, MapPin, Package, Truck,
+  Trash2, Pencil, Eye, CheckCircle2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { SessionRepository } from '@/repositories/SessionRepository'
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
+import { FAB } from '@/shared/components/ui/FAB'
+import { EmptyState } from '@/shared/components/ui/EmptyState'
 
 // ============================================================================
 // Tipos
@@ -30,26 +33,8 @@ interface Reception {
 }
 
 // ============================================================================
-// Componentes de UI - Estilo HammerPage
+// Card de Recepción - Usando DataCard cuando esté listo
 // ============================================================================
-const StatCard = ({ icon: Icon, label, value, color = 'text-primary' }: { 
-  icon: React.ElementType; label: string; value: number | string; color?: string 
-}) => (
-  <motion.div 
-    initial={{ opacity: 0, scale: 0.9 }} 
-    animate={{ opacity: 1, scale: 1 }}
-    className="bg-surface border border-subtle rounded-xl p-3 flex items-center gap-3"
-  >
-    <div className="w-10 h-10 rounded-lg bg-elevated flex items-center justify-center shrink-0">
-      <Icon className={cn('w-5 h-5', color)} />
-    </div>
-    <div className="min-w-0">
-      <p className={cn('text-lg font-bold', color)}>{value}</p>
-      <p className="text-xs text-muted">{label}</p>
-    </div>
-  </motion.div>
-)
-
 const ReceptionCard = ({ 
   reception, 
   onView, 
@@ -654,47 +639,34 @@ export const RedesignReceptionPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats - mismo estilo que HammerPage */}
+        {/* Stats - usando componente compartido */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-4">
-          <StatCard icon={PackageCheck} label="Total" value={stats.total} />
-          <StatCard icon={Clock} label="Pendientes" value={stats.pending} color="text-amber-500" />
-          <StatCard icon={Package} label="En Progreso" value={stats.inProgress} color="text-blue-500" />
-          <StatCard icon={CheckCircle2} label="Completadas" value={stats.completed} color="text-emerald-500" />
+          <HorizontalStatCard icon={PackageCheck} label="Total" value={stats.total} />
+          <HorizontalStatCard icon={Clock} label="Pendientes" value={stats.pending} color="text-amber-500" />
+          <HorizontalStatCard icon={Package} label="En Progreso" value={stats.inProgress} color="text-blue-500" />
+          <HorizontalStatCard icon={CheckCircle2} label="Completadas" value={stats.completed} color="text-emerald-500" />
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input 
-              type="text" 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por proveedor, documento o ubicación..."
-              className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500" 
-            />
-          </div>
+          {/* Search - usando componente compartido */}
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Buscar por proveedor, documento o ubicación..."
+          />
 
           {/* List */}
           <div className="flex flex-col gap-3">
             {filtered.length === 0 ? (
-              <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
-                <PackageCheck className="w-12 h-12 text-muted mx-auto mb-4" />
-                <p className="text-muted mb-2">
-                  {searchQuery ? 'No se encontraron recepciones' : 'No hay recepciones registradas'}
-                </p>
-                {!searchQuery && (
-                  <button 
-                    onClick={handleCreate}
-                    className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition-colors"
-                  >
-                    Crear primera recepción
-                  </button>
-                )}
-              </div>
+              <EmptyState
+                icon={PackageCheck}
+                title={searchQuery ? 'No se encontraron recepciones' : 'No hay recepciones registradas'}
+                description={!searchQuery ? 'Comienza registrando tu primera recepción de mercancía' : undefined}
+                action={!searchQuery ? { label: 'Crear primera recepción', onClick: handleCreate } : undefined}
+              />
             ) : (
               filtered.map(reception => (
                 <ReceptionCard 
@@ -711,12 +683,7 @@ export const RedesignReceptionPage: React.FC = () => {
       </div>
 
       {/* FAB para móvil */}
-      <button
-        onClick={handleCreate}
-        className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-900/30 flex items-center justify-center hover:bg-blue-500 transition-colors z-40"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      <FAB onClick={handleCreate} visible={true} />
 
       {/* Modals */}
       <ReceptionFormModal

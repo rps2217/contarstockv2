@@ -18,15 +18,20 @@ export * from './Card';
 export * from './Spinner';
 export * from './Skeleton';
 export * from './StatCard';
+export * from './HorizontalStatCard';
+export * from './DataCard';
 
 // Layout Components
 export * from './Modal';
+export * from './PageHeader';
 
 // Data Components
 export * from './VirtualList';
 
 // New components exports
 export * from './Tooltip';
+export * from './SearchInput';
+export * from './FAB';
 
 // Export Components
 export { ExportPreview } from './ExportPreview';
