@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Plus, Edit2, Trash2, Save, Loader2, ChevronUp, ChevronDown,
   AlertCircle, AlertTriangle, CheckCircle, Info, Search, Filter,
-  Table as TableIcon, ClipboardList, ArrowUpDown, List
+  Table as TableIcon, ClipboardList, ArrowUpDown, List, Cloud, CloudOff, RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -60,6 +60,7 @@ const COLUMNS = [
   { key: 'batch', label: 'Lote', sortable: true, width: 'w-24' },
   { key: 'expiryDate', label: 'Vencimiento', sortable: true, width: 'w-28' },
   { key: 'status', label: 'Estado', sortable: true, width: 'w-24' },
+  { key: 'syncStatus', label: '', sortable: false, width: 'w-8' },
   { key: 'createdAt', label: 'Fecha', sortable: true, width: 'w-28' },
   { key: 'actions', label: '', sortable: false, width: 'w-24' },
 ]
@@ -221,18 +222,20 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       }
       
       if (editingEvent?.id) {
-        // Actualizar
+        // Actualizar - marcar como pendiente de sincronizar
         await db.events.update(editingEvent.id, {
           ...eventData,
           updatedAt: Date.now(),
+          syncStatus: 'pending' as const,
         })
         toast.success('Evento actualizado correctamente')
       } else {
-        // Crear
+        // Crear - marcar como pendiente de sincronizar
         await db.events.add({
           ...eventData,
           type: 'info' as const,
           createdAt: Date.now(),
+          syncStatus: 'pending' as const,
         })
         toast.success('Evento creado correctamente')
       }
@@ -488,6 +491,25 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                                 )}>
                                   {statusInfo?.label}
                                 </span>
+                              </td>
+                              
+                              {/* Indicador de sincronización */}
+                              <td className="px-4 py-3">
+                                {event.syncStatus === 'pending' && (
+                                  <div className="flex items-center justify-center" title="Esperando respaldo">
+                                    <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+                                  </div>
+                                )}
+                                {event.syncStatus === 'synced' && (
+                                  <div className="flex items-center justify-center" title="Respaldado">
+                                    <Cloud className="w-4 h-4 text-emerald-400" />
+                                  </div>
+                                )}
+                                {event.syncStatus === 'error' && (
+                                  <div className="flex items-center justify-center" title="Error de sincronización">
+                                    <CloudOff className="w-4 h-4 text-rose-400" />
+                                  </div>
+                                )}
                               </td>
                               
                               {/* Fecha */}

@@ -19,6 +19,10 @@ export interface InventoryEvent {
   traspasoNumber?: string;
   createdAt: number;
   updatedAt?: number;
+  /** Estado de sincronización con la nube */
+  syncStatus?: 'synced' | 'pending' | 'error';
+  /** Timestamp de última sincronización */
+  lastSyncTimestamp?: number;
 }
 
 export interface SystemLog {

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle, Info, Bell, Clock, Package,
-  Upload, List, Table2
+  Upload, List, Table2, Cloud, CloudOff, RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -17,6 +17,7 @@ import { EventsImporter } from '../components/EventsImporter'
 type EventType = 'info' | 'warning' | 'error' | 'success'
 type EventStatus = 'pending' | 'destined' | 'adjusted'
 type TabType = 'table' | 'import'
+type SyncState = 'synced' | 'pending' | 'error' | 'partial'
 
 interface EventRecord {
   id: string
@@ -32,6 +33,7 @@ interface EventRecord {
   batch?: string
   expiryDate?: string
   frcNumber?: string
+  syncStatus?: 'synced' | 'pending' | 'error'
 }
 
 // ============================================================================
@@ -76,6 +78,74 @@ const StatCard = ({ status, count, isActive, onClick }: { status: EventStatus; c
   )
 }
 
+// Indicador de sincronización discreto
+const SyncIndicator = ({ state, pendingCount, totalCount }: { state: SyncState; pendingCount: number; totalCount: number }) => {
+  const getIcon = () => {
+    switch (state) {
+      case 'synced':
+        return <Cloud className="w-4 h-4 text-emerald-400" />
+      case 'pending':
+        return <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+      case 'error':
+        return <CloudOff className="w-4 h-4 text-rose-400" />
+      case 'partial':
+        return <Cloud className="w-4 h-4 text-amber-400" />
+      default:
+        return <Cloud className="w-4 h-4 text-muted" />
+    }
+  }
+
+  const getLabel = () => {
+    switch (state) {
+      case 'synced':
+        return 'Respaldo completo'
+      case 'pending':
+        return `${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''}`
+      case 'error':
+        return 'Error de sincronización'
+      case 'partial':
+        return `${pendingCount} sin respaldar`
+      default:
+        return ''
+    }
+  }
+
+  const getTooltip = () => {
+    if (totalCount === 0) return 'No hay eventos'
+    switch (state) {
+      case 'synced':
+        return `Todos los ${totalCount} eventos están respaldados en la nube`
+      case 'pending':
+        return `${pendingCount} de ${totalCount} eventos esperando respaldo`
+      case 'error':
+        return `${pendingCount} eventos con errores de sincronización`
+      case 'partial':
+        return `${pendingCount} de ${totalCount} eventos no están respaldados`
+      default:
+        return ''
+    }
+  }
+
+  // No mostrar si no hay eventos
+  if (totalCount === 0) return null
+
+  return (
+    <div 
+      className={cn(
+        "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+        state === 'synced' && "bg-emerald-500/10 text-emerald-400",
+        state === 'pending' && "bg-amber-500/10 text-amber-400",
+        state === 'error' && "bg-rose-500/10 text-rose-400",
+        state === 'partial' && "bg-amber-500/10 text-amber-400"
+      )}
+      title={getTooltip()}
+    >
+      {getIcon()}
+      <span>{getLabel()}</span>
+    </div>
+  )
+}
+
 // ============================================================================
 // Componente principal
 // ============================================================================
@@ -84,7 +154,7 @@ export const RedesignEventsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all')
   const [activeTab, setActiveTab] = useState<TabType>('table')
 
-  // Datos de eventos
+  // Datos de eventos completos con syncStatus
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
     try {
       if (!db.events) return []
@@ -99,7 +169,8 @@ export const RedesignEventsPage: React.FC = () => {
         expiryDate: e.expiryDate,
         frcNumber: e.frcNumber,
         status: e.status as EventStatus,
-        timestamp: e.createdAt
+        timestamp: e.createdAt,
+        syncStatus: e.syncStatus as 'synced' | 'pending' | 'error' | undefined
       }))
     } catch (error) {
       console.error('Error loading events:', error)
@@ -107,7 +178,23 @@ export const RedesignEventsPage: React.FC = () => {
     }
   }, [refreshKey])
 
-  // Stats
+  // Stats de estado de sincronización
+  const syncStats = useMemo(() => {
+    if (!events) return { synced: 0, pending: 0, error: 0, total: 0, state: 'synced' as SyncState }
+    
+    const total = events.length
+    const pending = events.filter(e => e.syncStatus === 'pending').length
+    const error = events.filter(e => e.syncStatus === 'error').length
+    const synced = events.filter(e => e.syncStatus === 'synced' || !e.syncStatus).length
+    
+    let state: SyncState = 'synced'
+    if (pending > 0 && error === 0) state = pending === total ? 'pending' : 'partial'
+    else if (error > 0) state = 'error'
+    
+    return { synced, pending, error, total, state }
+  }, [events])
+
+  // Stats de estado (para filtros)
   const stats = useMemo(() => {
     if (!events) return { pending: 0, destined: 0, adjusted: 0 }
     const s = { pending: 0, destined: 0, adjusted: 0 }
@@ -140,7 +227,7 @@ export const RedesignEventsPage: React.FC = () => {
       
       const skippedCount = parsedEvents.length - newEvents.length
       
-      // Guardar solo los eventos nuevos
+      // Guardar solo los eventos nuevos - marcar como pendientes de sincronizar
       for (const event of newEvents) {
         await db.events.add({
           type: event.type || 'info',
@@ -151,7 +238,8 @@ export const RedesignEventsPage: React.FC = () => {
           expiryDate: event.expiryDate,
           resolution: event.resolution,
           status: 'pending',
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          syncStatus: 'pending' as const,
         })
       }
       
@@ -185,12 +273,20 @@ export const RedesignEventsPage: React.FC = () => {
       {/* Header */}
       <div className="pt-8 px-4 sm:px-6 lg:px-8 shrink-0">
         <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight flex items-center gap-3">
-              <Bell className="w-8 h-8 text-amber-500" />
-              Eventos
-            </h1>
-            <p className="text-secondary text-sm mt-2">Gestión de incidencias y actividades.</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight flex items-center gap-3">
+                <Bell className="w-8 h-8 text-amber-500" />
+                Eventos
+              </h1>
+              {/* Indicador de sincronización */}
+              <SyncIndicator 
+                state={syncStats.state} 
+                pendingCount={syncStats.pending + syncStats.error}
+                totalCount={syncStats.total}
+              />
+            </div>
+            <p className="text-secondary text-sm">Gestión de incidencias y actividades.</p>
           </div>
           
           {/* Tabs */}
