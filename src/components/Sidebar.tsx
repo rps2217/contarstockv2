@@ -115,10 +115,10 @@ interface SidebarProps {
 }
 
 // Navegación simplificada estilo AppSheet (6 items) con descripciones
-// "Capturar" ahora va a /counting que muestra el modal de inicio unificado
+// "Contar" va a /massive que muestra el modal de inicio unificado
 const MAIN_NAV_ITEMS = [
   { key: 'dashboard', label: 'Panel', icon: Home, path: '/', description: 'Vista general' },
-  { key: 'counting', label: 'Contar', icon: Scan, path: '/counting', description: 'Conteo ciego o con carga teórica' },
+  { key: 'counting', label: 'Contar', icon: Scan, path: '/massive', description: 'Conteo ciego o con carga teórica' },
   { key: 'expiry', label: 'Vencimientos', icon: CalendarClock, path: '/expiry', description: 'Control de vencimientos' },
   { key: 'data', label: 'Datos', icon: Database, path: '/data', description: 'Inventario y catálogo' },
   { key: 'reports', label: 'Reportes', icon: History, path: '/reports', description: 'Informes' },

@@ -410,10 +410,9 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       {/* RUTAS PRINCIPALES */}
       <Route path="/" element={<Dashboard />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      {/* Redirección: /capture ahora es /counting (flujo unificado) */}
-      <Route path="/capture" element={<Navigate to="/counting" replace />} />
-      <Route path="/capture/:tab" element={<Navigate to="/counting" replace />} />
-      <Route path="/counting" element={<CountingPage />} />
+      {/* Redirección: /capture ahora es /massive (modal de inicio unificado) */}
+      <Route path="/capture" element={<Navigate to="/massive" replace />} />
+      <Route path="/capture/:tab" element={<Navigate to="/massive" replace />} />
       <Route path="/data" element={<DataPage />} />
       <Route path="/data/:table" element={<DataPage />} />
       <Route path="/data/:table/:id" element={<DataPage />} />
@@ -425,9 +424,14 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       <Route path="/expiry/:tab" element={<ExpiryPage />} />
       <Route path="/settings" element={<SettingsPage />} />
 
-      {/* PÁGINAS DE MÓDULOS */}
-      <Route path="/counting" element={<CountingPage />} />
+      {/* MÓDULO DE CONTEO (UNIFICADO) */}
+      {/* /massive = Modal de inicio (nuevo conteo ciego o teórico) */}
+      <Route path="/massive" element={<HammerPage />} />
+      <Route path="/massive/:batchId" element={<HammerPage />} />
+      {/* /counting/:id = Continuar sesión teórica existente */}
       <Route path="/counting/:id" element={<CountingPage />} />
+
+      {/* PÁGINAS DE MÓDULOS */}
       <Route path="/events" element={<EventsPage />} />
       <Route path="/reception" element={<ReceptionPage />} />
       <Route path="/reception/:id" element={<ReceptionPage />} />
@@ -441,8 +445,6 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
       <Route path="/theoretical-loads" element={<TheoreticalLoadsPage />} />
       <Route path="/inventory" element={<InventoryPage />} />
       <Route path="/audit" element={<AuditPage />} />
-      <Route path="/massive" element={<HammerPage />} />
-      <Route path="/massive/:batchId" element={<HammerPage />} />
 
       {/* DEEP LINKS */}
       <Route path="/session/:id" element={<ReportsLegacy />} />

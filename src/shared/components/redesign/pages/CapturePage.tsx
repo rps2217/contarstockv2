@@ -130,7 +130,8 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
     if (lastScannedCode.current === code) return
     lastScannedCode.current = code
     console.log('Codigo escaneado:', code)
-    navigate(`/counting/new?code=${encodeURIComponent(code)}`)
+    // Ir a /massive que muestra el modal de inicio unificado
+    navigate('/massive')
   }, [navigate])
 
   const { error: scannerHookError, videoRef } = useOpticalEngine({
@@ -147,21 +148,20 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
 
   const { searchResults, isSearching, search } = useProductSearch()
 
-  // Iniciar nuevo conteo
+  // Iniciar nuevo conteo - ir a /massive para elegir tipo
   const handleNewCount = () => {
-    navigate('/counting/new')
+    navigate('/massive')
   }
 
-  // Continuar conteo existente
+  // Continuar conteo existente - ir a /counting/:id
   const handleContinueSession = (sessionId: string) => {
     navigate(`/counting/${sessionId}`)
   }
 
   // Buscar producto manual
   const handleManualSearch = () => {
-    if (manualCode.trim()) {
-      navigate(`/counting/new?code=${encodeURIComponent(manualCode.trim())}`)
-    }
+    // Ir a /massive para elegir tipo de conteo
+    navigate('/massive')
   }
 
   // Manejar búsqueda
