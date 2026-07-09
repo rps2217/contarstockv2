@@ -253,6 +253,7 @@ export class ExpiryService {
     const withdrawalDate = new Date(expiryDate.getTime() - withdrawalDays * 24 * 60 * 60 * 1000);
     
     // Crear entrada con tipo ExpandedExpiryEntry (incluye campos adicionales)
+    const claveUnica = this.generateClaveUnica(barcode, mm, yyyy);
     const entry: ExpiryEntry & {
       providerName?: string;
       location?: string;
@@ -267,7 +268,7 @@ export class ExpiryService {
       estado?: string;
       type?: string;
     } = {
-      claveUnica: this.generateClaveUnica(barcode, mm, yyyy),
+      claveUnica,
       barcode: normalizeSku(barcode),
       productName: params.productName,
       providerName: params.providerName || 'SIN PROVEEDOR',
@@ -290,6 +291,17 @@ export class ExpiryService {
       estado: this.getEstadoFromStatus(status),
       type: 'Individual',
     };
+    
+    // Verificar si ya existe un registro con la misma claveUnica
+    const existing = await db.expirations.where('claveUnica').equals(claveUnica).first();
+    
+    if (existing) {
+      // Actualizar la cantidad sumándola
+      entry.id = existing.id;
+      entry.quantity = (existing.quantity || 0) + params.quantity;
+      entry.syncStatus = 'pending';
+      entry.timestamp = Date.now();
+    }
     
     // Guardar en IndexedDB y sincronizar
     await db.expirations.put(entry as unknown as Parameters<typeof db.expirations.put>[0]);

@@ -13,7 +13,7 @@ import { SmartDock, SmartDockItem } from './SmartDock';
 // Navegación simplificada estilo AppSheet (5 items para móvil)
 const MOBILE_NAV = [
   { id: 'dashboard', label: 'Panel', icon: Home, path: '/' },
-  { id: 'capture', label: 'Capturar', icon: Scan, path: '/capture' },
+  { id: 'counting', label: 'Contar', icon: Scan, path: '/massive' },
   { id: 'expiry', label: 'Vencim.', icon: CalendarClock, path: '/expiry' },
   { id: 'data', label: 'Datos', icon: Database, path: '/data' },
   { id: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
@@ -40,7 +40,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
   const getActiveId = () => {
     const path = location.pathname;
     if (path === '/' || path === '/dashboard') return 'dashboard';
-    if (path.startsWith('/capture')) return 'capture';
+    if (path.startsWith('/massive') || path.startsWith('/counting')) return 'counting';
     if (path.startsWith('/data')) return 'data';
     if (path.startsWith('/reports')) return 'reports';
     if (path.startsWith('/expiry')) return 'expiry';
@@ -57,7 +57,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
     // Badge para sync
     let badge = 0;
     let badgeStyle: 'default' | 'error' | 'warning' = 'default';
-    if (item.id === 'sync' && totalPending > 0) {
+    if (item.id === 'counting' && totalPending > 0) {
       badge = totalPending;
       badgeStyle = 'warning';
     }

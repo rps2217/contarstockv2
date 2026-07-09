@@ -65,24 +65,24 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
   return (
     <nav className={`md:hidden z-[100] relative ${
       isGlobal 
-        ? 'fixed bottom-0 left-0 right-0 bg-base/95 border-t border-subtle px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2.5 shadow-[0_-15px_40px_rgba(0,0,0,0.65)]'
+        ? 'fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-xl border-t border-subtle px-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 shadow-[0_-4px_30px_rgba(0,0,0,0.5)]'
         : 'flex items-center bg-brand-surface/95 backdrop-blur-3xl border border-subtle px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden'
     }`}>
       {/* Scrollable Indicator - Left Edge Gradient */}
       {isGlobal && showLeft && (
-        <div className="absolute left-0 top-0 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] w-10 bg-gradient-to-r from-slate-950 via-slate-950/70 to-transparent pointer-events-none z-20 transition-opacity duration-300" />
+        <div className="absolute left-0 top-0 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] w-12 bg-gradient-to-r from-surface via-surface/60 to-transparent pointer-events-none z-20 transition-opacity duration-300" />
       )}
 
       {/* Scrollable Indicator - Right Edge Gradient */}
       {isGlobal && showRight && (
-        <div className="absolute right-0 top-0 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] w-10 bg-gradient-to-l from-slate-950 via-slate-950/70 to-transparent pointer-events-none z-20 transition-opacity duration-300" />
+        <div className="absolute right-0 top-0 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] w-12 bg-gradient-to-l from-surface via-surface/60 to-transparent pointer-events-none z-20 transition-opacity duration-300" />
       )}
 
       <div 
         ref={containerRef}
         className={`flex items-center overflow-x-auto no-scrollbar w-full ${
           isGlobal 
-            ? 'h-16 gap-3 px-6 snap-x snap-mandatory' 
+            ? 'h-[72px] gap-1 px-4 snap-x snap-mandatory' 
             : 'px-2 py-1 gap-1'
         }`}
       >
@@ -98,9 +98,9 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
                   if (navigator.vibrate) navigator.vibrate(12);
                   item.onClick();
                 }}
-                className={`flex flex-col items-center justify-center gap-1 transition-all shrink-0 snap-center relative py-1 ${
+                className={`flex flex-col items-center justify-center gap-0.5 transition-all duration-200 shrink-0 snap-center relative py-1 ${
                   isGlobal 
-                    ? 'min-w-[65px] px-1' 
+                    ? 'min-w-[72px] px-2' 
                     : ''
                 } ${
                   isActive 
@@ -108,31 +108,34 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
                     : 'text-muted hover:text-secondary'
                 }`}
               >
-                <div className={`p-2 rounded-2xl transition-all duration-300 ${
-                  isActive ? (item.activeBg || (isGlobal ? 'bg-blue-500/15' : 'bg-white/10')) : 'bg-transparent'
-                } ${isGlobal && isActive ? 'scale-105' : ''}`}>
-                  <Icon className={`w-5 h-5 ${isActive && isGlobal ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+                {/* Active indicator bar */}
+                {isGlobal && isActive && (
+                  <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                )}
+                
+                <div className={`p-2.5 rounded-2xl transition-all duration-200 ${
+                  isActive 
+                    ? (item.activeBg || (isGlobal ? 'bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)]' : 'bg-white/10')) 
+                    : 'bg-transparent'
+                } ${isGlobal && isActive ? 'scale-110' : ''}`}>
+                  <Icon className={`w-6 h-6 ${isActive && isGlobal ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
                 </div>
                 
                 {isGlobal && item.label && (
-                  <span className={`text-[7.5px] font-black tracking-widest uppercase leading-none transition-opacity ${
-                    isActive ? 'opacity-100 text-blue-400' : 'opacity-40 text-secondary'
+                  <span className={`text-[10px] font-bold tracking-wide leading-none transition-all duration-200 ${
+                    isActive ? 'opacity-100 text-blue-400' : 'opacity-50 text-muted'
                   }`}>
                     {item.label}
                   </span>
                 )}
 
-                {isGlobal && isActive && (
-                  <div className="absolute -bottom-1.5 w-1.25 h-1.25 bg-blue-400 rounded-full shadow-[0_0_8px_#60a5fa] animate-pulse" />
-                )}
-
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className={`absolute top-0 right-0 text-[8px] font-black px-1.5 py-0.5 rounded-md border-2 border-slate-950 ${
+                  <span className={`absolute top-0 right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-lg ${
                     item.badgeStyle === 'error' ? 'bg-rose-500 text-white animate-pulse' :
                     item.badgeStyle === 'warning' ? 'bg-amber-500 text-black animate-bounce' :
                     'bg-blue-500 text-white'
                   }`}>
-                    {item.badge}
+                    {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </button>
