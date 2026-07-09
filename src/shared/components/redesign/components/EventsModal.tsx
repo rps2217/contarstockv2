@@ -25,6 +25,7 @@ interface EventFormData {
   expiryDate: string
   resolution: string
   status: EventStatus
+  traspasoNumber: string
 }
 
 // ============================================================================
@@ -79,6 +80,7 @@ const EMPTY_FORM: EventFormData = {
   expiryDate: '',
   resolution: '',
   status: 'pending',
+  traspasoNumber: '',
 }
 
 // ============================================================================
@@ -187,6 +189,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       expiryDate: event.expiryDate || '',
       resolution: event.resolution || '',
       status: event.status as EventStatus,
+      traspasoNumber: (event as any).traspasoNumber || '',
     })
     setViewMode('form')
   }
@@ -208,6 +211,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
         expiryDate: formData.expiryDate,
         resolution: formData.resolution,
         status: formData.status,
+        traspasoNumber: formData.traspasoNumber,
       }
       
       if (editingEvent?.id) {
@@ -523,7 +527,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 className="flex-1 overflow-y-auto p-6"
               >
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6 max-w-2xl">
-                  {/* Estado */}
+                  {/* Estado y Traspaso */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-secondary mb-2">Estado</label>
@@ -536,6 +540,26 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-secondary mb-2">N° de Traspaso</label>
+                      <input
+                        type="number"
+                        value={formData.traspasoNumber}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setFormData({ 
+                            ...formData, 
+                            traspasoNumber: value,
+                            status: value.trim() !== '' ? 'adjusted' as EventStatus : formData.status
+                          })
+                        }}
+                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500 font-mono"
+                        placeholder="Ej: 12345"
+                      />
+                      {formData.traspasoNumber.trim() !== '' && (
+                        <p className="text-xs text-emerald-500 mt-1">✓ Estado: Ajustados</p>
+                      )}
                     </div>
                   </div>
 

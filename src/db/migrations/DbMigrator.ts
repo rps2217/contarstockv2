@@ -218,5 +218,35 @@ export class DbMigrator {
         }
       }
     });
+
+    // v59: Agregar campo traspasoNumber a eventos
+    db.version(59).stores({
+      products: '&barcode, name, syncStatus', 
+      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, syncStatus, expectedItems, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp], [synced+mm+yyyy]',
+      expectedOrders: 'id, internalId, importedAt',
+      logs: '++id, level, module, timestamp',
+      sync_logs: '++id, timestamp, action, tableName, status',
+      syncQueue: '++id, tableName, operation, recordId, timestamp, retries, priority, [tableName+operation]',
+      settings: '&key',
+      locations: '++id, &name, lastUsed',
+      visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
+      erpSessions: 'id, erpOrderId, status, createdAt',
+      providers: '&rut, name, syncStatus',
+      customers: '&id, firstName, lastName, phone, syncStatus',
+      messageTemplates: 'id, name, syncStatus',
+      dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]',
+      productProviders: '++id, &productBarcode, &providerRut, isPrimary, syncStatus, [productBarcode+providerRut], [productBarcode+syncStatus]',
+      events: '++id, type, barcode, frcNumber, status, createdAt, [type+status], [barcode+createdAt]',
+      blindScans: '++id, batchId, barcode, timestamp',
+      blindManifests: '++id, batchId, barcode',
+      expirations: '++id, &claveUnica, barcode, mm, yyyy, status, timestamp, syncStatus, [mm+yyyy], [barcode+mm+yyyy]',
+      audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, syncStatus, [tableName+recordId], [userId+timestamp], [tableName+syncStatus]',
+      bulkHistory: '++id, module, action, timestamp, undone',
+      viewPreferences: '++id, module',
+      syncMetrics: '++id, timestamp, tableName, operation, [timestamp+tableName]'
+    }).upgrade(_tx => {
+      // v59: Campo traspasoNumber agregado (opcional, Dexie lo maneja automáticamente)
+    });
   }
 }

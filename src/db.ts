@@ -16,6 +16,7 @@ export interface InventoryEvent {
   expiryDate: string;
   resolution: string;
   status: 'pending' | 'destined' | 'adjusted';
+  traspasoNumber?: string;
   createdAt: number;
   updatedAt?: number;
 }
