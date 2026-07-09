@@ -1,16 +1,17 @@
 /**
  * TheoreticalLoadSelector - Componente reutilizable para seleccionar cargas teóricas
  * 
- * Se usa en:
- * - StartCountingModal (para iniciar conteo con carga teórica)
- * - ImportModal de HammerPage (para importar carga durante sesión)
+ * Diseño responsivo:
+ * - Tabs adaptativas para móvil/desktop
+ * - Lista scrolleable con altura máxima responsiva
+ * - Cards táctiles optimizadas
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Database, FileText, Loader2, RefreshCw, Layers, HardDrive,
-  ChevronRight, Package, Calendar, Search
+  ChevronRight, Search, Check, Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -133,9 +134,9 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
   const isLoading = externalLoading || loadingLocal || loadingCloud;
 
   return (
-    <div className={cn('space-y-4', compact && 'space-y-2')}>
-      {/* Tabs */}
-      <div className="flex gap-2 p-1 bg-surface rounded-xl">
+    <div className={cn('space-y-3', compact ? '' : '')}>
+      {/* Tabs - Mejoradas para móvil */}
+      <div className="flex gap-1.5 p-1 bg-surface rounded-xl">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -144,17 +145,18 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all',
+                'flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-xs font-semibold transition-all',
+                'active:scale-[0.98]',
                 isActive
                   ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
                   : 'text-secondary hover:text-primary hover:bg-elevated'
               )}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="truncate">{tab.label}</span>
               {tab.count !== undefined && tab.count > 0 && (
                 <span className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                  'px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0',
                   isActive ? 'bg-white/20' : 'bg-elevated'
                 )}>
                   {tab.count}
@@ -166,7 +168,7 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
       </div>
 
       {/* Barra de búsqueda (solo para locales) */}
-      {activeTab === 'local' && !compact && (
+      {activeTab === 'local' && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
@@ -174,13 +176,19 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar carga..."
-            className="w-full pl-9 pr-4 py-2 bg-surface border border-subtle rounded-xl text-sm text-primary placeholder:text-muted focus:outline-none focus:border-blue-500"
+            className={cn(
+              'w-full pl-9 pr-4 py-2.5 bg-surface border border-subtle rounded-xl text-sm text-primary',
+              'placeholder:text-muted focus:outline-none focus:border-blue-500 transition-colors'
+            )}
           />
         </div>
       )}
 
       {/* Lista de opciones */}
-      <div className={cn('space-y-2 overflow-y-auto', compact ? 'max-h-[200px]' : 'max-h-[300px]')}>
+      <div className={cn(
+        'space-y-2 overflow-y-auto',
+        compact ? 'max-h-[180px]' : 'max-h-[240px] sm:max-h-[280px]'
+      )}>
         {/* Locales */}
         {activeTab === 'local' && (
           isLoading && localOrders.length === 0 ? (
@@ -192,7 +200,7 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
               description="Sube un Excel o pega datos en 'Cargas Teóricas'"
             />
           ) : (
-            filteredLocalOrders.map((order) => {
+            filteredLocalOrders.map((order, index) => {
               const displayName = order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id;
               const skuCount = order.items?.length || 0;
               const isSelected = selectedLoad?.id === order.id && selectedLoad?.source === 'local';
@@ -204,7 +212,7 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
                   iconColor="text-emerald-400"
                   iconBg="bg-emerald-500/10"
                   title={displayName}
-                  subtitle={`ID: ${order.id.slice(0, 8)}... • ${order.metadata?.date || 'Sin fecha'}`}
+                  subtitle={`${order.metadata?.date || 'Sin fecha'} • ${skuCount} SKUs`}
                   skuCount={skuCount}
                   isSelected={isSelected}
                   onClick={() => handleSelectLoad({
@@ -242,7 +250,7 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
                   iconColor="text-indigo-400"
                   iconBg="bg-indigo-500/10"
                   title={manifest.id}
-                  subtitle={manifest.description || 'Manifiesto del ERP'}
+                  subtitle={manifest.description || `${skuCount} SKUs`}
                   skuCount={skuCount}
                   isSelected={isSelected}
                   onClick={() => handleSelectLoad({
@@ -284,7 +292,10 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
         <button
           onClick={handleRefresh}
           disabled={isLoading}
-          className="w-full py-2 text-xs text-secondary hover:text-primary flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          className={cn(
+            'w-full py-2.5 text-xs text-secondary hover:text-primary',
+            'flex items-center justify-center gap-2 transition-colors disabled:opacity-50'
+          )}
         >
           <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin')} />
           Actualizar listado
@@ -293,22 +304,39 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
 
       {/* Info de selección */}
       {selectedLoad && (
-        <div className={cn(
-          'p-3 rounded-xl border',
-          selectedLoad.source === 'local' ? 'bg-emerald-500/10 border-emerald-500/30' :
-          selectedLoad.source === 'cloud' ? 'bg-indigo-500/10 border-indigo-500/30' :
-          'bg-amber-500/10 border-amber-500/30'
-        )}>
-          <p className="text-sm font-medium text-primary">
-            {selectedLoad.name}
-            {selectedLoad.skuCount > 0 && ` (${selectedLoad.skuCount} SKUs)`}
-          </p>
-          <p className="text-xs text-secondary mt-1">
-            {selectedLoad.source === 'local' && 'Los datos se sincronizarán automáticamente'}
-            {selectedLoad.source === 'cloud' && 'Manifiesto del ERP'}
-            {selectedLoad.source === 'stock' && 'Usará toda la base de datos de productos'}
-          </p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            'p-3 rounded-xl border flex items-center gap-3',
+            selectedLoad.source === 'local' ? 'bg-emerald-500/10 border-emerald-500/30' :
+            selectedLoad.source === 'cloud' ? 'bg-indigo-500/10 border-indigo-500/30' :
+            'bg-amber-500/10 border-amber-500/30'
+          )}
+        >
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-white/10">
+            <Check className={cn(
+              'w-5 h-5',
+              selectedLoad.source === 'local' ? 'text-emerald-400' :
+              selectedLoad.source === 'cloud' ? 'text-indigo-400' : 'text-amber-400'
+            )} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-primary truncate">
+              {selectedLoad.name}
+            </p>
+            <p className="text-xs text-muted">
+              {selectedLoad.source === 'local' && 'Carga local • Se sincronizará automáticamente'}
+              {selectedLoad.source === 'cloud' && 'Manifiesto del ERP'}
+              {selectedLoad.source === 'stock' && 'Base de datos completa'}
+            </p>
+          </div>
+          {selectedLoad.skuCount > 0 && (
+            <span className="px-2 py-1 bg-white/10 rounded-lg text-xs font-medium text-primary shrink-0">
+              {selectedLoad.skuCount} SKUs
+            </span>
+          )}
+        </motion.div>
       )}
     </div>
   );
@@ -343,17 +371,25 @@ const LoadCard = ({
     onClick={onClick}
     className={cn(
       'w-full text-left rounded-xl border transition-all flex items-center gap-3',
-      'hover:scale-[1.01] active:scale-[0.99]',
+      'active:scale-[0.99]',
       isSelected
-        ? 'bg-blue-500/10 border-blue-500/50'
+        ? 'bg-blue-500/15 border-blue-500 shadow-sm'
         : 'bg-surface/50 border-subtle hover:bg-surface hover:border-blue-500/30'
     )}
   >
-    <div className={cn('rounded-lg flex items-center justify-center shrink-0', iconBg, compact ? 'w-8 h-8' : 'w-10 h-10')}>
+    <div className={cn(
+      'rounded-lg flex items-center justify-center shrink-0',
+      iconBg,
+      compact ? 'w-9 h-9' : 'w-10 h-10 sm:w-11 sm:h-11'
+    )}>
       <Icon className={cn(iconColor, compact ? 'w-4 h-4' : 'w-5 h-5')} />
     </div>
-    <div className="flex-1 min-w-0 py-2">
-      <p className={cn('font-semibold truncate', isSelected ? 'text-blue-400' : 'text-primary', compact ? 'text-xs' : 'text-sm')}>
+    <div className="flex-1 min-w-0 py-2.5 sm:py-3">
+      <p className={cn(
+        'font-semibold truncate',
+        isSelected ? 'text-blue-400' : 'text-primary',
+        compact ? 'text-xs' : 'text-sm'
+      )}>
         {title}
       </p>
       {subtitle && (
@@ -362,29 +398,33 @@ const LoadCard = ({
         </p>
       )}
     </div>
-    {skuCount !== undefined && skuCount > 0 && (
+    {isSelected && (
+      <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shrink-0 mr-2">
+        <Check className="w-4 h-4 text-white" />
+      </div>
+    )}
+    {!isSelected && skuCount !== undefined && skuCount > 0 && (
       <span className={cn(
-        'bg-elevated text-secondary rounded-lg shrink-0',
+        'bg-elevated text-secondary rounded-lg shrink-0 mr-2',
         compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'
       )}>
-        {skuCount} SKUs
+        {skuCount}
       </span>
     )}
-    <ChevronRight className={cn('w-5 h-5 shrink-0 mr-2', isSelected ? 'text-blue-400' : 'text-muted')} />
   </button>
 );
 
 const LoadingState = () => (
-  <div className="flex items-center justify-center py-12">
-    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+  <div className="flex items-center justify-center py-8 sm:py-10">
+    <Loader2 className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500 animate-spin" />
   </div>
 );
 
 const EmptyState = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) => (
-  <div className="text-center py-8 bg-surface/50 rounded-xl border border-dashed border-subtle">
-    <Icon className={cn('w-10 h-10 text-muted mx-auto mb-3')} />
-    <p className="text-sm text-secondary">{title}</p>
-    <p className="text-xs text-muted mt-1">{description}</p>
+  <div className="text-center py-6 sm:py-8 bg-surface/50 rounded-xl border border-dashed border-subtle">
+    <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-muted mx-auto mb-2" />
+    <p className="text-xs sm:text-sm text-secondary">{title}</p>
+    <p className="text-[10px] sm:text-xs text-muted mt-1">{description}</p>
   </div>
 );
 
