@@ -75,6 +75,8 @@ export function startRealtimeSync(
 
 /**
  * Inicia sync realtime con filtro
+ * 
+ * Maneja errores 406 (tabla no existe o RLS bloquea) gracefully.
  */
 export function startFilteredRealtimeSync(
   tableName: string, 
@@ -123,7 +125,12 @@ export function startFilteredRealtimeSync(
         logger.info('SYNC_REALTIME_FILTERED', `Supabase filtered sync: ${tableName} updated`);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      // Manejar errores de suscripción (406 = tabla no existe o RLS bloquea)
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        logger.warn('SYNC_REALTIME', `Channel error for ${tableName}: ${status}. Table may not exist or RLS blocking.`);
+      }
+    });
 
   return () => {
     supabase.removeChannel(channel);
