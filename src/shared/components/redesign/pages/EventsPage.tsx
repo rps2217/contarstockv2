@@ -38,22 +38,21 @@ interface EventRecord {
 // ============================================================================
 // Constantes
 // ============================================================================
-const EVENT_META: Record<EventType, {
+const STATUS_META: Record<EventStatus, {
   label: string; icon: React.ElementType; bg: string; border: string; dot: string; text: string
 }> = {
-  info: { label: 'Info', icon: Info, bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-500', text: 'text-blue-500' },
-  warning: { label: 'Advertencia', icon: AlertTriangle, bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500', text: 'text-amber-500' },
-  error: { label: 'Error', icon: AlertCircle, bg: 'bg-rose-500/10', border: 'border-rose-500/30', dot: 'bg-rose-500', text: 'text-rose-500' },
-  success: { label: 'Éxito', icon: CheckCircle, bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500', text: 'text-emerald-500' },
+  pending: { label: 'Pendiente', icon: Clock, bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500', text: 'text-amber-500' },
+  destined: { label: 'Destinados', icon: Package, bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-500', text: 'text-blue-500' },
+  adjusted: { label: 'Ajustados', icon: CheckCircle, bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500', text: 'text-emerald-500' },
 }
 
-const STATUS_ORDER: EventType[] = ['error', 'warning', 'info', 'success']
+const STATUS_ORDER: EventStatus[] = ['pending', 'destined', 'adjusted']
 
 // ============================================================================
 // Componentes
 // ============================================================================
-const StatCard = ({ type, count }: { type: EventType; count: number }) => {
-  const meta = EVENT_META[type]
+const StatCard = ({ status, count }: { status: EventStatus; count: number }) => {
+  const meta = STATUS_META[status]
   const Icon = meta.icon
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
@@ -70,7 +69,7 @@ const StatCard = ({ type, count }: { type: EventType; count: number }) => {
 }
 
 const EventRow = ({ event, onDismiss }: { event: EventRecord; onDismiss: (id: string) => void }) => {
-  const meta = EVENT_META[event.type]
+  const meta = STATUS_META[event.status]
   const Icon = meta.icon
   const timeAgo = event.timestamp ? formatTimeAgo(event.timestamp) : ''
 
@@ -185,9 +184,9 @@ export const RedesignEventsPage: React.FC = () => {
 
   // Stats
   const stats = useMemo(() => {
-    if (!events) return { info: 0, warning: 0, error: 0, success: 0, total: 0 }
-    const s = { info: 0, warning: 0, error: 0, success: 0, total: events.length }
-    events.forEach(e => { if (e.type in s) s[e.type as EventType]++ })
+    if (!events) return { pending: 0, destined: 0, adjusted: 0 }
+    const s = { pending: 0, destined: 0, adjusted: 0 }
+    events.forEach(e => { if (e.status in s) s[e.status as EventStatus]++ })
     return s
   }, [events])
 
@@ -279,8 +278,8 @@ export const RedesignEventsPage: React.FC = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {STATUS_ORDER.map(type => (
-              <StatCard key={type} type={type} count={stats[type]} />
+            {STATUS_ORDER.map(status => (
+              <StatCard key={status} status={status} count={stats[status]} />
             ))}
           </div>
         </div>
@@ -351,8 +350,8 @@ export const RedesignEventsPage: React.FC = () => {
             <>
               {/* Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {STATUS_ORDER.map(type => (
-                  <StatCard key={type} type={type} count={stats[type]} />
+                {STATUS_ORDER.map(status => (
+                  <StatCard key={status} status={status} count={stats[status]} />
                 ))}
               </div>
 
