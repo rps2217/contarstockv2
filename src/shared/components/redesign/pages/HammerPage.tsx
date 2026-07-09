@@ -811,6 +811,11 @@ export const RedesignHammerPage: React.FC = () => {
       return; // No mostrar el modal
     }
 
+    // No mostrar modal si el usuario ya interactuó con él (eligió una opción)
+    if (userInteractedWithModalRef.current) {
+      return;
+    }
+
     // Solo mostrar modal si NO estamos omitiéndolo
     if (!skipModal && params.batchId === effectiveBatchId) {
       // Solo mostrar si es una sesión nueva sin datos
@@ -822,9 +827,13 @@ export const RedesignHammerPage: React.FC = () => {
     }
   }, [effectiveBatchId, params.batchId, skipModal]);
 
+  // Ref para rastrear si el usuario ya interactuó con el modal
+  const userInteractedWithModalRef = useRef(false);
+
   // Manejar inicio desde el modal
   const handleStartFromModal = async (config: StartCountingConfig) => {
-    // Marcar que estamos iniciando para evitar re-renderizados
+    // Marcar que el usuario interactuó para evitar que el modal se reabra
+    userInteractedWithModalRef.current = true;
     isNavigatingRef.current = true;
     
     try {
