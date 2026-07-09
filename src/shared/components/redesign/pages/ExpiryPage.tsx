@@ -524,8 +524,8 @@ export const RedesignExpiryPage: React.FC = () => {
                   </div>
                 </div>
                 <button onClick={() => setShowCaptureModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
-                  <Plus className="w-4 h-4" /><span className="hidden sm:inline">Registrar</span>
+                  className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
+                  <Plus className="w-4 h-4" /><span>Registrar</span>
                 </button>
               </>
             )}
