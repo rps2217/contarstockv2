@@ -25,6 +25,24 @@ export interface InventoryEvent {
   lastSyncTimestamp?: number;
 }
 
+/**
+ * Registro de eventos eliminados localmente
+ * Se usa para no volver a descargar de la nube eventos que el usuario eliminó
+ */
+export interface DeletedEvent {
+  id?: number;
+  /** Clave única: barcode + frcNumber */
+  eventKey: string;
+  /** Barcode del evento eliminado */
+  barcode: string;
+  /** FRC del evento eliminado */
+  frcNumber: string;
+  /** Timestamp cuando se eliminó */
+  deletedAt: number;
+  /** Si ya se sincronizó la eliminación con la nube */
+  synced: boolean;
+}
+
 export interface SystemLog {
   id?: number;
   level: 'info' | 'warn' | 'error' | 'success';
@@ -141,6 +159,8 @@ export class LogiCountDB extends Dexie {
   dynamic_data!: Table<DynamicRecord>;
   productProviders!: Table<ProductProvider>;
   events!: Table<InventoryEvent>;
+  /** Registros de eventos eliminados localmente para no volver a descargarlos */
+  deletedEvents!: Table<DeletedEvent>;
   blindScans!: Table<{
     id?: number;
     batchId: string;

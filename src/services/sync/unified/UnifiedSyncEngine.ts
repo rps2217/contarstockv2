@@ -554,9 +554,13 @@ export class UnifiedSyncEngine {
     let added = 0, updated = 0;
     const localTable = (db as any)[meta.localTable];
 
-    // Para eventos, necesitamos comparar timestamps para saber qué actualizar
+    // Para eventos, necesitamos comparar timestamps y verificar eliminados
     if (tableName === 'events' && localTable) {
       try {
+        // Obtener lista de eventos eliminados localmente
+        const deletedEvents = await db.deletedEvents.toArray();
+        const deletedKeys = new Set(deletedEvents.map(e => e.eventKey.toLowerCase()));
+        
         // Obtener todos los eventos locales existentes
         const existingEvents = await localTable.toArray();
         
@@ -579,6 +583,12 @@ export class UnifiedSyncEngine {
           
           // Solo procesar si tiene clave válida
           if (remoteKey === '~' || (!row.frc_code && !row.barcode)) continue;
+          
+          // SKIP: Si el evento fue eliminado localmente, no descargarlo
+          if (deletedKeys.has(remoteKey)) {
+            logger.info('SYNC', `Evento omitido (eliminado localmente): ${remoteKey}`);
+            continue;
+          }
           
           const localEvent = localEventsMap.get(remoteKey);
           

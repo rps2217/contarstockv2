@@ -255,18 +255,38 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     if (!confirm('¿Estás seguro de eliminar este evento?')) return
     
     try {
-      // Obtener el evento antes de eliminar para poder eliminar de la nube
+      // Obtener el evento antes de eliminar
       const event = await db.events.get(id)
       
-      // Eliminar de la nube primero
       if (event) {
+        // Registrar en lista de eliminados para no volver a descargar
+        const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase();
+        await db.deletedEvents.put({
+          eventKey,
+          barcode: event.barcode || '',
+          frcNumber: event.frcNumber || '',
+          deletedAt: Date.now(),
+          synced: false // Se marcará como sincronizado cuando se elimine de la nube
+        });
+
+        // Intentar eliminar de la nube
         try {
           const { supabase } = await import('@/lib/supabase')
-          await supabase
+          const deleteResult = await supabase
             .from('EVENTOS')
             .delete()
             .eq('barcode', event.barcode || '')
             .eq('frc_code', event.frcNumber || '')
+          
+          if (!deleteResult.error) {
+            // Marcar como sincronizado en lista de eliminados
+            await db.deletedEvents
+              .where('eventKey')
+              .equals(eventKey)
+              .modify({ synced: true });
+          } else {
+            console.warn('No se pudo eliminar de la nube:', deleteResult.error.message)
+          }
         } catch (cloudErr) {
           console.warn('No se pudo eliminar de la nube:', cloudErr)
           // Continuar con eliminación local aunque falle la nube
