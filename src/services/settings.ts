@@ -104,7 +104,12 @@ const DEFAULT_SETTINGS: AppSettings = {
         traspaso: 'transfer_doc',
         destino: 'destination',
         observaciones: 'notes',
-        isAdjusted: 'is_adjusted'
+        isAdjusted: 'is_adjusted',
+        status: 'status',
+        frcNumber: 'frc_code',
+        resolution: 'resolution',
+        batch: 'batch_number',
+        expiryDate: 'expiry_date'
       },
       products: {
         barcode: 'barcode',

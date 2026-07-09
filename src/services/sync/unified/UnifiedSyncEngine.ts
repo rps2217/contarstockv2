@@ -635,9 +635,24 @@ export class UnifiedSyncEngine {
 
     if (!dirtyItems.length) return;
 
+    // Para eventos, filtrar duplicados por frc_code + barcode
+    let itemsToSync = dirtyItems;
+    if (tableName === 'events' || meta.filterValue === 'EVENTOS') {
+      try {
+        const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
+        const result = await filterEventsWithoutDuplicates(dirtyItems);
+        itemsToSync = result.events;
+        if (result.skippedCount > 0) {
+          logger.info('SYNC', `Eventos: ${result.skippedCount} duplicados omitidos en sync a nube`);
+        }
+      } catch (err) {
+        logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
+      }
+    }
+
     // Process in batches
-    for (let i = 0; i < dirtyItems.length; i += this.config.batchSize) {
-      const chunk = dirtyItems.slice(i, i + this.config.batchSize);
+    for (let i = 0; i < itemsToSync.length; i += this.config.batchSize) {
+      const chunk = itemsToSync.slice(i, i + this.config.batchSize);
       const rows = chunk.map(item => meta.mapToRemote ? meta.mapToRemote(item) : item);
       
       const result = await this.pushBatch(meta.remoteTable, rows);

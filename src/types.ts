@@ -285,6 +285,11 @@ export interface ExpiryMapping {
   batch?: string;
   timestamp?: string;
   fechaCC?: string;
+  // Campos adicionales para eventos
+  status?: string;
+  frcNumber?: string;
+  resolution?: string;
+  expiryDate?: string;
 }
 
 export interface ProductMapping {

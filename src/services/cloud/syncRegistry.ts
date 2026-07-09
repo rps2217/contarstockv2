@@ -87,7 +87,8 @@ const applyRemoteMapping = (
   const localKeys = [
     'barcode', 'productName', 'providerName', 'providerRut', 'quantity', 'event', 
     'mm', 'yyyy', 'location', 'supplier', 'timestamp', 'frc', 'erp', 'traspaso',
-    'destino', 'observaciones', 'isAdjusted', 'batch', 'uniqueKey', 'claveUnica'
+    'destino', 'observaciones', 'isAdjusted', 'batch', 'uniqueKey', 'claveUnica',
+    'status', 'frcNumber', 'resolution', 'expiryDate'
   ];
 
   const idCol = mapping.id || 'id';
@@ -454,3 +455,129 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     mapToLocal: () => null
   }
 };
+
+// =============================================================================
+// HELPERS PARA PREVENCIÓN DE DUPLICADOS EN EVENTOS
+// =============================================================================
+
+import { supabase } from '../../lib/supabase';
+
+/**
+ * Genera clave única para evento: frc_code + barcode
+ * Esta clave se usa para evitar duplicados en la nube
+ */
+export function generateEventKey(event: { frcNumber?: string; frc?: string; barcode?: string }): string {
+  const frc = (event.frcNumber || event.frc || '').toLowerCase().trim();
+  const barcode = (event.barcode || '').toLowerCase().trim();
+  return `${frc}~${barcode}`;
+}
+
+/**
+ * Filtra eventos que ya existen en la nube por frc_code + barcode
+ * Evita duplicados al sincronizar eventos locales a Supabase
+ * 
+ * @param localEvents - Eventos locales a verificar
+ * @returns Eventos que NO existen en la nube (listos para sincronizar)
+ */
+export async function filterEventsWithoutDuplicates(
+  localEvents: Array<{ data: Record<string, any>; id: string; timestamp: number }>
+): Promise<{ events: Array<{ data: Record<string, any>; id: string; timestamp: number }>; skippedCount: number }> {
+  if (!localEvents.length) {
+    return { events: [], skippedCount: 0 };
+  }
+
+  try {
+    // Extraer todas las claves únicas de los eventos locales
+    const localKeys = localEvents.map(e => generateEventKey(e.data));
+    
+    // Construir condiciones para la consulta: (frc='X' AND barcode='Y') OR ...
+    // Solo verificar los que tienen ambas claves
+    const validKeys = localKeys.filter(k => !k.startsWith('~') && !k.endsWith('~'));
+    
+    if (validKeys.length === 0) {
+      // No hay claves válidas para verificar
+      return { events: localEvents, skippedCount: 0 };
+    }
+
+    // Extraer frc_codes y barcodes separados
+    const frcCodes = validKeys.map(k => k.split('~')[0]).filter(Boolean);
+    const barcodes = validKeys.map(k => k.split('~')[1]).filter(Boolean);
+
+    // Consultar la nube para ver qué combinaciones ya existen
+    const { data: existingEvents, error } = await supabase
+      .from('EVENTOS')
+      .select('frc_code, barcode')
+      .or(`frc_code.in.(${frcCodes.join(',')}),barcode.in.${barcodes.join(',')})`);
+
+    if (error) {
+      console.warn('Error verificando duplicados de eventos:', error.message);
+      // En caso de error, permitir todos los eventos (no filtrar)
+      return { events: localEvents, skippedCount: 0 };
+    }
+
+    // Crear set de claves existentes en la nube
+    const existingKeys = new Set<string>();
+    if (existingEvents && existingEvents.length > 0) {
+      existingEvents.forEach(e => {
+        if (e.frc_code && e.barcode) {
+          existingKeys.add(`${(e.frc_code || '').toLowerCase()}~${(e.barcode || '').toLowerCase()}`);
+        }
+      });
+    }
+
+    // Filtrar eventos que NO existen en la nube
+    const newEvents: Array<{ data: Record<string, any>; id: string; timestamp: number }> = [];
+    let skippedCount = 0;
+
+    localEvents.forEach((event, index) => {
+      const key = localKeys[index];
+      // Si la clave es válida y NO existe en la nube, incluirla
+      // Si la clave no es válida (vacía), incluirla también
+      if (!key.startsWith('~') && !key.endsWith('~')) {
+        if (!existingKeys.has(key)) {
+          newEvents.push(event);
+        } else {
+          skippedCount++;
+        }
+      } else {
+        // Clave inválida (frc o barcode vacío), incluirla
+        newEvents.push(event);
+      }
+    });
+
+    return { events: newEvents, skippedCount };
+  } catch (err) {
+    console.error('Error en filterEventsWithoutDuplicates:', err);
+    // En caso de error, permitir todos los eventos
+    return { events: localEvents, skippedCount: 0 };
+  }
+}
+
+/**
+ * Verifica si un evento específico ya existe en la nube
+ */
+export async function eventExistsInCloud(
+  frcNumber: string,
+  barcode: string
+): Promise<boolean> {
+  if (!frcNumber || !barcode) return false;
+
+  try {
+    const { data, error } = await supabase
+      .from('EVENTOS')
+      .select('id')
+      .eq('frc_code', frcNumber)
+      .eq('barcode', barcode)
+      .limit(1);
+
+    if (error) {
+      console.warn('Error verificando existencia de evento:', error.message);
+      return false;
+    }
+
+    return data && data.length > 0;
+  } catch (err) {
+    console.error('Error en eventExistsInCloud:', err);
+    return false;
+  }
+}
