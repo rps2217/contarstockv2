@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Plus, Edit2, Trash2, Save, Loader2, ChevronUp, ChevronDown,
   AlertCircle, AlertTriangle, CheckCircle, Info, Search, Filter,
-  Table as TableIcon, ClipboardList, ArrowUpDown
+  Table as TableIcon, ClipboardList, ArrowUpDown, List
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -90,9 +90,11 @@ const EMPTY_FORM: EventFormData = {
 interface EventsModalProps {
   isOpen: boolean
   onClose: () => void
+  embedded?: boolean
+  onSwitchView?: () => void
 }
 
-export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose }) => {
+export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embedded = false, onSwitchView }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [editingEvent, setEditingEvent] = useState<InventoryEvent | null>(null)
   const [formData, setFormData] = useState<EventFormData>(EMPTY_FORM)
@@ -251,15 +253,24 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose }) => 
 
   if (!isOpen) return null
 
+  // Contenedor según modo
+  const containerClass = embedded
+    ? "bg-surface border border-subtle rounded-2xl w-full h-full flex flex-col overflow-hidden"
+    : "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+
+  const handleContainerClick = embedded ? undefined : onClose
+  const handleContentClick = embedded ? undefined : (e: React.MouseEvent) => e.stopPropagation()
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className={containerClass} onClick={handleContainerClick as any}>
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
+        initial={embedded ? false : { scale: 0.95, opacity: 0 }}
+        animate={embedded ? false : { scale: 1, opacity: 1 }}
+        exit={embedded ? false : { scale: 0.95, opacity: 0 }}
         transition={{ type: 'spring', duration: 0.3 }}
         className="bg-surface border border-subtle rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden"
-        onClick={e => e.stopPropagation()}
+        onClick={handleContentClick as any}
+        style={embedded ? { borderRadius: '1rem', maxWidth: '100%', height: '100%' } : {}}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-subtle shrink-0">
@@ -296,8 +307,17 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose }) => 
                 Nuevo
               </button>
             )}
+            {embedded && onSwitchView && (
+              <button
+                onClick={onSwitchView}
+                className="flex items-center gap-2 bg-surface hover:bg-elevated text-secondary px-3 py-2 rounded-xl text-sm font-medium transition-colors border border-subtle"
+              >
+                <List className="w-4 h-4" />
+                Cards
+              </button>
+            )}
             <button
-              onClick={onClose}
+              onClick={embedded ? onSwitchView || (() => {}) : onClose}
               className="p-2 hover:bg-base rounded-xl transition-colors"
             >
               <X className="w-5 h-5 text-muted" />

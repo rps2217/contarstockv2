@@ -142,7 +142,8 @@ export const RedesignEventsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('list')
   const [refreshKey, setRefreshKey] = useState(0)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  // Vista de tabla como principal (sin modal)
+  const [showTableView, setShowTableView] = useState(true)
 
   // Datos de eventos
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
@@ -233,6 +234,50 @@ export const RedesignEventsPage: React.FC = () => {
     )
   }
 
+  // Determinar qué vista mostrar
+  if (showTableView) {
+    return (
+      <div className="h-full flex flex-col bg-base">
+        {/* Header */}
+        <div className="pt-8 px-4 sm:px-6 lg:px-8 shrink-0">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight flex items-center gap-3">
+                <Bell className="w-8 h-8 text-amber-500" />
+                Eventos
+              </h1>
+              <p className="text-secondary text-sm mt-2">Gestión de incidencias y actividades.</p>
+            </div>
+            <button
+              onClick={() => setShowTableView(false)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
+            >
+              <List className="w-4 h-4" />
+              Vista Cards
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {STATUS_ORDER.map(type => (
+              <StatCard key={type} type={type} count={stats[type]} />
+            ))}
+          </div>
+        </div>
+
+        {/* Tabla de Eventos */}
+        <div className="flex-1 overflow-hidden px-4 sm:px-6 lg:px-8 pb-6">
+          <EventsModal 
+            isOpen={true} 
+            onClose={() => {}} 
+            embedded={true}
+            onSwitchView={() => setShowTableView(false)}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-full flex flex-col bg-base">
       {/* Header */}
@@ -245,28 +290,12 @@ export const RedesignEventsPage: React.FC = () => {
             </h1>
             <p className="text-secondary text-sm mt-2">Registro de incidencias y actividades.</p>
           </div>
-          <button 
-            onClick={() => setActiveTab(activeTab === 'list' ? 'import' : 'list')}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
-          >
-            {activeTab === 'list' ? (
-              <>
-                <Upload className="w-4 h-4" />
-                Importar
-              </>
-            ) : (
-              <>
-                <List className="w-4 h-4" />
-                Ver Lista
-              </>
-            )}
-          </button>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setShowTableView(true)}
             className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-amber-900/20"
           >
             <Table2 className="w-4 h-4" />
-            Gestionar
+            Vista Tabla
           </button>
         </div>
 
@@ -365,9 +394,6 @@ export const RedesignEventsPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Modal de Gestión de Eventos */}
-      <EventsModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   )
 }
