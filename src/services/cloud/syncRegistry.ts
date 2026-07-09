@@ -275,7 +275,6 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     localTable: 'sessions',
     remoteTable: 'SESSIONS',
     primaryKey: 'id',
-    optional: true, // Marcar como opcional - puede fallar si la tabla no existe en Supabase
     mapToRemote: (s) => ({
       id: s.id,
       status: s.status,
