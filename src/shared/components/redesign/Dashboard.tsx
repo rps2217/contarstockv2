@@ -220,7 +220,6 @@ const useDashboardMetrics = () => {
 export const RedesignDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { pendingItems, isSupabaseConnected, lastSyncTime, latencyMs } = useSyncStore();
-  const { setStartSessionModalOpen } = useAppStore();
   const metrics = useDashboardMetrics();
   
   const {
@@ -271,9 +270,9 @@ export const RedesignDashboard: React.FC = () => {
     );
   }
 
-  // Handler para abrir modal de nuevo conteo
+  // Handler para navegar al módulo de conteo (abre StartCountingModal en HammerPage)
   const handleNewCount = () => {
-    setStartSessionModalOpen(true);
+    navigate('/massive');
   };
 
   // Formatear números

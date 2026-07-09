@@ -41,7 +41,6 @@ const SimpleActionButton: React.FC<SimpleActionButtonProps> = ({ title, icon: Ic
 export const DashboardSimple: React.FC = () => {
   const navigate = useNavigate();
   const { pendingItems } = useSyncStore();
-  const { setStartSessionModalOpen } = useAppStore();
 
   // Solo consultar lo esencial - NO todas las métricas
   const stats = useLiveQuery(async () => {
@@ -56,7 +55,8 @@ export const DashboardSimple: React.FC = () => {
     }
   }, [], { productCount: 0, sessionCount: 0 });
 
-  const handleNewCount = () => setStartSessionModalOpen(true);
+  // Navegar al módulo de conteo (abre StartCountingModal en HammerPage)
+  const handleNewCount = () => navigate('/massive');
 
   return (
     <div className="h-full overflow-y-auto bg-base pb-24">
