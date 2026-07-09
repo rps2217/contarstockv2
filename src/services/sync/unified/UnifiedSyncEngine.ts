@@ -554,9 +554,35 @@ export class UnifiedSyncEngine {
     let added = 0, updated = 0;
     const localTable = (db as any)[meta.localTable];
 
+    // Para eventos, filtrar duplicados locales por frc_code + barcode
+    let rowsToProcess = data || [];
+    if (tableName === 'events' && localTable) {
+      try {
+        const existingEvents = await localTable.toArray();
+        const existingKeys = new Set(
+          existingEvents
+            .map((e: any) => `${e.frcNumber || ''}~${e.barcode || ''}`.toLowerCase())
+            .filter((k: string) => !k.startsWith('~'))
+        );
+        
+        const beforeCount = rowsToProcess.length;
+        rowsToProcess = rowsToProcess.filter((row: any) => {
+          const key = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
+          return !existingKeys.has(key);
+        });
+        
+        const skipped = beforeCount - rowsToProcess.length;
+        if (skipped > 0) {
+          logger.info('SYNC', `Eventos: ${skipped} duplicados locales omitidos en descarga`);
+        }
+      } catch (err) {
+        logger.warn('SYNC', 'Error verificando duplicados locales de eventos');
+      }
+    }
+
     if (meta.isDynamic) {
       // Tablas dinámicas: usar dynamic_data
-      for (const row of data || []) {
+      for (const row of rowsToProcess) {
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await db.dynamic_data.put(local as any);
@@ -565,7 +591,7 @@ export class UnifiedSyncEngine {
       }
     } else if (localTable) {
       // Tablas normales
-      for (const row of data || []) {
+      for (const row of rowsToProcess) {
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await localTable.put(local as any);
