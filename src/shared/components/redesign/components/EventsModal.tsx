@@ -303,6 +303,48 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     }
   }
 
+  // Limpiar eventos huérfanos (con frcNumber="-") y agregarlos a eliminados
+  const handleCleanOrphanEvents = async () => {
+    if (!confirm('¿Eliminar todos los eventos con FRC="-" y agregarlos a la lista de eliminados? No se volverán a descargar.')) return
+    
+    try {
+      const orphanEvents = await db.events
+        .where('frcNumber')
+        .equals('-')
+        .toArray()
+      
+      if (orphanEvents.length === 0) {
+        toast.info('No hay eventos con FRC="-" para limpiar')
+        return
+      }
+      
+      let cleaned = 0
+      for (const event of orphanEvents) {
+        if (event.id) {
+          // Agregar a lista de eliminados
+          const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase()
+          await db.deletedEvents.put({
+            eventKey,
+            barcode: event.barcode || '',
+            frcNumber: event.frcNumber || '',
+            deletedAt: Date.now(),
+            synced: true // Marcar como sincronizado ya que estos son problemáticos
+          })
+          
+          // Eliminar localmente
+          await db.events.delete(event.id)
+          cleaned++
+        }
+      }
+      
+      toast.success(`${cleaned} eventos huérfanos eliminados. No se volverán a descargar.`)
+      setRefreshKey(k => k + 1)
+    } catch (error) {
+      console.error('Error cleaning orphan events:', error)
+      toast.error('Error al limpiar eventos huérfanos')
+    }
+  }
+
   // Cancelar formulario
   const handleCancelForm = () => {
     setViewMode('table')
@@ -364,6 +406,16 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
               >
                 <Plus className="w-4 h-4" />
                 Nuevo
+              </button>
+            )}
+            {viewMode === 'table' && (
+              <button
+                onClick={handleCleanOrphanEvents}
+                className="flex items-center gap-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-500 px-3 py-2 rounded-xl text-sm font-medium transition-colors border border-amber-500/30"
+                title="Eliminar eventos con FRC='-' para evitar descargas fantasma"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpiar huérfanos
               </button>
             )}
             {embedded && onSwitchView && (
