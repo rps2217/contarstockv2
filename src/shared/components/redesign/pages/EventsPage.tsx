@@ -16,7 +16,7 @@ import { EventsModal } from '../components/EventsModal'
 // Tipos
 // ============================================================================
 type EventType = 'info' | 'warning' | 'error' | 'success'
-type EventStatus = 'active' | 'resolved' | 'dismissed'
+type EventStatus = 'pending' | 'destined' | 'adjusted'
 type TabType = 'list' | 'import'
 
 interface EventRecord {
@@ -78,7 +78,7 @@ const EventRow = ({ event, onDismiss }: { event: EventRecord; onDismiss: (id: st
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
       className={cn(
         'flex items-start gap-3 p-4 rounded-xl transition-all bg-surface hover:bg-elevated',
-        event.status !== 'active' && 'opacity-60'
+        event.status !== 'pending' && 'opacity-60'
       )}>
       <div className={cn('w-1.5 h-full rounded-full shrink-0', meta.dot)} />
       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', meta.bg)}>
@@ -109,7 +109,7 @@ const EventRow = ({ event, onDismiss }: { event: EventRecord; onDismiss: (id: st
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs text-muted">{timeAgo}</span>
-            {event.status === 'active' && (
+            {event.status === 'pending' && (
               <button onClick={() => onDismiss(event.id)}
                 className="p-1.5 rounded-lg hover:bg-rose-500/20 transition-colors">
                 <X className="w-4 h-4 text-muted" />
@@ -201,22 +201,42 @@ export const RedesignEventsPage: React.FC = () => {
         toast.error('Tabla de eventos no disponible. Recarga la página.')
         return
       }
-      // Guardar en la tabla events
-      for (const event of parsedEvents) {
+      
+      // Obtener los FRCs existentes para evitar duplicados
+      const existingEvents = await db.events.toArray()
+      const existingFrcs = new Set(existingEvents.map(e => e.frcNumber?.toLowerCase()).filter(Boolean))
+      
+      // Filtrar solo los eventos con FRC nuevo
+      const newEvents = parsedEvents.filter(event => 
+        event.frcNumber && !existingFrcs.has(event.frcNumber.toLowerCase())
+      )
+      
+      const skippedCount = parsedEvents.length - newEvents.length
+      
+      // Guardar solo los nuevos eventos
+      for (const event of newEvents) {
         await db.events.add({
-          type: event.type,
+          type: event.type || 'info',
           frcNumber: event.frcNumber,
           barcode: event.barcode,
           productName: event.productName,
           batch: event.batch,
           expiryDate: event.expiryDate,
           resolution: event.resolution,
-          status: 'active',
+          status: 'pending',
           createdAt: Date.now()
         })
       }
       
-      toast.success(`${parsedEvents.length} eventos importados exitosamente`)
+      if (newEvents.length > 0) {
+        toast.success(`${newEvents.length} eventos importados exitosamente`)
+        if (skippedCount > 0) {
+          toast.info(`${skippedCount} FRCs omitidos (ya existen)`)
+        }
+      } else {
+        toast.warning('Todos los FRCs ya existen en el sistema')
+      }
+      
       setActiveTab('list')
       setRefreshKey(k => k + 1)
     } catch (err) {

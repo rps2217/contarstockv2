@@ -15,7 +15,7 @@ export interface InventoryEvent {
   batch: string;
   expiryDate: string;
   resolution: string;
-  status: 'active' | 'resolved' | 'dismissed';
+  status: 'pending' | 'destined' | 'adjusted';
   createdAt: number;
   updatedAt?: number;
 }

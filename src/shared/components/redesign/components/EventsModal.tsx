@@ -14,11 +14,10 @@ import { db, InventoryEvent } from '@/db'
 // Tipos
 // ============================================================================
 type EventType = 'info' | 'warning' | 'error' | 'success'
-type EventStatus = 'active' | 'resolved' | 'dismissed'
+type EventStatus = 'pending' | 'destined' | 'adjusted'
 type ViewMode = 'table' | 'form'
 
 interface EventFormData {
-  type: EventType
   frcNumber: string
   barcode: string
   productName: string
@@ -41,9 +40,9 @@ const EVENT_META: Record<EventType, {
 }
 
 const STATUS_OPTIONS: { value: EventStatus; label: string; color: string }[] = [
-  { value: 'active', label: 'Activo', color: 'text-amber-500' },
-  { value: 'resolved', label: 'Resuelto', color: 'text-emerald-500' },
-  { value: 'dismissed', label: 'Descartado', color: 'text-muted' },
+  { value: 'pending', label: 'Pendiente', color: 'text-amber-500' },
+  { value: 'destined', label: 'Destinados', color: 'text-blue-500' },
+  { value: 'adjusted', label: 'Ajustados', color: 'text-emerald-500' },
 ]
 
 const TYPE_OPTIONS: { value: EventType; label: string }[] = [
@@ -54,7 +53,6 @@ const TYPE_OPTIONS: { value: EventType; label: string }[] = [
 ]
 
 const COLUMNS = [
-  { key: 'type', label: 'Tipo', sortable: true, width: 'w-24' },
   { key: 'frcNumber', label: 'FRC', sortable: true, width: 'w-28' },
   { key: 'productName', label: 'Producto', sortable: true, width: 'flex-1' },
   { key: 'barcode', label: 'Barras', sortable: true, width: 'w-32' },
@@ -74,14 +72,13 @@ const formatDate = (timestamp: number): string => {
 }
 
 const EMPTY_FORM: EventFormData = {
-  type: 'info',
   frcNumber: '',
   barcode: '',
   productName: '',
   batch: '',
   expiryDate: '',
   resolution: '',
-  status: 'active',
+  status: 'pending',
 }
 
 // ============================================================================
@@ -183,14 +180,13 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
   const handleEdit = (event: InventoryEvent) => {
     setEditingEvent(event)
     setFormData({
-      type: event.type,
       frcNumber: event.frcNumber || '',
       barcode: event.barcode || '',
       productName: event.productName || '',
       batch: event.batch || '',
       expiryDate: event.expiryDate || '',
       resolution: event.resolution || '',
-      status: event.status,
+      status: event.status as EventStatus,
     })
     setViewMode('form')
   }
@@ -204,17 +200,28 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     
     setIsSaving(true)
     try {
+      const eventData = {
+        frcNumber: formData.frcNumber,
+        barcode: formData.barcode,
+        productName: formData.productName,
+        batch: formData.batch,
+        expiryDate: formData.expiryDate,
+        resolution: formData.resolution,
+        status: formData.status,
+      }
+      
       if (editingEvent?.id) {
         // Actualizar
         await db.events.update(editingEvent.id, {
-          ...formData,
+          ...eventData,
           updatedAt: Date.now(),
         })
         toast.success('Evento actualizado correctamente')
       } else {
         // Crear
         await db.events.add({
-          ...formData,
+          ...eventData,
+          type: 'info' as const,
           createdAt: Date.now(),
         })
         toast.success('Evento creado correctamente')
@@ -419,8 +426,6 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                         </tr>
                       ) : (
                         filteredEvents.map(event => {
-                          const meta = EVENT_META[event.type]
-                          const Icon = meta.icon
                           const statusInfo = STATUS_OPTIONS.find(s => s.value === event.status)
                           
                           return (
@@ -428,16 +433,6 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                               key={event.id}
                               className="hover:bg-base/50 transition-colors"
                             >
-                              {/* Tipo */}
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <Icon className={cn('w-4 h-4', meta.text)} />
-                                  <span className={cn('text-xs font-medium', meta.text)}>
-                                    {meta.label}
-                                  </span>
-                                </div>
-                              </td>
-                              
                               {/* FRC */}
                               <td className="px-4 py-3">
                                 <span className="text-sm font-mono text-primary">
@@ -477,9 +472,9 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                               <td className="px-4 py-3">
                                 <span className={cn(
                                   'text-xs font-medium px-2 py-1 rounded-full',
-                                  event.status === 'active' && 'bg-amber-500/20 text-amber-500',
-                                  event.status === 'resolved' && 'bg-emerald-500/20 text-emerald-500',
-                                  event.status === 'dismissed' && 'bg-base text-muted'
+                                  event.status === 'pending' && 'bg-amber-500/20 text-amber-500',
+                                  event.status === 'destined' && 'bg-blue-500/20 text-blue-500',
+                                  event.status === 'adjusted' && 'bg-emerald-500/20 text-emerald-500'
                                 )}>
                                   {statusInfo?.label}
                                 </span>
@@ -528,20 +523,8 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 className="flex-1 overflow-y-auto p-6"
               >
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6 max-w-2xl">
-                  {/* Tipo y Estado */}
+                  {/* Estado */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">Tipo *</label>
-                      <select
-                        value={formData.type}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value as EventType })}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
-                      >
-                        {TYPE_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
                     <div>
                       <label className="block text-sm font-medium text-secondary mb-2">Estado</label>
                       <select
