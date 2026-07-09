@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle, Info, Bell, Clock, Package
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { EventsModal } from '../components/EventsModal'
@@ -45,18 +46,27 @@ const STATUS_ORDER: EventStatus[] = ['pending', 'destined', 'adjusted']
 // ============================================================================
 // Componentes
 // ============================================================================
-const StatCard = ({ status, count }: { status: EventStatus; count: number }) => {
+const StatCard = ({ status, count, isActive, onClick }: { status: EventStatus; count: number; isActive: boolean; onClick: () => void }) => {
   const meta = STATUS_META[status]
   const Icon = meta.icon
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-      className="bg-surface border border-subtle rounded-xl p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center border bg-emerald-500/10 border-emerald-500/30">
-        <Icon className="w-5 h-5 text-emerald-500" />
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }} 
+      animate={{ opacity: 1, scale: 1 }}
+      onClick={onClick}
+      className={cn(
+        "rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all border",
+        isActive 
+          ? "bg-blue-600/20 border-blue-500 shadow-lg shadow-blue-500/20" 
+          : "bg-surface border-subtle hover:border-blue-500/50 hover:bg-surface/80"
+      )}
+    >
+      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", meta.bg, isActive ? "border-blue-500/50" : meta.border)}>
+        <Icon className={cn("w-5 h-5", isActive ? "text-white" : meta.text)} />
       </div>
       <div>
-        <p className="text-2xl font-bold text-primary">{count}</p>
-        <p className="text-xs text-muted">{meta.label}</p>
+        <p className={cn("text-2xl font-bold", isActive ? "text-white" : "text-primary")}>{count}</p>
+        <p className={cn("text-xs", isActive ? "text-blue-200" : "text-muted")}>{meta.label}</p>
       </div>
     </motion.div>
   )
@@ -67,6 +77,7 @@ const StatCard = ({ status, count }: { status: EventStatus; count: number }) => 
 // ============================================================================
 export const RedesignEventsPage: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0)
+  const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all')
 
   // Datos de eventos
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
@@ -122,11 +133,26 @@ export const RedesignEventsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats - Clickeables para filtrar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          {STATUS_ORDER.map(status => (
-            <StatCard key={status} status={status} count={stats[status]} />
-          ))}
+          <StatCard 
+            status="pending" 
+            count={stats.pending} 
+            isActive={statusFilter === 'pending'}
+            onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
+          />
+          <StatCard 
+            status="destined" 
+            count={stats.destined} 
+            isActive={statusFilter === 'destined'}
+            onClick={() => setStatusFilter(statusFilter === 'destined' ? 'all' : 'destined')}
+          />
+          <StatCard 
+            status="adjusted" 
+            count={stats.adjusted} 
+            isActive={statusFilter === 'adjusted'}
+            onClick={() => setStatusFilter(statusFilter === 'adjusted' ? 'all' : 'adjusted')}
+          />
         </div>
       </div>
 
@@ -136,6 +162,7 @@ export const RedesignEventsPage: React.FC = () => {
           isOpen={true} 
           onClose={() => {}} 
           embedded={true}
+          statusFilter={statusFilter}
         />
       </div>
     </div>

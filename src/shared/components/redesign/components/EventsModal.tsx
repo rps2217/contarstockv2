@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Plus, Edit2, Trash2, Save, Loader2, ChevronUp, ChevronDown,
@@ -91,9 +91,10 @@ interface EventsModalProps {
   onClose: () => void
   embedded?: boolean
   onSwitchView?: () => void
+  statusFilter?: EventStatus | 'all'
 }
 
-export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embedded = false, onSwitchView }) => {
+export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embedded = false, onSwitchView, statusFilter: externalStatusFilter = 'all' }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [editingEvent, setEditingEvent] = useState<InventoryEvent | null>(null)
   const [formData, setFormData] = useState<EventFormData>(EMPTY_FORM)
@@ -106,6 +107,11 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
   const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all')
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // Sincronizar filtro de estado externo con estado local
+  useEffect(() => {
+    setStatusFilter(externalStatusFilter)
+  }, [externalStatusFilter])
 
   // Cargar eventos
   const events = useLiveQuery(async (): Promise<InventoryEvent[]> => {
