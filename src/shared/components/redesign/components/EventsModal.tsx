@@ -303,45 +303,72 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     }
   }
 
-  // Limpiar eventos huérfanos (con frcNumber="-") y agregarlos a eliminados
+  // Limpiar eventos problemáticos y agregarlos a eliminados
   const handleCleanOrphanEvents = async () => {
-    if (!confirm('¿Eliminar todos los eventos con FRC="-" y agregarlos a la lista de eliminados? No se volverán a descargar.')) return
+    if (!confirm('¿Eliminar TODOS los eventos actuales y agregarlos a la lista de eliminados? No se volverán a descargar.')) return
     
     try {
-      const orphanEvents = await db.events
-        .where('frcNumber')
-        .equals('-')
-        .toArray()
+      // Obtener TODOS los eventos locales
+      const allEvents = await db.events.toArray()
       
-      if (orphanEvents.length === 0) {
-        toast.info('No hay eventos con FRC="-" para limpiar')
+      if (allEvents.length === 0) {
+        toast.info('No hay eventos para limpiar')
         return
       }
       
       let cleaned = 0
-      for (const event of orphanEvents) {
-        if (event.id) {
-          // Agregar a lista de eliminados
-          const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase()
-          await db.deletedEvents.put({
-            eventKey,
-            barcode: event.barcode || '',
-            frcNumber: event.frcNumber || '',
-            deletedAt: Date.now(),
-            synced: true // Marcar como sincronizado ya que estos son problemáticos
-          })
-          
-          // Eliminar localmente
-          await db.events.delete(event.id)
-          cleaned++
+      let errors = 0
+      
+      for (const event of allEvents) {
+        try {
+          if (event.id) {
+            // Agregar a lista de eliminados con la clave barcode~frcNumber
+            const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase()
+            await db.deletedEvents.put({
+              eventKey,
+              barcode: event.barcode || '',
+              frcNumber: event.frcNumber || '',
+              deletedAt: Date.now(),
+              synced: false // Se intentará sincronizar la eliminación
+            })
+            
+            // Intentar eliminar de la nube
+            try {
+              const { supabase } = await import('@/lib/supabase')
+              await supabase
+                .from('EVENTOS')
+                .delete()
+                .eq('barcode', event.barcode || '')
+                .eq('frc_code', event.frcNumber || '')
+              
+              // Marcar como sincronizado si se eliminó de la nube
+              await db.deletedEvents
+                .where('eventKey')
+                .equals(eventKey)
+                .modify({ synced: true })
+            } catch (cloudErr) {
+              console.warn('No se pudo eliminar de la nube:', cloudErr)
+            }
+            
+            // Eliminar localmente
+            await db.events.delete(event.id)
+            cleaned++
+          }
+        } catch (err) {
+          console.error('Error cleaning event:', err)
+          errors++
         }
       }
       
-      toast.success(`${cleaned} eventos huérfanos eliminados. No se volverán a descargar.`)
+      if (errors > 0) {
+        toast.error(`${cleaned} eliminados, ${errors} errores`)
+      } else {
+        toast.success(`${cleaned} eventos eliminados. No se volverán a descargar.`)
+      }
       setRefreshKey(k => k + 1)
     } catch (error) {
       console.error('Error cleaning orphan events:', error)
-      toast.error('Error al limpiar eventos huérfanos')
+      toast.error('Error al limpiar eventos: ' + String(error))
     }
   }
 
