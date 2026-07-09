@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  CalendarClock, Plus, Search, ChevronRight, Skull, AlertTriangle,
+  CalendarClock, Plus, ChevronRight, Skull, AlertTriangle,
   PackageX, Clock, ShieldCheck, MapPin, RefreshCw, Package, AlertCircle,
   X, Trash2, Check, Pencil, Download, Table2, FileSpreadsheet, FileText,
   Filter, ArrowUpDown, Truck, LayoutGrid, List, Columns3,
@@ -17,6 +17,10 @@ import { ExpiryCaptureModal, ExpiryFormData } from '@/features/expiry/components
 
 // IMPORTAR HOOK DE EXPORTACIÓN
 import { useExport } from '@/shared/hooks'
+
+// IMPORTAR COMPONENTES COMPARTIDOS
+import { SearchInput } from '@/shared/components/ui/SearchInput'
+import { FAB } from '@/shared/components/ui/FAB'
 
 // Tipos y constantes de UI
 type UxExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe'
@@ -548,10 +552,11 @@ export const RedesignExpiryPage: React.FC = () => {
           {/* Barra de búsqueda y filtros alineados */}
           <div className="flex flex-col lg:flex-row gap-3 items-start">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input type="text" value={filters?.searchQuery || ''} onChange={(e) => actions.setSearchQuery(e.target.value)}
+              <SearchInput 
+                value={filters?.searchQuery || ''} 
+                onChange={(value) => actions.setSearchQuery(value)}
                 placeholder="Buscar por producto, código o ubicación..."
-                className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm text-primary focus:outline-none focus:border-blue-500 transition-all" />
+              />
             </div>
             <div className="flex gap-2">
               {/* Toggle filtros avanzados */}
@@ -976,14 +981,11 @@ export const RedesignExpiryPage: React.FC = () => {
 
       {/* FAB flotante para móvil */}
       {!isSelectionMode && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
+        <FAB 
           onClick={() => setShowCaptureModal(true)}
-          className="fixed bottom-24 right-6 md:hidden w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-900/30 flex items-center justify-center hover:bg-blue-500 transition-colors z-40"
-        >
-          <Plus className="w-6 h-6" />
-        </motion.button>
+          visible={true}
+          label="Registrar vencimiento"
+        />
       )}
     </div>
   )
