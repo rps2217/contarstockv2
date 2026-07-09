@@ -554,35 +554,64 @@ export class UnifiedSyncEngine {
     let added = 0, updated = 0;
     const localTable = (db as any)[meta.localTable];
 
-    // Para eventos, filtrar duplicados locales por frc_code + barcode
-    let rowsToProcess = data || [];
+    // Para eventos, necesitamos comparar timestamps para saber qué actualizar
     if (tableName === 'events' && localTable) {
       try {
+        // Obtener todos los eventos locales existentes
         const existingEvents = await localTable.toArray();
-        const existingKeys = new Set(
-          existingEvents
-            .map((e: any) => `${e.frcNumber || ''}~${e.barcode || ''}`.toLowerCase())
-            .filter((k: string) => !k.startsWith('~'))
-        );
         
-        const beforeCount = rowsToProcess.length;
-        rowsToProcess = rowsToProcess.filter((row: any) => {
-          const key = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
-          return !existingKeys.has(key);
+        // Crear mapa de eventos locales: key -> { id, localTimestamp }
+        const localEventsMap = new Map<string, { id: number; timestamp: number }>();
+        existingEvents.forEach((e: any) => {
+          const key = `${e.frcNumber || ''}~${e.barcode || ''}`.toLowerCase();
+          if (key !== '~') {
+            localEventsMap.set(key, {
+              id: e.id!,
+              timestamp: e.createdAt || 0
+            });
+          }
         });
+
+        // Procesar cada evento remoto
+        for (const row of (data || [])) {
+          const remoteKey = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
+          const remoteTimestamp = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+          
+          // Solo procesar si tiene clave válida
+          if (remoteKey === '~' || (!row.frc_code && !row.barcode)) continue;
+          
+          const localEvent = localEventsMap.get(remoteKey);
+          
+          if (!localEvent) {
+            // No existe localmente, agregar
+            const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
+            if (local) {
+              await localTable.put(local as any);
+              added++;
+            }
+          } else if (remoteTimestamp > localEvent.timestamp) {
+            // Existe pero remoto es más nuevo, actualizar
+            const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
+            if (local) {
+              await localTable.update(localEvent.id, {
+                ...local,
+                syncStatus: 'synced'
+              } as any);
+              updated++;
+            }
+          }
+          // Si local es más nuevo o igual, no hacer nada
+        }
         
-        const skipped = beforeCount - rowsToProcess.length;
-        if (skipped > 0) {
-          logger.info('SYNC', `Eventos: ${skipped} duplicados locales omitidos en descarga`);
+        if (added > 0 || updated > 0) {
+          logger.info('SYNC', `Eventos: ${added} agregados, ${updated} actualizados desde nube`);
         }
       } catch (err) {
-        logger.warn('SYNC', 'Error verificando duplicados locales de eventos');
+        logger.warn('SYNC', 'Error procesando eventos desde nube:', err);
       }
-    }
-
-    if (meta.isDynamic) {
+    } else if (meta.isDynamic) {
       // Tablas dinámicas: usar dynamic_data
-      for (const row of rowsToProcess) {
+      for (const row of (data || [])) {
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await db.dynamic_data.put(local as any);
@@ -590,8 +619,8 @@ export class UnifiedSyncEngine {
         }
       }
     } else if (localTable) {
-      // Tablas normales
-      for (const row of rowsToProcess) {
+      // Tablas normales (no eventos)
+      for (const row of (data || [])) {
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await localTable.put(local as any);
@@ -642,7 +671,7 @@ export class UnifiedSyncEngine {
     const localTable = (db as any)[meta.localTable];
     if (!localTable) return;
 
-    // Get dirty items
+    // Get dirty items (pending and error)
     let dirtyItems: any[] = [];
     
     if (meta.isDynamic) {
@@ -653,7 +682,33 @@ export class UnifiedSyncEngine {
         .where({ tableName: meta.filterValue, syncStatus: 'error' })
         .toArray();
       dirtyItems = [...pending, ...errors];
+      
+      // Get items marked for deletion
+      const toDelete = await db.dynamic_data
+        .where({ tableName: meta.filterValue, syncStatus: 'pending_delete' })
+        .toArray();
+      
+      // Process deletions
+      if (toDelete.length > 0) {
+        for (const item of toDelete) {
+          const remoteId = item.data?.id || item.data?.ID || item.id;
+          try {
+            const deleteResult = await supabase
+              .from(meta.remoteTable)
+              .delete()
+              .eq(meta.primaryKey, remoteId);
+            
+            if (!deleteResult.error) {
+              await db.dynamic_data.delete(item.id);
+              logger.info('SYNC', `Eliminado de nube: ${meta.remoteTable}/${remoteId}`);
+            }
+          } catch (err) {
+            logger.error('SYNC', `Error eliminando de nube: ${err}`);
+          }
+        }
+      }
     } else {
+      // For non-dynamic tables (like events), check syncStatus
       const pending = await localTable.where('syncStatus').equals('pending').toArray();
       const errors = await localTable.where('syncStatus').equals('error').toArray();
       dirtyItems = [...pending, ...errors];
@@ -661,30 +716,77 @@ export class UnifiedSyncEngine {
 
     if (!dirtyItems.length) return;
 
-    // Para eventos, filtrar duplicados por frc_code + barcode
-    let itemsToSync = dirtyItems;
+    	
+    // Para eventos, usar filtro mejorado que distingue create/update
     if (tableName === 'events' || meta.filterValue === 'EVENTOS') {
       try {
         const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
-        const result = await filterEventsWithoutDuplicates(dirtyItems);
-        itemsToSync = result.events;
-        if (result.skippedCount > 0) {
-          logger.info('SYNC', `Eventos: ${result.skippedCount} duplicados omitidos en sync a nube`);
+        const filterResult = await filterEventsWithoutDuplicates(dirtyItems);
+        
+        if (filterResult.skippedCount > 0) {
+          logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
         }
+
+        // Process creates
+        if (filterResult.toCreate.length > 0) {
+          const createRows = filterResult.toCreate.map(item => {
+            const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
+            // Eliminar id si existe para que Supabase lo genere
+            delete row.id;
+            return row;
+          });
+          await this.pushBatch(meta.remoteTable, createRows);
+          // Mark as synced
+          await db.transaction('rw', localTable, async () => {
+            for (const item of filterResult.toCreate) {
+              const id = item[meta.primaryKey] || item.id;
+              await localTable.update(id, {
+                syncStatus: 'synced',
+                lastSyncTimestamp: Date.now(),
+              });
+            }
+          });
+          logger.info('SYNC', `Eventos: ${filterResult.toCreate.length} creados en nube`);
+        }
+
+        // Process updates - usar remoteId del evento existente en la nube
+        if (filterResult.toUpdate.length > 0) {
+          const updateRows = filterResult.toUpdate.map(item => {
+            const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
+            // Reemplazar id local con id remoto
+            if (item.remoteId !== undefined) {
+              row.id = item.remoteId;
+            }
+            return row;
+          });
+          await this.pushBatch(meta.remoteTable, updateRows);
+          // Mark as synced
+          await db.transaction('rw', localTable, async () => {
+            for (const item of filterResult.toUpdate) {
+              const id = item[meta.primaryKey] || item.id;
+              await localTable.update(id, {
+                syncStatus: 'synced',
+                lastSyncTimestamp: Date.now(),
+              });
+            }
+          });
+          logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
+        }
+        
+        return;
       } catch (err) {
         logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
       }
     }
 
-    // Process in batches
-    for (let i = 0; i < itemsToSync.length; i += this.config.batchSize) {
-      const chunk = itemsToSync.slice(i, i + this.config.batchSize);
+    // Default behavior for non-events tables
+    for (let i = 0; i < dirtyItems.length; i += this.config.batchSize) {
+      const chunk = dirtyItems.slice(i, i + this.config.batchSize);
       const rows = chunk.map(item => meta.mapToRemote ? meta.mapToRemote(item) : item);
       
       const result = await this.pushBatch(meta.remoteTable, rows);
       
       if (result.success) {
-        // Mark as synced
         await db.transaction('rw', localTable, async () => {
           for (const item of chunk) {
             const id = item[meta.primaryKey] || item.id;

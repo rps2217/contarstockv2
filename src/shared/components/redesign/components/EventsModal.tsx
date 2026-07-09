@@ -250,11 +250,30 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     }
   }
 
-  // Eliminar
+  // Eliminar evento (local y nube)
   const handleDelete = async (id: number) => {
     if (!confirm('¿Estás seguro de eliminar este evento?')) return
     
     try {
+      // Obtener el evento antes de eliminar para poder eliminar de la nube
+      const event = await db.events.get(id)
+      
+      // Eliminar de la nube primero
+      if (event) {
+        try {
+          const { supabase } = await import('@/lib/supabase')
+          await supabase
+            .from('EVENTOS')
+            .delete()
+            .eq('barcode', event.barcode || '')
+            .eq('frc_code', event.frcNumber || '')
+        } catch (cloudErr) {
+          console.warn('No se pudo eliminar de la nube:', cloudErr)
+          // Continuar con eliminación local aunque falle la nube
+        }
+      }
+      
+      // Eliminar localmente
       await db.events.delete(id)
       toast.success('Evento eliminado')
       setRefreshKey(k => k + 1)
