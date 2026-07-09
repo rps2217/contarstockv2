@@ -403,7 +403,7 @@ export const RedesignDashboard: React.FC = () => {
             value={metrics.sessionCount || 0}
             icon={History}
             colorClass="bg-emerald-500/10 text-emerald-500"
-            linkTo="/data"
+            linkTo="/reports"
           />
 
           <StatCard
@@ -411,7 +411,7 @@ export const RedesignDashboard: React.FC = () => {
             value={formatNumber(metrics.scanCount || 0)}
             icon={Scan}
             colorClass="bg-pink-500/10 text-pink-500"
-            linkTo="/capture"
+            linkTo="/massive"
           />
         </div>
 
