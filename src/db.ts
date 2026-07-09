@@ -17,6 +17,10 @@ export interface InventoryEvent {
   resolution: string;
   status: 'pending' | 'destined' | 'adjusted';
   traspasoNumber?: string;
+  /** Ubicación del evento (para sync con nube) */
+  location?: string;
+  /** Destino del evento (para sync con nube) */
+  destino?: string;
   createdAt: number;
   updatedAt?: number;
   /** Estado de sincronización con la nube */

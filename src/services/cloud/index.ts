@@ -4,6 +4,7 @@
 export * from './BatchSyncService';
 export * from './ConflictResolution';
 export * from './GenericSyncEngine';
+export * from './EventsSyncService';
 export * from './IdValidator';
 export * from './QueryErrorHandler';
 export * from './RealtimeSyncService';

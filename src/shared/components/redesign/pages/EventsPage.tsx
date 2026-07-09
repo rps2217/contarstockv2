@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle, Info, Bell, Clock, Package,
-  Upload, List, Table2, Cloud, CloudOff, RefreshCw
+  Upload, List, Table2, Cloud, CloudOff, RefreshCw, Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -10,6 +10,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { EventsModal } from '../components/EventsModal'
 import { EventsImporter } from '../components/EventsImporter'
+import { useEventsSync } from '@/shared/hooks'
 
 // ============================================================================
 // Tipos
@@ -154,6 +155,23 @@ export const RedesignEventsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all')
   const [activeTab, setActiveTab] = useState<TabType>('table')
 
+  // Hook de sincronización de eventos
+  const {
+    syncEvents,
+    stats: syncStatsHook,
+    isSyncing,
+    lastError
+  } = useEventsSync({
+    showToasts: true,
+    onSuccess: (result) => {
+      // Refrescar datos después de sincronizar
+      setRefreshKey(k => k + 1)
+    },
+    onError: (error) => {
+      console.error('Error sincronizando eventos:', error)
+    }
+  })
+
   // Datos de eventos completos con syncStatus
   const events = useLiveQuery(async (): Promise<EventRecord[]> => {
     try {
@@ -289,32 +307,73 @@ export const RedesignEventsPage: React.FC = () => {
             <p className="text-secondary text-sm">Gestión de incidencias y actividades.</p>
           </div>
           
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-surface rounded-xl border border-subtle">
+          {/* Acciones: Botón de sync + Tabs */}
+          <div className="flex items-center gap-3">
+            {/* Botón de sincronización */}
             <button
-              onClick={() => setActiveTab('table')}
+              onClick={syncEvents}
+              disabled={isSyncing || !navigator.onLine}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                activeTab === 'table' 
-                  ? "bg-blue-600 text-white" 
-                  : "text-muted hover:text-white"
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
+                isSyncing
+                  ? "bg-blue-600/50 text-white/70 cursor-not-allowed"
+                  : syncStatsHook?.pending && syncStatsHook.pending > 0
+                    ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                    : "bg-surface hover:bg-elevated text-primary border border-subtle"
               )}
+              title={
+                !navigator.onLine 
+                  ? "Sin conexión a internet" 
+                  : syncStatsHook?.pending 
+                    ? `Sincronizar ${syncStatsHook.pending} evento${syncStatsHook.pending !== 1 ? 's' : ''} pendiente${syncStatsHook.pending !== 1 ? 's' : ''}`
+                    : "Sincronizar eventos"
+              }
             >
-              <Table2 className="w-4 h-4" />
-              Tabla
-            </button>
-            <button
-              onClick={() => setActiveTab('import')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                activeTab === 'import' 
-                  ? "bg-blue-600 text-white" 
-                  : "text-muted hover:text-white"
+              {isSyncing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="hidden sm:inline">Sincronizando...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className={cn("w-4 h-4", syncStatsHook?.pending && syncStatsHook.pending > 0 && "text-blue-200")} />
+                  <span className="hidden sm:inline">Sincronizar</span>
+                  {syncStatsHook?.pending && syncStatsHook.pending > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-blue-400 text-blue-900 rounded-full text-xs font-bold">
+                      {syncStatsHook.pending}
+                    </span>
+                  )}
+                </>
               )}
-            >
-              <Upload className="w-4 h-4" />
-              Importar
             </button>
+            
+            {/* Tabs */}
+            <div className="flex gap-1 p-1 bg-surface rounded-xl border border-subtle">
+              <button
+                onClick={() => setActiveTab('table')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  activeTab === 'table' 
+                    ? "bg-blue-600 text-white" 
+                    : "text-muted hover:text-white"
+                )}
+              >
+                <Table2 className="w-4 h-4" />
+                Tabla
+              </button>
+              <button
+                onClick={() => setActiveTab('import')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  activeTab === 'import' 
+                    ? "bg-blue-600 text-white" 
+                    : "text-muted hover:text-white"
+                )}
+              >
+                <Upload className="w-4 h-4" />
+                Importar
+              </button>
+            </div>
           </div>
         </div>
 

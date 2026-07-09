@@ -14,6 +14,7 @@ export { useDbReady, safeDbOperation, safeCount } from './hooks/useDbReady';
 export { DbLoader, DbError } from './components/DbLoader';
 export { EventsImporter } from './components/EventsImporter';
 export { EventsModal } from './components/EventsModal';
+export { EventsSyncPanel } from './components/EventsSyncPanel';
 
 // Re-exportar ThemeName para uso en componentes del rediseño
 export type { ThemeName } from './ThemeContext';
