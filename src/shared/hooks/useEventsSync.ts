@@ -1,20 +1,14 @@
 /**
  * useEventsSync - Hook dedicado para sincronización de eventos
- * 
+ *
  * Proporciona una interfaz completa para sincronizar eventos con la nube,
  * incluyendo deduplicación, stats y feedback visual.
- * 
- * USO:
- * 
- * // Uso básico
- * const { syncEvents, stats, isSyncing } = useEventsSync();
- * 
- * // Con callbacks
- * const eventsSync = useEventsSync({
- *   onSuccess: (result) => toast.success(`${result.created} creados`),
- *   onError: (error) => toast.error(error),
- *   autoSync: true  // Sincronizar automáticamente cada 60s
- * });
+ *
+ * MEJORAS FASE 5:
+ * - Cola de errores con historial
+ * - Retry con backoff exponencial
+ * - Historial de sincronizaciones
+ * - Indicadores de estado mejorados
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -23,6 +17,19 @@ import { db } from '@/db';
 import { eventsSyncService, EventSyncResult } from '@/services/cloud/EventsSyncService';
 import { useToastStore } from '@/stores';
 import { logger } from '@/services/logger';
+
+// ============================================================================
+// CONSTANTES
+// ============================================================================
+
+const DEFAULT_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000,
+  maxDelay: 30000,
+  backoffMultiplier: 2,
+};
+
+const MAX_HISTORY_ITEMS = 50;
 
 // ============================================================================
 // TIPOS
@@ -35,78 +42,147 @@ export interface EventStats {
   error: number;
 }
 
+export interface SyncHistoryEntry {
+  id: string;
+  timestamp: number;
+  type: 'full' | 'push' | 'pull';
+  result: 'success' | 'partial' | 'failed';
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+  duration: number;
+}
+
+export interface ErrorEntry {
+  id: string;
+  timestamp: number;
+  message: string;
+  retryCount: number;
+  resolved: boolean;
+}
+
 export interface UseEventsSyncOptions {
-  /** Sincronizar automáticamente cada interval ms */
   autoSync?: boolean;
-  /** Intervalo de auto-sync en ms (default: 60000) */
   autoSyncInterval?: number;
-  /** Callback al iniciar sincronización */
+  retryConfig?: typeof DEFAULT_RETRY_CONFIG;
   onStart?: () => void;
-  /** Callback al completar exitosamente */
   onSuccess?: (result: EventSyncResult) => void;
-  /** Callback al error */
   onError?: (error: string) => void;
-  /** Mostrar toasts automáticos (default: true) */
   showToasts?: boolean;
 }
 
 export interface UseEventsSyncReturn {
-  /** Disparar sincronización manual */
   syncEvents: () => Promise<EventSyncResult | null>;
-  /** Sincronizar solo subida (push) */
   pushEvents: () => Promise<EventSyncResult | null>;
-  /** Sincronizar solo descarga (pull) */
   pullEvents: () => Promise<void>;
-  /** Estadísticas actuales de eventos */
   stats: EventStats | undefined;
-  /** Si está sincronizando actualmente */
   isSyncing: boolean;
-  /** Último resultado de sincronización */
   lastResult: EventSyncResult | null;
-  /** Último error */
   lastError: string | null;
-  /** Pausar auto-sync */
+  syncHistory: SyncHistoryEntry[];
+  errorQueue: ErrorEntry[];
   pause: () => void;
-  /** Reanudar auto-sync */
   resume: () => void;
-  /** Si auto-sync está pausado */
   isPaused: boolean;
+  lastSyncTime: number | null;
+  clearHistory: () => void;
+  clearErrors: () => void;
 }
 
 // ============================================================================
 // HOOK
 // ============================================================================
 
-/**
- * Hook para sincronización de eventos con deduplicación
- */
 export function useEventsSync(
   options: UseEventsSyncOptions = {}
 ): UseEventsSyncReturn {
   const {
     autoSync = false,
     autoSyncInterval = 60000,
+    retryConfig = DEFAULT_RETRY_CONFIG,
     onStart,
     onSuccess,
     onError,
     showToasts = true,
   } = options;
 
-  // Stores
   const addToast = useToastStore(state => state.addToast);
 
-  // Estado
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [lastResult, setLastResult] = useState<EventSyncResult | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [syncHistory, setSyncHistory] = useState<SyncHistoryEntry[]>([]);
+  const [errorQueue, setErrorQueue] = useState<ErrorEntry[]>([]);
 
-  // Refs
   const syncInProgress = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ============================================================================
-  // STATS EN VIVO
+  // HELPERS
+  // ============================================================================
+
+  const calculateBackoff = useCallback((attempt: number): number => {
+    const delay = Math.min(
+      retryConfig.baseDelay * Math.pow(retryConfig.backoffMultiplier, attempt),
+      retryConfig.maxDelay
+    );
+    return delay * (0.5 + Math.random() * 0.5);
+  }, [retryConfig]);
+
+  const addToHistory = useCallback((entry: Omit<SyncHistoryEntry, 'id'>) => {
+    const newEntry: SyncHistoryEntry = {
+      ...entry,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    setSyncHistory(prev => [newEntry, ...prev].slice(0, MAX_HISTORY_ITEMS));
+  }, []);
+
+  const addToErrorQueue = useCallback((message: string, retryCount = 0) => {
+    const errorEntry: ErrorEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      message,
+      retryCount,
+      resolved: false,
+    };
+    setErrorQueue(prev => [...prev, errorEntry]);
+  }, []);
+
+  const notifyStart = useCallback(() => {
+    onStart?.();
+    if (showToasts) addToast('Sincronizando eventos...', 'info');
+  }, [onStart, showToasts, addToast]);
+
+  const notifySuccess = useCallback((result: EventSyncResult) => {
+    onSuccess?.(result);
+    setLastResult(result);
+    setLastError(null);
+    setLastSyncTime(Date.now());
+    if (showToasts) {
+      if (result.created > 0 || result.updated > 0) {
+        addToast(`Eventos: ${result.created} creados, ${result.updated} actualizados`, 'success');
+      } else if (result.skipped > 0) {
+        addToast(`Eventos sincronizados (${result.skipped} omitidos)`, 'success');
+      } else {
+        addToast('Eventos: Sin cambios pendientes', 'success');
+      }
+    }
+  }, [onSuccess, showToasts, addToast]);
+
+  const notifyError = useCallback((error: string, retryCount = 0) => {
+    onError?.(error);
+    setLastError(error);
+    addToErrorQueue(error, retryCount);
+    logger.error('useEventsSync', 'Sync failed', error);
+    if (showToasts) addToast(`Error sincronizando eventos: ${error}`, 'error');
+  }, [onError, showToasts, addToast, addToErrorQueue]);
+
+  // ============================================================================
+  // STATS
   // ============================================================================
 
   const stats = useLiveQuery(async (): Promise<EventStats> => {
@@ -117,7 +193,6 @@ export function useEventsSync(
         db.events.where('syncStatus').equals('pending').count(),
         db.events.where('syncStatus').equals('error').count(),
       ]);
-
       return { total, synced, pending, error };
     } catch {
       return { total: 0, synced: 0, pending: 0, error: 0 };
@@ -125,171 +200,178 @@ export function useEventsSync(
   }, []);
 
   // ============================================================================
-  // HELPERS
-  // ============================================================================
-
-  const notifyStart = useCallback(() => {
-    onStart?.();
-    if (showToasts) {
-      addToast('Sincronizando eventos...', 'info');
-    }
-  }, [onStart, showToasts, addToast]);
-
-  const notifySuccess = useCallback((result: EventSyncResult) => {
-    onSuccess?.(result);
-    setLastResult(result);
-    setLastError(null);
-
-    if (showToasts) {
-      if (result.created > 0 || result.updated > 0) {
-        addToast(
-          `Eventos: ${result.created} creados, ${result.updated} actualizados`,
-          'success'
-        );
-      } else if (result.skipped > 0) {
-        addToast(`Eventos sincronizados (${result.skipped} omitidos)`, 'success');
-      } else {
-        addToast('Eventos: Sin cambios pendientes', 'success');
-      }
-    }
-  }, [onSuccess, showToasts, addToast]);
-
-  const notifyError = useCallback((error: string) => {
-    onError?.(error);
-    setLastError(error);
-    logger.error('useEventsSync', 'Sync failed', error);
-
-    if (showToasts) {
-      addToast(`Error sincronizando eventos: ${error}`, 'error');
-    }
-  }, [onError, showToasts, addToast]);
-
-  // ============================================================================
-  // FUNCIÓN DE SYNC (PUSH + PULL)
+  // SYNC (PUSH + PULL)
   // ============================================================================
 
   const syncEvents = useCallback(async (): Promise<EventSyncResult | null> => {
-    if (syncInProgress.current || !navigator.onLine) {
-      return null;
-    }
+    if (syncInProgress.current || !navigator.onLine) return null;
 
+    const startTime = Date.now();
     syncInProgress.current = true;
     setIsSyncing(true);
     notifyStart();
 
     try {
-      // 1. Push: Subir cambios locales
-      const pushResult = await eventsSyncService.syncPendingEvents();
+      for (let attempt = 0; attempt < retryConfig.maxRetries; attempt++) {
+        try {
+          const pushResult = await eventsSyncService.syncPendingEvents();
+          const lastSync = localStorage.getItem('lastSync_EVENTOS');
+          const lastSyncTimestamp = lastSync ? parseInt(lastSync, 10) : undefined;
+          const pullStats = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
 
-      // 2. Pull: Descargar cambios remotos
-      const lastSync = localStorage.getItem('lastSync_EVENTOS');
-      const lastSyncTimestamp = lastSync ? parseInt(lastSync, 10) : undefined;
-      const pullStats = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
+          localStorage.setItem('lastSync_EVENTOS', Date.now().toString());
 
-      // Actualizar timestamp de última sync
-      localStorage.setItem('lastSync_EVENTOS', Date.now().toString());
+          const result: EventSyncResult = {
+            success: pushResult.success,
+            created: pushResult.created + pullStats.added,
+            updated: pushResult.updated + pullStats.updated,
+            skipped: pushResult.skipped,
+            failed: pushResult.failed,
+            errors: pushResult.errors,
+          };
 
-      // Construir resultado combinado
-      const result: EventSyncResult = {
-        success: pushResult.success,
-        created: pushResult.created + pullStats.added,
-        updated: pushResult.updated + pullStats.updated,
-        skipped: pushResult.skipped,
-        failed: pushResult.failed,
-        errors: pushResult.errors,
-      };
+          const duration = Date.now() - startTime;
+          addToHistory({
+            timestamp: Date.now(),
+            type: 'full',
+            result: result.success ? (result.failed > 0 ? 'partial' : 'success') : 'failed',
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+            errors: result.errors,
+            duration,
+          });
 
-      notifySuccess(result);
-      return result;
+          notifySuccess(result);
+          return result;
 
+        } catch (err) {
+          if (attempt === retryConfig.maxRetries - 1) throw err;
+          await new Promise(r => setTimeout(r, calculateBackoff(attempt)));
+        }
+      }
+      throw new Error('Max retries exceeded');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
-      notifyError(errorMsg);
+      const duration = Date.now() - startTime;
+      addToHistory({
+        timestamp: Date.now(),
+        type: 'full',
+        result: 'failed',
+        created: 0, updated: 0, skipped: 0, failed: 0,
+        errors: [errorMsg],
+        duration,
+      });
+      notifyError(errorMsg, retryConfig.maxRetries);
       return null;
     } finally {
       syncInProgress.current = false;
       setIsSyncing(false);
     }
-  }, [notifyStart, notifySuccess, notifyError]);
+  }, [notifyStart, notifySuccess, notifyError, retryConfig, calculateBackoff, addToHistory]);
 
   // ============================================================================
-  // FUNCIÓN PUSH ONLY
+  // PUSH ONLY
   // ============================================================================
 
   const pushEvents = useCallback(async (): Promise<EventSyncResult | null> => {
-    if (syncInProgress.current || !navigator.onLine) {
-      return null;
-    }
+    if (syncInProgress.current || !navigator.onLine) return null;
 
+    const startTime = Date.now();
     syncInProgress.current = true;
     setIsSyncing(true);
     notifyStart();
 
     try {
       const result = await eventsSyncService.syncPendingEvents();
+      const duration = Date.now() - startTime;
+      addToHistory({
+        timestamp: Date.now(),
+        type: 'push',
+        result: result.success ? 'success' : 'failed',
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        failed: result.failed,
+        errors: result.errors,
+        duration,
+      });
       notifySuccess(result);
       return result;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
-      notifyError(errorMsg);
+      notifyError(errorMsg, retryConfig.maxRetries);
       return null;
     } finally {
       syncInProgress.current = false;
       setIsSyncing(false);
     }
-  }, [notifyStart, notifySuccess, notifyError]);
+  }, [notifyStart, notifySuccess, notifyError, retryConfig, addToHistory]);
 
   // ============================================================================
-  // FUNCIÓN PULL ONLY
+  // PULL ONLY
   // ============================================================================
 
   const pullEvents = useCallback(async (): Promise<void> => {
     if (!navigator.onLine) return;
 
+    const startTime = Date.now();
     setIsSyncing(true);
-    
+
     try {
       const lastSync = localStorage.getItem('lastSync_EVENTOS');
       const lastSyncTimestamp = lastSync ? parseInt(lastSync, 10) : undefined;
-      const stats = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
-      
+      const pullResult = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
+
       localStorage.setItem('lastSync_EVENTOS', Date.now().toString());
-      
+      setLastSyncTime(Date.now());
+
+      const duration = Date.now() - startTime;
+      addToHistory({
+        timestamp: Date.now(),
+        type: 'pull',
+        result: 'success',
+        created: pullResult.added,
+        updated: pullResult.updated,
+        skipped: 0, failed: 0, errors: [],
+        duration,
+      });
+
       if (showToasts) {
-        if (stats.added > 0 || stats.updated > 0) {
-          addToast(
-            `Eventos descargados: ${stats.added} nuevos, ${stats.updated} actualizados`,
-            'success'
-          );
+        if (pullResult.added > 0 || pullResult.updated > 0) {
+          addToast(`Eventos descargados: ${pullResult.added} nuevos, ${pullResult.updated} actualizados`, 'success');
         } else {
           addToast('Eventos: Sin cambios nuevos', 'success');
         }
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      const duration = Date.now() - startTime;
+      addToHistory({
+        timestamp: Date.now(),
+        type: 'pull',
+        result: 'failed',
+        created: 0, updated: 0, skipped: 0, failed: 0,
+        errors: [errorMsg],
+        duration,
+      });
       notifyError(errorMsg);
     } finally {
       setIsSyncing(false);
     }
-  }, [showToasts, addToast, notifyError]);
+  }, [showToasts, addToast, notifyError, addToHistory]);
 
   // ============================================================================
-  // AUTO-SYNC
+  // AUTO-SYNC & LISTENERS
   // ============================================================================
 
   useEffect(() => {
     if (!autoSync || isPaused) return;
+    if (navigator.onLine && stats && stats.pending > 0) syncEvents();
 
-    // Sync inicial si hay pendientes
-    if (navigator.onLine && stats && stats.pending > 0) {
-      syncEvents();
-    }
-
-    // Configurar intervalo
     intervalRef.current = setInterval(() => {
-      if (navigator.onLine && !isPaused && stats && stats.pending > 0) {
-        syncEvents();
-      }
+      if (navigator.onLine && !isPaused && stats && stats.pending > 0) syncEvents();
     }, autoSyncInterval);
 
     return () => {
@@ -300,25 +382,14 @@ export function useEventsSync(
     };
   }, [autoSync, autoSyncInterval, isPaused, stats, syncEvents]);
 
-  // ============================================================================
-  // LISTENERS ONLINE/OFFLINE
-  // ============================================================================
-
   useEffect(() => {
-    const handleOnline = () => {
-      if (stats && stats.pending > 0) {
-        syncEvents();
-      }
-    };
-
+    const handleOnline = () => { if (stats && stats.pending > 0) syncEvents(); };
     window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
+    return () => window.removeEventListener('online', handleOnline);
   }, [stats, syncEvents]);
 
   // ============================================================================
-  // CONTROL DE PAUSA
+  // CONTROL
   // ============================================================================
 
   const pause = useCallback(() => {
@@ -329,27 +400,16 @@ export function useEventsSync(
     }
   }, []);
 
-  const resume = useCallback(() => {
-    setIsPaused(false);
-  }, []);
+  const resume = useCallback(() => setIsPaused(false), []);
+  const clearHistory = useCallback(() => setSyncHistory([]), []);
+  const clearErrors = useCallback(() => setErrorQueue([]), []);
 
   return {
-    syncEvents,
-    pushEvents,
-    pullEvents,
-    stats,
-    isSyncing,
-    lastResult,
-    lastError,
-    pause,
-    resume,
-    isPaused,
+    syncEvents, pushEvents, pullEvents, stats, isSyncing,
+    lastResult, lastError, syncHistory, errorQueue,
+    pause, resume, isPaused, lastSyncTime, clearHistory, clearErrors,
   };
 }
-
-// ============================================================================
-// UTILIDADES DE EXPORT
-// ============================================================================
 
 export { eventsSyncService } from '@/services/cloud/EventsSyncService';
 export type { EventSyncResult } from '@/services/cloud/EventsSyncService';

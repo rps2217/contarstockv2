@@ -7,6 +7,11 @@
  * - Manejo de eliminaciones
  * - Realtime sync con Supabase
  * 
+ * MEJORAS FASE 2:
+ * - Normalización de campos
+ * - Validación de datos
+ * - Manejo de nulos mejorado
+ * 
  * @module services/cloud/EventsSyncService
  */
 
@@ -29,25 +34,136 @@ export interface EventSyncResult {
   errors: string[];
 }
 
-// Interface interna (no exportada para evitar conflicto con syncRegistry)
+export interface SyncDeletedResult {
+  success: number;
+  failed: number;
+  errors: string[];
+}
+
+// Interface interna
 interface EventFilterResult {
   toCreate: InventoryEvent[];
-  toUpdate: Array<{ event: InventoryEvent; remoteId: number }>;
+  toUpdate: Array<{ event: InventoryEvent; remoteId: string }>;
   toSkip: number;
 }
 
 // ============================================================================
-// HELPERS
+// CONSTANTES
+// ============================================================================
+
+const BATCH_SIZE = 50;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+// ============================================================================
+// HELPERS DE NORMALIZACIÓN
 // ============================================================================
 
 /**
- * Genera clave única para evento: frc_code + barcode
+ * Normaliza un string: trim, lowercase, null si vacío
  */
-function generateEventKey(event: { frcNumber?: string; barcode?: string }): string {
-  const frc = (event.frcNumber || '').toLowerCase().trim();
-  const barcode = (event.barcode || '').toLowerCase().trim();
-  return `${frc}~${barcode}`;
+function normalizeString(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.toString().trim();
+  return trimmed === '' ? null : trimmed;
 }
+
+/**
+ * Genera clave única para evento: frc_code + barcode
+ * Normaliza para evitar duplicados por mayúsculas/espacios
+ */
+function generateEventKey(frcNumber?: string, barcode?: string): string {
+  const frc = normalizeString(frcNumber) || '';
+  const bar = normalizeString(barcode) || '';
+  return `${frc.toLowerCase()}~${bar.toLowerCase()}`;
+}
+
+/**
+ * Mapea evento local a formato Supabase (con normalización)
+ */
+function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
+  return {
+    barcode: normalizeString(event.barcode),
+    frc_code: normalizeString(event.frcNumber),
+    product_name: normalizeString(event.productName),
+    batch_number: event.batch || null,
+    expiry_date: event.expiryDate || null,
+    resolution: normalizeString(event.resolution),
+    status: event.status || 'pending',
+    event_type: event.type || 'info',
+    location: normalizeString(event.location) || null,
+    transfer_doc: normalizeString(event.traspasoNumber) || null,
+    destination: normalizeString(event.destino) || null,
+    notes: normalizeString(event.resolution) || null,
+    sync_status: 'synced',
+    created_at: event.createdAt 
+      ? new Date(event.createdAt).toISOString() 
+      : new Date().toISOString(),
+    updated_at: event.updatedAt 
+      ? new Date(event.updatedAt).toISOString() 
+      : new Date().toISOString(),
+  };
+}
+
+/**
+ * Mapea evento de Supabase a formato local
+ */
+function mapEventToLocal(remote: Record<string, unknown>): Partial<InventoryEvent> {
+  return {
+    barcode: normalizeString(remote.barcode as string) || undefined,
+    frcNumber: normalizeString(remote.frc_code as string) || undefined,
+    productName: normalizeString(remote.product_name as string) || undefined,
+    batch: normalizeString(remote.batch as string) || undefined,
+    expiryDate: normalizeString(remote.expiry_date as string) || undefined,
+    resolution: normalizeString(remote.resolution as string) || undefined,
+    status: (normalizeString(remote.status as string) as InventoryEvent['status']) || 'pending',
+    type: (normalizeString(remote.event_type as string) as InventoryEvent['type']) || 'info',
+    location: normalizeString(remote.location as string) || undefined,
+    traspasoNumber: normalizeString(remote.transfer_doc as string) || undefined,
+    destino: normalizeString(remote.destination as string) || undefined,
+    syncStatus: 'synced' as const,
+    lastSyncTimestamp: Date.now(),
+    createdAt: remote.created_at 
+      ? new Date(remote.created_at as string).getTime() 
+      : Date.now(),
+    updatedAt: remote.updated_at 
+      ? new Date(remote.updated_at as string).getTime() 
+      : Date.now(),
+  };
+}
+
+/**
+ * Valida que un evento tenga los campos mínimos requeridos
+ */
+function validateEvent(event: InventoryEvent): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (!normalizeString(event.barcode)) {
+    errors.push('Barcode es requerido');
+  }
+  
+  if (!normalizeString(event.frcNumber)) {
+    errors.push('FRC Number es requerido');
+  }
+  
+  // Validaciones opcionales
+  if (event.frcNumber && event.frcNumber.length > 100) {
+    errors.push('FRC Number excede 100 caracteres');
+  }
+  
+  if (event.barcode && event.barcode.length > 255) {
+    errors.push('Barcode excede 255 caracteres');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+// ============================================================================
+// HELPERS DE SYNC
+// ============================================================================
 
 /**
  * Verifica si un evento existe en la nube por clave única
@@ -55,8 +171,11 @@ function generateEventKey(event: { frcNumber?: string; barcode?: string }): stri
 async function eventExistsInCloud(
   frcNumber: string,
   barcode: string
-): Promise<{ exists: boolean; remoteId?: number; updatedAt?: number }> {
-  if (!frcNumber || !barcode) {
+): Promise<{ exists: boolean; remoteId?: string; updatedAt?: number }> {
+  const normalizedFrc = normalizeString(frcNumber);
+  const normalizedBarcode = normalizeString(barcode);
+  
+  if (!normalizedFrc || !normalizedBarcode) {
     return { exists: false };
   }
 
@@ -64,8 +183,8 @@ async function eventExistsInCloud(
     const { data, error } = await supabase
       .from('EVENTOS')
       .select('id, updated_at')
-      .eq('frc_code', frcNumber)
-      .eq('barcode', barcode)
+      .eq('frc_code', normalizedFrc)
+      .eq('barcode', normalizedBarcode)
       .limit(1);
 
     if (error) {
@@ -104,28 +223,31 @@ async function filterEventsForSync(
     return result;
   }
 
-  // Procesar cada evento
   for (const event of localEvents) {
+    // Validar evento
+    const validation = validateEvent(event);
+    if (!validation.valid) {
+      logger.warn('EventsSync', `Evento inválido: ${validation.errors.join(', ')}`);
+      continue;
+    }
+
     const cloudInfo = await eventExistsInCloud(
       event.frcNumber,
       event.barcode
     );
 
     if (!cloudInfo.exists) {
-      // No existe en la nube, crear
       result.toCreate.push(event);
     } else if (
       event.updatedAt &&
       cloudInfo.updatedAt &&
       event.updatedAt > cloudInfo.updatedAt
     ) {
-      // Existe pero local es más nuevo, actualizar
       result.toUpdate.push({
         event,
         remoteId: cloudInfo.remoteId!
       });
     } else {
-      // Ya sincronizado o remoto es más nuevo, omitir
       result.toSkip++;
     }
   }
@@ -217,52 +339,55 @@ export class EventsSyncService {
   }
 
   /**
-   * Crea un lote de eventos en la nube
+   * Crea un lote de eventos en la nube usando UPSERT
+   * Mejorado con normalización y retry
    */
   private async createEventsBatch(
     events: InventoryEvent[]
   ): Promise<{ success: number; failed: number; errors: string[] }> {
     const result = { success: 0, failed: 0, errors: [] as string[] };
     
-    const BATCH_SIZE = 50; // Lotes pequeños para eventos
-    
     for (let i = 0; i < events.length; i += BATCH_SIZE) {
       const batch = events.slice(i, i + BATCH_SIZE);
       
-      const rows = batch.map(event => ({
-        barcode: event.barcode,
-        frc_code: event.frcNumber,
-        product_name: event.productName,
-        batch_number: event.batch,
-        expiry_date: event.expiryDate,
-        resolution: event.resolution,
-        status: event.status,
-        event_type: event.type,
-        location: event.location || null,
-        transfer_doc: event.traspasoNumber || null,
-        destination: event.destino || null,
-        notes: event.resolution || null,
-        created_at: event.createdAt 
-          ? new Date(event.createdAt).toISOString() 
-          : new Date().toISOString(),
-        updated_at: event.updatedAt 
-          ? new Date(event.updatedAt).toISOString() 
-          : new Date().toISOString(),
-      }));
+      // Usar mapEventToRemote con normalización
+      const rows = batch.map(event => mapEventToRemote(event));
 
-      try {
-        const pushResult = await pushBatch('EVENTOS', rows);
-        
-        if (pushResult.success) {
-          result.success += batch.length;
-        } else {
-          result.failed += batch.length;
-          result.errors.push(pushResult.error || 'Error en pushBatch');
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          // Usar upsert para evitar duplicados por constraint único
+          const { data, error } = await supabase
+            .from('EVENTOS')
+            .upsert(rows, {
+              onConflict: 'frc_code,barcode',
+              ignoreDuplicates: false,
+            })
+            .select('id');
+
+          if (error) {
+            // Si es error de constraint único, intentamos upsert individual
+            if (error.code === '23505') {
+              logger.warn('EventsSync', 'Constraint único detectado, usando insert individual');
+              await this.insertEventsIndividually(batch, result);
+              break;
+            }
+            throw error;
+          }
+
+          result.success += data?.length || batch.length;
+          break;
+          
+        } catch (err) {
+          if (attempt === MAX_RETRIES) {
+            result.failed += batch.length;
+            const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+            result.errors.push(`Batch ${i}-${i + BATCH_SIZE}: ${errorMsg}`);
+            logger.error('EventsSync', `Error en batch después de ${MAX_RETRIES} intentos`, err);
+          } else {
+            // Esperar antes de reintentar
+            await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
+          }
         }
-      } catch (err) {
-        result.failed += batch.length;
-        const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
-        result.errors.push(`Batch ${i}-${i + batch.length}: ${errorMsg}`);
       }
     }
 
@@ -270,28 +395,48 @@ export class EventsSyncService {
   }
 
   /**
+   * Inserta eventos individualmente (fallback para duplicados)
+   */
+  private async insertEventsIndividually(
+    events: InventoryEvent[],
+    result: { success: number; failed: number; errors: string[] }
+  ): Promise<void> {
+    for (const event of events) {
+      try {
+        const { error } = await supabase
+          .from('EVENTOS')
+          .upsert(mapEventToRemote(event), {
+            onConflict: 'frc_code,barcode',
+          });
+
+        if (error) {
+          result.failed++;
+          result.errors.push(`${event.barcode}: ${error.message}`);
+        } else {
+          result.success++;
+        }
+      } catch (err) {
+        result.failed++;
+        const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+        result.errors.push(`${event.barcode}: ${errorMsg}`);
+      }
+    }
+  }
+
+  /**
    * Actualiza un lote de eventos existentes en la nube
+   * Mejorado con normalización
    */
   private async updateEventsBatch(
-    updates: Array<{ event: InventoryEvent; remoteId: number }>
+    updates: Array<{ event: InventoryEvent; remoteId: string }>
   ): Promise<{ success: number; failed: number; errors: string[] }> {
     const result = { success: 0, failed: 0, errors: [] as string[] };
 
     for (const { event, remoteId } of updates) {
       try {
+        // Usar mapEventToRemote para normalización
         const row = {
-          barcode: event.barcode,
-          frc_code: event.frcNumber,
-          product_name: event.productName,
-          batch_number: event.batch,
-          expiry_date: event.expiryDate,
-          resolution: event.resolution,
-          status: event.status,
-          event_type: event.type,
-          location: event.location || null,
-          transfer_doc: event.traspasoNumber || null,
-          destination: event.destino || null,
-          notes: event.resolution || null,
+          ...mapEventToRemote(event),
           updated_at: new Date().toISOString(),
         };
 
@@ -334,8 +479,88 @@ export class EventsSyncService {
     });
   }
 
+  // ============================================================================
+  // FASE 3: SINCRONIZACIÓN DE ELIMINACIONES
+  // ============================================================================
+
+  /**
+   * Sincroniza eliminaciones pendientes con Supabase
+   * Registra en DELETED_EVENTS y elimina de EVENTOS
+   */
+  async syncDeletedEvents(): Promise<SyncDeletedResult> {
+    const result: SyncDeletedResult = {
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+    
+    try {
+      // 1. Obtener eliminaciones locales no sincronizadas
+      const allDeletions = await db.deletedEvents.toArray();
+      const pendingDeletions = allDeletions.filter(d => !d.synced);
+      
+      if (pendingDeletions.length === 0) {
+        logger.info('EventsSync', 'No hay eliminaciones pendientes de sincronizar');
+        return result;
+      }
+      
+      logger.info('EventsSync', `Sincronizando ${pendingDeletions.length} eliminaciones`);
+
+      for (const deletion of pendingDeletions) {
+        try {
+          // 2. Registrar en tabla de eliminaciones de Supabase
+          const { error: insertError } = await supabase
+            .from('DELETED_EVENTS')
+            .insert({
+              event_key: deletion.eventKey,
+              barcode: normalizeString(deletion.barcode),
+              frc_code: normalizeString(deletion.frcNumber),
+              deleted_at: new Date(deletion.deletedAt).toISOString(),
+              local_id: deletion.id,
+            });
+          
+          if (insertError && insertError.code !== '23505') {
+            throw insertError;
+          }
+          
+          // 3. Eliminar de EVENTOS si existe
+          const [frc, barcode] = deletion.eventKey.split('~');
+          const { error: deleteError } = await supabase
+            .from('EVENTOS')
+            .delete()
+            .eq('frc_code', frc)
+            .eq('barcode', barcode);
+          
+          if (deleteError) {
+            logger.warn('EventsSync', `No se pudo eliminar evento ${deletion.eventKey}: ${deleteError.message}`);
+          }
+          
+          // 4. Marcar como sincronizado
+          await db.deletedEvents.update(deletion.id!, { synced: true });
+          result.success++;
+          
+        } catch (err) {
+          result.failed++;
+          const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+          result.errors.push(`Eliminación ${deletion.eventKey}: ${errorMsg}`);
+          logger.error('EventsSync', `Error sincronizando eliminación: ${deletion.eventKey}`, err);
+        }
+      }
+      
+    } catch (err) {
+      logger.error('EventsSync', 'Error en syncDeletedEvents', err);
+    }
+    
+    return result;
+  }
+
+  // ============================================================================
+  // PULL (DESCARGA)
+  // ============================================================================
+
   /**
    * Descarga eventos desde la nube
+   * Mejorado con normalización de datos
    */
   async pullFromCloud(lastSyncTimestamp?: number): Promise<{
     added: number;
@@ -367,15 +592,18 @@ export class EventsSyncService {
       }
 
       // Obtener claves de eventos eliminados localmente
-      const deletedEvents = await db.deletedEvents.toArray();
+      const deletedEventsList = await db.deletedEvents.toArray();
       const deletedKeys = new Set(
-        deletedEvents
+        deletedEventsList
           .filter(d => d.synced)
           .map(d => d.eventKey.toLowerCase())
       );
 
-      for (const remoteEvent of data) {
-        const eventKey = `${(remoteEvent.frc_code || '').toLowerCase()}~${(remoteEvent.barcode || '').toLowerCase()}`;
+      for (const remoteEvent of data as Record<string, unknown>[]) {
+        const eventKey = generateEventKey(
+          remoteEvent.frc_code as string,
+          remoteEvent.barcode as string
+        );
         
         // Omitir si fue eliminado localmente
         if (deletedKeys.has(eventKey)) {
@@ -385,53 +613,32 @@ export class EventsSyncService {
         // Buscar localmente por clave única
         const localEvent = await db.events
           .where('barcode')
-          .equals(remoteEvent.barcode)
+          .equals(normalizeString(remoteEvent.barcode as string) || '')
           .and(e => e.frcNumber === remoteEvent.frc_code)
           .first();
 
-        const mapped = {
-          barcode: remoteEvent.barcode,
-          frcNumber: remoteEvent.frc_code,
-          productName: remoteEvent.product_name,
-          batch: remoteEvent.batch_number,
-          expiryDate: remoteEvent.expiry_date,
-          resolution: remoteEvent.resolution,
-          status: remoteEvent.status || 'pending',
-          type: remoteEvent.event_type || 'info',
-          location: remoteEvent.location,
-          traspasoNumber: remoteEvent.transfer_doc,
-          destino: remoteEvent.destination,
-          syncStatus: 'synced' as const,
-          lastSyncTimestamp: Date.now(),
-          createdAt: remoteEvent.created_at ? new Date(remoteEvent.created_at).getTime() : Date.now(),
-          updatedAt: remoteEvent.updated_at ? new Date(remoteEvent.updated_at).getTime() : Date.now(),
-        };
+        // Usar mapEventToLocal para normalización
+        const mapped = mapEventToLocal(remoteEvent);
 
         if (localEvent) {
+          // Verificar si local tiene cambios pendientes
+          if (localEvent.syncStatus === 'pending') {
+            logger.info('EventsSync', `Preservando cambios locales para: ${eventKey}`);
+            continue;
+          }
+          
           // Actualizar existente
           await db.events.update(localEvent.id!, mapped);
           stats.updated++;
         } else {
           // Crear nuevo
-          await db.events.add(mapped);
+          await db.events.add(mapped as InventoryEvent);
           stats.added++;
         }
       }
 
-      // Sincronizar eliminaciones
-      const pendingDeletions = deletedEvents.filter(d => !d.synced);
-      for (const del of pendingDeletions) {
-        const [frc, barcode] = del.eventKey.split('~');
-        const { error } = await supabase
-          .from('EVENTOS')
-          .delete()
-          .eq('frc_code', frc)
-          .eq('barcode', barcode);
-
-        if (!error) {
-          await db.deletedEvents.update(del.id!, { synced: true });
-        }
-      }
+      // Sincronizar eliminaciones pendientes
+      await this.syncDeletedEvents();
 
     } catch (err) {
       logger.error('EventsSync', 'Error en pullFromCloud', err);
@@ -468,6 +675,7 @@ export class EventsSyncService {
 
   /**
    * Inicia suscripción realtime para eventos
+   * Mejorado con verificación de RLS y limpieza de canales
    */
   startRealtimeSync(): () => void {
     if (this.realtimeChannel) {
@@ -480,10 +688,14 @@ export class EventsSyncService {
       return this.stopRealtimeSync;
     }
 
+    // Limpiar canales anteriores
+    this.cleanupChannels();
+
     logger.info('EventsSync', 'Starting realtime sync');
 
+    // Crear canal con filtro por tabla (RLS se aplica automáticamente)
     this.realtimeChannel = supabase
-      .channel('events-realtime')
+      .channel('events-realtime-v2')
       .on(
         'postgres_changes',
         {
@@ -496,12 +708,33 @@ export class EventsSyncService {
         }
       )
       .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          logger.error('EventsSync', `Realtime channel error: ${status}`);
+        if (status === 'CHANNEL_ERROR') {
+          logger.error('EventsSync', `Realtime channel error: CHANNEL_ERROR`);
+        } else if (status === 'TIMED_OUT') {
+          logger.error('EventsSync', `Realtime channel timed out`);
+        } else if (status === 'SUBSCRIBED') {
+          logger.info('EventsSync', 'Realtime sync subscribed successfully');
         }
       });
 
     return this.stopRealtimeSync.bind(this);
+  }
+
+  /**
+   * Limpia canales de realtime anteriores
+   */
+  private cleanupChannels(): void {
+    try {
+      const channels = supabase.getChannels();
+      channels.forEach(channel => {
+        if (channel.topic.includes('events-')) {
+          logger.info('EventsSync', `Removing old channel: ${channel.topic}`);
+          supabase.removeChannel(channel);
+        }
+      });
+    } catch (err) {
+      logger.warn('EventsSync', 'Error cleaning up channels', err);
+    }
   }
 
   /**
@@ -559,9 +792,13 @@ export class EventsSyncService {
 
   /**
    * Maneja inserción/actualización desde realtime
+   * Mejorado con normalización
    */
-  private async handleRemoteInsertOrUpdate(remoteEvent: any): Promise<void> {
-    const eventKey = `${(remoteEvent.frc_code || '').toLowerCase()}~${(remoteEvent.barcode || '').toLowerCase()}`;
+  private async handleRemoteInsertOrUpdate(remoteEvent: Record<string, unknown>): Promise<void> {
+    const eventKey = generateEventKey(
+      remoteEvent.frc_code as string,
+      remoteEvent.barcode as string
+    );
 
     // Verificar si fue eliminado localmente
     const deletedEvent = await db.deletedEvents
@@ -577,31 +814,12 @@ export class EventsSyncService {
     // Buscar evento local por clave única
     const localEvent = await db.events
       .where('barcode')
-      .equals(remoteEvent.barcode)
+      .equals(normalizeString(remoteEvent.barcode as string) || '')
       .and((e) => e.frcNumber === remoteEvent.frc_code)
       .first();
 
-    const mapped = {
-      barcode: remoteEvent.barcode,
-      frcNumber: remoteEvent.frc_code,
-      productName: remoteEvent.product_name,
-      batch: remoteEvent.batch_number,
-      expiryDate: remoteEvent.expiry_date,
-      resolution: remoteEvent.resolution,
-      status: remoteEvent.status || 'pending',
-      type: remoteEvent.event_type || 'info',
-      location: remoteEvent.location,
-      traspasoNumber: remoteEvent.transfer_doc,
-      destino: remoteEvent.destination,
-      syncStatus: 'synced' as const,
-      lastSyncTimestamp: Date.now(),
-      createdAt: remoteEvent.created_at
-        ? new Date(remoteEvent.created_at).getTime()
-        : Date.now(),
-      updatedAt: remoteEvent.updated_at
-        ? new Date(remoteEvent.updated_at).getTime()
-        : Date.now(),
-    };
+    // Usar mapEventToLocal para normalización
+    const mapped = mapEventToLocal(remoteEvent);
 
     if (localEvent) {
       // Verificar si local tiene cambios pendientes
@@ -611,11 +829,11 @@ export class EventsSyncService {
       }
 
       // Actualizar con datos remotos
-      await db.events.update(localEvent.id!, mapped);
+      await db.events.update(localEvent.id!, mapped as InventoryEvent);
       logger.info('EventsSync', `Updated local event from realtime: ${eventKey}`);
     } else {
       // Crear nuevo
-      await db.events.add(mapped);
+      await db.events.add(mapped as InventoryEvent);
       logger.info('EventsSync', `Added new event from realtime: ${eventKey}`);
     }
   }

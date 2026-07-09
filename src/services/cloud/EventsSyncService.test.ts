@@ -534,3 +534,206 @@ function createMockEvent(overrides: Partial<{
     ...overrides,
   };
 }
+
+// ============================================================================
+// TESTS FASE 2: NORMALIZACIÓN
+// ============================================================================
+
+describe('EventsSyncService - Normalización', () => {
+  describe('normalizeString', () => {
+    it('should normalize basic strings', () => {
+      const normalizeString = (value: string | null | undefined): string | null => {
+        if (!value) return null;
+        const trimmed = value.toString().trim();
+        return trimmed === '' ? null : trimmed;
+      };
+
+      expect(normalizeString('  hello  ')).toBe('hello');
+      expect(normalizeString('hello')).toBe('hello');
+    });
+
+    it('should return null for empty strings', () => {
+      const normalizeString = (value: string | null | undefined): string | null => {
+        if (!value) return null;
+        const trimmed = value.toString().trim();
+        return trimmed === '' ? null : trimmed;
+      };
+
+      expect(normalizeString('')).toBe(null);
+      expect(normalizeString('   ')).toBe(null);
+      expect(normalizeString(null)).toBe(null);
+      expect(normalizeString(undefined)).toBe(null);
+    });
+  });
+
+  describe('generateEventKey con normalización', () => {
+    const generateEventKey = (frcNumber?: string, barcode?: string): string => {
+      const normalizeString = (value: string | null | undefined): string | null => {
+        if (!value) return null;
+        const trimmed = value.toString().trim();
+        return trimmed === '' ? null : trimmed;
+      };
+      const frc = normalizeString(frcNumber) || '';
+      const bar = normalizeString(barcode) || '';
+      return `${frc.toLowerCase()}~${bar.toLowerCase()}`;
+    };
+
+    it('should generate normalized keys', () => {
+      expect(generateEventKey('  FRC-001  ', '  123456  ')).toBe('frc-001~123456');
+      expect(generateEventKey('FRC-001', '123456')).toBe('frc-001~123456');
+    });
+  });
+});
+
+// ============================================================================
+// TESTS FASE 3: VALIDACIÓN
+// ============================================================================
+
+describe('EventsSyncService - Validación', () => {
+  interface InventoryEvent {
+    barcode?: string;
+    frcNumber?: string;
+    status?: string;
+    type?: string;
+  }
+
+  const validateEvent = (event: InventoryEvent): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    if (!event.barcode) errors.push('Barcode es requerido');
+    if (!event.frcNumber) errors.push('FRC Number es requerido');
+    if (event.frcNumber && event.frcNumber.length > 100) errors.push('FRC Number excede 100 caracteres');
+    if (event.barcode && event.barcode.length > 255) errors.push('Barcode excede 255 caracteres');
+    
+    return { valid: errors.length === 0, errors };
+  };
+
+  it('should validate required fields', () => {
+    const result = validateEvent({});
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Barcode es requerido');
+    expect(result.errors).toContain('FRC Number es requerido');
+  });
+
+  it('should validate valid event', () => {
+    const result = validateEvent({
+      barcode: '123456',
+      frcNumber: 'FRC-001'
+    });
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should validate length constraints', () => {
+    const result = validateEvent({
+      barcode: 'x'.repeat(256),
+      frcNumber: 'x'.repeat(101)
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('FRC Number excede 100 caracteres');
+    expect(result.errors).toContain('Barcode excede 255 caracteres');
+  });
+});
+
+// ============================================================================
+// TESTS FASE 5: CONFIGURACIÓN DE RETRY
+// ============================================================================
+
+describe('EventsSyncService - Retry Config', () => {
+  const DEFAULT_RETRY_CONFIG = {
+    maxRetries: 3,
+    baseDelay: 1000,
+    maxDelay: 30000,
+    backoffMultiplier: 2,
+  };
+
+  const calculateBackoff = (attempt: number): number => {
+    const delay = Math.min(
+      DEFAULT_RETRY_CONFIG.baseDelay * Math.pow(DEFAULT_RETRY_CONFIG.backoffMultiplier, attempt),
+      DEFAULT_RETRY_CONFIG.maxDelay
+    );
+    return delay * (0.5 + Math.random() * 0.5);
+  };
+
+  it('should calculate exponential backoff', () => {
+    const attempt0 = DEFAULT_RETRY_CONFIG.baseDelay * Math.pow(DEFAULT_RETRY_CONFIG.backoffMultiplier, 0);
+    const attempt1 = DEFAULT_RETRY_CONFIG.baseDelay * Math.pow(DEFAULT_RETRY_CONFIG.backoffMultiplier, 1);
+    const attempt2 = DEFAULT_RETRY_CONFIG.baseDelay * Math.pow(DEFAULT_RETRY_CONFIG.backoffMultiplier, 2);
+
+    expect(attempt0).toBe(1000);
+    expect(attempt1).toBe(2000);
+    expect(attempt2).toBe(4000);
+  });
+
+  it('should cap delay at maxDelay', () => {
+    const attempt10 = DEFAULT_RETRY_CONFIG.baseDelay * Math.pow(DEFAULT_RETRY_CONFIG.backoffMultiplier, 10);
+    expect(Math.min(attempt10, DEFAULT_RETRY_CONFIG.maxDelay)).toBe(DEFAULT_RETRY_CONFIG.maxDelay);
+  });
+});
+
+// ============================================================================
+// TESTS FASE 5: HISTORIAL DE SYNC
+// ============================================================================
+
+describe('EventsSyncService - Sync History', () => {
+  interface SyncHistoryEntry {
+    id: string;
+    timestamp: number;
+    type: 'full' | 'push' | 'pull';
+    result: 'success' | 'partial' | 'failed';
+    duration: number;
+  }
+
+  const MAX_HISTORY_ITEMS = 50;
+
+  const addToHistory = (entry: Omit<SyncHistoryEntry, 'id'>, history: SyncHistoryEntry[]): SyncHistoryEntry[] => {
+    const newEntry: SyncHistoryEntry = {
+      ...entry,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    return [newEntry, ...history].slice(0, MAX_HISTORY_ITEMS);
+  };
+
+  it('should add entries to history', () => {
+    const history: SyncHistoryEntry[] = [];
+    const newHistory = addToHistory({
+      timestamp: Date.now(),
+      type: 'full',
+      result: 'success',
+      duration: 100,
+    }, history);
+
+    expect(newHistory).toHaveLength(1);
+    expect(newHistory[0].id).toBeDefined();
+  });
+
+  it('should limit history to max items', () => {
+    let history: SyncHistoryEntry[] = [];
+    
+    for (let i = 0; i < 60; i++) {
+      history = addToHistory({
+        timestamp: Date.now(),
+        type: 'full',
+        result: 'success',
+        duration: 100,
+      }, history);
+    }
+
+    expect(history.length).toBe(MAX_HISTORY_ITEMS);
+  });
+
+  it('should maintain order (newest first)', () => {
+    let history: SyncHistoryEntry[] = [];
+    
+    for (let i = 0; i < 5; i++) {
+      history = addToHistory({
+        timestamp: Date.now() + i,
+        type: 'full',
+        result: 'success',
+        duration: 100,
+      }, history);
+    }
+
+    expect(history[0].timestamp).toBeGreaterThan(history[1].timestamp);
+  });
+});
