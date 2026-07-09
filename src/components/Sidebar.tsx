@@ -11,7 +11,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   Database as DatabaseIcon,
-  CalendarClock
+  CalendarClock,
+  Bell
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings } from '../types';
@@ -114,12 +115,13 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-// Navegación simplificada estilo AppSheet (6 items) con descripciones
+// Navegación simplificada estilo AppSheet (7 items) con descripciones
 // "Contar" va a /massive que muestra el modal de inicio unificado
 const MAIN_NAV_ITEMS = [
   { key: 'dashboard', label: 'Panel', icon: Home, path: '/', description: 'Vista general' },
   { key: 'counting', label: 'Contar', icon: Scan, path: '/massive', description: 'Conteo ciego o con carga teórica' },
   { key: 'expiry', label: 'Vencimientos', icon: CalendarClock, path: '/expiry', description: 'Control de vencimientos' },
+  { key: 'events', label: 'Eventos', icon: Bell, path: '/events', description: 'Gestión de incidencias' },
   { key: 'data', label: 'Datos', icon: Database, path: '/data', description: 'Inventario y catálogo' },
   { key: 'reports', label: 'Reportes', icon: History, path: '/reports', description: 'Informes' },
   { key: 'sync', label: 'Sync', icon: Cloud, path: '/sync', description: 'Sincronización' },

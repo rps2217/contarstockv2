@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Scan, Database, History, Cloud, Settings, CalendarClock } from 'lucide-react';
+import { Home, Scan, Database, History, Cloud, Settings, CalendarClock, Bell } from 'lucide-react';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
@@ -15,7 +15,7 @@ const MOBILE_NAV = [
   { id: 'dashboard', label: 'Panel', icon: Home, path: '/' },
   { id: 'counting', label: 'Contar', icon: Scan, path: '/massive' },
   { id: 'expiry', label: 'Vencim.', icon: CalendarClock, path: '/expiry' },
-  { id: 'data', label: 'Datos', icon: Database, path: '/data' },
+  { id: 'events', label: 'Eventos', icon: Bell, path: '/events' },
   { id: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
 ];
 
@@ -41,9 +41,9 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
     const path = location.pathname;
     if (path === '/' || path === '/dashboard') return 'dashboard';
     if (path.startsWith('/massive') || path.startsWith('/counting')) return 'counting';
-    if (path.startsWith('/data')) return 'data';
-    if (path.startsWith('/reports')) return 'reports';
     if (path.startsWith('/expiry')) return 'expiry';
+    if (path.startsWith('/events')) return 'events';
+    if (path.startsWith('/data')) return 'data';
     if (path.startsWith('/sync')) return 'sync';
     if (path.startsWith('/settings')) return 'settings';
     return 'dashboard';
