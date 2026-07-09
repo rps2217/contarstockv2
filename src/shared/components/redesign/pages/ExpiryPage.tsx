@@ -51,23 +51,26 @@ const FILTERS = [
   { value: 'safe' as const, label: 'Vigentes' },
 ]
 
-// Componentes de UI
+// Componentes de UI - Estilo igual a HammerPage
 const SummaryCard = ({ status, count, total }: { status: UxExpiryStatus; count: number; total: number }) => {
   const meta = STATUS_META[status]
   const Icon = meta.icon
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-      className={cn('bg-surface border border-subtle rounded-2xl p-4 flex flex-col gap-3 min-w-[140px]')}>
-      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border', meta.bg, meta.border)}>
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }} 
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-surface border border-subtle rounded-xl p-3 flex items-center gap-3"
+    >
+      <div className={cn('w-10 h-10 rounded-lg bg-elevated flex items-center justify-center shrink-0')}>
         <Icon className={cn('w-5 h-5', meta.text)} />
       </div>
-      <div>
-        <div className="flex items-baseline gap-2">
-          <p className="text-2xl font-bold text-primary">{count}</p>
-          <p className="text-xs text-muted">{percentage}%</p>
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-1.5">
+          <p className={cn('text-lg font-bold', meta.text)}>{count}</p>
+          <p className="text-[10px] text-muted/70">{percentage}%</p>
         </div>
-        <p className="text-xs text-muted mt-1">{meta.label}</p>
+        <p className="text-xs text-muted">{meta.label}</p>
       </div>
     </motion.div>
   )
@@ -537,8 +540,8 @@ export const RedesignExpiryPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-12 pb-24 md:pb-8">
         {/* Contenedor que aprovecha mejor el espacio en pantallas grandes */}
         <div className="max-w-7xl mx-auto flex flex-col gap-5">
-          {/* Stats cards en grid responsive */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Stats cards en grid responsive - mismo estilo que HammerPage */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {STATUS_ORDER.map((s) => <SummaryCard key={s} status={s} count={counts[s]} total={totalRecords} />)}
           </div>
 
