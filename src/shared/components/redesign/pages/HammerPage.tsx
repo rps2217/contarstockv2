@@ -6,7 +6,7 @@ import {
   AlertTriangle, TrendingUp, Settings, Download, Scan, Keyboard,
   Cloud, CloudOff, Volume2, VolumeX, Play,
   FileSpreadsheet, BarChart3, MapPin, Zap, RotateCcw, Printer,
-  HardDrive, Loader2, Eye, ShoppingCart, Search, Calendar, 
+  HardDrive, Loader2, Eye, ShoppingCart, Calendar, 
   ChevronRight, Package2, ListChecks, Wifi, WifiOff, ArrowLeft
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,27 +32,10 @@ import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpi
 import { StartCountingModal, type StartCountingConfig } from '@/features/counting/components/StartCountingModal'
 import { useCountingEngine } from '@/features/counting/hooks/useCountingEngine'
 
-// ============================================================================
-// Componentes de UI
-// ============================================================================
-const StatCard = ({ icon: Icon, label, value, color = 'text-primary', subtext }: {
-  icon: React.ElementType; label: string; value: string | number; color?: string; subtext?: string
-}) => (
-  <motion.div 
-    initial={{ opacity: 0, scale: 0.9 }} 
-    animate={{ opacity: 1, scale: 1 }}
-    className="bg-surface border border-subtle rounded-xl p-3 flex items-center gap-3"
-  >
-    <div className={cn('w-10 h-10 rounded-lg bg-elevated flex items-center justify-center shrink-0')}>
-      <Icon className={cn('w-5 h-5', color)} />
-    </div>
-    <div className="min-w-0">
-      <p className={cn('text-lg font-bold', color)}>{value}</p>
-      <p className="text-xs text-muted">{label}</p>
-      {subtext && <p className="text-[10px] text-muted/70">{subtext}</p>}
-    </div>
-  </motion.div>
-)
+// Importar componentes compartidos
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
+
 
 const ToolItem = ({ icon: Icon, iconColor, iconBg, title, description, onClick, badge, variant = 'default' }: {
   icon: React.ElementType; iconColor: string; iconBg: string; title: string; description: string; onClick: () => void; badge?: string; variant?: 'default' | 'danger'
@@ -564,16 +547,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
             <div className="space-y-4">
               {/* Campo de búsqueda */}
               {localOrders.length > 0 && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nombre u orden..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-surface border border-subtle rounded-xl text-sm text-primary placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
-                  />
-                </div>
+                <SearchInput
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Buscar por nombre u orden..."
+                  iconSize="sm"
+                />
               )}
 
               {/* Lista de órdenes */}
@@ -1199,10 +1178,10 @@ export const RedesignHammerPage: React.FC = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-          <StatCard icon={Package} label="SKUs" value={stats.total} />
-          <StatCard icon={Check} label="OK" value={stats.complete} color="text-emerald-500" />
-          <StatCard icon={AlertTriangle} label="Variacion" value={stats.withVariance} color="text-amber-500" />
-          <StatCard icon={TrendingUp} label="Unidades" value={stats.totalQty} color="text-blue-500" />
+          <HorizontalStatCard icon={Package} label="SKUs" value={stats.total} />
+          <HorizontalStatCard icon={Check} label="OK" value={stats.complete} color="text-emerald-500" />
+          <HorizontalStatCard icon={AlertTriangle} label="Variacion" value={stats.withVariance} color="text-amber-500" />
+          <HorizontalStatCard icon={TrendingUp} label="Unidades" value={stats.totalQty} color="text-blue-500" />
         </div>
 
         {/* Progress */}

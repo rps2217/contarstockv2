@@ -20,6 +20,7 @@ export * from './Skeleton';
 export * from './StatCard';
 export * from './HorizontalStatCard';
 export * from './DataCard';
+export * from './EntityCards';
 
 // Layout Components
 export * from './Modal';

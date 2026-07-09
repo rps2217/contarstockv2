@@ -1,13 +1,17 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Users, Plus, Search, Phone, Edit2, Trash2, MessageSquare, 
+  Users, Plus, Phone, Edit2, Trash2, MessageSquare, 
   X, User, Send, ChevronRight, UserCheck, Clock, CheckCircle2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCustomers } from '@/features/customers/hooks/useCustomers'
 import type { Customer } from '@/types'
 import { toast } from 'sonner'
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
+import { FAB } from '@/shared/components/ui/FAB'
+import { EmptyState } from '@/shared/components/ui/EmptyState'
 
 // ============================================================================
 // Constantes de UI
@@ -21,23 +25,6 @@ const FILTERS = [
 // ============================================================================
 // Componentes de UI
 // ============================================================================
-const SummaryCard = ({ label, value, color = 'text-primary', icon: Icon }: { 
-  label: string; value: number; color?: string; icon: React.ElementType 
-}) => (
-  <motion.div 
-    initial={{ opacity: 0, scale: 0.9 }} 
-    animate={{ opacity: 1, scale: 1 }}
-    className="bg-surface border border-subtle rounded-2xl p-4 flex flex-col gap-3 min-w-[140px]">
-    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-      <Icon className={cn('w-5 h-5', color)} />
-    </div>
-    <div>
-      <p className={cn('text-2xl font-bold', color)}>{value}</p>
-      <p className="text-xs text-muted mt-1">{label}</p>
-    </div>
-  </motion.div>
-)
-
 const CustomerRow = ({ customer, onClick }: { 
   customer: Customer; 
   onClick: () => void;
@@ -51,8 +38,8 @@ const CustomerRow = ({ customer, onClick }: {
       animate={{ opacity: 1, x: 0 }}
       onClick={onClick}
       className="flex items-center gap-3 p-3 hover:bg-elevated transition-colors group cursor-pointer rounded-xl">
-      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-        <User className="w-5 h-5 text-blue-500" />
+      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+        <User className="w-5 h-5 text-emerald-500" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -490,10 +477,10 @@ export const RedesignCustomersPage: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="flex gap-3 overflow-x-auto no-scrollbar">
-          <SummaryCard label="Total" value={stats.total} icon={Users} color="text-primary" />
-          <SummaryCard label="Sincronizados" value={stats.syncedCount} icon={UserCheck} color="text-emerald-500" />
-          <SummaryCard label="Pendientes" value={stats.pendingCount} icon={Clock} color="text-amber-500" />
+        <div className="grid grid-cols-3 gap-2">
+          <HorizontalStatCard icon={Users} label="Total" value={stats.total} />
+          <HorizontalStatCard icon={UserCheck} label="Sincronizados" value={stats.syncedCount} color="text-emerald-500" />
+          <HorizontalStatCard icon={Clock} label="Pendientes" value={stats.pendingCount} color="text-amber-500" />
         </div>
       </div>
 
@@ -502,14 +489,11 @@ export const RedesignCustomersPage: React.FC = () => {
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input 
-                type="text" 
+            <div className="flex-1">
+              <SearchInput 
                 value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={setSearchQuery}
                 placeholder="Buscar por nombre o teléfono..." 
-                className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500" 
               />
             </div>
             <div className="flex gap-2">
@@ -520,7 +504,7 @@ export const RedesignCustomersPage: React.FC = () => {
                   className={cn(
                     'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors',
                     activeFilter === f.value
-                      ? 'bg-blue-500/10 text-blue-500 border border-blue-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
                       : 'bg-surface text-secondary hover:text-primary border border-subtle'
                   )}
                 >
@@ -532,18 +516,12 @@ export const RedesignCustomersPage: React.FC = () => {
 
           {/* Lista */}
           {filtered.length === 0 ? (
-            <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
-              <Users className="w-12 h-12 text-muted mx-auto mb-4" />
-              <p className="text-muted">
-                {searchQuery ? 'No se encontraron clientes' : 'No hay clientes registrados'}
-              </p>
-              {!searchQuery && (
-                <button onClick={actions.openCreate}
-                  className="mt-4 text-blue-500 hover:underline">
-                  Agregar el primero
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? 'No se encontraron clientes' : 'No hay clientes registrados'}
+              description={!searchQuery ? 'Agrega tu primer cliente para comenzar' : undefined}
+              action={!searchQuery ? { label: 'Agregar cliente', onClick: actions.openCreate } : undefined}
+            />
           ) : (
             <>
               {/* Sincronizados */}
@@ -611,6 +589,9 @@ export const RedesignCustomersPage: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* FAB para móvil */}
+      <FAB onClick={actions.openCreate} visible={true} color="bg-emerald-600 hover:bg-emerald-500" label="Agregar cliente" />
     </div>
   )
 }
