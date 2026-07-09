@@ -1,31 +1,27 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Truck, Plus, Search, Phone, Mail, MapPin,
+  Truck, Plus, Phone, Mail, MapPin,
   Edit2, Trash2, ChevronRight, Package, X, RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSuppliers } from '@/features/suppliers/hooks/useSuppliers'
 import { Provider } from '@/types'
 import { toast } from 'sonner'
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
+import { FAB } from '@/shared/components/ui/FAB'
+import { EmptyState } from '@/shared/components/ui/EmptyState'
 
 // ============================================================================
 // Componentes
 // ============================================================================
-const StatCard = ({ label, value, color = 'text-primary' }: { label: string; value: number; color?: string }) => (
-  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-    className="bg-surface border border-subtle rounded-xl p-4">
-    <p className={cn('text-2xl font-bold', color)}>{value}</p>
-    <p className="text-xs text-muted">{label}</p>
-  </motion.div>
-)
-
 const SupplierRow = ({ supplier, onClick }: { supplier: Provider; onClick: () => void }) => (
   <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
     className="flex items-center gap-4 p-4 bg-surface hover:bg-elevated rounded-xl transition-colors cursor-pointer"
     onClick={onClick}>
-    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-      <Truck className="w-6 h-6 text-orange-500" />
+    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+      <Truck className="w-6 h-6 text-amber-500" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-sm font-semibold text-primary truncate">{supplier.name}</p>
@@ -197,10 +193,10 @@ export const RedesignSuppliersPage: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <StatCard label="Total" value={stats.total} />
-          <StatCard label="Con Canje" value={stats.withExchange} color="text-emerald-500" />
-          <StatCard label="Sin Canje" value={stats.withoutExchange} color="text-muted" />
+        <div className="grid grid-cols-3 gap-2">
+          <HorizontalStatCard icon={Truck} label="Total" value={stats.total} />
+          <HorizontalStatCard icon={Package} label="Con Canje" value={stats.withExchange} color="text-emerald-500" />
+          <HorizontalStatCard icon={X} label="Sin Canje" value={stats.withoutExchange} color="text-muted" />
         </div>
       </div>
 
@@ -208,28 +204,21 @@ export const RedesignSuppliersPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-24">
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre, RUT o email..."
-              className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500" />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Buscar por nombre, RUT o email..."
+          />
 
           {/* List */}
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <div className="bg-surface border border-subtle rounded-2xl p-8 text-center">
-                <Truck className="w-12 h-12 text-muted mx-auto mb-4" />
-                <p className="text-muted">
-                  {searchQuery ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
-                </p>
-                {!searchQuery && (
-                  <button onClick={actions.openCreate}
-                    className="mt-4 text-blue-500 hover:underline">
-                    Agregar el primero
-                  </button>
-                )}
-              </div>
+              <EmptyState
+                icon={Truck}
+                title={searchQuery ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
+                description={!searchQuery ? 'Agrega tu primer proveedor para comenzar' : undefined}
+                action={!searchQuery ? { label: 'Agregar proveedor', onClick: actions.openCreate } : undefined}
+              />
             ) : (
               filtered.map(supplier => (
                 <SupplierRow
@@ -262,6 +251,9 @@ export const RedesignSuppliersPage: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* FAB para móvil */}
+      <FAB onClick={actions.openCreate} visible={true} color="bg-amber-600 hover:bg-amber-500" label="Agregar proveedor" />
     </div>
   )
 }

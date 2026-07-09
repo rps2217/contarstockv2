@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Scissors, Plus, Search, Package, Clock, MapPin,
+  Scissors, Plus, Package, Clock, MapPin,
   ChevronRight, Download, Check, X, Package2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
 
 // ============================================================================
 // Tipos
@@ -332,14 +333,11 @@ export const RedesignSlicesPage: React.FC = () => {
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input 
-                type="text" 
+            <div className="flex-1">
+              <SearchInput 
                 value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={setSearchQuery}
                 placeholder="Buscar por producto o código..." 
-                className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500" 
               />
             </div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar">

@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Database, Plus, Search, Table, FileSpreadsheet, Download, Upload,
+  Database, Plus, Table, FileSpreadsheet, Download, Upload,
   Settings, MoreVertical, ChevronRight, RefreshCw, Table2, Rows3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { SearchInput } from '@/shared/components/ui/SearchInput'
 
 // ============================================================================
 // Tipos
@@ -27,7 +28,7 @@ const TableRow = ({ table }: { table: DynamicTable }) => {
   const lastUpdated = table.lastUpdated ? new Date(table.lastUpdated).toLocaleDateString() : '-'
   
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-4 p-4 bg-surface hover:bg-elevated rounded-xl cursor-pointer transition-colors">
       <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
@@ -158,12 +159,11 @@ export const RedesignDynamicPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-24">
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar tablas..."
-              className="w-full bg-surface border border-subtle rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500" />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Buscar tablas..."
+          />
 
           {/* List */}
           <div className="flex flex-col gap-2">
