@@ -345,28 +345,8 @@ const AppContent = () => {
       
       {/* BottomDock y botón flotante - siempre en móvil */}
       {!isScanningMode && (
-        <>
-          <Suspense fallback={null}>
-            <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
-          </Suspense>
-          {(location.pathname === '/' || location.pathname === '/dashboard') && (
-            <button
-              onClick={() => setStartSessionModalOpen(true)}
-              className="md:hidden fixed bottom-24 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-2xl shadow-blue-900/50 flex items-center justify-center border-b-4 border-blue-800 active:scale-90 transition-transform"
-            >
-              <Plus className="w-8 h-8" />
-            </button>
-          )}
-        </>
-      )}
-
-      {isStartSessionModalOpen && (
         <Suspense fallback={null}>
-          <StartSessionModal 
-            isOpen={isStartSessionModalOpen}
-            onClose={() => setStartSessionModalOpen(false)}
-            onSessionStart={(session: CountingSession) => navigate(`/counting/${session.id}`)}
-          />
+          <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
         </Suspense>
       )}
     </div>
