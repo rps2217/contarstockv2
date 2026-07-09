@@ -4,11 +4,11 @@
  * Componente orchestrator que usa componentes separados.
  * La lógica de negocio está en useCountingLogic.
  * 
- * Ahora incluye StartCountingModal para iniciar nuevos conteos
- * de forma unificada (modo ciego o con carga teórica).
+ * REDIRECT: Si no hay ID, redirige a /massive para elegir tipo de conteo.
+ * El modal de inicio se maneja en HammerPage.
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -25,10 +25,6 @@ import { useCountingLogic } from '@/features/counting/hooks/useCountingLogic'
 import { useProductivity } from '@/shared/hooks'
 import { useExpiryTracker } from '@/features/counting/hooks/useExpiryTracker'
 import { SessionRepository } from '@/repositories/SessionRepository'
-
-// Importar hook de motor unificado y modal de inicio
-import { useCountingEngine } from '@/features/counting/hooks/useCountingEngine'
-import { StartCountingModal, type StartCountingConfig } from '@/features/counting/components/StartCountingModal'
 
 // ============================================================================
 // COMPONENTES DE ESTADO (Loading/Empty/Error)
@@ -66,39 +62,17 @@ export const RedesignCountingPage: React.FC = () => {
   const [isFinishing, setIsFinishing] = useState(false)
   const [editExpiryItem, setEditExpiryItem] = useState<{barcode: string; name: string; mm?: number; yyyy?: number} | null>(null)
   
-  // Modal de inicio unificado
-  const [showStartModal, setShowStartModal] = useState(false)
-  
-  // Ref para evitar que el modal se reabra durante navegación
-  const isNavigatingRef = useRef(false);
-
-  // Hook del motor de conteo unificado
-  const { startCounting, isStarting } = useCountingEngine()
-  
-  // Wrapper para startCounting que marca navegación
-  const handleStartCounting = async (config: any) => {
-    isNavigatingRef.current = true;
-    try {
-      await startCounting(config);
-    } finally {
-      // Resetear después de un delay para permitir re-abrir el modal si es necesario
-      setTimeout(() => {
-        isNavigatingRef.current = false;
-      }, 1000);
+  // REDIRECT: Si no hay ID, ir directamente a HammerPage para elegir tipo de conteo
+  useEffect(() => {
+    if (!id) {
+      navigate('/massive');
     }
-  };
-
-  // Hook de counting (para cuando hay sesión activa)
+  }, [id, navigate]);
+  
+  // useCountingLogic requiere un ID válido
   const handleExit = () => navigate('/dashboard')
   const { state, sessionData, actions } = useCountingLogic(id, handleExit)
   const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker()
-
-  // Mostrar modal de inicio cuando no hay ID (pero no durante navegación)
-  useEffect(() => {
-    if (!id && !isNavigatingRef.current) {
-      setShowStartModal(true)
-    }
-  }, [id])
 
   // ✅ Extraer estado de auto-save
   const { autoSave } = state
@@ -235,28 +209,14 @@ export const RedesignCountingPage: React.FC = () => {
             {/* Botones de acción rápida */}
             <div className="space-y-3">
               <button
-                onClick={() => setShowStartModal(true)}
-                disabled={isStarting}
-                className="w-full py-4 px-6 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                onClick={() => navigate('/massive')}
+                className="w-full py-4 px-6 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
               >
-                {isStarting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Zap className="w-5 h-5" />
-                    Nuevo Conteo
-                  </>
-                )}
+                <Zap className="w-5 h-5" />
+                Nuevo Conteo
               </button>
               
               <div className="flex gap-3">
-                <button
-                  onClick={() => navigate('/massive')}
-                  className="flex-1 py-3 px-4 bg-surface hover:bg-elevated text-primary rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  Modo Ráfaga
-                </button>
                 <button
                   onClick={() => navigate('/theoretical-loads')}
                   className="flex-1 py-3 px-4 bg-surface hover:bg-elevated text-primary rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
@@ -268,13 +228,6 @@ export const RedesignCountingPage: React.FC = () => {
             </div>
           </motion.div>
         </div>
-
-        {/* Modal de inicio de conteo */}
-        <StartCountingModal
-          isOpen={showStartModal}
-          onClose={() => setShowStartModal(false)}
-          onStart={handleStartCounting}
-        />
       </div>
     )
   }
