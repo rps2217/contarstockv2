@@ -5,6 +5,7 @@
  * 
  * Proporciona una interfaz unificada para sync que:
  * - Usa EnhancedSyncEngine con retry y métricas
+ * - Usa EventsSyncService para eventos (con deduplicación)
  * - Actualiza el SyncStore de Zustand
  * - Proporciona callbacks para UI
  * 
@@ -12,6 +13,7 @@
  */
 
 import { enhancedSyncEngine, type EnhancedSyncResult } from './GenericSyncEngineEnhanced';
+import { eventsSyncService, type EventSyncResult } from './EventsSyncService';
 import { useSyncStore } from '@/stores';
 import { logger } from '../logger';
 
@@ -135,12 +137,71 @@ export class SyncBridge {
     try {
       useSyncStore.getState().setSyncing(true);
       
+      // Usar EventsSyncService para eventos (con deduplicación)
+      if (table === 'events') {
+        return await this.syncEventsTable();
+      }
+      
       const result = await enhancedSyncEngine.sync(table);
       this.updateStore(table, result);
       
       return result;
     } finally {
       useSyncStore.getState().setSyncing(false);
+    }
+  }
+
+  /**
+   * Sincroniza la tabla de eventos usando EventsSyncService (con deduplicación)
+   */
+  private async syncEventsTable(): Promise<EnhancedSyncResult> {
+    try {
+      // 1. Push: Subir eventos pendientes con deduplicación
+      const pushResult = await eventsSyncService.syncPendingEvents();
+      
+      // 2. Pull: Descargar eventos desde la nube
+      const lastSync = localStorage.getItem('lastSync_EVENTOS');
+      const lastSyncTimestamp = lastSync ? parseInt(lastSync, 10) : undefined;
+      const pullStats = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
+      
+      // Actualizar timestamp
+      localStorage.setItem('lastSync_EVENTOS', Date.now().toString());
+      
+      // Actualizar store
+      this.updateStore('events', {
+        success: pushResult.success,
+        error: pushResult.errors.length > 0 ? pushResult.errors.join('; ') : undefined,
+        pushRes: {
+          success: pushResult.created + pushResult.updated,
+          failed: pushResult.failed
+        },
+        pullRes: {
+          added: pullStats.added,
+          updated: pullStats.updated
+        }
+      });
+      
+      return {
+        success: pushResult.success,
+        error: pushResult.errors.length > 0 ? pushResult.errors.join('; ') : undefined,
+        pushRes: {
+          success: pushResult.created + pushResult.updated,
+          failed: pushResult.failed
+        },
+        pullRes: {
+          added: pullStats.added,
+          updated: pullStats.updated
+        }
+      };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('SyncBridge', 'Error syncing events', errorMsg);
+      return {
+        success: false,
+        error: errorMsg,
+        pushRes: { success: 0, failed: 0 },
+        pullRes: { added: 0, updated: 0 }
+      };
     }
   }
 

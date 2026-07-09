@@ -45,6 +45,13 @@ export { useSync, useAutoSyncLegacy, useManualSync, useScheduledSyncLegacy } fro
 export type { UseSyncOptions, UseSyncReturn, SyncMode } from './useSync';
 
 // ============================================================================
+// Sincronización de eventos (con deduplicación)
+// ============================================================================
+export { useEventsSync, eventsSyncService } from './useEventsSync';
+export type { UseEventsSyncOptions, UseEventsSyncReturn, EventStats } from './useEventsSync';
+export type { EventSyncResult } from '@/services/cloud/EventsSyncService';
+
+// ============================================================================
 // Exportación de datos
 // ============================================================================
 export { useExport } from './useExport';
