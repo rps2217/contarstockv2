@@ -120,10 +120,11 @@ END $$;
 DROP INDEX IF EXISTS idx_eventos_dedup;
 DROP INDEX IF EXISTS idx_eventos_frc_barcode;
 
--- Crear índice único (maneja NULLs ignorándolos)
+-- Crear índice único usando expresión (sin TRIM, la app normaliza datos)
+-- Usamos lower() para case-insensitive
 CREATE UNIQUE INDEX idx_eventos_dedup 
-ON public."EVENTOS" (LOWER(TRIM(frc_code)), LOWER(TRIM(barcode)))
-WHERE frc_code IS NOT NULL AND frc_code != '' AND barcode IS NOT NULL AND barcode != '';
+ON public."EVENTOS" (lower(frc_code), lower(barcode))
+WHERE frc_code IS NOT NULL AND frc_code <> '' AND barcode IS NOT NULL AND barcode <> '';
 
 -- ============================================================================
 -- PASO 6: CREAR TABLA DE ELIMINACIONES (SOFT DELETES)
@@ -135,13 +136,12 @@ CREATE TABLE IF NOT EXISTS public."DELETED_EVENTS" (
     barcode VARCHAR(255),
     frc_code VARCHAR(255),
     deleted_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_by UUID, -- REFERENCES auth.users(id) -- Descomenta si tienes auth
-    local_id INTEGER, -- ID local en IndexedDB para referencia
-    CONSTRAINT deleted_events_key_unique UNIQUE (LOWER(event_key))
+    deleted_by UUID,
+    local_id INTEGER
 );
 
 -- Crear índices para la tabla de eliminaciones
-CREATE INDEX IF NOT EXISTS idx_deleted_events_key ON public."DELETED_EVENTS" (LOWER(event_key));
+CREATE INDEX IF NOT EXISTS idx_deleted_events_key ON public."DELETED_EVENTS" (lower(event_key));
 CREATE INDEX IF NOT EXISTS idx_deleted_events_barcode ON public."DELETED_EVENTS" (barcode);
 CREATE INDEX IF NOT EXISTS idx_deleted_events_frc ON public."DELETED_EVENTS" (frc_code);
 
