@@ -80,29 +80,39 @@ function generateEventKey(frcNumber?: string, barcode?: string): string {
 
 /**
  * Mapea evento local a formato Supabase (con normalización)
- * NOTA: No incluir sync_status ya que no existe en la tabla de Supabase
+ * Columnas mínimas que debe tener la tabla EVENTOS en Supabase:
+ * - barcode, frc_code, product_name, status, event_type, created_at
+ * 
+ * Columnas opcionales (si existen en Supabase):
+ * - batch_number, expiry_date, resolution, location, transfer_doc, destination, notes, updated_at
  */
 function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
-  return {
+  const data: Record<string, unknown> = {
     barcode: normalizeString(event.barcode),
     frc_code: normalizeString(event.frcNumber),
     product_name: normalizeString(event.productName),
-    batch_number: event.batch || null,
-    expiry_date: event.expiryDate || null,
-    resolution: normalizeString(event.resolution),
     status: event.status || 'pending',
     event_type: event.type || 'info',
-    location: normalizeString(event.location) || null,
-    transfer_doc: normalizeString(event.traspasoNumber) || null,
-    destination: normalizeString(event.destino) || null,
-    notes: normalizeString(event.resolution) || null,
     created_at: event.createdAt 
       ? new Date(event.createdAt).toISOString() 
       : new Date().toISOString(),
-    updated_at: event.updatedAt 
-      ? new Date(event.updatedAt).toISOString() 
-      : new Date().toISOString(),
   };
+
+  // Campos opcionales - solo incluir si tienen valor
+  if (event.batch) data.batch_number = event.batch;
+  if (event.expiryDate) data.expiry_date = event.expiryDate;
+  if (event.resolution) {
+    data.resolution = normalizeString(event.resolution);
+    data.notes = normalizeString(event.resolution);
+  }
+  if (event.location) data.location = normalizeString(event.location);
+  if (event.traspasoNumber) data.transfer_doc = normalizeString(event.traspasoNumber);
+  if (event.destino) data.destination = normalizeString(event.destino);
+  if (event.updatedAt) {
+    data.updated_at = new Date(event.updatedAt).toISOString();
+  }
+
+  return data;
 }
 
 /**
