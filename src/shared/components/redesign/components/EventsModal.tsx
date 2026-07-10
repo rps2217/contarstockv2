@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Plus, Edit2, Trash2, Save, Loader2, ChevronUp, ChevronDown,
   AlertCircle, AlertTriangle, CheckCircle, Info, Search, Filter,
-  Table as TableIcon, ClipboardList, ArrowUpDown, List, Cloud, CloudOff, RefreshCw
+  Table as TableIcon, ClipboardList, ArrowUpDown, List, Cloud, CloudOff, RefreshCw,
+  CheckSquare, Square, XCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -108,11 +109,22 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
   const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all')
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Selección múltiple (estilo AppSheet)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false)
 
   // Sincronizar filtro de estado externo con estado local
   useEffect(() => {
     setStatusFilter(externalStatusFilter)
   }, [externalStatusFilter])
+  
+  // Limpiar selección cuando se cambia el modo de vista
+  useEffect(() => {
+    if (viewMode === 'form') {
+      setSelectedIds(new Set())
+    }
+  }, [viewMode])
 
   // Cargar eventos
   const events = useLiveQuery(async (): Promise<InventoryEvent[]> => {
@@ -171,6 +183,14 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     return result
   }, [events, searchQuery, sortConfig, typeFilter, statusFilter])
 
+  // Computed: ¿Todos los elementos filtrados están seleccionados?
+  const isAllSelected = useMemo(() => {
+    return filteredEvents.length > 0 && filteredEvents.every(e => e.id !== undefined && selectedIds.has(e.id))
+  }, [filteredEvents, selectedIds])
+  
+  // Contador de seleccionados
+  const selectedCount = selectedIds.size
+
   const handleSort = (key: string) => {
     setSortConfig(prev => ({
       key,
@@ -183,6 +203,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     setEditingEvent(null)
     setFormData(EMPTY_FORM)
     setViewMode('form')
+    setSelectedIds(new Set()) // Limpiar selección
   }
 
   // Abrir formulario para editar
@@ -379,6 +400,115 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
     setFormData(EMPTY_FORM)
   }
 
+  // ============================================================================
+  // Selección múltiple (estilo AppSheet)
+  // ============================================================================
+  
+  // Toggle selección de un item
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
+  
+  // Seleccionar todos / deseleccionar todos
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      // Deseleccionar todos
+      setSelectedIds(new Set())
+    } else {
+      // Seleccionar todos los ids visibles
+      const allIds = filteredEvents
+        .filter(e => e.id !== undefined)
+        .map(e => e.id as number)
+      setSelectedIds(new Set(allIds))
+    }
+  }
+  
+  // Limpiar selección
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+  
+  // Eliminar seleccionados (masivo)
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    
+    const count = selectedIds.size
+    if (!confirm(`¿Eliminar ${count} evento${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}?`)) return
+    
+    setIsDeletingBulk(true)
+    try {
+      let deleted = 0
+      let errors = 0
+      
+      for (const id of selectedIds) {
+        try {
+          // Obtener el evento antes de eliminar
+          const event = await db.events.get(id)
+          
+          if (event) {
+            // Registrar en lista de eliminados
+            const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase()
+            await db.deletedEvents.put({
+              eventKey,
+              barcode: event.barcode || '',
+              frcNumber: event.frcNumber || '',
+              deletedAt: Date.now(),
+              synced: false
+            })
+            
+            // Intentar eliminar de la nube
+            try {
+              const { supabase } = await import('@/lib/supabase')
+              await supabase
+                .from('EVENTOS')
+                .delete()
+                .eq('barcode', event.barcode || '')
+                .eq('frc_code', event.frcNumber || '')
+              
+              await db.deletedEvents
+                .where('eventKey')
+                .equals(eventKey)
+                .modify({ synced: true })
+            } catch (cloudErr) {
+              console.warn('No se pudo eliminar de la nube:', cloudErr)
+            }
+          }
+          
+          // Eliminar localmente
+          await db.events.delete(id)
+          deleted++
+        } catch (err) {
+          console.error('Error deleting event:', err)
+          errors++
+        }
+      }
+      
+      // Limpiar selección
+      setSelectedIds(new Set())
+      
+      if (errors > 0) {
+        toast.error(`${deleted} eliminados, ${errors} errores`)
+      } else {
+        toast.success(`${deleted} evento${deleted !== 1 ? 's' : ''} eliminado${deleted !== 1 ? 's' : ''}`)
+      }
+      
+      setRefreshKey(k => k + 1)
+    } catch (error) {
+      console.error('Error bulk deleting events:', error)
+      toast.error('Error al eliminar eventos')
+    } finally {
+      setIsDeletingBulk(false)
+    }
+  }
+
   if (!isOpen) return null
 
   // Contenedor según modo
@@ -410,7 +540,12 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-primary">Gestión de Eventos</h2>
-                  <p className="text-xs text-muted">{filteredEvents.length} registros</p>
+                  <p className="text-xs text-muted">
+                    {selectedCount > 0 
+                      ? `${selectedCount} seleccionado${selectedCount !== 1 ? 's' : ''} de ${filteredEvents.length} registros`
+                      : `${filteredEvents.length} registros`
+                    }
+                  </p>
                 </div>
               </>
             ) : (
@@ -426,7 +561,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
           </div>
           
           <div className="flex items-center gap-2">
-            {viewMode === 'table' && (
+            {viewMode === 'table' && selectedCount === 0 && (
               <button
                 onClick={handleNew}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
@@ -462,6 +597,71 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
             </button>
           </div>
         </div>
+
+        {/* Barra de acciones masivas */}
+        <AnimatePresence>
+          {viewMode === 'table' && selectedCount > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="bg-blue-600/10 border-b border-blue-500/30 px-6 py-3 shrink-0 overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-5 h-5 text-blue-400" />
+                    <span className="text-sm font-medium text-blue-300">
+                      {selectedCount} seleccionado{selectedCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={clearSelection}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Limpiar selección
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 bg-surface hover:bg-elevated text-secondary px-3 py-1.5 rounded-lg text-sm transition-colors border border-subtle"
+                  >
+                    {isAllSelected ? (
+                      <>
+                        <Square className="w-4 h-4" />
+                        Deseleccionar todo
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="w-4 h-4" />
+                        Seleccionar todo ({filteredEvents.length})
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={isDeletingBulk}
+                    className="flex items-center gap-2 bg-rose-600/80 hover:bg-rose-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {isDeletingBulk ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Eliminando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar {selectedCount}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -517,6 +717,23 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                   <table className="w-full">
                     <thead className="sticky top-0 bg-surface z-10">
                       <tr className="border-b border-subtle">
+                        {/* Checkbox de selección */}
+                        <th className="w-12 px-4 py-3">
+                          <button
+                            onClick={toggleSelectAll}
+                            className="flex items-center justify-center w-5 h-5 rounded transition-colors hover:bg-elevated"
+                            title={isAllSelected ? 'Deseleccionar todo' : 'Seleccionar todo'}
+                          >
+                            {isAllSelected ? (
+                              <CheckSquare className="w-4 h-4 text-blue-400" />
+                            ) : (
+                              <Square className={cn(
+                                "w-4 h-4",
+                                selectedCount > 0 ? "text-blue-400" : "text-muted"
+                              )} />
+                            )}
+                          </button>
+                        </th>
                         {COLUMNS.map(col => (
                           <th
                             key={col.key}
@@ -542,7 +759,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                     <tbody className="divide-y divide-subtle">
                       {filteredEvents.length === 0 ? (
                         <tr>
-                          <td colSpan={COLUMNS.length} className="px-4 py-12 text-center">
+                          <td colSpan={COLUMNS.length + 1} className="px-4 py-12 text-center">
                             <div className="flex flex-col items-center gap-2">
                               <Info className="w-8 h-8 text-muted" />
                               <p className="text-sm text-muted">No hay eventos registrados</p>
@@ -558,12 +775,29 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                       ) : (
                         filteredEvents.map(event => {
                           const statusInfo = STATUS_OPTIONS.find(s => s.value === event.status)
+                          const isSelected = event.id !== undefined && selectedIds.has(event.id)
                           
                           return (
                             <tr 
                               key={event.id}
-                              className="hover:bg-base/50 transition-colors"
+                              className={cn(
+                                "transition-colors",
+                                isSelected ? "bg-blue-500/10" : "hover:bg-base/50"
+                              )}
                             >
+                              {/* Checkbox de selección */}
+                              <td className="w-12 px-4 py-3">
+                                <button
+                                  onClick={() => event.id !== undefined && toggleSelect(event.id)}
+                                  className="flex items-center justify-center w-5 h-5 rounded transition-colors hover:bg-elevated"
+                                >
+                                  {isSelected ? (
+                                    <CheckSquare className="w-4 h-4 text-blue-400" />
+                                  ) : (
+                                    <Square className="w-4 h-4 text-muted" />
+                                  )}
+                                </button>
+                              </td>
                               {/* FRC */}
                               <td className="px-4 py-3">
                                 <span className="text-sm font-mono text-primary">
