@@ -111,7 +111,18 @@ function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
 
   // Campos opcionales
   if (event.batch) data.batch_number = event.batch;
-  if (event.expiryDate) data.expiry_date = event.expiryDate;
+  if (event.expiryDate) {
+    // Convertir DD/MM/YYYY a YYYY-MM-DD para PostgreSQL
+    const expiry = normalizeString(event.expiryDate);
+    if (expiry && expiry.includes('/')) {
+      const parts = expiry.split('/');
+      if (parts.length === 3) {
+        data.expiry_date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    } else if (expiry) {
+      data.expiry_date = expiry;
+    }
+  }
   if (event.type) data.event_type = event.type;
   if (event.resolution) data.resolution = normalizeString(event.resolution);
 
