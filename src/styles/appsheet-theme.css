@@ -1,0 +1,1030 @@
+/**
+ * AppSheet Dark Theme - Colores oficiales de Material Design 3 / AppSheet
+ * 
+ * Basado en la paleta de AppSheet con tema oscuro de Google
+ * Referencia: Material Design 3 Dark Theme Specification
+ */
+
+/* ========================
+   CSS CUSTOM PROPERTIES
+   ======================== */
+:root {
+  /* === APPSTYLE DARK TOKENS - Colores oficiales AppSheet === */
+  
+  /* Backgrounds - Sistema de elevación MD3 */
+  --appsheet-bg-base: #121212;        /* Surface container lowest */
+  --appsheet-bg-elevated: #1e1e1e;    /* Surface container low */
+  --appsheet-bg-surface: #252525;     /* Surface container */
+  --appsheet-bg-card: #2d2d2d;        /* Surface container high */
+  --appsheet-bg-hover: rgba(255, 255, 255, 0.06);
+  --appsheet-bg-active: rgba(255, 255, 255, 0.10);
+  
+  /* Surface tertiary - Fondo discreto para search bar */
+  --appsheet-surface-tertiary: #2a2a2a;  /* Más claro que elevated, para inputs */
+  
+  /* Search bar - Fondo más claro para destacar */
+  --appsheet-bg-search: #353535;
+  
+  /* Primary - Azul característico de Google/AppSheet */
+  --appsheet-primary: #8AB4F8;        /* Google Blue accent */
+  --appsheet-primary-hover: #AECBFA;
+  --appsheet-primary-pressed: #669DF6;
+  --appsheet-on-primary: #000000;
+  --appsheet-primary-subtle: rgba(138, 180, 248, 0.12);
+  
+  /* Secondary */
+  --appsheet-secondary: #C4C7C5;
+  --appsheet-secondary-subtle: rgba(196, 199, 197, 0.12);
+  
+  /* Tertiary */
+  --appsheet-tertiary: #FD6639;       /* AppSheet orange accent */
+  
+  /* Borders - Sistema de bordes MD3 */
+  --appsheet-border-subtle: rgba(255, 255, 255, 0.06);
+  --appsheet-border-default: rgba(255, 255, 255, 0.10);
+  --appsheet-border-strong: rgba(255, 255, 255, 0.18);
+  --appsheet-border-focus: #8AB4F8;
+  --appsheet-outline: #5F6368;        /* MD3 outline */
+  --appsheet-outline-variant: #3C4043;
+  
+  /* Text - Jerarquía tipográfica MD3 */
+  --appsheet-text-primary: #E8EAED;   /* On Surface */
+  --appsheet-text-secondary: #9AA0A6;  /* On Surface Variant */
+  --appsheet-text-tertiary: #5F6368;  /* Disabled */
+  --appsheet-text-disabled: #3C4043;
+  --appsheet-text-inverse: #000000;
+  
+  /* Semantic Colors - MD3 Error colors */
+  --appsheet-success: #81C784;        /* Verde claro */
+  --appsheet-success-subtle: rgba(129, 199, 132, 0.12);
+  --appsheet-warning: #FFB74D;        /* Naranja claro */
+  --appsheet-warning-subtle: rgba(255, 183, 77, 0.12);
+  --appsheet-error: #F2B8B5;          /* MD3 Error */
+  --appsheet-error-container: rgba(242, 184, 181, 0.12);
+  --appsheet-info: #81D4FA;           /* Azul claro */
+  --appsheet-info-subtle: rgba(129, 212, 250, 0.12);
+  
+  /* Interactive States */
+  --appsheet-interactive-hover: rgba(255, 255, 255, 0.06);
+  --appsheet-interactive-pressed: rgba(255, 255, 255, 0.10);
+  --appsheet-interactive-disabled: rgba(255, 255, 255, 0.03);
+  
+  /* Shadows - Elevación MD3 */
+  --appsheet-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --appsheet-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --appsheet-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --appsheet-shadow-glow: 0 0 16px rgba(138, 180, 248, 0.15);
+  
+  /* Radii - Border radius MD3 */
+  --appsheet-radius-xs: 4px;
+  --appsheet-radius-sm: 8px;
+  --appsheet-radius-md: 12px;
+  --appsheet-radius-lg: 16px;
+  --appsheet-radius-xl: 28px;
+  --appsheet-radius-full: 9999px;
+  
+  /* Spacing - 4dp grid */
+  --appsheet-space-0: 0px;
+  --appsheet-space-1: 4px;
+  --appsheet-space-2: 8px;
+  --appsheet-space-3: 12px;
+  --appsheet-space-4: 16px;
+  --appsheet-space-5: 20px;
+  --appsheet-space-6: 24px;
+  --appsheet-space-8: 32px;
+  --appsheet-space-10: 40px;
+  
+  /* Typography - Roboto/Inter */
+  --appsheet-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --appsheet-font-mono: 'Roboto Mono', monospace;
+  
+  /* Transitions */
+  --appsheet-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --appsheet-transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --appsheet-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================
+   MOTION & ANIMATIONS
+   ======================== */
+
+/* Material Design 3 Easing */
+:root {
+  /* Standard easing */
+  --md3-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md3-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md3-easing-emphasized-decelerate: cubic-bezier(0.32, 0.72, 0, 1);
+  --md3-easing-emphasized-accelerate: cubic-bezier(0.32, 0, 0, 1);
+  --md3-easing-linear: cubic-bezier(0, 0, 1, 1);
+  
+  /* Durations MD3 */
+  --md3-duration-none: 0ms;
+  --md3-duration-short1: 50ms;
+  --md3-duration-short2: 100ms;
+  --md3-duration-short3: 150ms;
+  --md3-duration-short4: 200ms;
+  --md3-duration-medium1: 250ms;
+  --md3-duration-medium2: 300ms;
+  --md3-duration-medium3: 350ms;
+  --md3-duration-medium4: 400ms;
+  --md3-duration-long1: 450ms;
+  --md3-duration-long2: 500ms;
+  --md3-duration-long3: 550ms;
+  --md3-duration-long4: 600ms;
+  --md3-duration-extra-long1: 700ms;
+  --md3-duration-extra-long2: 800ms;
+  --md3-duration-extra-long3: 900ms;
+  --md3-duration-extra-long4: 1000ms;
+  
+  /* MD3 State Layer Opacities */
+  --md3-state-hover: rgba(255, 255, 255, 0.08);
+  --md3-state-focus: rgba(255, 255, 255, 0.10);
+  --md3-state-pressed: rgba(255, 255, 255, 0.10);
+  --md3-state-dragged: rgba(255, 255, 255, 0.16);
+  --md3-state-disabled: rgba(255, 255, 255, 0.38);
+}
+
+/* Base transitions using MD3 tokens */
+.appsheet-dark,
+.appsheet-light {
+  transition: 
+    background-color var(--md3-duration-medium1) var(--md3-easing-standard),
+    border-color var(--md3-duration-short2) var(--md3-easing-standard),
+    color var(--md3-duration-short2) var(--md3-easing-standard);
+}
+
+/* ========================
+   STATE LAYERS (MD3) - Transiciones suaves y naturales
+   ======================== */
+
+/* List Items - Hover sutil con transición CSS nativa */
+.list-item {
+  background-color: var(--appsheet-bg-surface);
+}
+
+.list-item:hover {
+  background-color: var(--appsheet-bg-elevated);
+}
+
+.list-item:active {
+  background-color: var(--appsheet-bg-card);
+}
+
+/* Detail Rows - Hover sutil */
+.detail-row {
+  background-color: transparent;
+}
+
+.detail-row:hover {
+  background-color: var(--appsheet-bg-elevated);
+}
+
+.detail-row:active {
+  background-color: var(--appsheet-bg-hover);
+}
+
+/* Generic state layer classes */
+.md3-hover {
+  transition: background-color 150ms var(--md3-easing-standard);
+}
+
+.md3-hover:hover {
+  background-color: var(--md3-state-hover);
+}
+
+.md3-pressed,
+.md3-focus:focus {
+  background-color: var(--md3-state-pressed);
+}
+
+.md3-drag {
+  background-color: var(--md3-state-dragged);
+}
+
+.md3-disabled {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+/* ========================
+   RIPPLE EFFECT
+   ======================== */
+.appsheet-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.appsheet-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, currentColor 10%, transparent 10%);
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0.4s, opacity 0.4s;
+}
+
+.appsheet-ripple:active::after {
+  transform: scale(2);
+  opacity: 0.1;
+  transition: 0s;
+}
+
+/* ========================
+   BASE STYLES
+   ======================== */
+.appsheet-dark {
+  background-color: var(--appsheet-bg-base);
+  color: var(--appsheet-text-primary);
+  font-family: var(--appsheet-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar personalizado */
+.appsheet-dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.appsheet-dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.appsheet-dark ::-webkit-scrollbar-thumb {
+  background: var(--appsheet-border-default);
+  border-radius: var(--appsheet-radius-full);
+}
+
+.appsheet-dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--appsheet-border-strong);
+}
+
+/* ========================
+   TYPOGRAPHY
+   ======================== */
+.appsheet-dark .text-display {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.appsheet-dark .text-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.appsheet-dark .text-subtitle {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.appsheet-dark .text-body {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.appsheet-dark .text-caption {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.appsheet-dark .text-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+/* ========================
+   CARDS
+   ======================== */
+.appsheet-card {
+  background: var(--appsheet-bg-surface);
+  border: 1px solid var(--appsheet-border-subtle);
+  border-radius: var(--appsheet-radius-lg);
+  padding: var(--appsheet-space-4);
+  transition: all var(--appsheet-transition-normal);
+}
+
+.appsheet-card:hover {
+  background: var(--appsheet-bg-card);
+  border-color: var(--appsheet-border-default);
+}
+
+.appsheet-card--elevated {
+  background: var(--appsheet-bg-card);
+  box-shadow: var(--appsheet-shadow-md);
+}
+
+.appsheet-card--interactive {
+  cursor: pointer;
+}
+
+.appsheet-card--interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--appsheet-shadow-lg);
+}
+
+.appsheet-card--interactive:active {
+  transform: translateY(0);
+}
+
+/* ========================
+   BUTTONS
+   ======================== */
+.appsheet-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--appsheet-space-2);
+  padding: var(--appsheet-space-2) var(--appsheet-space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--appsheet-radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all var(--appsheet-transition-fast);
+  white-space: nowrap;
+}
+
+.appsheet-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.appsheet-btn--primary {
+  background: var(--appsheet-primary-primary);
+  color: var(--appsheet-text-inverse);
+}
+
+.appsheet-btn--primary:hover:not(:disabled) {
+  background: var(--appsheet-primary-hover);
+}
+
+.appsheet-btn--primary:active:not(:disabled) {
+  background: var(--appsheet-primary-pressed);
+}
+
+/* Secondary Button */
+.appsheet-btn--secondary {
+  background: var(--appsheet-bg-card);
+  color: var(--appsheet-text-primary);
+  border: 1px solid var(--appsheet-border-default);
+}
+
+.appsheet-btn--secondary:hover:not(:disabled) {
+  background: var(--appsheet-interactive-hover);
+  border-color: var(--appsheet-border-strong);
+}
+
+/* Ghost Button */
+.appsheet-btn--ghost {
+  background: transparent;
+  color: var(--appsheet-text-secondary);
+}
+
+.appsheet-btn--ghost:hover:not(:disabled) {
+  background: var(--appsheet-interactive-hover);
+  color: var(--appsheet-text-primary);
+}
+
+/* Danger Button */
+.appsheet-btn--danger {
+  background: var(--appsheet-error);
+  color: white;
+}
+
+.appsheet-btn--danger:hover:not(:disabled) {
+  background: #ef4444;
+}
+
+/* Success Button */
+.appsheet-btn--success {
+  background: var(--appsheet-success);
+  color: var(--appsheet-bg-base);
+}
+
+.appsheet-btn--success:hover:not(:disabled) {
+  background: #4ade80;
+}
+
+/* Warning Button */
+.appsheet-btn--warning {
+  background: var(--appsheet-warning);
+  color: var(--appsheet-bg-base);
+}
+
+.appsheet-btn--warning:hover:not(:disabled) {
+  background: #fcd34d;
+}
+
+/* Button Sizes */
+.appsheet-btn--sm {
+  padding: var(--appsheet-space-1) var(--appsheet-space-3);
+  font-size: 0.75rem;
+}
+
+.appsheet-btn--lg {
+  padding: var(--appsheet-space-3) var(--appsheet-space-6);
+  font-size: 1rem;
+}
+
+/* ========================
+   INPUTS
+   ======================== */
+.appsheet-input {
+  width: 100%;
+  padding: var(--appsheet-space-3) var(--appsheet-space-4);
+  font-size: 0.875rem;
+  background: var(--appsheet-bg-elevated);
+  border: 1px solid var(--appsheet-border-default);
+  border-radius: var(--appsheet-radius-md);
+  color: var(--appsheet-text-primary);
+  transition: all var(--appsheet-transition-fast);
+}
+
+.appsheet-input::placeholder {
+  color: var(--appsheet-text-tertiary);
+}
+
+.appsheet-input:hover {
+  border-color: var(--appsheet-border-strong);
+}
+
+.appsheet-input:focus {
+  outline: none;
+  border-color: var(--appsheet-border-focus);
+  box-shadow: 0 0 0 3px var(--appsheet-primary-subtle);
+}
+
+.appsheet-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--appsheet-interactive-disabled);
+}
+
+/* Input States */
+.appsheet-input--error {
+  border-color: var(--appsheet-error);
+}
+
+.appsheet-input--error:focus {
+  box-shadow: 0 0 0 3px var(--appsheet-error-subtle);
+}
+
+.appsheet-input--success {
+  border-color: var(--appsheet-success);
+}
+
+.appsheet-input--success:focus {
+  box-shadow: 0 0 0 3px var(--appsheet-success-subtle);
+}
+
+/* ========================
+   BADGES & TAGS
+   ======================== */
+.appsheet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--appsheet-space-1);
+  padding: var(--appsheet-space-1) var(--appsheet-space-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: var(--appsheet-radius-full);
+  white-space: nowrap;
+}
+
+.appsheet-badge--default {
+  background: var(--appsheet-bg-card);
+  color: var(--appsheet-text-secondary);
+  border: 1px solid var(--appsheet-border-default);
+}
+
+.appsheet-badge--primary {
+  background: var(--appsheet-primary-subtle);
+  color: var(--appsheet-primary-primary);
+}
+
+.appsheet-badge--success {
+  background: var(--appsheet-success-subtle);
+  color: var(--appsheet-success);
+}
+
+.appsheet-badge--warning {
+  background: var(--appsheet-warning-subtle);
+  color: var(--appsheet-warning);
+}
+
+.appsheet-badge--error {
+  background: var(--appsheet-error-subtle);
+  color: var(--appsheet-error);
+}
+
+.appsheet-badge--info {
+  background: var(--appsheet-info-subtle);
+  color: var(--appsheet-info);
+}
+
+/* ========================
+   MODALS & OVERLAYS
+   ======================== */
+.appsheet-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+}
+
+.appsheet-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - var(--appsheet-space-8));
+  max-width: 480px;
+  max-height: calc(100vh - var(--appsheet-space-8));
+  background: var(--appsheet-bg-surface);
+  border: 1px solid var(--appsheet-border-default);
+  border-radius: var(--appsheet-radius-xl);
+  box-shadow: var(--appsheet-shadow-lg);
+  overflow: hidden;
+  z-index: 51;
+}
+
+.appsheet-modal-header {
+  padding: var(--appsheet-space-4) var(--appsheet-space-5);
+  border-bottom: 1px solid var(--appsheet-border-subtle);
+}
+
+.appsheet-modal-body {
+  padding: var(--appsheet-space-5);
+  overflow-y: auto;
+}
+
+.appsheet-modal-footer {
+  padding: var(--appsheet-space-4) var(--appsheet-space-5);
+  border-top: 1px solid var(--appsheet-border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--appsheet-space-3);
+}
+
+/* ========================
+   TABS
+   ======================== */
+.appsheet-tabs {
+  display: flex;
+  gap: var(--appsheet-space-1);
+  border-bottom: 1px solid var(--appsheet-border-subtle);
+}
+
+.appsheet-tab {
+  padding: var(--appsheet-space-3) var(--appsheet-space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--appsheet-text-tertiary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--appsheet-transition-fast);
+  margin-bottom: -1px;
+}
+
+.appsheet-tab:hover {
+  color: var(--appsheet-text-secondary);
+}
+
+.appsheet-tab--active {
+  color: var(--appsheet-primary-primary);
+  border-bottom-color: var(--appsheet-primary-primary);
+}
+
+/* Pill Tabs */
+.appsheet-tabs-pill {
+  display: flex;
+  gap: var(--appsheet-space-2);
+  padding: var(--appsheet-space-1);
+  background: var(--appsheet-bg-elevated);
+  border-radius: var(--appsheet-radius-lg);
+}
+
+.appsheet-tabs-pill .appsheet-tab {
+  padding: var(--appsheet-space-2) var(--appsheet-space-4);
+  border-radius: var(--appsheet-radius-md);
+  border: none;
+}
+
+.appsheet-tabs-pill .appsheet-tab--active {
+  background: var(--appsheet-bg-card);
+  color: var(--appsheet-text-primary);
+}
+
+/* ========================
+   LISTS
+   ======================== */
+.appsheet-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.appsheet-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--appsheet-space-3);
+  padding: var(--appsheet-space-3) var(--appsheet-space-4);
+  border-bottom: 1px solid var(--appsheet-border-subtle);
+  transition: background var(--appsheet-transition-fast);
+}
+
+.appsheet-list-item:last-child {
+  border-bottom: none;
+}
+
+.appsheet-list-item:hover {
+  background: var(--appsheet-bg-hover);
+}
+
+.appsheet-list-item--interactive {
+  cursor: pointer;
+}
+
+.appsheet-list-item--interactive:active {
+  background: var(--appsheet-bg-active);
+}
+
+/* ========================
+   DIVIDERS
+   ======================== */
+.appsheet-divider {
+  height: 1px;
+  background: var(--appsheet-border-subtle);
+  margin: var(--appsheet-space-4) 0;
+}
+
+.appsheet-divider--vertical {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+  margin: 0 var(--appsheet-space-4);
+}
+
+/* ========================
+   SKELETON LOADING
+   ======================== */
+.appsheet-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--appsheet-bg-elevated) 0%,
+    var(--appsheet-bg-card) 50%,
+    var(--appsheet-bg-elevated) 100%
+  );
+  background-size: 200% 100%;
+  animation: appsheet-shimmer 1.5s infinite;
+  border-radius: var(--appsheet-radius-md);
+}
+
+@keyframes appsheet-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ========================
+   UTILITIES
+   ======================== */
+.appsheet-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.appsheet-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Focus Ring */
+.appsheet-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--appsheet-bg-base), 0 0 0 4px var(--appsheet-primary-primary);
+}
+
+/* ========================
+   TYPOGRAPHY UTILITIES
+   ======================== */
+.appsheet-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--appsheet-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.appsheet-hint {
+  font-size: 0.75rem;
+  color: var(--appsheet-text-tertiary);
+  margin-top: 0.25rem;
+}
+
+.appsheet-hint--error {
+  font-size: 0.75rem;
+  color: var(--appsheet-error);
+  margin-top: 0.25rem;
+}
+
+/* ========================
+   TEXTAREA
+   ======================== */
+.appsheet-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* ========================
+   SELECT
+   ======================== */
+.appsheet-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 2.5rem;
+}
+
+/* ========================
+   SKELETON VARIANTS
+   ======================== */
+.appsheet-skeleton--text {
+  border-radius: 4px;
+  height: 1em;
+}
+
+.appsheet-skeleton--circular {
+  border-radius: 9999px;
+}
+
+.appsheet-skeleton--rectangular {
+  border-radius: var(--appsheet-radius-md);
+}
+
+/* ========================
+   LIST INTERACTIVE
+   ======================== */
+.appsheet-list--interactive .appsheet-list-item {
+  cursor: pointer;
+}
+
+.appsheet-list-item--selected {
+  background: var(--appsheet-primary-subtle) !important;
+}
+
+.appsheet-list-item--selected:hover {
+  background: var(--appsheet-primary-subtle) !important;
+}
+
+/* ========================
+   SWITCH / TOGGLE
+   ======================== */
+.appsheet-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--appsheet-bg-card);
+  border: 1px solid var(--appsheet-border-default);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all var(--appsheet-transition-normal);
+}
+
+.appsheet-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 9999px;
+  transition: transform var(--appsheet-transition-normal);
+}
+
+.appsheet-switch--checked {
+  background: var(--appsheet-primary-primary);
+  border-color: var(--appsheet-primary-primary);
+}
+
+.appsheet-switch--checked::after {
+  transform: translateX(20px);
+}
+
+/* ========================
+   CHECKBOX
+   ======================== */
+.appsheet-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--appsheet-border-default);
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+  background: transparent;
+  transition: all var(--appsheet-transition-fast);
+}
+
+.appsheet-checkbox:checked {
+  background: var(--appsheet-primary-primary);
+  border-color: var(--appsheet-primary-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* ========================
+   PROGRESS
+   ======================== */
+.appsheet-progress {
+  width: 100%;
+  height: 8px;
+  background: var(--appsheet-bg-elevated);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.appsheet-progress-bar {
+  height: 100%;
+  background: var(--appsheet-primary-primary);
+  border-radius: 9999px;
+  transition: width var(--appsheet-transition-slow);
+}
+
+/* ========================
+   AVATAR
+   ======================== */
+.appsheet-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--appsheet-primary-subtle);
+  color: var(--appsheet-primary-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.appsheet-avatar--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.75rem;
+}
+
+.appsheet-avatar--md {
+  width: 40px;
+  height: 40px;
+}
+
+.appsheet-avatar--lg {
+  width: 56px;
+  height: 56px;
+  font-size: 1.25rem;
+}
+
+/* ========================
+   TOOLTIP
+   ======================== */
+.appsheet-tooltip {
+  position: relative;
+}
+
+.appsheet-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: var(--appsheet-bg-card);
+  color: var(--appsheet-text-primary);
+  font-size: 0.75rem;
+  border-radius: var(--appsheet-radius-md);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--appsheet-transition-fast);
+  box-shadow: var(--appsheet-shadow-md);
+  z-index: 100;
+}
+
+.appsheet-tooltip:hover::after {
+  opacity: 1;
+}
+
+/* ========================
+   EMPTY STATE
+   ======================== */
+.appsheet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--appsheet-space-8);
+  text-align: center;
+}
+
+.appsheet-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--appsheet-space-4);
+  color: var(--appsheet-text-disabled);
+}
+
+.appsheet-empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--appsheet-text-secondary);
+  margin-bottom: var(--appsheet-space-2);
+}
+
+.appsheet-empty-description {
+  font-size: 0.875rem;
+  color: var(--appsheet-text-tertiary);
+  max-width: 300px;
+}
+
+/* ========================
+   NAVIGATION
+   ======================== */
+.appsheet-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--appsheet-space-3);
+  padding: var(--appsheet-space-3) var(--appsheet-space-4);
+  color: var(--appsheet-text-secondary);
+  border-radius: var(--appsheet-radius-md);
+  transition: all var(--appsheet-transition-fast);
+}
+
+.appsheet-nav-item:hover {
+  background: var(--appsheet-bg-hover);
+  color: var(--appsheet-text-primary);
+}
+
+.appsheet-nav-item--active {
+  background: var(--appsheet-primary-subtle);
+  color: var(--appsheet-primary-primary);
+}
+
+/* ========================
+   ALERT / BANNER
+   ======================== */
+.appsheet-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--appsheet-space-3);
+  padding: var(--appsheet-space-4);
+  border-radius: var(--appsheet-radius-lg);
+  font-size: 0.875rem;
+}
+
+.appsheet-alert--info {
+  background: var(--appsheet-info-subtle);
+  color: var(--appsheet-info);
+}
+
+.appsheet-alert--success {
+  background: var(--appsheet-success-subtle);
+  color: var(--appsheet-success);
+}
+
+.appsheet-alert--warning {
+  background: var(--appsheet-warning-subtle);
+  color: var(--appsheet-warning);
+}
+
+.appsheet-alert--error {
+  background: var(--appsheet-error-subtle);
+  color: var(--appsheet-error);
+}

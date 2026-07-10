@@ -1,0 +1,416 @@
+/**
+ * Night Steel Theme - Professional Grayscale Design
+ * ===========================================
+ * Sistema de diseño premium con paleta monocromática
+ * Optimizado para contraste WCAG AAA y legibilidad
+ * 
+ * Color de acento: Steel Blue #6B8CAE
+ */
+
+/* ================================================
+ * NIGHT STEEL - CSS Variables Globales
+ * ================================================ */
+:root.night-steel-theme,
+.night-steel-theme {
+  /* Backgrounds - Sistema de Elevación */
+  --ns-bg-base: #0A0A0B;
+  --ns-bg-elevated: #111113;
+  --ns-bg-surface: #18181B;
+  --ns-bg-overlay: #1F1F23;
+  --ns-bg-interactive: #27272A;
+  --ns-bg-muted: #3F3F46;
+  
+  /* Borders */
+  --ns-border-subtle: rgba(255, 255, 255, 0.04);
+  --ns-border-default: rgba(255, 255, 255, 0.08);
+  --ns-border-strong: rgba(255, 255, 255, 0.12);
+  --ns-border-focused: rgba(107, 140, 174, 0.5);
+  
+  /* Text */
+  --ns-text-primary: #FAFAFA;
+  --ns-text-secondary: #A1A1AA;
+  --ns-text-muted: #71717A;
+  --ns-text-disabled: #52525B;
+  --ns-text-inverse: #0A0A0B;
+  
+  /* Accent - Steel Blue */
+  --ns-accent: #6B8CAE;
+  --ns-accent-hover: #7A9BBF;
+  --ns-accent-active: #5A7A9B;
+  --ns-accent-subtle: rgba(107, 140, 174, 0.12);
+  --ns-accent-muted: rgba(107, 140, 174, 0.25);
+  --ns-accent-glow: rgba(107, 140, 174, 0.35);
+  
+  /* Status */
+  --ns-success: #4ADE80;
+  --ns-success-subtle: rgba(74, 222, 128, 0.12);
+  --ns-warning: #FBBF24;
+  --ns-warning-subtle: rgba(251, 191, 36, 0.12);
+  --ns-error: #F87171;
+  --ns-error-subtle: rgba(248, 113, 113, 0.12);
+  
+  /* Shadows */
+  --ns-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ns-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --ns-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --ns-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+}
+
+/* ================================================
+ * NIGHT STEEL - Tema Aplicado
+ * ================================================ */
+.night-steel-theme {
+  background-color: var(--ns-bg-base);
+  color: var(--ns-text-primary);
+}
+
+/* Fondos */
+.night-steel-theme .bg-slate-950,
+.night-steel-theme .bg-black {
+  background-color: var(--ns-bg-base) !important;
+}
+
+.night-steel-theme .bg-slate-900 {
+  background-color: var(--ns-bg-elevated) !important;
+}
+
+.night-steel-theme .bg-slate-800 {
+  background-color: var(--ns-bg-surface) !important;
+}
+
+.night-steel-theme .bg-slate-700 {
+  background-color: var(--ns-bg-overlay) !important;
+}
+
+.night-steel-theme .bg-slate-600 {
+  background-color: var(--ns-bg-interactive) !important;
+}
+
+.night-steel-theme .bg-slate-500 {
+  background-color: var(--ns-bg-muted) !important;
+}
+
+/* Transparencias blancas */
+.night-steel-theme .bg-white\/5,
+.night-steel-theme .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.night-steel-theme .bg-white\/15 {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.night-steel-theme .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Transparencias accent */
+.night-steel-theme .bg-blue-500\/10,
+.night-steel-theme .bg-blue-500\/15 {
+  background-color: var(--ns-accent-subtle) !important;
+}
+
+.night-steel-theme .bg-blue-500\/20 {
+  background-color: var(--ns-accent-muted) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Textos
+ * ================================================ */
+.night-steel-theme .text-white,
+.night-steel-theme .text-slate-50 {
+  color: var(--ns-text-primary) !important;
+}
+
+.night-steel-theme .text-slate-100 {
+  color: #E4E4E7 !important;
+}
+
+.night-steel-theme .text-slate-200 {
+  color: var(--ns-text-secondary) !important;
+}
+
+.night-steel-theme .text-slate-300 {
+  color: var(--ns-text-muted) !important;
+}
+
+.night-steel-theme .text-slate-400 {
+  color: var(--ns-text-disabled) !important;
+}
+
+.night-steel-theme .text-slate-500 {
+  color: var(--ns-text-disabled) !important;
+}
+
+/* Textos accent */
+.night-steel-theme .text-blue-400,
+.night-steel-theme .text-blue-500,
+.night-steel-theme .text-blue-600 {
+  color: var(--ns-accent) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Bordes
+ * ================================================ */
+.night-steel-theme .border-white\/5 {
+  border-color: var(--ns-border-subtle) !important;
+}
+
+.night-steel-theme .border-white\/10 {
+  border-color: var(--ns-border-default) !important;
+}
+
+.night-steel-theme .border-white\/15 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.night-steel-theme .border-white\/20 {
+  border-color: var(--ns-border-strong) !important;
+}
+
+.night-steel-theme .border-blue-500 {
+  border-color: var(--ns-accent) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Sombras
+ * ================================================ */
+.night-steel-theme .shadow-lg {
+  box-shadow: var(--ns-shadow-lg) !important;
+}
+
+.night-steel-theme .shadow-xl {
+  box-shadow: var(--ns-shadow-xl) !important;
+}
+
+.night-steel-theme .shadow-2xl {
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Surface Components
+ * ================================================ */
+.night-steel-theme .surface-glass {
+  background-color: rgba(10, 10, 11, 0.85) !important;
+  backdrop-filter: blur(24px);
+  border-color: var(--ns-border-default) !important;
+  box-shadow: var(--ns-shadow-lg), 0 0 1px rgba(107, 140, 174, 0.1) !important;
+}
+
+.night-steel-theme .surface-card,
+.night-steel-theme .card {
+  background-color: var(--ns-bg-surface) !important;
+  border-color: var(--ns-border-subtle) !important;
+  box-shadow: var(--ns-shadow-md) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Sidebar
+ * ================================================ */
+.night-steel-theme aside,
+.night-steel-theme nav[class*="sidebar"] {
+  background-color: var(--ns-bg-surface) !important;
+  border-color: var(--ns-border-subtle) !important;
+}
+
+.night-steel-theme aside button.active,
+.night-steel-theme nav[class*="sidebar"] button.active {
+  background-color: var(--ns-accent-subtle) !important;
+  color: var(--ns-accent) !important;
+}
+
+.night-steel-theme aside button:hover:not(.active),
+.night-steel-theme nav[class*="sidebar"] button:hover:not(.active) {
+  background-color: var(--ns-bg-interactive) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Dashboard Cards
+ * ================================================ */
+.night-steel-theme .rounded-\[2\.5rem\] {
+  background-color: var(--ns-bg-surface) !important;
+  border-color: var(--ns-border-subtle) !important;
+}
+
+.night-steel-theme .rounded-\[2\.5rem\]:hover {
+  background-color: var(--ns-bg-overlay) !important;
+  border-color: var(--ns-border-default) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Header
+ * ================================================ */
+.night-steel-theme header,
+.night-steel-theme .bg-slate-900\/50 {
+  background-color: var(--ns-bg-elevated) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Inputs
+ * ================================================ */
+.night-steel-theme input,
+.night-steel-theme select,
+.night-steel-theme textarea {
+  background-color: var(--ns-bg-elevated) !important;
+  border-color: var(--ns-border-default) !important;
+  color: var(--ns-text-primary) !important;
+}
+
+.night-steel-theme input:focus,
+.night-steel-theme select:focus,
+.night-steel-theme textarea:focus {
+  border-color: var(--ns-accent) !important;
+  box-shadow: 0 0 0 3px var(--ns-accent-subtle) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Bottom Dock
+ * ================================================ */
+.night-steel-theme .fixed.bottom-0 {
+  background-color: var(--ns-bg-surface) !important;
+  border-top-color: var(--ns-border-subtle) !important;
+}
+
+.night-steel-theme .fixed.bottom-0 button.active {
+  color: var(--ns-accent) !important;
+}
+
+.night-steel-theme .fixed.bottom-0 button.active .bg-blue-500\/15 {
+  background-color: var(--ns-accent-subtle) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Status Indicators
+ * ================================================ */
+.night-steel-theme .animate-pulse.bg-emerald-500 {
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5) !important;
+}
+
+.night-steel-theme .bg-emerald-500\/10 {
+  background-color: var(--ns-success-subtle) !important;
+}
+
+.night-steel-theme .bg-amber-500\/10 {
+  background-color: var(--ns-warning-subtle) !important;
+}
+
+.night-steel-theme .bg-rose-500\/10 {
+  background-color: var(--ns-error-subtle) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Badge
+ * ================================================ */
+.night-steel-theme .rounded-full.bg-blue-600 {
+  background-color: var(--ns-accent) !important;
+  box-shadow: 0 0 8px var(--ns-accent-glow) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Primary Button
+ * ================================================ */
+.night-steel-theme .bg-blue-600:not(.bg-blue-600\/10):not(.bg-blue-600\/20) {
+  background-color: var(--ns-accent) !important;
+}
+
+.night-steel-theme .bg-blue-600:hover:not(.bg-blue-600\/10):not(.bg-blue-600\/20) {
+  background-color: var(--ns-accent-hover) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Scrollbar
+ * ================================================ */
+.night-steel-theme ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.night-steel-theme ::-webkit-scrollbar-track {
+  background: var(--ns-bg-base);
+}
+
+.night-steel-theme ::-webkit-scrollbar-thumb {
+  background: var(--ns-bg-interactive);
+  border-radius: 4px;
+}
+
+.night-steel-theme ::-webkit-scrollbar-thumb:hover {
+  background: var(--ns-bg-muted);
+}
+
+/* ================================================
+ * NIGHT STEEL - Focus Ring
+ * ================================================ */
+.night-steel-theme :focus-visible {
+  outline: 2px solid var(--ns-accent);
+  outline-offset: 2px;
+}
+
+/* ================================================
+ * NIGHT STEEL - Gradientes
+ * ================================================ */
+.night-steel-theme .text-gradient-blue {
+  background: linear-gradient(135deg, var(--ns-accent), var(--ns-accent-active)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.night-steel-theme .text-gradient {
+  background: linear-gradient(135deg, var(--ns-text-primary), var(--ns-text-secondary)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Modal Backdrop
+ * ================================================ */
+.night-steel-theme [class*="backdrop"]:not([class*="bg-white"]) {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* ================================================
+ * NIGHT STEEL - Loading Animation
+ * ================================================ */
+.night-steel-theme .animate-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--ns-bg-interactive) 0%,
+    var(--ns-bg-overlay) 50%,
+    var(--ns-bg-interactive) 100%
+  ) !important;
+  background-size: 200% 100% !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Selection
+ * ================================================ */
+.night-steel-theme ::selection,
+.night-steel-theme *::selection {
+  background-color: var(--ns-accent-muted) !important;
+  color: var(--ns-text-primary) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Stat Cards
+ * ================================================ */
+.night-steel-theme [class*="StatCard"],
+.night-steel-theme .stat-card {
+  background-color: var(--ns-bg-surface) !important;
+  border-color: var(--ns-border-subtle) !important;
+}
+
+.night-steel-theme [class*="StatCard"]:hover,
+.night-steel-theme .stat-card:hover {
+  border-color: var(--ns-border-default) !important;
+  box-shadow: var(--ns-shadow-lg) !important;
+}
+
+/* ================================================
+ * NIGHT STEEL - Divider
+ * ================================================ */
+.night-steel-theme hr,
+.night-steel-theme .divide-white\/5 {
+  border-color: var(--ns-border-subtle) !important;
+}

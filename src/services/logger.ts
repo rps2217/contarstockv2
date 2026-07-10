@@ -1,0 +1,123 @@
+
+import { db, SystemLog } from '../db';
+import { telemetry } from './telemetryService';
+
+const MAX_LOGS = 2000;
+
+// Tipos para el logger
+type LogLevel = SystemLog['level'];
+export type LoggerDetails = Record<string, unknown> | string | number | boolean | null | unknown;
+
+const safeStringify = (obj: unknown): string => {
+  const cache = new Set();
+  return JSON.stringify(obj, (_key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) {
+        return '[Circular]';
+      }
+      cache.add(value);
+    }
+    return value;
+  });
+};
+
+const writeLog = async (level: LogLevel, module: string, message: string, details?: LoggerDetails) => {
+  try {
+    const timestamp = Date.now();
+    let messageStr = String(message);
+    if (typeof message === 'object' && message !== null) {
+      try {
+        messageStr = (message as { message?: string }).message || safeStringify(message);
+      } catch {
+        messageStr = '[Unstringifiable Object]';
+      }
+    }
+    
+    // Consola formateada para desarrollo
+    const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' 
+      : level === 'success' ? 'color: #2ecc71' 
+      : 'color: #3498db';
+    console.log(`%c[${module}] [${level.toUpperCase()}] ${messageStr}`, style, details || '');
+
+    if (level === 'error') {
+      telemetry.track('ERROR', module, { message: messageStr, details });
+    }
+
+    let detailsStr: string | undefined;
+    if (details !== undefined) {
+      if (typeof details === 'object') {
+        try {
+          detailsStr = safeStringify(details);
+        } catch {
+          detailsStr = '[Unstringifiable Details]';
+        }
+      } else {
+        detailsStr = String(details);
+      }
+    }
+
+    await db.logs.add({
+      level,
+      module,
+      message: messageStr,
+      details: detailsStr,
+      timestamp
+    });
+
+    // Cleanup selectivo (1 de cada 20 llamadas)
+    if (Math.random() < 0.05) {
+      const count = await db.logs.count();
+      if (count > MAX_LOGS) {
+        const keys = await db.logs.orderBy('timestamp').limit(count - MAX_LOGS).primaryKeys();
+        await db.logs.bulkDelete(keys);
+      }
+    }
+  } catch (e) {
+    // Fallback silencioso si falla IndexedDB (ej. cuota excedida o bloqueo)
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    console.warn("Logger persistency failed:", errorMessage);
+  }
+};
+
+// Constantes de contexto para módulos
+export const LOG_CONTEXT = {
+  SYNC: 'SyncManager',
+  HAMMER: 'HammerLogic',
+  RECEPTION: 'ReceptionLogic',
+  EXPORT: 'ExportService',
+  AUTH: 'Authentication',
+  DATABASE: 'Database',
+  SETTINGS: 'Settings',
+  UI: 'UI',
+  SCANNER: 'Scanner',
+  PRINTER: 'Printer',
+  API: 'API',
+} as const;
+
+export type LogContext = typeof LOG_CONTEXT[keyof typeof LOG_CONTEXT];
+
+export const logger = {
+  info: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('info', module, message, details),
+  
+  warn: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('warn', module, message, details),
+  
+  error: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('error', module, message, details),
+  
+  success: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('success', module, message, details),
+  
+  debug: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('info', module, `[DEBUG] ${message}`, details),
+  
+  getRecent: async (limit = 200): Promise<SystemLog[]> => {
+    return await db.logs.orderBy('timestamp').reverse().limit(limit).toArray();
+  },
+  
+  clear: async (): Promise<void> => {
+    await db.logs.clear();
+    logger.info('System', 'Log de auditoría vaciado.');
+  }
+};

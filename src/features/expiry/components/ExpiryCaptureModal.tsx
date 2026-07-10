@@ -1,0 +1,803 @@
+/**
+ * ExpiryCaptureModal - Modal para capturar y editar vencimientos
+ * 
+ * Características:
+ * - Búsqueda de producto por SKU/Barcode
+ * - Selector de mes/año con auto-detección de teclado
+ * - Campo de cantidad
+ * - Campo de ubicación
+ * - Observaciones
+ * - Validación de fecha vencida (robusta con rango 2024-2027)
+ * - Confirmación obligatoria para fechas críticas
+ * - Políticas de proveedor
+ * - Modo edición con datos pre-cargados
+ * 
+ * @version 3.0.0
+ */
+
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2, Pencil, AlertCircle, CheckCheck } from 'lucide-react';
+import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';
+import { QuantityInput } from '@/shared/features/inventory/components/QuantityInput';
+import type { ProductInfo } from '@/shared/features/inventory/hooks/useProductSearch';
+import type { ExpiryRecord } from '../hooks/useExpiry';
+import { db } from '@/db';
+
+// ✅ NUEVO: Imports de constantes y validación
+import { EXPIRY_YEARS, MIN_YEAR, MAX_YEAR, MIN_BARCODE_LENGTH } from '../constants';
+import { useExpiryValidation, validateYearInput, validateMonthInput } from '../hooks/useExpiryValidation';
+
+export type ExpiryModalMode = 'create' | 'edit';
+
+interface ExpiryCaptureModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  scannedBarcode?: string | null;
+  mode?: ExpiryModalMode;
+  initialData?: ExpiryRecord | null;
+  onSubmit?: (data: ExpiryFormData) => Promise<void>;
+  onUpdate?: (data: ExpiryFormData) => Promise<void>;
+  theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
+}
+
+export interface ExpiryFormData {
+  barcode: string;
+  productName: string;
+  quantity: number;
+  mm: number;
+  yyyy: number;
+  location: string;
+  observaciones: string;
+  providerName?: string;
+  providerRut?: string;
+  hasCanje?: boolean;
+  withdrawalDays?: number;
+}
+
+const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+// ✅ CORREGIDO: Años con rango válido (2024-2027)
+const AÑOS = [...EXPIRY_YEARS]; // [2024, 2025, 2026, 2027]
+
+export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
+  isOpen,
+  onClose,
+  scannedBarcode,
+  mode = 'create',
+  initialData,
+  onSubmit,
+  onUpdate,
+  theme = 'dark',
+}) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Form state
+  const [barcode, setBarcode] = useState('');
+  const [product, setProduct] = useState<ProductInfo | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedMm, setSelectedMm] = useState<number | null>(null);
+  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
+  const [location, setLocation] = useState('');
+  const [observaciones, setObservaciones] = useState('');
+  const [hasCanje, setHasCanje] = useState(false);
+  const [withdrawalDays, setWithdrawalDays] = useState(30);
+
+  const isEditMode = mode === 'edit';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
+  const isHighContrast = theme === 'high-contrast';
+
+  // Usar barcode escaneado si existe o datos iniciales para edición
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditMode && initialData) {
+        // Modo edición: cargar datos existentes
+        setBarcode(initialData.barcode);
+        setProduct(null); // No buscar producto en BD para edición
+        setQuantity(initialData.quantity);
+        setSelectedMm(initialData.mm);
+        setSelectedYyyy(initialData.yyyy);
+        setLocation(initialData.location);
+        setObservaciones(initialData.observaciones);
+        setHasCanje(initialData.hasCanje);
+        setWithdrawalDays(initialData.withdrawalDays);
+      } else if (scannedBarcode) {
+        // Modo creación: usar barcode escaneado Y buscar producto en BD
+        setBarcode(scannedBarcode);
+        
+        // Buscar producto en la BD para obtener proveedor y políticas
+        const fetchProduct = async () => {
+          try {
+            // Normalizar barcode para búsqueda
+            const normalizedCode = scannedBarcode.replace(/\s+/g, '').toUpperCase();
+            
+            // Buscar en productos
+            let foundProduct = await db.products.where('barcode').equalsIgnoreCase(normalizedCode).first();
+            
+            // Si no se encontró por barcode, buscar por SKU
+            if (!foundProduct) {
+              foundProduct = await db.products.where('sku').equalsIgnoreCase(normalizedCode).first();
+            }
+            
+            if (foundProduct) {
+              // Crear ProductInfo con datos del producto y proveedor
+              const productInfo: ProductInfo = {
+                barcode: foundProduct.barcode || scannedBarcode,
+                name: foundProduct.name,
+                supplierName: (foundProduct as any).supplier,
+                supplierRut: (foundProduct as any).supplierRut,
+              };
+              setProduct(productInfo);
+              
+              // Si el producto tiene políticas, aplicarlas
+              const wd = (foundProduct as any).withdrawalDays;
+              if (wd !== undefined) {
+                setWithdrawalDays(wd);
+              }
+              const he = (foundProduct as any).hasExchange;
+              if (he !== undefined) {
+                setHasCanje(he);
+              }
+            } else {
+              setProduct(null);
+            }
+          } catch (error) {
+            console.warn('Error buscando producto:', error);
+            setProduct(null);
+          }
+        };
+        
+        fetchProduct();
+        
+        setQuantity(1);
+        setSelectedMm(null);
+        setSelectedYyyy(null);
+        setLocation('');
+        setObservaciones('');
+      }
+    }
+  }, [scannedBarcode, isOpen, isEditMode, initialData]);
+
+  // Limpiar form al cerrar (solo en modo creación)
+  useEffect(() => {
+    if (!isOpen && !isEditMode) {
+      setBarcode('');
+      setProduct(null);
+      setQuantity(1);
+      setSelectedMm(null);
+      setSelectedYyyy(null);
+      setLocation('');
+      setObservaciones('');
+      setHasCanje(false);
+      setWithdrawalDays(30);
+    }
+  }, [isOpen, isEditMode]);
+
+  // ✅ NUEVO: Validación robusta
+  const validation = useExpiryValidation({
+    barcode,
+    mm: selectedMm,
+    yyyy: selectedYyyy,
+    quantity,
+  });
+
+  // Usar validación para compatibilidad hacia atrás
+  const isDateExpired = validation.status === 'expired';
+  const isNearExpiry = validation.status === 'critical';
+
+  // Auto-detectar fecha del teclado (con rango corregido 2024-2027)
+  useKeyboardDateDetection(selectedMm, selectedYyyy, setSelectedMm, setSelectedYyyy, isOpen);
+
+  // ¿Se puede enviar? (usando validación robusta)
+  const canSubmit = validation.canSubmit && !isSubmitting;
+
+  // ¿El producto fue encontrado en la BD?
+  const productFound = product !== null;
+
+  // ✅ NUEVO: Handler de submit con confirmación obligatoria
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+
+    // ✅ Confirmación obligatoria para fechas críticas
+    if (validation.requiresConfirmation) {
+      const confirmed = window.confirm(validation.confirmationMessage);
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formData: ExpiryFormData = {
+        barcode: barcode.trim().toUpperCase(),
+        productName: product?.name || barcode || initialData?.productName || '',
+        quantity,
+        mm: selectedMm!,
+        yyyy: selectedYyyy!,
+        location,
+        observaciones,
+        providerName: product?.supplierName || initialData?.providerName,
+        providerRut: product?.supplierRut || initialData?.providerRut,
+        hasCanje: hasCanje,
+        withdrawalDays: withdrawalDays,
+      };
+
+      if (isEditMode) {
+        await onUpdate?.(formData);
+      } else {
+        await onSubmit?.(formData);
+      }
+      onClose();
+    } catch {
+      // Error manejado externamente
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[2000] flex justify-end pointer-events-none">
+          {/* Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/20 pointer-events-auto z-0"
+          />
+          
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className={`relative z-10 w-full sm:w-[480px] h-full overflow-hidden flex flex-col pointer-events-auto ${
+              isDark ? 'bg-base border-white/10' : 'bg-white border-slate-200'
+            } shadow-[-20px_0_60px_rgba(0,0,0,0.8)]`}
+          >
+            {/* HEADER */}
+            <div className={`p-4 border-b flex items-center justify-between ${
+              isDark ? 'border-white/5 bg-surface/50' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${
+                  isEditMode 
+                    ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'
+                    : isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                }`}>
+                  {isEditMode ? <Pencil className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                </div>
+                <div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${
+                    isDark ? 'text-slate-500' : 'text-slate-500'
+                  }`}>
+                    {isEditMode ? 'Editar Vencimiento' : 'Captura de Vencimiento'}
+                  </span>
+                  <p className={`font-black text-sm truncate max-w-[200px] ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    {product?.name || barcode || 'Sin producto'}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Proveedor y Políticas */}
+              <div className="flex items-center gap-2">
+                {/* Indicador de producto encontrado */}
+                {barcode.length >= 8 && (
+                  <div className={`px-2 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 ${
+                    productFound
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : 'bg-slate-500/10 text-muted border-slate-500/30'
+                  }`}>
+                    {productFound ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>BD</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>NUEVO</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                
+                {product && (
+                  <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex flex-col items-center leading-none ${
+                    hasCanje 
+                      ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                  }`}>
+                    <span className="mb-1">{hasCanje ? 'CANJE' : 'MERMA'}</span>
+                    <span className="text-xs">{withdrawalDays}D</span>
+                  </div>
+                )}
+                
+                {/* Indicador de proveedor */}
+                {product?.supplierName && (
+                  <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter ${
+                    isDark 
+                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' 
+                      : 'bg-blue-50 text-blue-600 border-blue-200'
+                  }`} title={product.supplierRut ? `RUT: ${product.supplierRut}` : 'Sin RUT'}>
+                    <span className="truncate max-w-[120px]">{product.supplierName}</span>
+                  </div>
+                )}
+                <button 
+                  onClick={onClose}
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                    isDark 
+                      ? 'bg-white/5 text-muted active:bg-white/10' 
+                      : 'bg-slate-200 text-slate-500 active:bg-slate-300'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENT */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+              
+              {/* 1. BÚSQUEDA DE PRODUCTO - Solo en modo creación */}
+              {isEditMode ? (
+                <div className="space-y-2">
+                  <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                    isDark ? 'text-slate-500' : 'text-slate-500'
+                  }`}>
+                    <Package className="w-3 h-3" />
+                    Producto
+                  </label>
+                  <div className={`px-4 py-3.5 rounded-xl border-2 ${
+                    isDark ? 'bg-white/5 border-white/10 text-muted' : 'bg-slate-100 border-slate-200 text-slate-600'
+                  }`}>
+                    <p className="font-mono font-bold">{barcode}</p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {initialData?.productName || barcode}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <ProductSearchInput
+                  value={barcode}
+                  onChange={(val) => { setBarcode(val); }}
+                  onProductFound={(p) => setProduct(p)}
+                  placeholder="Escanee o ingrese código..."
+                  theme={theme}
+                  autoFocus={!scannedBarcode}
+                />
+              )}
+
+              {/* 2. CANTIDAD */}
+              <QuantityInput
+                value={quantity}
+                onChange={setQuantity}
+                min={1}
+                max={9999}
+                label="Cantidad"
+                theme={theme}
+              />
+
+              {/* 3. SELECTOR DE MES */}
+              <div className="space-y-3">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  isDark ? 'text-slate-500' : 'text-slate-500'
+                }`}>
+                  <span className="w-5 h-5 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center text-[10px] font-black">3</span>
+                  Seleccione Mes {selectedMm && <span className="text-blue-400">→ {MESES[selectedMm - 1]}</span>}
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {MESES.map((mes, i) => i + 1).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setSelectedMm(m)}
+                      className={`h-11 rounded-xl font-black text-sm transition-all border-2 active:scale-90 ${
+                        selectedMm === m 
+                          ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' 
+                          : isDark
+                            ? 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
+                            : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {MESES[m - 1]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. SELECTOR DE AÑO */}
+              <div className="space-y-3">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  isDark ? 'text-slate-500' : 'text-slate-500'
+                }`}>
+                  <span className="w-5 h-5 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">4</span>
+                  Seleccione Año {selectedYyyy && <span className="text-emerald-400">→ {selectedYyyy}</span>}
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {AÑOS.map(y => (
+                    <button
+                      key={y}
+                      onClick={() => setSelectedYyyy(y)}
+                      className={`h-12 rounded-xl font-black text-lg italic tracking-tighter transition-all border-2 active:scale-95 ${
+                        selectedYyyy === y 
+                          ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_15px_rgba(5,150,105,0.4)]' 
+                          : isDark
+                            ? 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
+                            : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4.1. FECHA DE RETIRO CALCULADA */}
+              {selectedMm && selectedYyyy && (
+                (() => {
+                  const lastDay = new Date(selectedYyyy, selectedMm, 0).getDate();
+                  const expiryDate = new Date(selectedYyyy, selectedMm - 1, lastDay);
+                  const withdrawalDateCalc = new Date(expiryDate.getTime() - withdrawalDays * 24 * 60 * 60 * 1000);
+                  const daysUntilWithdrawal = Math.ceil((withdrawalDateCalc.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  const withdrawalMonth = MESES[withdrawalDateCalc.getMonth()];
+                  
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-4 rounded-2xl border-2 ${
+                        daysUntilWithdrawal < 0
+                          ? 'bg-rose-500/10 border-rose-500/30'
+                          : daysUntilWithdrawal <= 7
+                            ? 'bg-amber-500/10 border-amber-500/30'
+                            : 'bg-blue-500/10 border-blue-500/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`text-[10px] font-black uppercase tracking-widest ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-blue-400'
+                          }`}>
+                            📅 Fecha de Retiro
+                          </p>
+                          <p className={`text-lg font-black mt-1 ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-blue-400'
+                          }`}>
+                            {withdrawalMonth} {withdrawalDateCalc.getDate()}, {withdrawalDateCalc.getFullYear()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-[10px] font-black uppercase ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-slate-400'
+                          }`}>
+                            {daysUntilWithdrawal < 0 ? 'Ya pasó' : 'En'}
+                          </p>
+                          <p className={`text-2xl font-black ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : daysUntilWithdrawal <= 7 ? 'text-amber-400' : 'text-emerald-400'
+                          }`}>
+                            {daysUntilWithdrawal < 0 ? Math.abs(daysUntilWithdrawal) : daysUntilWithdrawal}
+                          </p>
+                          <p className={`text-[10px] uppercase ${
+                            daysUntilWithdrawal < 0 ? 'text-rose-400' : 'text-slate-400'
+                          }`}>
+                            {daysUntilWithdrawal < 0 ? 'días' : 'días'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-500">Política</span>
+                        <span className={`text-[10px] font-black ${
+                          hasCanje ? 'text-indigo-400' : 'text-amber-400'
+                        }`}>
+                          {hasCanje ? '🏭 CANJE' : '⚠️ MERMA'} • {withdrawalDays} días
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })()
+              )}
+
+              {/* 4.2. POLÍTICAS (Editable en modo edición) */}
+              {isEditMode && (
+                <div className="space-y-3">
+                  <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                    isDark ? 'text-slate-500' : 'text-slate-500'
+                  }`}>
+                    <span className="w-5 h-5 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center text-[10px] font-black">!</span>
+                    Políticas del Proveedor
+                  </label>
+                  <div className={`p-4 rounded-2xl border-2 ${
+                    isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    {/* Toggle Canje */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          ¿Tiene Canje?
+                        </p>
+                        <p className={`text-xs ${isDark ? 'text-muted' : 'text-slate-500'}`}>
+                          El proveedor acepta devolución de productos no vendidos
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setHasCanje(!hasCanje)}
+                        className={`relative w-14 h-8 rounded-full transition-colors ${
+                          hasCanje ? 'bg-indigo-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                          hasCanje ? 'translate-x-7' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                    
+                    {/* Días de retiro */}
+                    <div>
+                      <label className={`text-xs font-bold mb-2 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        Días de anticipación para retiro
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="1"
+                          max="90"
+                          value={withdrawalDays}
+                          onChange={(e) => setWithdrawalDays(Number(e.target.value))}
+                          className="flex-1 accent-purple-500"
+                        />
+                        <span className={`w-16 text-center font-black text-lg ${
+                          hasCanje ? 'text-indigo-400' : 'text-amber-500'
+                        }`}>
+                          {withdrawalDays}
+                        </span>
+                      </div>
+                      <p className={`text-[10px] mt-1 ${isDark ? 'text-muted' : 'text-slate-500'}`}>
+                        Días antes del vencimiento para retirar el producto
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. UBICACIÓN */}
+              <div className="space-y-2">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  isDark ? 'text-slate-500' : 'text-slate-500'
+                }`}>
+                  <MapPin className="w-3 h-3" />
+                  Ubicación en bodega
+                </label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value.toUpperCase())}
+                  placeholder="Ej: BOD-37, EST-5, NIVEL-2"
+                  className={`w-full px-4 py-3 rounded-xl text-sm font-mono font-bold uppercase tracking-wider border-2 transition-all outline-none ${
+                    isDark
+                      ? 'bg-white/5 border-white/10 focus:border-blue-500 text-white placeholder-slate-600'
+                      : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900 placeholder-slate-400'
+                  }`}
+                />
+              </div>
+
+              {/* 6. OBSERVACIONES */}
+              <div className="space-y-2">
+                <label className={`text-[10px] font-black uppercase tracking-widest ${
+                  isDark ? 'text-slate-500' : 'text-slate-500'
+                }`}>
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Notas adicionales sobre este lote..."
+                  rows={2}
+                  className={`w-full px-4 py-3 rounded-xl text-sm border-2 transition-all outline-none resize-none ${
+                    isDark
+                      ? 'bg-white/5 border-white/10 focus:border-blue-500 text-white placeholder-slate-600'
+                      : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900 placeholder-slate-400'
+                  }`}
+                />
+              </div>
+
+              {/* ✅ ALERTAS - Errors de validación */}
+              <AnimatePresence>
+                {validation.errors.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`p-4 rounded-2xl border-2 flex items-start gap-3 ${
+                      isDark 
+                        ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}
+                  >
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-black uppercase tracking-wider mb-1">❌ Errores de Validación</p>
+                      {validation.errors.map((error, i) => (
+                        <p key={i} className="text-[10px] opacity-90">{error}</p>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {isDateExpired && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`p-4 rounded-2xl border-2 flex items-start gap-3 ${
+                      isDark 
+                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}
+                  >
+                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider">⚠️ Producto Vencido</p>
+                      <p className="text-[10px] mt-1 opacity-80">
+                        La fecha seleccionada ya pasó. Requiere confirmación para registrar.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {isNearExpiry && !isDateExpired && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`p-4 rounded-2xl border-2 flex items-start gap-3 ${
+                      isDark 
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                        : 'bg-amber-50 border-amber-200 text-amber-700'
+                    }`}
+                  >
+                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider">⏰ Por Vencer</p>
+                      <p className="text-[10px] mt-1 opacity-80">
+                        Este producto vencerá en {validation.daysLeft} días. Requiere confirmación.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ✅ Warnings adicionales (status safe pero con días) */}
+                {validation.warnings.length > 0 && !isDateExpired && !isNearExpiry && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`p-4 rounded-2xl border-2 flex items-start gap-3 ${
+                      isDark 
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                        : 'bg-green-50 border-green-200 text-green-700'
+                    }`}
+                  >
+                    <CheckCheck className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider">✅ Vencimiento Válido</p>
+                      <p className="text-[10px] mt-1 opacity-80">
+                        {validation.warnings.join(' • ')}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* FOOTER */}
+            <div className={`p-5 border-t ${
+              isDark ? 'border-white/5 bg-surface/50' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <button
+                disabled={!canSubmit}
+                onClick={handleSubmit}
+                className={`w-full py-5 rounded-2xl font-black text-xl uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl ${
+                  isSubmitting 
+                    ? 'bg-slate-700 text-slate-500 cursor-wait'
+                    : canSubmit
+                      ? isEditMode
+                        ? 'bg-amber-500 text-white hover:bg-amber-400 active:bg-amber-300 shadow-amber-500/20'
+                        : 'bg-white text-black hover:bg-blue-50 active:bg-blue-100 shadow-blue-500/20'
+                      : isDark
+                        ? 'bg-white/5 text-slate-600 cursor-not-allowed'
+                        : 'bg-slate-200 text-muted cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : isEditMode ? (
+                  <><CornerDownLeft className="w-6 h-6 text-white" /> Actualizar Vencimiento</>
+                ) : (
+                  <><CornerDownLeft className="w-6 h-6 text-black" /> Registrar Vencimiento</>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Auto-detección de fecha desde teclado numérico
+ * ✅ CORREGIDO: Solo acepta años entre 2024 y 2027
+ */
+function useKeyboardDateDetection(
+  selectedMm: number | null,
+  selectedYyyy: number | null,
+  setSelectedMm: (mm: number) => void,
+  setSelectedYyyy: (yyyy: number) => void,
+  isOpen: boolean
+) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let yearAccumulator = '';
+    let monthAccumulator = '';
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar si hay focus en input
+      if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.key === 'Escape') return;
+      if (e.key === 'Enter') return;
+
+      if (/^[0-9]$/.test(e.key)) {
+        if (resetTimer) clearTimeout(resetTimer);
+        
+        resetTimer = setTimeout(() => {
+          yearAccumulator = '';
+          monthAccumulator = '';
+        }, 1200);
+
+        yearAccumulator += e.key;
+        monthAccumulator += e.key;
+
+        // ✅ CORREGIDO: Auto-detectar año (solo acepta 2024-2027)
+        if (yearAccumulator.length === 4) {
+          const year = parseInt(yearAccumulator);
+          if (year >= MIN_YEAR && year <= MAX_YEAR) {
+            setSelectedYyyy(year);
+            yearAccumulator = '';
+          } else {
+            // Reiniciar si no es un año válido (2024-2027)
+            yearAccumulator = yearAccumulator.slice(-1);
+          }
+        }
+
+        // Auto-detectar mes (1-2 dígitos)
+        const month = parseInt(monthAccumulator);
+        if (monthAccumulator.length === 2 && month >= 1 && month <= 12) {
+          setSelectedMm(month);
+          monthAccumulator = '';
+        } else if (monthAccumulator.length === 1 && month >= 1 && month <= 9) {
+          setSelectedMm(month);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+      if (resetTimer) clearTimeout(resetTimer);
+    };
+  }, [isOpen, setSelectedMm, setSelectedYyyy]);
+}
+

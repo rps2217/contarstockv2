@@ -1,0 +1,73 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "vite/client",
+      "vitest/globals"
+    ],
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    // ========================================================================
+    // TYPESCRIPT STRICT MODE - Habilitado progresivamente
+    // ========================================================================
+
+    // Error en código que nunca puede ser null/undefined
+    "strict": true,
+
+    // Requiere parámetros opcionales al final
+
+    // Verificar tipos en function bind/call/apply
+    "strictBindCallApply": true,
+
+    // No permite any implícito
+    "noImplicitAny": false, // Deshabilitado - muchos componentes legacy usan any
+
+    // No permite this implícito en funciones
+    "noImplicitThis": false, // Deshabilitado por ahora
+
+    // Trata undefined como un tipo válido
+    "strictNullChecks": true,
+
+    // No permite funciones sin return en funciones no-void
+    "noImplicitReturns": true,
+
+    // No permite casos fall-through en switch
+    "noFallthroughCasesInSwitch": true,
+
+    // Resuelve arrays como T | undefined
+    "noUncheckedIndexedAccess": false, // Deshabilitado por ahora - requiere cambios significativos
+
+    // No permite variables no usadas
+    "noUnusedLocals": false, // Deshabilitado - genera mucho ruido
+    "noUnusedParameters": false // Deshabilitado - genera mucho ruido
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
