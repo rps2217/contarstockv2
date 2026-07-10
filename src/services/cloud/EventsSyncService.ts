@@ -381,23 +381,23 @@ export class EventsSyncService {
 
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-          // Usar upsert para evitar duplicados por constraint único
+          // Usar INSERT simple - el índice único rechazará duplicados
           const { data, error } = await supabase
             .from('EVENTOS')
-            .upsert(rows, {
-              onConflict: 'frc,barcode',  // Usar 'frc' según columnas en Supabase
-              ignoreDuplicates: false,
-            })
+            .insert(rows)
             .select('id');
 
           if (error) {
-            // Si es error de constraint único, intentamos upsert individual
+            // Si es error de constraint único, contar como insertados
             if (error.code === '23505') {
-              logger.warn('EventsSync', 'Constraint único detectado, usando insert individual');
-              await this.insertEventsIndividually(batch, result);
+              logger.warn('EventsSync', 'Algunos eventos ya existen (duplicados)');
+              result.skipped += batch.length;
               break;
             }
-            throw error;
+            // Otros errores: intentar uno por uno
+            logger.warn('EventsSync', 'Error en batch, intentando individualmente');
+            await this.insertEventsIndividually(batch, result);
+            break;
           }
 
           result.success += data?.length || batch.length;
@@ -431,13 +431,16 @@ export class EventsSyncService {
       try {
         const { error } = await supabase
           .from('EVENTOS')
-          .upsert(mapEventToRemote(event), {
-            onConflict: 'frc,barcode',  // Usar 'frc' según columnas en Supabase
-          });
+          .insert(mapEventToRemote(event));
 
         if (error) {
-          result.failed++;
-          result.errors.push(`${event.barcode}: ${error.message}`);
+          // Ignorar errores de duplicados (código 23505)
+          if (error.code === '23505') {
+            result.skipped++;
+          } else {
+            result.failed++;
+            result.errors.push(`${event.barcode}: ${error.message}`);
+          }
         } else {
           result.success++;
         }
