@@ -79,38 +79,35 @@ function generateEventKey(frcNumber?: string, barcode?: string): string {
 }
 
 /**
- * Mapea evento local a formato Supabase (con normalización)
- * Columnas mínimas que debe tener la tabla EVENTOS en Supabase:
- * - barcode, frc_code, product_name, status, event_type, created_at
- * 
- * Columnas opcionales (si existen en Supabase):
- * - batch_number, expiry_date, resolution, location, transfer_doc, destination, notes, updated_at
+ * Mapea evento local a formato Supabase
+ * Nombres de columnas en Supabase (según tu tabla):
+ * - barcode, frc, productName, providerName, event, quantity, location,
+ *   nguia, destino, traspaso, observaciones, timestamp, claveUnica, isAdjusted,
+ *   updated_at, product_name, provider_name, clave_unica, is_adjusted
+ * - frc_code, destination, batch_number, expiry_date, resolution, event_type, transfer_doc, notes
  */
 function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
   const data: Record<string, unknown> = {
     barcode: normalizeString(event.barcode),
-    frc_code: normalizeString(event.frcNumber),
-    product_name: normalizeString(event.productName),
-    status: event.status || 'pending',
-    event_type: event.type || 'info',
-    created_at: event.createdAt 
-      ? new Date(event.createdAt).toISOString() 
-      : new Date().toISOString(),
+    frc: normalizeString(event.frcNumber),  // Usar 'frc' no 'frc_code'
+    productName: normalizeString(event.productName),  // Usar 'productName'
+    event: event.resolution || '',  // Mapear resolution -> event
+    quantity: 1,  // Campo requerido
+    location: normalizeString(event.location) || null,
+    destino: normalizeString(event.destino) || null,  // Usar 'destino' no 'destination'
+    traspaso: normalizeString(event.traspasoNumber) || null,  // Usar 'traspaso' no 'transfer_doc'
+    observaciones: normalizeString(event.resolution) || null,  // Usar 'observaciones' no 'notes'
+    timestamp: event.createdAt || Date.now(),
+    claveUnica: generateEventKey(event.frcNumber, event.barcode),
+    isAdjusted: event.status === 'adjusted',
+    updated_at: new Date().toISOString(),
   };
 
-  // Campos opcionales - solo incluir si tienen valor
+  // Campos opcionales
   if (event.batch) data.batch_number = event.batch;
   if (event.expiryDate) data.expiry_date = event.expiryDate;
-  if (event.resolution) {
-    data.resolution = normalizeString(event.resolution);
-    data.notes = normalizeString(event.resolution);
-  }
-  if (event.location) data.location = normalizeString(event.location);
-  if (event.traspasoNumber) data.transfer_doc = normalizeString(event.traspasoNumber);
-  if (event.destino) data.destination = normalizeString(event.destino);
-  if (event.updatedAt) {
-    data.updated_at = new Date(event.updatedAt).toISOString();
-  }
+  if (event.type) data.event_type = event.type;
+  if (event.resolution) data.resolution = normalizeString(event.resolution);
 
   return data;
 }
@@ -121,24 +118,25 @@ function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
 function mapEventToLocal(remote: Record<string, unknown>): Partial<InventoryEvent> {
   return {
     barcode: normalizeString(remote.barcode as string) || undefined,
-    frcNumber: normalizeString(remote.frc_code as string) || undefined,
-    productName: normalizeString(remote.product_name as string) || undefined,
-    batch: normalizeString(remote.batch as string) || undefined,
-    expiryDate: normalizeString(remote.expiry_date as string) || undefined,
-    resolution: normalizeString(remote.resolution as string) || undefined,
+    frcNumber: normalizeString((remote.frc || remote.frc_code) as string) || undefined,
+    productName: normalizeString((remote.productName || remote.product_name) as string) || undefined,
+    batch: normalizeString((remote.batch_number || remote.batch) as string) || undefined,
+    expiryDate: normalizeString((remote.expiry_date || remote.expiryDate) as string) || undefined,
+    resolution: normalizeString((remote.resolution || remote.observaciones || remote.event) as string) || undefined,
     status: (normalizeString(remote.status as string) as InventoryEvent['status']) || 'pending',
-    type: (normalizeString(remote.event_type as string) as InventoryEvent['type']) || 'info',
+    type: (normalizeString((remote.event_type || remote.type) as string) as InventoryEvent['type']) || 'info',
     location: normalizeString(remote.location as string) || undefined,
-    traspasoNumber: normalizeString(remote.transfer_doc as string) || undefined,
-    destino: normalizeString(remote.destination as string) || undefined,
-    syncStatus: 'synced' as const,
-    lastSyncTimestamp: Date.now(),
-    createdAt: remote.created_at 
-      ? new Date(remote.created_at as string).getTime() 
-      : Date.now(),
-    updatedAt: remote.updated_at 
-      ? new Date(remote.updated_at as string).getTime() 
-      : Date.now(),
+    destino: normalizeString((remote.destino || remote.destination) as string) || undefined,
+    traspasoNumber: normalizeString((remote.traspaso || remote.transfer_doc) as string) || undefined,
+    createdAt: typeof remote.timestamp === 'number' 
+      ? remote.timestamp 
+      : typeof remote.created_at === 'string' 
+        ? new Date(remote.created_at).getTime() 
+        : Date.now(),
+    updatedAt: typeof remote.updated_at === 'string' 
+      ? new Date(remote.updated_at).getTime() 
+      : undefined,
+    syncStatus: 'synced',
   };
 }
 
@@ -382,7 +380,7 @@ export class EventsSyncService {
           const { data, error } = await supabase
             .from('EVENTOS')
             .upsert(rows, {
-              onConflict: 'frc_code,barcode',
+              onConflict: 'frc,barcode',  // Usar 'frc' según columnas en Supabase
               ignoreDuplicates: false,
             })
             .select('id');
@@ -429,7 +427,7 @@ export class EventsSyncService {
         const { error } = await supabase
           .from('EVENTOS')
           .upsert(mapEventToRemote(event), {
-            onConflict: 'frc_code,barcode',
+            onConflict: 'frc,barcode',  // Usar 'frc' según columnas en Supabase
           });
 
         if (error) {
