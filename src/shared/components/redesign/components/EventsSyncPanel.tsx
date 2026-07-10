@@ -285,7 +285,7 @@ export const EventsSyncPanel: React.FC<EventsSyncPanelProps> = ({
 
         {/* Botón sync */}
         <button
-          onClick={syncEvents}
+          onClick={() => syncEvents()}
           disabled={isSyncing || !navigator.onLine}
           className={cn(
             "p-2 rounded-lg transition-colors",
@@ -361,7 +361,7 @@ export const EventsSyncPanel: React.FC<EventsSyncPanelProps> = ({
               {/* Controles */}
               <div className="flex items-center gap-3">
                 <button
-                  onClick={syncEvents}
+                  onClick={() => syncEvents()}
                   disabled={isSyncing || !navigator.onLine}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all",

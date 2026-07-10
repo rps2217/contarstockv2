@@ -263,8 +263,10 @@ export class EventsSyncService {
   /**
    * Sincroniza eventos pendientes con la nube
    * Incluye deduplicación basada en frc_code + barcode
+   * 
+   * @param forceSync - Si es true, sincroniza TODOS los eventos incluyendo los ya marcados como 'synced'
    */
-  async syncPendingEvents(): Promise<EventSyncResult> {
+  async syncPendingEvents(forceSync = false): Promise<EventSyncResult> {
     const result: EventSyncResult = {
       success: true,
       created: 0,
@@ -275,33 +277,43 @@ export class EventsSyncService {
     };
 
     try {
-      // 1. Obtener eventos pendientes de IndexedDB
-      const pendingEvents = await db.events
-        .where('syncStatus')
-        .equals('pending')
-        .toArray();
+      // 1. Obtener eventos de IndexedDB
+      let eventsToSync: InventoryEvent[] = [];
+      
+      if (forceSync) {
+        // Modo forzado: sincronizar TODOS los eventos
+        logger.info('EventsSync', 'Modo forzado: sincronizando todos los eventos');
+        eventsToSync = await db.events.toArray();
+      } else {
+        // Modo normal: solo pendientes y con error
+        const pendingEvents = await db.events
+          .where('syncStatus')
+          .equals('pending')
+          .toArray();
 
-      const errorEvents = await db.events
-        .where('syncStatus')
-        .equals('error')
-        .toArray();
+        const errorEvents = await db.events
+          .where('syncStatus')
+          .equals('error')
+          .toArray();
 
-      const allPending = [...pendingEvents, ...errorEvents];
+        eventsToSync = [...pendingEvents, ...errorEvents];
+      }
 
-      if (allPending.length === 0) {
-        logger.info('EventsSync', 'No hay eventos pendientes');
+      if (eventsToSync.length === 0) {
+        logger.info('EventsSync', 'No hay eventos para sincronizar');
         return result;
       }
 
-      logger.info('EventsSync', `Procesando ${allPending.length} eventos pendientes`);
+      logger.info('EventsSync', `Procesando ${eventsToSync.length} eventos`);
 
       // 2. Filtrar con deduplicación
-      const filtered = await filterEventsForSync(allPending);
+      const filtered = await filterEventsForSync(eventsToSync);
       
       result.skipped = filtered.toSkip;
 
       // 3. Crear eventos nuevos en lote
       if (filtered.toCreate.length > 0) {
+        logger.info('EventsSync', `Creando ${filtered.toCreate.length} eventos`);
         const createResult = await this.createEventsBatch(filtered.toCreate);
         result.created = createResult.success;
         result.failed += createResult.failed;
@@ -312,6 +324,7 @@ export class EventsSyncService {
 
       // 4. Actualizar eventos existentes en lote
       if (filtered.toUpdate.length > 0) {
+        logger.info('EventsSync', `Actualizando ${filtered.toUpdate.length} eventos`);
         const updateResult = await this.updateEventsBatch(filtered.toUpdate);
         result.updated = updateResult.success;
         result.failed += updateResult.failed;

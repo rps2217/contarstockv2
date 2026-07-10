@@ -311,7 +311,7 @@ export const RedesignEventsPage: React.FC = () => {
           <div className="flex items-center gap-3">
             {/* Botón de sincronización */}
             <button
-              onClick={syncEvents}
+              onClick={() => syncEvents()}
               disabled={isSyncing || !navigator.onLine}
               className={cn(
                 "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",

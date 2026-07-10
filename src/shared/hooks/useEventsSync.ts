@@ -74,7 +74,7 @@ export interface UseEventsSyncOptions {
 }
 
 export interface UseEventsSyncReturn {
-  syncEvents: () => Promise<EventSyncResult | null>;
+  syncEvents: (forceSync?: boolean) => Promise<EventSyncResult | null>;
   pushEvents: () => Promise<EventSyncResult | null>;
   pullEvents: () => Promise<void>;
   stats: EventStats | undefined;
@@ -203,7 +203,7 @@ export function useEventsSync(
   // SYNC (PUSH + PULL)
   // ============================================================================
 
-  const syncEvents = useCallback(async (): Promise<EventSyncResult | null> => {
+  const syncEvents = useCallback(async (forceSync = false): Promise<EventSyncResult | null> => {
     if (syncInProgress.current || !navigator.onLine) return null;
 
     const startTime = Date.now();
@@ -214,7 +214,7 @@ export function useEventsSync(
     try {
       for (let attempt = 0; attempt < retryConfig.maxRetries; attempt++) {
         try {
-          const pushResult = await eventsSyncService.syncPendingEvents();
+          const pushResult = await eventsSyncService.syncPendingEvents(forceSync);
           const lastSync = localStorage.getItem('lastSync_EVENTOS');
           const lastSyncTimestamp = lastSync ? parseInt(lastSync, 10) : undefined;
           const pullStats = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
