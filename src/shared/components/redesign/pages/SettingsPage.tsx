@@ -27,6 +27,8 @@ import {
   Activity,
   AlertTriangle,
   FlaskConical,
+  Trash2,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores'
@@ -36,6 +38,7 @@ import { AuditPanel } from '@/shared/components/audit/AuditPanel'
 import { FeatureFlagsPanel } from '@/shared/components/settings/FeatureFlagsPanel'
 import { usePermissions } from '@/shared/hooks/usePermissions'
 import { toast } from 'sonner'
+import { clearCacheWithConfirmation } from '@/lib/cacheCleaner.tsx'
 
 // ✅ Health Dashboard y Integrity Service
 import { HealthDashboard } from '@/shared/components/ui/health'
@@ -226,6 +229,7 @@ export const RedesignSettingsPage: React.FC = () => {
   // ✅ Estados para Health Dashboard
   const [showHealthDashboard, setShowHealthDashboard] = useState(false)
   const [isRunningIntegrityCheck, setIsRunningIntegrityCheck] = useState(false)
+  const [isClearingCache, setIsClearingCache] = useState(false)
 
   // Handler para cambiar tema (usando el contexto principal)
   const handleThemeChange = (newTheme: ThemeName) => {
@@ -237,6 +241,16 @@ export const RedesignSettingsPage: React.FC = () => {
   const handleToggle = (key: 'soundEnabled' | 'hapticsEnabled' | 'ttsEnabled' | 'batchTrackingEnabled' | 'lowEndMode', value: boolean, setter: (v: boolean) => void) => {
     updateSetting(key, value)
     setter(value)
+  }
+
+  // ✅ Handler para limpiar cache y datos
+  const handleClearCache = async () => {
+    setIsClearingCache(true)
+    try {
+      await clearCacheWithConfirmation()
+    } finally {
+      setIsClearingCache(false)
+    }
   }
 
   // ✅ Handler para ejecutar integridad de datos
@@ -524,6 +538,22 @@ export const RedesignSettingsPage: React.FC = () => {
                     isRunningIntegrityCheck ? (
                       <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
                     ) : undefined
+                  }
+                />
+                {/* ✅ Opción de Limpiar Cache */}
+                <SettingsItem
+                  icon={Trash2}
+                  label="Limpiar Cache y Datos"
+                  description="Reset completo de la aplicación"
+                  onClick={handleClearCache}
+                  rightElement={
+                    isClearingCache ? (
+                      <Loader2 className="w-5 h-5 text-rose-500 animate-spin" />
+                    ) : (
+                      <span className="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-medium">
+                        PELIGRO
+                      </span>
+                    )
                   }
                 />
               </>
