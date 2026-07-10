@@ -80,24 +80,30 @@ function generateEventKey(frcNumber?: string, barcode?: string): string {
 
 /**
  * Mapea evento local a formato Supabase
- * Nombres de columnas en Supabase (según tu tabla):
- * - barcode, frc, productName, providerName, event, quantity, location,
- *   nguia, destino, traspaso, observaciones, timestamp, claveUnica, isAdjusted,
- *   updated_at, product_name, provider_name, clave_unica, is_adjusted
- * - frc_code, destination, batch_number, expiry_date, resolution, event_type, transfer_doc, notes
+ * Columnas de la tabla EVENTOS en Supabase:
+ * - id (UUID, requerido), barcode, frc, productName, event (NOT NULL), quantity,
+ *   location, destino, traspaso, observaciones, timestamp, claveUnica, isAdjusted
+ * - product_name, provider_name, clave_unica, is_adjusted, frc_code
+ * - destination, batch_number, expiry_date, resolution, event_type, transfer_doc, notes
  */
 function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
+  // Generar UUID para el evento
+  const eventId = event.id 
+    ? String(event.id).length === 36 ? event.id : crypto.randomUUID()
+    : crypto.randomUUID();
+
   const data: Record<string, unknown> = {
+    id: eventId,
     barcode: normalizeString(event.barcode),
-    frc: normalizeString(event.frcNumber),  // Usar 'frc' no 'frc_code'
-    productName: normalizeString(event.productName),  // Usar 'productName'
-    event: event.resolution || '',  // Mapear resolution -> event
-    quantity: 1,  // Campo requerido
+    frc: normalizeString(event.frcNumber),
+    productName: normalizeString(event.productName),
+    event: event.resolution || 'Evento sin descripción',  // Campo NOT NULL
+    quantity: 1,
     location: normalizeString(event.location) || null,
-    destino: normalizeString(event.destino) || null,  // Usar 'destino' no 'destination'
-    traspaso: normalizeString(event.traspasoNumber) || null,  // Usar 'traspaso' no 'transfer_doc'
-    observaciones: normalizeString(event.resolution) || null,  // Usar 'observaciones' no 'notes'
-    timestamp: event.createdAt || Date.now(),
+    destino: normalizeString(event.destino) || null,
+    traspaso: normalizeString(event.traspasoNumber) || null,
+    observaciones: normalizeString(event.resolution) || null,
+    timestamp: event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString(),
     claveUnica: generateEventKey(event.frcNumber, event.barcode),
     isAdjusted: event.status === 'adjusted',
     updated_at: new Date().toISOString(),
@@ -117,22 +123,21 @@ function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
  */
 function mapEventToLocal(remote: Record<string, unknown>): Partial<InventoryEvent> {
   return {
+    id: remote.id as number | undefined,
     barcode: normalizeString(remote.barcode as string) || undefined,
     frcNumber: normalizeString((remote.frc || remote.frc_code) as string) || undefined,
     productName: normalizeString((remote.productName || remote.product_name) as string) || undefined,
     batch: normalizeString((remote.batch_number || remote.batch) as string) || undefined,
     expiryDate: normalizeString((remote.expiry_date || remote.expiryDate) as string) || undefined,
     resolution: normalizeString((remote.resolution || remote.observaciones || remote.event) as string) || undefined,
-    status: (normalizeString(remote.status as string) as InventoryEvent['status']) || 'pending',
+    status: (remote.isAdjusted ? 'adjusted' : 'pending') as InventoryEvent['status'],
     type: (normalizeString((remote.event_type || remote.type) as string) as InventoryEvent['type']) || 'info',
     location: normalizeString(remote.location as string) || undefined,
     destino: normalizeString((remote.destino || remote.destination) as string) || undefined,
     traspasoNumber: normalizeString((remote.traspaso || remote.transfer_doc) as string) || undefined,
-    createdAt: typeof remote.timestamp === 'number' 
-      ? remote.timestamp 
-      : typeof remote.created_at === 'string' 
-        ? new Date(remote.created_at).getTime() 
-        : Date.now(),
+    createdAt: typeof remote.timestamp === 'string' 
+      ? new Date(remote.timestamp).getTime() 
+      : Date.now(),
     updatedAt: typeof remote.updated_at === 'string' 
       ? new Date(remote.updated_at).getTime() 
       : undefined,
