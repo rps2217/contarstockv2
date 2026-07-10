@@ -4,8 +4,8 @@ import { Product } from '../types';
 
 const scoreProduct = (product: Product, queryTokens: string[]): number => {
  let score = 0;
- const nameLower = product.name.toLowerCase();
- const barcodeLower = product.barcode.toLowerCase();
+ const nameLower = (product.name || '').toLowerCase();
+ const barcodeLower = (product.barcode || '').toLowerCase();
  const categoryLower = (product.category || '').toLowerCase();
 
  // 1. Critical Match: Barcode Exact
@@ -54,7 +54,7 @@ self.onmessage = (e: MessageEvent) => {
  // Filter first (broad match) then sort
  const results = products
  .filter((p: Product) => {
- const str = (p.barcode + ' ' + p.name + ' ' + (p.category || '')).toLowerCase();
+ const str = ((p.barcode || '') + ' ' + (p.name || '') + ' ' + (p.category || '')).toLowerCase();
  return tokens.some((token: string) => str.includes(token));
  })
  .map((p: Product) => ({ product: p, score: scoreProduct(p, tokens) }))

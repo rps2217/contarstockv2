@@ -80,6 +80,7 @@ function generateEventKey(frcNumber?: string, barcode?: string): string {
 
 /**
  * Mapea evento local a formato Supabase (con normalización)
+ * NOTA: No incluir sync_status ya que no existe en la tabla de Supabase
  */
 function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
   return {
@@ -95,7 +96,6 @@ function mapEventToRemote(event: InventoryEvent): Record<string, unknown> {
     transfer_doc: normalizeString(event.traspasoNumber) || null,
     destination: normalizeString(event.destino) || null,
     notes: normalizeString(event.resolution) || null,
-    sync_status: 'synced',
     created_at: event.createdAt 
       ? new Date(event.createdAt).toISOString() 
       : new Date().toISOString(),
