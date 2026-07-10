@@ -382,10 +382,10 @@ export class EventsSyncService {
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           // Usar INSERT simple - el índice único rechazará duplicados
+          // Sin .select() para evitar problemas con RLS
           const { data, error } = await supabase
             .from('EVENTOS')
-            .insert(rows)
-            .select('id');
+            .insert(rows);
 
           if (error) {
             // Si es error de constraint único, contar como insertados
@@ -395,7 +395,7 @@ export class EventsSyncService {
               break;
             }
             // Otros errores: intentar uno por uno
-            logger.warn('EventsSync', 'Error en batch, intentando individualmente');
+            logger.warn('EventsSync', `Error en batch (${error.message}), intentando individualmente`);
             await this.insertEventsIndividually(batch, result);
             break;
           }
