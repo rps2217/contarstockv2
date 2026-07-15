@@ -204,8 +204,8 @@ export const getSettings = (): AppSettings => {
  ...(parsed.captureSettings || {})
  }
  };
- } catch (e) {
- console.error("Critical: Settings recovery failed", e);
+ } catch (err: unknown) {
+ logger.error('Settings', 'Critical: Settings recovery failed', err instanceof Error ? err.message : String(err));
  return DEFAULT_SETTINGS;
  }
 };
@@ -214,7 +214,7 @@ export const saveSettings = async (settings: AppSettings) => {
  localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
  try {
  await db.settings.put({ key: 'app_config', value: settings });
- } catch (e) {
- console.warn("No se pudo persistir configuración para SW", e);
+ } catch (err: unknown) {
+ logger.warn('Settings', 'No se pudo persistir configuración para SW', err instanceof Error ? err.message : String(err));
  }
 };

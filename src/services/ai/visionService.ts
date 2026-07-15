@@ -103,8 +103,8 @@ export const visionService = {
         status: 'active',
         createdAt: Date.now(),
       };
-    } catch (e) {
-      console.error("Error parsing vision response:", e, text);
+    } catch (err: unknown) {
+      logger.error('visionService', 'Error parsing vision response', err instanceof Error ? err.message : String(err));
       throw new Error("Error al interpretar los datos de la guía. Por favor, intenta con una foto más clara.");
     }
   }

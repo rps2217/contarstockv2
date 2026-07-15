@@ -114,8 +114,8 @@ export function useSlicesLogic(): UseSlicesLogicReturn {
             return true;
         }
       });
-    } catch (e) {
-      console.error('Error fetching slice data:', e);
+    } catch (err: unknown) {
+      logger.error('useSlicesLogic', 'Error fetching slice data', err instanceof Error ? err.message : String(err));
       return [];
     }
   }, [activeSlice, slices]);

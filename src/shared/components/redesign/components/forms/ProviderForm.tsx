@@ -28,8 +28,8 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ provider, onSave, on
     try {
       await onSave(form)
       onClose()
-    } catch (error) {
-      console.error('Error saving provider:', error)
+    } catch (err: unknown) {
+      logger.error('ProviderForm', 'Error saving provider', err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false)
     }

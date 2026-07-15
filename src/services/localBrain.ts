@@ -80,7 +80,7 @@ class LocalBrainService {
         this.updateStatus('ready', 100, 'IA Activa');
       } catch (err: unknown) {
         const error = handleError(err, 'LocalBrain_INIT');
-        console.error("[LocalBrain] Init Failed:", error.message);
+        logger.error('localBrain', 'Init Failed', error.message);
         this.initPromise = null;
         if (!silent) this.updateStatus('error', 0, error.message);
         else this.status = 'idle';

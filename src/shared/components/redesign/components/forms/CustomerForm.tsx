@@ -26,8 +26,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave, on
     try {
       await onSave(form)
       onClose()
-    } catch (error) {
-      console.error('Error saving customer:', error)
+    } catch (err: unknown) {
+      logger.error('CustomerForm', 'Error saving customer', err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false)
     }

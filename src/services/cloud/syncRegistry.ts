@@ -604,8 +604,8 @@ export async function filterEventsWithoutDuplicates(
     });
 
     return result;
-  } catch (err) {
-    console.error('Error en filterEventsWithoutDuplicates:', err);
+  } catch (err: unknown) {
+    logger.error('syncRegistry', 'Error en filterEventsWithoutDuplicates', err instanceof Error ? err.message : String(err));
     // En caso de error, crear todos
     result.toCreate = localEvents;
     return result;
@@ -630,13 +630,13 @@ export async function eventExistsInCloud(
       .limit(1);
 
     if (error) {
-      console.warn('Error verificando existencia de evento:', error.message);
+      logger.warn('syncRegistry', 'Error verificando existencia de evento', error.message);
       return false;
     }
 
     return data && data.length > 0;
-  } catch (err) {
-    console.error('Error en eventExistsInCloud:', err);
+  } catch (err: unknown) {
+    logger.error('syncRegistry', 'Error en eventExistsInCloud', err instanceof Error ? err.message : String(err));
     return false;
   }
 }

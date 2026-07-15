@@ -157,8 +157,8 @@ export const useReports = () => {
       }
       
       toast.success("Historial de auditorías actualizado con éxito");
-    } catch (e: any) {
-      console.error("Error pulling cloud sessions and counts:", e);
+    } catch (err: unknown) {
+      logger.error('useReports', 'Error pulling cloud sessions and counts', err instanceof Error ? err.message : String(err));
     } finally {
       setIsPulling(false);
     }
@@ -264,8 +264,8 @@ export const useReports = () => {
       
       setLiveConsolidated(resolvedList);
       setIsLiveStale(false);
-    } catch (err) {
-      console.error("Error cargando consolidación:", err);
+    } catch (err: unknown) {
+      logger.error('useReports', 'Error cargando consolidación', err instanceof Error ? err.message : String(err));
       // Mantener cache anterior si existe
       if (!liveCache) {
         toast.error("No se pudo regenerar la consolidación de la nube");

@@ -133,8 +133,8 @@ export const useReceptionLogic = () => {
           try {
             await uploadGroupCompat(receptionGroup);
             addToast('Recepción sincronizada correctamente', 'success');
-          } catch (syncError) {
-            console.error('Sync error:', syncError);
+          } catch (syncError: unknown) {
+            logger.error('useReceptionLogic', 'Sync error', syncError instanceof Error ? syncError.message : String(syncError));
             addToast('Error al sincronizar. Se reintentará automáticamente.', 'warning');
           }
         }
@@ -143,7 +143,7 @@ export const useReceptionLogic = () => {
       }
       
       return true;
-    } catch (e) {
+    } catch (err: unknown) {
       SoundFX.play('error');
       addToast('Error al finalizar la recepción', 'error');
       return false;
@@ -192,8 +192,8 @@ export const useReceptionLogic = () => {
       } else {
         addToast('No hay datos pendientes de sincronizar', 'info');
       }
-    } catch (err) {
-      console.error('Manual sync error:', err);
+    } catch (err: unknown) {
+      logger.error('useReceptionLogic', 'Manual sync error', err instanceof Error ? err.message : String(err));
       addToast('Error al sincronizar con la nube', 'error');
       SoundFX.play('error');
     } finally {

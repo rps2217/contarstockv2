@@ -101,9 +101,9 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
           }
 
           resolve(arrayToSave.length);
-        } catch (error) {
-          console.error("Error bulk saving providers:", error);
-          reject(error);
+        } catch (err: unknown) {
+          logger.error('providerImporter', 'Error bulk saving providers', err instanceof Error ? err.message : String(err));
+          reject(err);
         }
       },
       error: (error: Error) => {

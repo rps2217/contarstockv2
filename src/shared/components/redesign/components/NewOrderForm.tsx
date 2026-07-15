@@ -55,8 +55,8 @@ export const NewOrderForm: React.FC<NewOrderFormProps> = ({ onSaved, onCancel })
       
       setParsedItems(items)
       toast.success(`${items.length} items parseados`)
-    } catch (err) {
-      console.error('Error CSV:', err)
+    } catch (err: unknown) {
+      logger.error('NewOrderForm', 'Error CSV', err instanceof Error ? err.message : String(err));
       toast.error('Error al procesar CSV')
     }
   }
@@ -109,9 +109,9 @@ export const NewOrderForm: React.FC<NewOrderFormProps> = ({ onSaved, onCancel })
       await ExpectedOrderRepository.save(newOrder)
       toast.success('Carga teorica guardada exitosamente')
       onSaved?.()
-    } catch (err: any) {
-      console.error('Error guardando:', err)
-      toast.error(err.message || 'Error al guardar')
+    } catch (err: unknown) {
+      logger.error('NewOrderForm', 'Error guardando', err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSavingOrder(false)
     }

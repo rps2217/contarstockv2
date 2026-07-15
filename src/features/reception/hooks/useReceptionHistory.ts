@@ -54,8 +54,8 @@ export const useReceptionHistory = () => {
           await db.sessions.bulkPut(sessionsToPut);
         }
       }
-    } catch (e) {
-      console.error('Error pulling reception data:', e);
+    } catch (err: unknown) {
+      logger.error('useReceptionHistory', 'Error pulling reception data', err instanceof Error ? err.message : String(err));
     } finally {
       setIsInitialLoading(false);
     }

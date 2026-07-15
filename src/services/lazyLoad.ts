@@ -16,8 +16,8 @@ export const lazyWithRetry = (
  throw new Error("Módulo cargado no contiene un export default válido.");
  }
  return component;
- } catch (error) {
- console.error("Fallo crítico cargando módulo:", error);
+ } catch (err: unknown) {
+ logger.error('lazyLoad', 'Fallo crítico cargando módulo', err instanceof Error ? err.message : String(err));
  
  // Intento de recuperación por recarga suave si el error es de red
  const hasRefreshed = sessionStorage.getItem('retry-refreshed');

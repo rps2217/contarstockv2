@@ -85,8 +85,8 @@ class SyncMetricsService {
       await this.cleanupOldMetrics(cutoff);
       
       this.initialized = true;
-    } catch (e) {
-      console.error('Failed to init SyncMetrics:', e);
+    } catch (err: unknown) {
+      logger.error('SyncMetrics', 'Failed to init SyncMetrics', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -105,13 +105,13 @@ class SyncMetricsService {
     this.listeners.forEach(listener => {
       try {
         listener(fullMetric);
-      } catch (e) {
-        console.error('Metric listener error:', e);
+      } catch (err: unknown) {
+        logger.error('SyncMetrics', 'Metric listener error', err instanceof Error ? err.message : String(err));
       }
     });
 
     // Persistir en IndexedDB
-    this.persistMetric(fullMetric).catch(console.error);
+    this.persistMetric(fullMetric).catch((err) => logger.error('SyncMetrics', 'persistMetric failed', err instanceof Error ? err.message : String(err)));
   }
 
   /**
@@ -338,8 +338,8 @@ class SyncMetricsService {
         status: metric.success ? 'success' : 'error',
         errorMessage: metric.error
       });
-    } catch (e) {
-      console.error('Failed to persist metric:', e);
+    } catch (err: unknown) {
+      logger.error('SyncMetrics', 'Failed to persist metric', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -349,8 +349,8 @@ class SyncMetricsService {
         .where('timestamp')
         .below(cutoff)
         .delete();
-    } catch (e) {
-      console.error('Failed to cleanup old metrics:', e);
+    } catch (err: unknown) {
+      logger.error('SyncMetrics', 'Failed to cleanup old metrics', err instanceof Error ? err.message : String(err));
     }
   }
 }

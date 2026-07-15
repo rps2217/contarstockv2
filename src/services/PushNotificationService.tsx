@@ -173,8 +173,8 @@ export class PushNotificationService {
       }
       
       return granted;
-    } catch (error) {
-      console.error('Error al solicitar permiso de notificaciones:', error);
+    } catch (err: unknown) {
+      logger.error('PushNotification', 'Error al solicitar permiso de notificaciones', err instanceof Error ? err.message : String(err));
       return false;
     }
   }
@@ -296,8 +296,8 @@ export class PushNotificationService {
       if (alert.type !== 'critical') {
         setTimeout(() => notification.close(), 10000);
       }
-    } catch (error) {
-      console.error('Error al enviar notificación push:', error);
+    } catch (err: unknown) {
+      logger.error('PushNotification', 'Error al enviar notificación push', err instanceof Error ? err.message : String(err));
     }
   }
 

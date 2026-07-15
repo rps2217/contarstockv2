@@ -80,7 +80,9 @@ export const closeSession = async (id: string) => {
   await SessionRepository.save({ ...session, status: 'completed' });
   
   if (navigator.onLine) {
-      supabaseSyncService.pushBatch('SESIONES_CONTEO', [session as any]).catch(console.error);
+      supabaseSyncService.pushBatch('SESIONES_CONTEO', [session as any]).catch((err) => 
+        logger.error('sessionService', 'Error en pushBatch', err instanceof Error ? err.message : String(err))
+      );
   }
 };
 

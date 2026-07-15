@@ -372,7 +372,7 @@ export const setConfiguredStrategy = async (strategy: ConflictStrategy): Promise
         conflictStrategy: strategy
       }
     });
-  } catch (e) {
-    console.error('Failed to save conflict strategy:', e);
+  } catch (err: unknown) {
+    logger.error('ConflictResolution', 'Failed to save conflict strategy', err instanceof Error ? err.message : String(err));
   }
 };
