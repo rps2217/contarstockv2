@@ -234,13 +234,13 @@ export class ExpiryService {
     if (rangeCheck.shouldSkip) {
       if (skipIfOutOfRange) {
         if (!silent) {
-          console.log(`[ExpiryService] Omisión: año ${yyyy} fuera del rango ${EXPIRY_CONSTANTS.MIN_YEAR}-${EXPIRY_CONSTANTS.MAX_YEAR}`);
+          logger.info('ExpiryService', `Omisión: año ${yyyy} fuera del rango ${EXPIRY_CONSTANTS.MIN_YEAR}-${EXPIRY_CONSTANTS.MAX_YEAR}`);
         }
         return null;
       }
       
       if (!silent) {
-        console.warn(`[ExpiryService] Año ${yyyy} fuera del rango configurado, pero se guardará de todas formas`);
+        logger.warn('ExpiryService', `Año ${yyyy} fuera del rango configurado, pero se guardará de todas formas`);
       }
     }
     
@@ -430,8 +430,8 @@ export class ExpiryService {
         'update',
         entry as unknown as Record<string, any>
       );
-    } catch (error) {
-      console.error('[ExpiryService] Error al encolar para sync:', error);
+    } catch (err: unknown) {
+      logger.error('ExpiryService', 'Error al encolar para sync', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -452,8 +452,8 @@ export class ExpiryService {
       if (entry.id) {
         await db.expirations.update(entry.id, { syncStatus: 'synced' });
       }
-    } catch (error) {
-      console.error('[ExpiryService] Error al sincronizar:', error);
+    } catch (err: unknown) {
+      logger.error('ExpiryService', 'Error al sincronizar', err instanceof Error ? err.message : String(err));
       if (entry.id) {
         await db.expirations.update(entry.id, { syncStatus: 'error' });
       }

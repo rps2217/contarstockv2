@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Package, Zap, AlertCircle, Loader2, CheckCircle2, Database } from 'lucide-react';
 import type { SyncUIGroup } from '../hooks/useSyncManager';
 
@@ -9,11 +9,13 @@ interface Props {
   progress?: string | number;
 }
 
-export const SyncGroupCard: React.FC<Props> = ({ group, uiStatus, progress }) => {
-  const isOrphan = group.erpOrder === 'REGISTROS_HUERFANOS';
-  const isDynamic = group.type === 'dynamic';
-  const isHammer = group.sessionType === 'hammer' || group.type === 'inventory';
-  const tableName = group.tableName || (group.sessionIds.length > 0 ? `Bulto ${group.sessionIds[0]}` : 'N/A');
+const SyncGroupCardComponent: React.FC<Props> = ({ group, uiStatus, progress }) => {
+  const { isOrphan, isDynamic, isHammer, tableName } = useMemo(() => ({
+    isOrphan: group.erpOrder === 'REGISTROS_HUERFANOS',
+    isDynamic: group.type === 'dynamic',
+    isHammer: group.sessionType === 'hammer' || group.type === 'inventory',
+    tableName: group.tableName || (group.sessionIds.length > 0 ? `Bulto ${group.sessionIds[0]}` : 'N/A')
+  }), [group.erpOrder, group.type, group.sessionType, group.tableName, group.sessionIds]);
   
   return (
     <div className={`bg-white dark:bg-surface md:hover:shadow-md md:hover:scale-[1.01] p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all ${
@@ -73,4 +75,6 @@ export const SyncGroupCard: React.FC<Props> = ({ group, uiStatus, progress }) =>
     </div>
   );
 };
+
+export const SyncGroupCard = memo(SyncGroupCardComponent);
 
