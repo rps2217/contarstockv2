@@ -161,16 +161,16 @@ export const EventsImporter: React.FC<EventsImporterProps> = ({ onSave, onCancel
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Instrucciones */}
-      <div className="bg-surface rounded-xl p-4 border border-subtle">
-        <h4 className="text-xs font-black uppercase text-muted mb-2">Formato esperado</h4>
-        <p className="text-xs text-secondary leading-relaxed">
+      <div className="bg-surface rounded-xl p-3 sm:p-4 border border-subtle">
+        <h4 className="text-[10px] sm:text-xs font-black uppercase text-muted mb-1 sm:mb-2">Formato esperado</h4>
+        <p className="text-[10px] sm:text-xs text-secondary leading-relaxed">
           Pega texto plano con columnas separadas por tabulador. El sistema detectará automáticamente:
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-1 sm:gap-2">
           {['N° FRC', 'Código', 'Descripción', 'Lote', 'Vence', 'Resolución'].map(col => (
-            <span key={col} className="px-2 py-1 bg-elevated rounded text-xs text-muted font-mono">{col}</span>
+            <span key={col} className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-elevated rounded text-[10px] sm:text-xs text-muted font-mono">{col}</span>
           ))}
         </div>
       </div>
@@ -181,7 +181,7 @@ export const EventsImporter: React.FC<EventsImporterProps> = ({ onSave, onCancel
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          "border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer",
+          "border-2 border-dashed rounded-xl sm:rounded-2xl p-4 sm:p-8 text-center transition-colors cursor-pointer",
           isDragging ? "border-blue-500 bg-blue-500/5" :
           parsedEvents.length > 0 ? "border-emerald-500 bg-emerald-500/5" :
           "border-subtle hover:border-white/20"
@@ -195,22 +195,22 @@ export const EventsImporter: React.FC<EventsImporterProps> = ({ onSave, onCancel
           onChange={(e) => e.target.files?.[0] && handleFileDrop(e.target.files[0])}
           className="hidden"
         />
-        <Clipboard className={cn("w-12 h-12 mx-auto mb-3", parsedEvents.length > 0 ? "text-emerald-500" : "text-muted")} />
-        <p className="text-sm font-medium text-primary">
-          {parsedEvents.length > 0 ? `${parsedEvents.length} registros detectados` : 'Arrastra archivo o haz clic para seleccionar'}
+        <Clipboard className={cn("w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3", parsedEvents.length > 0 ? "text-emerald-500" : "text-muted")} />
+        <p className="text-xs sm:text-sm font-medium text-primary">
+          {parsedEvents.length > 0 ? `${parsedEvents.length} registros detectados` : 'Arrastra archivo o haz clic'}
         </p>
-        <p className="text-xs text-muted mt-1">Archivos .txt, .csv o pega texto directamente</p>
+        <p className="text-[10px] sm:text-xs text-muted mt-1 hidden sm:block">Archivos .txt, .csv o pega texto directamente</p>
       </div>
 
       {/* Área de texto pegado */}
-      <div className="bg-surface rounded-xl p-4 border border-subtle">
-        <h4 className="text-xs font-black uppercase text-muted mb-3">O pega el texto directamente</h4>
+      <div className="bg-surface rounded-xl p-3 sm:p-4 border border-subtle">
+        <h4 className="text-[10px] sm:text-xs font-black uppercase text-muted mb-2 sm:mb-3">O pega el texto directamente</h4>
         <textarea
-          rows={8}
+          rows={6}
           value={pasteText}
           onChange={(e) => handlePasteText(e.target.value)}
-          placeholder={"121-192\t5412360004201\tAC. ESEN. LAVANDA VERDADERA ORG 10 ML\t1064421\t25/09/2026\tMANTENER EN EL LOCAL PARA SU VENTA HASTA SU CANJE O VENCIMIENTO\n121-179\t7804902034858\tSH. CAIDA-GRASO 350 ML\t552326\t25/05/2029\tCARGAR STOCK A B80"}
-          className="w-full bg-base border border-subtle rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-blue-500 resize-none"
+          placeholder={"121-192\t5412360004201\tAC. ESEN. LAVANDA VERDADERA ORG 10 ML\t1064421\t25/09/2026\tMANTENER EN EL LOCAL"}
+          className="w-full bg-base border border-subtle rounded-lg px-3 py-2 text-xs sm:text-sm font-mono focus:outline-none focus:border-blue-500 resize-none"
         />
       </div>
 
@@ -218,62 +218,62 @@ export const EventsImporter: React.FC<EventsImporterProps> = ({ onSave, onCancel
       {parsedEvents.length > 0 && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <div className="bg-surface rounded-xl p-3 border border-subtle text-center">
-              <p className="text-xl font-bold text-primary">{stats.total}</p>
-              <p className="text-xs text-muted">Total</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="bg-surface rounded-xl p-2 sm:p-3 border border-subtle text-center">
+              <p className="text-base sm:text-xl font-bold text-primary">{stats.total}</p>
+              <p className="text-[10px] sm:text-xs text-muted">Total</p>
             </div>
-            <div className="bg-rose-500/10 rounded-xl p-3 border border-rose-500/30 text-center">
-              <p className="text-xl font-bold text-rose-500">{stats.error}</p>
-              <p className="text-xs text-rose-500">Errores</p>
+            <div className="bg-rose-500/10 rounded-xl p-2 sm:p-3 border border-rose-500/30 text-center">
+              <p className="text-base sm:text-xl font-bold text-rose-500">{stats.error}</p>
+              <p className="text-[10px] sm:text-xs text-rose-500">Errores</p>
             </div>
-            <div className="bg-amber-500/10 rounded-xl p-3 border border-amber-500/30 text-center">
-              <p className="text-xl font-bold text-amber-500">{stats.warning}</p>
-              <p className="text-xs text-amber-500">Alertas</p>
+            <div className="bg-amber-500/10 rounded-xl p-2 sm:p-3 border border-amber-500/30 text-center">
+              <p className="text-base sm:text-xl font-bold text-amber-500">{stats.warning}</p>
+              <p className="text-[10px] sm:text-xs text-amber-500">Alertas</p>
             </div>
-            <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/30 text-center">
-              <p className="text-xl font-bold text-blue-500">{stats.info}</p>
-              <p className="text-xs text-blue-500">Info</p>
+            <div className="bg-blue-500/10 rounded-xl p-2 sm:p-3 border border-blue-500/30 text-center">
+              <p className="text-base sm:text-xl font-bold text-blue-500">{stats.info}</p>
+              <p className="text-[10px] sm:text-xs text-blue-500">Info</p>
             </div>
-            <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/30 text-center">
-              <p className="text-xl font-bold text-emerald-500">{stats.success}</p>
-              <p className="text-xs text-emerald-500">OK</p>
+            <div className="bg-emerald-500/10 rounded-xl p-2 sm:p-3 border border-emerald-500/30 text-center col-span-1 sm:col-span-1">
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{stats.success}</p>
+              <p className="text-[10px] sm:text-xs text-emerald-500">OK</p>
             </div>
           </div>
 
           {/* Lista preview */}
-          <div className="bg-surface rounded-xl border border-subtle overflow-hidden max-h-80 overflow-y-auto">
-            <div className="p-3 border-b border-subtle flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase text-muted">
-                Preview ({parsedEvents.length} registros)
+          <div className="bg-surface rounded-xl border border-subtle overflow-hidden max-h-64 sm:max-h-80 overflow-y-auto">
+            <div className="p-2 sm:p-3 border-b border-subtle flex items-center justify-between">
+              <h4 className="text-[10px] sm:text-xs font-black uppercase text-muted">
+                Preview ({parsedEvents.length})
               </h4>
               <button
                 onClick={() => { setParsedEvents([]); setPasteText(''); }}
                 className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
             <div className="divide-y divide-subtle">
-              {parsedEvents.slice(0, 50).map((event, idx) => (
-                <div key={idx} className="flex items-start gap-3 px-4 py-3 hover:bg-elevated transition-colors">
-                  {getTypeIcon(event.type)}
+              {parsedEvents.slice(0, 30).map((event, idx) => (
+                <div key={idx} className="flex items-start gap-2 px-2 sm:px-4 py-2 sm:py-3 hover:bg-elevated transition-colors">
+                  <div className="shrink-0 mt-0.5">{getTypeIcon(event.type)}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono text-muted">{event.frcNumber}</span>
-                      <span className="text-xs font-mono bg-elevated px-1.5 py-0.5 rounded text-blue-400">{event.barcode}</span>
+                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                      <span className="text-[10px] sm:text-xs font-mono text-muted">{event.frcNumber}</span>
+                      <span className="text-[10px] sm:text-xs font-mono bg-elevated px-1 sm:px-1.5 py-0.5 rounded text-blue-400 hidden sm:inline">{event.barcode}</span>
                     </div>
-                    <p className="text-sm text-primary truncate mt-0.5">{event.productName}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted">
-                      <span>Lote: <span className="font-mono">{event.batch}</span></span>
+                    <p className="text-xs sm:text-sm text-primary truncate mt-0.5">{event.productName}</p>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[10px] sm:text-xs text-muted">
+                      <span className="hidden sm:inline">Lote: <span className="font-mono">{event.batch}</span></span>
                       <span>Vence: <span className="font-mono">{event.expiryDate}</span></span>
                     </div>
-                    <p className="text-xs text-secondary mt-1 line-clamp-1">{event.resolution}</p>
+                    <p className="text-[10px] sm:text-xs text-secondary mt-0.5 line-clamp-1">{event.resolution}</p>
                   </div>
                 </div>
               ))}
-              {parsedEvents.length > 50 && (
-                <p className="text-xs text-center text-muted py-3">+{parsedEvents.length - 50} registros más...</p>
+              {parsedEvents.length > 30 && (
+                <p className="text-[10px] sm:text-xs text-center text-muted py-2 sm:py-3">+{parsedEvents.length - 30} registros más...</p>
               )}
             </div>
           </div>
@@ -281,26 +281,27 @@ export const EventsImporter: React.FC<EventsImporterProps> = ({ onSave, onCancel
       )}
 
       {/* Acciones */}
-      <div className="flex gap-3">
+      <div className="flex gap-2 sm:gap-3">
         <button
           onClick={onCancel}
-          className="flex-1 py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium transition-colors"
+          className="flex-1 py-2.5 sm:py-3 bg-surface hover:bg-elevated text-primary rounded-xl font-medium transition-colors text-sm"
         >
           Cancelar
         </button>
         <button
           onClick={handleSave}
           disabled={saving || parsedEvents.length === 0}
-          className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors text-sm"
         >
           {saving ? (
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
-              <Save className="w-5 h-5" />
+              <Save className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.div>
           ) : (
             <>
-              <Save className="w-5 h-5" />
-              Guardar {parsedEvents.length} Eventos
+              <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Guardar {parsedEvents.length} Eventos</span>
+              <span className="sm:hidden">Guardar ({parsedEvents.length})</span>
             </>
           )}
         </button>

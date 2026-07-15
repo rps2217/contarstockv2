@@ -533,18 +533,18 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
         style={embedded ? { borderRadius: '1rem', maxWidth: '100%', height: '100%' } : {}}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-subtle shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
             {viewMode === 'table' ? (
               <>
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <TableIcon className="w-5 h-5 text-amber-500" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <TableIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-primary">Gestión de Eventos</h2>
-                  <p className="text-xs text-muted">
+                  <h2 className="text-base sm:text-lg font-bold text-primary">Eventos</h2>
+                  <p className="text-[10px] sm:text-xs text-muted hidden sm:block">
                     {selectedCount > 0 
-                      ? `${selectedCount} seleccionado${selectedCount !== 1 ? 's' : ''} de ${filteredEvents.length} registros`
+                      ? `${selectedCount} seleccionado${selectedCount !== 1 ? 's' : ''} de ${filteredEvents.length}`
                       : `${filteredEvents.length} registros`
                     }
                   </p>
@@ -552,50 +552,50 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
               </>
             ) : (
               <>
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-blue-500" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                 </div>
-                <h2 className="text-lg font-bold text-primary">
-                  {editingEvent ? 'Editar Evento' : 'Nuevo Evento'}
+                <h2 className="text-base sm:text-lg font-bold text-primary">
+                  {editingEvent ? 'Editar' : 'Nuevo Evento'}
                 </h2>
               </>
             )}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {viewMode === 'table' && selectedCount === 0 && (
               <button
                 onClick={handleNew}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                className="flex items-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-500 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                Nuevo
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Nuevo</span>
               </button>
             )}
             {viewMode === 'table' && (
               <button
                 onClick={handleCleanOrphanEvents}
-                className="flex items-center gap-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-500 px-3 py-2 rounded-xl text-sm font-medium transition-colors border border-amber-500/30"
+                className="flex items-center gap-1 sm:gap-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-500 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium transition-colors border border-amber-500/30"
                 title="Eliminar eventos con FRC='-' para evitar descargas fantasma"
               >
-                <Trash2 className="w-4 h-4" />
-                Limpiar huérfanos
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Limpiar</span>
               </button>
             )}
             {embedded && onSwitchView && (
               <button
                 onClick={onSwitchView}
-                className="flex items-center gap-2 bg-surface hover:bg-elevated text-secondary px-3 py-2 rounded-xl text-sm font-medium transition-colors border border-subtle"
+                className="flex items-center gap-1 sm:gap-2 bg-surface hover:bg-elevated text-secondary px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors border border-subtle"
               >
-                <List className="w-4 h-4" />
-                Cards
+                <List className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Cards</span>
               </button>
             )}
             <button
               onClick={embedded ? onSwitchView || (() => {}) : onClose}
-              className="p-2 hover:bg-base rounded-xl transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-base rounded-lg sm:rounded-xl transition-colors"
             >
-              <X className="w-5 h-5 text-muted" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-muted" />
             </button>
           </div>
         </div>
@@ -677,25 +677,25 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* Filtros */}
-                <div className="px-6 py-3 border-b border-subtle space-y-3 shrink-0">
-                  <div className="flex gap-3">
-                    <div className="relative flex-1 max-w-md">
+                <div className="px-4 sm:px-6 py-2 sm:py-3 border-b border-subtle shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Buscar por producto, barras, FRC..."
-                        className="w-full bg-base border border-subtle rounded-xl pl-10 pr-4 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
+                        placeholder="Buscar..."
+                        className="w-full bg-base border border-subtle rounded-xl pl-9 pr-4 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     
                     <select
                       value={typeFilter}
                       onChange={(e) => setTypeFilter(e.target.value as EventType | 'all')}
-                      className="bg-base border border-subtle rounded-xl px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
+                      className="bg-base border border-subtle rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm text-primary focus:outline-none focus:border-blue-500"
                     >
-                      <option value="all">Todos los tipos</option>
+                      <option value="all">Tipo</option>
                       {TYPE_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
@@ -704,9 +704,9 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value as EventStatus | 'all')}
-                      className="bg-base border border-subtle rounded-xl px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
+                      className="bg-base border border-subtle rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm text-primary focus:outline-none focus:border-blue-500"
                     >
-                      <option value="all">Todos los estados</option>
+                      <option value="all">Estado</option>
                       {STATUS_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
@@ -715,12 +715,12 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 </div>
 
                 {/* Tabla */}
-                <div className="flex-1 overflow-auto">
-                  <table className="w-full">
+                <div className="flex-1 overflow-auto min-w-0">
+                  <table className="w-full min-w-[600px]">
                     <thead className="sticky top-0 bg-surface z-10">
                       <tr className="border-b border-subtle">
                         {/* Checkbox de selección */}
-                        <th className="w-12 px-4 py-3">
+                        <th className="w-10 sm:w-12 px-2 sm:px-4 py-2 sm:py-3">
                           <button
                             onClick={toggleSelectAll}
                             className="flex items-center justify-center w-5 h-5 rounded transition-colors hover:bg-elevated"
@@ -740,14 +740,15 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                           <th
                             key={col.key}
                             className={cn(
-                              'px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider',
+                              'px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-muted uppercase tracking-wider',
                               col.width,
                               col.sortable && 'cursor-pointer hover:text-primary transition-colors'
                             )}
                             onClick={() => col.sortable && handleSort(col.key)}
                           >
                             <div className="flex items-center gap-1">
-                              {col.label}
+                              <span className="hidden sm:inline">{col.label}</span>
+                              <span className="sm:hidden">{col.label === 'FRC' ? 'FRC' : col.label === 'Producto' ? 'Prod' : col.label === 'Barras' ? 'Bar' : col.label === 'Lote' ? 'Lot' : col.label === 'Vencimiento' ? 'Ven' : col.label === 'Estado' ? 'Est' : col.label === 'Fecha' ? 'Fec' : ''}</span>
                               {col.sortable && sortConfig.key === col.key && (
                                 sortConfig.direction === 'asc' 
                                   ? <ChevronUp className="w-3 h-3" />
@@ -788,7 +789,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                               )}
                             >
                               {/* Checkbox de selección */}
-                              <td className="w-12 px-4 py-3">
+                              <td className="w-10 sm:w-12 px-2 sm:px-4 py-2 sm:py-3">
                                 <button
                                   onClick={() => event.id !== undefined && toggleSelect(event.id)}
                                   className="flex items-center justify-center w-5 h-5 rounded transition-colors hover:bg-elevated"
@@ -801,44 +802,44 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                                 </button>
                               </td>
                               {/* FRC */}
-                              <td className="px-4 py-3">
-                                <span className="text-sm font-mono text-primary">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                <span className="text-xs sm:text-sm font-mono text-primary truncate block max-w-[60px] sm:max-w-none">
                                   {event.frcNumber || '-'}
                                 </span>
                               </td>
                               
                               {/* Producto */}
-                              <td className="px-4 py-3">
-                                <span className="text-sm text-primary line-clamp-1">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                <span className="text-xs sm:text-sm text-primary line-clamp-1 block max-w-[80px] sm:max-w-[200px]">
                                   {event.productName || '-'}
                                 </span>
                               </td>
                               
                               {/* Barras */}
-                              <td className="px-4 py-3">
-                                <span className="text-sm font-mono text-secondary">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
+                                <span className="text-xs sm:text-sm font-mono text-secondary truncate block max-w-[80px]">
                                   {event.barcode || '-'}
                                 </span>
                               </td>
                               
                               {/* Lote */}
-                              <td className="px-4 py-3">
-                                <span className="text-sm text-secondary">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
+                                <span className="text-xs sm:text-sm text-secondary truncate block max-w-[60px]">
                                   {event.batch || '-'}
                                 </span>
                               </td>
                               
                               {/* Vencimiento */}
-                              <td className="px-4 py-3">
-                                <span className="text-sm text-secondary">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden lg:table-cell">
+                                <span className="text-xs sm:text-sm text-secondary">
                                   {event.expiryDate || '-'}
                                 </span>
                               </td>
                               
                               {/* Estado */}
-                              <td className="px-4 py-3">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
                                 <span className={cn(
-                                  'text-xs font-medium px-2 py-1 rounded-full',
+                                  'text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap',
                                   event.status === 'pending' && 'bg-amber-500/20 text-amber-500',
                                   event.status === 'destined' && 'bg-blue-500/20 text-blue-500',
                                   event.status === 'adjusted' && 'bg-emerald-500/20 text-emerald-500'
@@ -848,47 +849,49 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                               </td>
                               
                               {/* Indicador de sincronización */}
-                              <td className="px-4 py-3">
-                                {event.syncStatus === 'pending' && (
-                                  <div className="flex items-center justify-center" title="Esperando respaldo">
-                                    <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
-                                  </div>
-                                )}
-                                {event.syncStatus === 'synced' && (
-                                  <div className="flex items-center justify-center" title="Respaldado">
-                                    <Cloud className="w-4 h-4 text-emerald-400" />
-                                  </div>
-                                )}
-                                {event.syncStatus === 'error' && (
-                                  <div className="flex items-center justify-center" title="Error de sincronización">
-                                    <CloudOff className="w-4 h-4 text-rose-400" />
-                                  </div>
-                                )}
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                <div className="flex items-center justify-center">
+                                  {event.syncStatus === 'pending' && (
+                                    <div title="Esperando respaldo">
+                                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 animate-spin" />
+                                    </div>
+                                  )}
+                                  {event.syncStatus === 'synced' && (
+                                    <div title="Respaldado">
+                                      <Cloud className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
+                                    </div>
+                                  )}
+                                  {event.syncStatus === 'error' && (
+                                    <div title="Error">
+                                      <CloudOff className="w-3 h-3 sm:w-4 sm:h-4 text-rose-400" />
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               
                               {/* Fecha */}
-                              <td className="px-4 py-3">
-                                <span className="text-sm text-muted">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
+                                <span className="text-[10px] sm:text-sm text-muted">
                                   {event.createdAt ? formatDate(event.createdAt) : '-'}
                                 </span>
                               </td>
                               
                               {/* Acciones */}
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-1">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                <div className="flex items-center gap-0.5 sm:gap-1">
                                   <button
                                     onClick={() => handleEdit(event)}
-                                    className="p-1.5 rounded-lg hover:bg-blue-500/20 transition-colors"
+                                    className="p-1 rounded-lg hover:bg-blue-500/20 transition-colors"
                                     title="Editar"
                                   >
-                                    <Edit2 className="w-4 h-4 text-blue-500" />
+                                    <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                                   </button>
                                   <button
                                     onClick={() => event.id && handleDelete(event.id)}
-                                    className="p-1.5 rounded-lg hover:bg-rose-500/20 transition-colors"
+                                    className="p-1 rounded-lg hover:bg-rose-500/20 transition-colors"
                                     title="Eliminar"
                                   >
-                                    <Trash2 className="w-4 h-4 text-rose-500" />
+                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-rose-500" />
                                   </button>
                                 </div>
                               </td>
@@ -906,17 +909,17 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex-1 overflow-y-auto p-6"
+                className="flex-1 overflow-y-auto p-4 sm:p-6"
               >
-                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6 max-w-2xl">
+                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4 sm:space-y-6 max-w-2xl">
                   {/* Estado y Traspaso */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">Estado</label>
+                      <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Estado</label>
                       <select
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as EventStatus })}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
+                        className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500"
                       >
                         {STATUS_OPTIONS.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -924,7 +927,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">N° de Traspaso</label>
+                      <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">N° de Traspaso</label>
                       <input
                         type="number"
                         value={formData.traspasoNumber}
@@ -936,34 +939,34 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                             status: value.trim() !== '' ? 'adjusted' as EventStatus : formData.status
                           })
                         }}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500 font-mono"
                         placeholder="Ej: 12345"
                       />
                       {formData.traspasoNumber.trim() !== '' && (
-                        <p className="text-xs text-emerald-500 mt-1">✓ Estado: Ajustados</p>
+                        <p className="text-[10px] sm:text-xs text-emerald-500 mt-1">✓ Estado: Ajustados</p>
                       )}
                     </div>
                   </div>
 
                   {/* FRC y Barras */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">Número FRC</label>
+                      <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Número FRC</label>
                       <input
                         type="text"
                         value={formData.frcNumber}
                         onChange={(e) => setFormData({ ...formData, frcNumber: e.target.value })}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500 font-mono"
                         placeholder="FRC-0001"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">Código de Barras</label>
+                      <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Código de Barras</label>
                       <input
                         type="text"
                         value={formData.barcode}
                         onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500 font-mono"
                         placeholder="1234567890123"
                       />
                     </div>
@@ -971,36 +974,36 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
 
                   {/* Producto */}
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-2">Nombre del Producto *</label>
+                    <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Nombre del Producto *</label>
                     <input
                       type="text"
                       value={formData.productName}
                       onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-                      className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
+                      className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500"
                       placeholder="Nombre del producto"
                       required
                     />
                   </div>
 
                   {/* Lote y Vencimiento */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">Lote</label>
+                      <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Lote</label>
                       <input
                         type="text"
                         value={formData.batch}
                         onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
+                        className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500"
                         placeholder="LOT-2024-001"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-2">Fecha de Vencimiento</label>
+                      <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Fecha de Vencimiento</label>
                       <input
                         type="text"
                         value={formData.expiryDate}
                         onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                        className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500"
+                        className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500"
                         placeholder="mm/yyyy"
                       />
                     </div>
@@ -1008,22 +1011,22 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
 
                   {/* Resolución */}
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-2">Resolución / Notas</label>
+                    <label className="block text-xs sm:text-sm font-medium text-secondary mb-1 sm:mb-2">Resolución / Notas</label>
                     <textarea
                       value={formData.resolution}
                       onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
-                      className="w-full bg-base border border-subtle rounded-xl px-4 py-2.5 text-primary focus:outline-none focus:border-blue-500 resize-none"
+                      className="w-full bg-base border border-subtle rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-primary focus:outline-none focus:border-blue-500 resize-none"
                       rows={3}
                       placeholder="Notas o resolución del evento..."
                     />
                   </div>
 
                   {/* Botones */}
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-subtle">
+                  <div className="flex items-center justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-subtle">
                     <button
                       type="button"
                       onClick={handleCancelForm}
-                      className="px-6 py-2.5 rounded-xl text-sm font-medium text-secondary bg-base border border-subtle hover:bg-elevated transition-colors"
+                      className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium text-secondary bg-base border border-subtle hover:bg-elevated transition-colors"
                     >
                       Cancelar
                     </button>
