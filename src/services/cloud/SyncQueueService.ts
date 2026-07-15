@@ -28,6 +28,21 @@ const MAX_RETRY_DELAY = 60000; // 1 minuto
 class SyncQueueService {
   private isProcessing = false;
   private onlineHandler: (() => void) | null = null;
+  private syncIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Cleanup de recursos (útil para testing)
+   */
+  destroy(): void {
+    if (this.onlineHandler) {
+      window.removeEventListener('online', this.onlineHandler);
+      this.onlineHandler = null;
+    }
+    if (this.syncIntervalId) {
+      clearInterval(this.syncIntervalId);
+      this.syncIntervalId = null;
+    }
+  }
 
   /**
    * Agrega una operación a la cola
@@ -199,7 +214,7 @@ class SyncQueueService {
     window.addEventListener('online', this.onlineHandler);
     
     // Procesar periódicamente cada 30 segundos si hay conexión
-    setInterval(() => {
+    this.syncIntervalId = setInterval(() => {
       if (navigator.onLine) {
         this.processQueue();
       }

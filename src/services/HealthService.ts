@@ -88,6 +88,7 @@ export class HealthService {
   private metricsHistory: SystemMetrics[] = [];
   private readonly MAX_ALERTS = 100;
   private readonly METRICS_HISTORY_SIZE = 100;
+  private metricsIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {
     this.startTime = Date.now();
@@ -104,6 +105,16 @@ export class HealthService {
       HealthService.instance = new HealthService();
     }
     return HealthService.instance;
+  }
+
+  /**
+   * Detiene la recolección de métricas (útil para testing)
+   */
+  stopMetricsCollection(): void {
+    if (this.metricsIntervalId) {
+      clearInterval(this.metricsIntervalId);
+      this.metricsIntervalId = null;
+    }
   }
 
   // ==========================================================================
@@ -464,7 +475,7 @@ export class HealthService {
 
   private startMetricsCollection(): void {
     // Registrar métricas cada 5 minutos
-    setInterval(() => {
+    this.metricsIntervalId = setInterval(() => {
       this.recordMetrics();
     }, 5 * 60 * 1000);
     
