@@ -2,7 +2,7 @@
  * SyncStatusCards - Tarjetas de estado de sincronización
  */
 
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Wifi, WifiOff, Clock, Database } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -14,12 +14,15 @@ interface Props {
   lastSyncTime: number | null;
 }
 
-export const SyncStatusCards: React.FC<Props> = ({
+const SyncStatusCardsComponent: React.FC<Props> = ({
   isOnline,
   isSupabaseConnected,
   totalPending,
   lastSyncTime,
 }) => {
+  const lastSyncFormatted = useMemo(() => {
+    return lastSyncTime ? format(new Date(lastSyncTime), 'HH:mm:ss dd/MM', { locale: es }) : 'Nunca';
+  }, [lastSyncTime]);
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Connection status */}
@@ -66,9 +69,11 @@ export const SyncStatusCards: React.FC<Props> = ({
       <div className="bg-surface/40 border border-subtle/80 p-4.5 rounded-2xl">
         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">Última Reconciliación</span>
         <span className="text-xs font-bold text-muted font-mono mt-1.5 block">
-          {lastSyncTime ? format(new Date(lastSyncTime), 'HH:mm:ss dd/MM', { locale: es }) : 'Nunca'}
+          {lastSyncFormatted}
         </span>
       </div>
     </div>
   );
 };
+
+export const SyncStatusCards = memo(SyncStatusCardsComponent);

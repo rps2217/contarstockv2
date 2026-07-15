@@ -27,9 +27,8 @@ export const createSession = async (
     ? expectedItems 
     : (expectedItems?.items || []);
     
-  console.log('[createSession] expectedItems input:', expectedItems);
-  console.log('[createSession] itemsToSave count:', itemsToSave.length);
-  console.log('[createSession] itemsToSave sample:', itemsToSave.slice(0, 2));
+  logger.debug('SessionService', 'expectedItems input', { expectedItems, itemsToSaveCount: itemsToSave.length });
+  logger.debug('SessionService', 'itemsToSave sample', { items: itemsToSave.slice(0, 2) });
   
   const session: CountingSession = {
     id: crypto.randomUUID(),
@@ -45,7 +44,7 @@ export const createSession = async (
     totalSKUs: 0
   };
   
-  console.log('[createSession] session.expectedItems BEFORE save:', session.expectedItems);
+  logger.debug('SessionService', 'session.expectedItems before save', { expectedItems: session.expectedItems });
   
   // ✅ Usar UnitOfWork para crear sesión atómicamente
   const result = await withUnitOfWork(async (uow) => {
@@ -60,7 +59,7 @@ export const createSession = async (
     throw new Error(`Error al crear sesión: ${result.error}`);
   }
 
-  console.log('[createSession] session saved with expectedItems:', session.expectedItems?.length);
+  logger.debug('SessionService', 'session saved', { expectedItemsCount: session.expectedItems?.length });
   logger.info('SESSION', `Sesión creada: ${session.id}`);
   return session;
 };
@@ -201,7 +200,7 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
        }
      }
    } catch (err) {
-     console.warn("[sessionService] Error al descargar teórico desde nube:", err);
+     logger.warn('SessionService', 'Error al descargar teórico desde nube', { error: String(err) });
    }
    return await ExpectedOrderRepository.getById(cleanId) || null;
 };

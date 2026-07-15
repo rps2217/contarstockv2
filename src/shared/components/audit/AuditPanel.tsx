@@ -3,7 +3,9 @@
  * AuditPanel - Panel de visualización de logs de auditoría
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,

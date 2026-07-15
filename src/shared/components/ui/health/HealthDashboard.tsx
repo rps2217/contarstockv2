@@ -13,7 +13,9 @@
  * @since 2026-07-07
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, 

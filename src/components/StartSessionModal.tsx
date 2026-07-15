@@ -3,6 +3,7 @@ import { DownloadCloud, Loader2, AlertCircle, FileSearch, Database, Box, ArrowRi
 import { CountingSession, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService';
 import { SoundFX } from '../services/audio';
+import { logger } from '../services/logger';
 import { useHIDScanner } from '../hooks/useHIDScanner';
 import { Modal } from '../shared/components/ui/Modal';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
@@ -26,9 +27,13 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [localSavedOrders, setLocalSavedOrders] = useState<ExpectedOrder[]>([]);
 
   const loadSavedOrders = useCallback(() => {
-    ExpectedOrderRepository.getAll().then((list) => {
-      setLocalSavedOrders(list || []);
-    });
+    ExpectedOrderRepository.getAll()
+      .then((list) => {
+        setLocalSavedOrders(list || []);
+      })
+      .catch(err => {
+        logger.error('StartSessionModal', 'Error loading saved orders', { error: String(err) });
+      });
   }, []);
 
   useEffect(() => {

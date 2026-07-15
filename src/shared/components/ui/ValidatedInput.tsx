@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { logger } from '@/services/logger';
 
 export type ValidationStatus = 'idle' | 'validating' | 'valid' | 'warning' | 'invalid';
 
@@ -121,10 +122,14 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = ({
   const handleBlur = () => {
     if (validateOnBlur) {
       setTouched(true);
-      validate(value).then(result => {
-        setStatus(result.status);
-        setMessage(result.message);
-      });
+      validate(value)
+        .then(result => {
+          setStatus(result.status);
+          setMessage(result.message);
+        })
+        .catch(err => {
+          logger.error('ValidatedInput', 'Validation error', { error: String(err) });
+        });
     }
   };
 

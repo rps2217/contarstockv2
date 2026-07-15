@@ -1,5 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState } from 'react'
+import { logger } from '@/services/logger';
+;
 import { ChevronLeft, Trash2, Minus, Plus, Cloud, Printer, Loader2, FileSpreadsheet, FileText, Zap, Search, CheckCircle2 } from 'lucide-react';
 import * as sessionService from '../../../services/sessionService';
 import { useLiveQuery } from 'dexie-react-hooks';

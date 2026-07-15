@@ -8,7 +8,9 @@
  * - Notificaciones de escritorio
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 import { db } from '@/db';
 import { useTaskStore } from '@/stores';
 import { toast } from 'sonner';

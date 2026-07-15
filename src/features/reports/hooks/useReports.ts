@@ -1,4 +1,6 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { logger } from '@/services/logger';
+;
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import * as sessionService from "../../../services/sessionService";

@@ -8,7 +8,9 @@
  * @module SyncMetricsDashboard
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { motion } from 'framer-motion';
 import { 
   Activity,

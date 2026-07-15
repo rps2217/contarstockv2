@@ -4,6 +4,7 @@
  */
 
 import { toast } from 'sonner'
+import { logger } from '../services/logger';
 
 export interface CacheCleanResult {
   success: boolean
@@ -37,22 +38,22 @@ export async function clearAllAppData(): Promise<CacheCleanResult> {
   try {
     localStorage.clear()
     result.cleared.localStorage = true
-    console.log('[CacheCleaner] localStorage limpiado')
+    logger.debug('CacheCleaner', 'localStorage limpiado')
   } catch (err) {
     const error = `localStorage: ${err}`
     result.errors.push(error)
-    console.error('[CacheCleaner] Error limpiando localStorage:', err)
+    logger.error('CacheCleaner', 'Error limpiando localStorage', { error: String(err) })
   }
 
   // 2. Limpiar sessionStorage
   try {
     sessionStorage.clear()
     result.cleared.sessionStorage = true
-    console.log('[CacheCleaner] sessionStorage limpiado')
+    logger.debug('CacheCleaner', 'sessionStorage limpiado')
   } catch (err) {
     const error = `sessionStorage: ${err}`
     result.errors.push(error)
-    console.error('[CacheCleaner] Error limpiando sessionStorage:', err)
+    logger.error('CacheCleaner', 'Error limpiando sessionStorage', { error: String(err) })
   }
 
   // 3. Limpiar IndexedDB
@@ -68,11 +69,11 @@ export async function clearAllAppData(): Promise<CacheCleanResult> {
       }
     }
     result.cleared.indexedDB = true
-    console.log('[CacheCleaner] IndexedDB limpiado')
+    logger.debug('CacheCleaner', 'IndexedDB limpiado')
   } catch (err) {
     const error = `indexedDB: ${err}`
     result.errors.push(error)
-    console.error('[CacheCleaner] Error limpiando IndexedDB:', err)
+    logger.error('CacheCleaner', 'Error limpiando IndexedDB', { error: String(err) })
   }
 
   // 4. Limpiar Cache API
@@ -89,12 +90,12 @@ export async function clearAllAppData(): Promise<CacheCleanResult> {
         })
       )
       result.cleared.caches = true
-      console.log('[CacheCleaner] Caches limpiados')
+      logger.debug('CacheCleaner', 'Caches limpiados')
     }
   } catch (err) {
     const error = `caches: ${err}`
     result.errors.push(error)
-    console.error('[CacheCleaner] Error limpiando caches:', err)
+    logger.error('CacheCleaner', 'Error limpiando caches', { error: String(err) })
   }
 
   // 5. Desregistrar Service Worker
@@ -105,12 +106,12 @@ export async function clearAllAppData(): Promise<CacheCleanResult> {
         await registration.unregister()
       }
       result.cleared.serviceWorker = true
-      console.log('[CacheCleaner] Service Workers desregistrados')
+      logger.debug('CacheCleaner', 'Service Workers desregistrados')
     }
   } catch (err) {
     const error = `serviceWorker: ${err}`
     result.errors.push(error)
-    console.error('[CacheCleaner] Error desregistrando Service Workers:', err)
+    logger.error('CacheCleaner', 'Error desregistrando Service Workers', { error: String(err) })
   }
 
   result.success = result.errors.length === 0
@@ -183,7 +184,7 @@ export async function clearCacheWithConfirmation(): Promise<boolean> {
       return false
     }
   } catch (err) {
-    console.error('[CacheCleaner] Error general:', err)
+    logger.error('CacheCleaner', 'Error general', { error: String(err) })
     toast.error('Error al limpiar datos')
     return false
   }

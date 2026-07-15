@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 
 import { VisualGuide } from "../../types";
 

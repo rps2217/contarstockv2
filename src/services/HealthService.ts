@@ -428,8 +428,9 @@ export class HealthService {
         // ✅ Timestamp para historial
         timestamp: Date.now(),
       };
-    } catch (error) {
-      logger.error('HealthService', 'Failed to get metrics', String(error));
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('HealthService', 'Failed to get metrics', error.message);
       throw error;
     }
   }

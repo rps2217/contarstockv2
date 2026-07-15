@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { handleError } from './types';
 import { getSettings } from './settings';
 

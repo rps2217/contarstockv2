@@ -20,6 +20,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository';
 import { erpService, type ErpManifest } from '@/services/erpService';
 import type { ExpectedOrder } from '@/types';
+import { logger } from '@/services/logger';
 
 // ============================================================================
 // TIPOS
@@ -78,7 +79,9 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
       const manifests = await erpService.downloadAllPendingManifests();
       setCloudManifests(manifests || []);
     } catch (err) {
-      console.error('Error loading cloud manifests:', err);
+      logger.error('TheoreticalLoadSelector', 'Error loading cloud manifests', { 
+        error: err instanceof Error ? err.message : String(err) 
+      });
       toast.error('Error al cargar manifiestos de la nube');
     } finally {
       setLoadingCloud(false);
@@ -106,10 +109,15 @@ export const TheoreticalLoadSelector: React.FC<TheoreticalLoadSelectorProps> = (
   const handleRefresh = () => {
     if (activeTab === 'local') {
       setLoadingLocal(true);
-      ExpectedOrderRepository.getAll().then(orders => {
-        setLocalOrders(orders || []);
-        setLoadingLocal(false);
-      });
+      ExpectedOrderRepository.getAll()
+        .then(orders => {
+          setLocalOrders(orders || []);
+          setLoadingLocal(false);
+        })
+        .catch(err => {
+          logger.error('TheoreticalLoadSelector', 'Error refreshing local orders', { error: String(err) });
+          setLoadingLocal(false);
+        });
     } else if (activeTab === 'cloud') {
       loadCloudData();
     }

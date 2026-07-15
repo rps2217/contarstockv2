@@ -46,7 +46,7 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose, theme = 'dar
       const allLogs = await systemLogRepository.getRecentLogs(500);
       setLogs(allLogs);
     } catch (e) {
-      console.error("Error loading logs", e);
+      logger.error('SystemLogs', 'Error loading logs', { error: String(e) });
     } finally {
       setIsLoading(false);
     }

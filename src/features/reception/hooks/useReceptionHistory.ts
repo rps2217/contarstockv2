@@ -1,4 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react'
+import { logger } from '@/services/logger';
+;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ScanRepository } from '../../../repositories/ScanRepository';

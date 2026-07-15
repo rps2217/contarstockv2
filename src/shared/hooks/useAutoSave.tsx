@@ -10,7 +10,9 @@
  * - Limpieza automática al guardar exitosamente
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 
 export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'restored';
 

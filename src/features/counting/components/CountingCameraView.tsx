@@ -6,6 +6,7 @@ import { VirtualList } from '../../../shared/components/ui/VirtualList';
 import { ScannerFeedbackOverlay } from '../../../shared/components/scanner/layouts/ScannerFeedbackOverlay';
 import { ArrowLeft, MapPin, Lock, Unlock, Cloud, CloudOff, Settings, Zap, Barcode, Check, X, Camera, Edit3, List, CheckCircle2 } from 'lucide-react';
 import { normalizeSku } from '../../../services/utils';
+import { logger } from '../../../services/logger';
 
 interface CountingCameraViewProps {
   onBack: () => void;
@@ -64,7 +65,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   const manualInputRef = useRef<HTMLInputElement>(null);
   
   // DEBUG: Log all incoming props
-  console.log('[CountingCameraView] Props:', {
+  logger.debug('CountingCameraView', 'Props received', {
     expectedItemsCount: expectedItems?.length || 0,
     itemsCount: items?.length || 0,
     isManualMode
@@ -73,7 +74,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   // Check if we're in test mode (has expected items)
   const isTestMode = expectedItems.length > 0;
   
-  console.log('[CountingCameraView] isTestMode:', isTestMode, '| expectedItems:', expectedItems?.slice(0, 2));
+  logger.debug('CountingCameraView', 'Mode check', { isTestMode, expectedItemsSample: expectedItems?.slice(0, 2) });
 
   // Safe defaults
   const safePotentialMatch = potentialMatch ?? null;

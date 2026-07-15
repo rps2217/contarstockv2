@@ -8,7 +8,9 @@
  * - Vibración háptica en móviles
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { toast } from 'sonner';
 
 export type ScanFeedbackType = 'success' | 'error' | 'warning' | 'info';

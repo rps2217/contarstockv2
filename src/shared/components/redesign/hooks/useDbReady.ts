@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { db } from '@/db';
 
 /**

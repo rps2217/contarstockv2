@@ -7,7 +7,9 @@
  * Maneja errores 406 (tabla no existe o RLS bloquea acceso) gracefully.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 import { db } from '../../../db';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import type { LocalTableRepository } from '../../../services/supabaseSyncService';
@@ -42,7 +44,7 @@ export const useCountingSync = (sessionId: string | undefined) => {
       } catch (error) {
         // Silenciar errores 406 - tabla no existe o RLS bloquea
         if (error instanceof Error && error.message.includes('406')) {
-          console.warn('[useCountingSync] SESSIONS table not available, skipping realtime sync');
+          logger.warn('CountingSync', 'SESSIONS table not available, skipping realtime sync');
         }
       }
     };

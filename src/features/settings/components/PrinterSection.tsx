@@ -1,5 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { Printer, Wifi, Usb, CheckCircle2, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 import { thermalPrinter } from '../../../services/thermalPrinterService';
 import { AppSettings } from '../../../types';

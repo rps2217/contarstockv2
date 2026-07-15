@@ -7,7 +7,9 @@
  * @deprecated Usar useExpiryService de '@/services/ExpiryService' directamente
  */
 
-import { useCallback } from 'react';
+import { useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { normalizeSku } from '@/services/utils';
@@ -87,7 +89,7 @@ export const useExpiryTracker = () => {
         await db.expirations.update(existing.id, { syncStatus: 'synced' });
       }
     } catch (error) {
-      console.error('[useExpiryTracker] Error al sincronizar:', error);
+      logger.error('ExpiryTracker', 'Error al sincronizar', { error: String(error) });
     }
   }, []);
 

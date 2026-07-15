@@ -4,6 +4,7 @@ import { normalizeSku } from '../../../services/utils';
 import { DetectiveService } from '../../../services/detectiveService';
 import { SoundFX } from '../../../services/audio';
 import { ConsolidatedItem, MatchResult } from '../../../types';
+import { logger } from '../../../services/logger';
 
 export const useCountingAI = (
   consolidatedHistory: ConsolidatedItem[] | undefined, 
@@ -49,7 +50,9 @@ export const useCountingAI = (
           }
         }
       } catch (e) {
-        console.error("Inference Error:", e);
+        logger.error('CountingAI', 'Inference Error', { 
+          error: e instanceof Error ? e.message : String(e) 
+        });
       }
     };
 

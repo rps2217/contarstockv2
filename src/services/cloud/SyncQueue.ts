@@ -160,8 +160,9 @@ class SyncQueueManager {
       this.startProcessor();
 
       logger.info('SyncQueue', 'Initialized');
-    } catch (error) {
-      logger.error('SyncQueue', 'Failed to initialize', String(error));
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('SyncQueue', 'Failed to initialize', error.message);
       throw error;
     }
   }

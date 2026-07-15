@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { InitializationService, InitStep } from '@/services/initializationService';
 import { initPersistence } from '@/services/backupService';
 

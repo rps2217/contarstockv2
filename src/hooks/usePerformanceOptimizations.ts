@@ -8,7 +8,9 @@
  * - Preload de recursos
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { logger } from '@/services/logger';
+;
 
 // ============================================================
 // UTILIDADES DE OPTIMIZACIÓN

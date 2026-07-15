@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { AppSettings, TableSchema } from '../types';
 import { db } from '../db';
 

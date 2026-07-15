@@ -100,7 +100,7 @@ export const productProviderRepository = {
    */
   async delete(productBarcode: string, providerRut: string): Promise<void> {
     const all = await this.getByProduct(productBarcode);
-    const toDelete = all.filter(r => r.providerRut === providerRut && r.id);
+    const toDelete = all.filter((r: ProductProvider) => r.providerRut === providerRut && r.id);
     if (toDelete.length > 0 && toDelete[0].id) {
       await db.table(this.table).delete(toDelete[0].id);
     }

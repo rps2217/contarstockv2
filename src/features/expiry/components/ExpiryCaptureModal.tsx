@@ -15,7 +15,9 @@
  * @version 3.0.0
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { motion, AnimatePresence } from 'motion/react';
 import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2, Pencil, AlertCircle, CheckCheck } from 'lucide-react';
 import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';

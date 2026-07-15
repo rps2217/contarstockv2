@@ -168,12 +168,12 @@ export const useHammerLogic = (batchId: string) => {
           if (autoSyncRef.current) {
             pushWithRetry(batchId).catch((err) => {
               setSyncError('Error de sincronización');
-              console.warn('[HammerLogic] AutoSync background push failed:', err);
+              logger.warn('HammerLogic', 'AutoSync background push failed', { error: String(err) });
             });
           }
         }
       } catch (e) {
-        console.error('[HammerLogic] Write failed, returning to queue', e);
+        logger.error('HammerLogic', 'Write failed, returning to queue', { error: String(e) });
         writeQueue.current = [...batch, ...writeQueue.current];
         setSyncError('Error de escritura local');
       }
@@ -254,7 +254,7 @@ export const useHammerLogic = (batchId: string) => {
         // Background push manual edit immediately if enabled
         if (autoSyncRef.current) {
           pushScansToCloud(batchId).catch((err) => {
-            console.warn('[HammerLogic] AutoSync manual edit push failed:', err);
+            logger.warn('HammerLogic', 'AutoSync manual edit push failed', { error: String(err) });
           });
         }
         

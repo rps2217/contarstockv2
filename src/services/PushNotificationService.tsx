@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * =============================================================================
  * PushNotificationService - Notificaciones push para alertas de salud

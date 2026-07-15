@@ -276,7 +276,7 @@ const CustomerFormModal = ({
                 <input
                   type="text"
                   value={firstName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+                  onChange={(e) => setFirstName(e.target.value)}
                   className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                   placeholder="Juan"
                 />
@@ -286,7 +286,7 @@ const CustomerFormModal = ({
                 <input
                   type="text"
                   value={lastName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+                  onChange={(e) => setLastName(e.target.value)}
                   className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                   placeholder="Pérez"
                 />
@@ -298,7 +298,7 @@ const CustomerFormModal = ({
               <input
                 type="tel"
                 value={phone}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full bg-surface border border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                 placeholder="+56 9 1234 5678"
               />

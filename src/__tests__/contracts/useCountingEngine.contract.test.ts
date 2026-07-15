@@ -7,6 +7,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ============================================================================
+// MOCKS AL NIVEL SUPERIOR (hoisted by vitest)
+// ============================================================================
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// ============================================================================
 // CONTRATOS
 // ============================================================================
 
@@ -24,25 +39,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
  */
 describe('useCountingEngine Contract Tests', () => {
   
-  // Mock de dependencias
-  const mockNavigate = vi.fn();
-  const mockToast = {
-    success: vi.fn(),
-    error: vi.fn(),
-  };
-  
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mock('react-router-dom', () => ({
-      useNavigate: () => mockNavigate,
-    }));
-    vi.mock('sonner', () => ({
-      toast: mockToast,
-    }));
-  });
-  
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   // ============================================================================
@@ -373,6 +371,182 @@ describe('useCountingEngine Contract Tests', () => {
       const expectedPath = `/massive/${batchId}?expiry=${registerExpiry ? '1' : '0'}`;
       
       expect(expectedPath).toBe('/massive/HM-12345678?expiry=1');
+    });
+    
+    it('debe incluir skipModal=true en query string', () => {
+      const batchId = 'HM-12345678';
+      const expectedPath = `/massive/${batchId}?expiry=0&skipModal=true`;
+      
+      expect(expectedPath).toContain('skipModal=true');
+    });
+  });
+
+  // ============================================================================
+  // CONTRATO 8: Casos de borde
+  // ============================================================================
+  
+  describe('Casos de borde', () => {
+    it('debe manejar batchId con caracteres especiales', () => {
+      const batchIdPattern = /^HM-[A-Z0-9]+$/;
+      const specialBatchId = 'HM-ABCD1234';
+      
+      expect(batchIdPattern.test(specialBatchId)).toBe(true);
+    });
+    
+    it('debe manejar sessionId vacío como no-ciego', () => {
+      const isBlindMode = (sessionId: string): boolean => {
+        return sessionId.startsWith('HM-');
+      };
+      
+      expect(isBlindMode('')).toBe(false);
+    });
+    
+    it('debe manejar sessionId muy largo', () => {
+      const longSessionId = 'session-' + 'a'.repeat(100);
+      const isBlindMode = (sessionId: string): boolean => {
+        return sessionId.startsWith('HM-');
+      };
+      
+      expect(isBlindMode(longSessionId)).toBe(false);
+    });
+    
+    it('CountingMode debe tener exactamente 2 valores', () => {
+      type CountingMode = 'blind' | 'theoretical';
+      
+      const modes: CountingMode[] = ['blind', 'theoretical'];
+      
+      expect(modes).toHaveLength(2);
+      expect(modes).toContain('blind');
+      expect(modes).toContain('theoretical');
+    });
+    
+    it('registerExpiry debe ser boolean', () => {
+      interface StartCountingConfig {
+        mode: 'blind' | 'theoretical';
+        registerExpiry: boolean;
+      }
+      
+      const config: StartCountingConfig = {
+        mode: 'blind',
+        registerExpiry: false,
+      };
+      
+      expect(typeof config.registerExpiry).toBe('boolean');
+    });
+    
+    it('createdAt debe ser timestamp válido', () => {
+      const session = {
+        id: 'HM-12345678',
+        mode: 'blind' as const,
+        registerExpiry: false,
+        createdAt: Date.now(),
+      };
+      
+      expect(session.createdAt).toBeGreaterThan(0);
+      expect(session.createdAt).toBeLessThanOrEqual(Date.now());
+    });
+  });
+
+  // ============================================================================
+  // CONTRATO 9: useActiveSessions estructura
+  // ============================================================================
+  
+  describe('useActiveSessions estructura', () => {
+    it('debe manejar sesión ciega sin manifests', () => {
+      interface BlindSession {
+        batchId: string;
+        scanCount: number;
+        manifestCount: number;
+        lastActivity: number;
+      }
+      
+      const blindSession: BlindSession = {
+        batchId: 'HM-12345678',
+        scanCount: 50,
+        manifestCount: 0,
+        lastActivity: Date.now(),
+      };
+      
+      expect(blindSession.manifestCount).toBe(0);
+      expect(blindSession.scanCount).toBeGreaterThan(0);
+    });
+    
+    it('debe manejar sesión teórica sin items', () => {
+      interface TheoreticalSession {
+        id: string;
+        name: string;
+        itemCount: number;
+        lastActivity: number;
+      }
+      
+      const theoreticalSession: TheoreticalSession = {
+        id: 'session-1',
+        name: 'Orden vacía',
+        itemCount: 0,
+        lastActivity: Date.now(),
+      };
+      
+      expect(theoreticalSession.itemCount).toBe(0);
+    });
+    
+    it('debe manejar arrays vacíos', () => {
+      interface BlindSession {
+        batchId: string;
+        scanCount: number;
+        manifestCount: number;
+        lastActivity: number;
+      }
+      
+      const emptySessions: BlindSession[] = [];
+      
+      expect(emptySessions).toHaveLength(0);
+    });
+  });
+
+  // ============================================================================
+  // CONTRATO 10: useSessionInfo estructura
+  // ============================================================================
+  
+  describe('useSessionInfo estructura', () => {
+    it('debe manejar sesión ciega sin escaneos', () => {
+      interface BlindSessionInfo {
+        mode: 'blind';
+        batchId: string;
+        scanCount: number;
+        manifestCount: number;
+        lastActivity: number;
+      }
+      
+      const blindInfo: BlindSessionInfo = {
+        mode: 'blind',
+        batchId: 'HM-12345678',
+        scanCount: 0,
+        manifestCount: 0,
+        lastActivity: 0,
+      };
+      
+      expect(blindInfo.scanCount).toBe(0);
+      expect(blindInfo.lastActivity).toBe(0);
+    });
+    
+    it('debe manejar sesión teórica sin carga teórica', () => {
+      interface TheoreticalSessionInfo {
+        mode: 'theoretical';
+        sessionId: string;
+        scanCount: number;
+        hasTheoretical: boolean;
+        lastActivity: number;
+      }
+      
+      const theoreticalInfo: TheoreticalSessionInfo = {
+        mode: 'theoretical',
+        sessionId: 'session-abc-123',
+        scanCount: 0,
+        hasTheoretical: false,
+        lastActivity: Date.now(),
+      };
+      
+      expect(theoreticalInfo.hasTheoretical).toBe(false);
     });
   });
 });

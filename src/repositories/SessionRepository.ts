@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { db } from '../db';
 import { CountingSession } from '../types';
 import { CountingSessionSchema } from '../schemas/database';

@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { logger } from '@/services/logger';
+
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scan,

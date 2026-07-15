@@ -515,7 +515,9 @@ export function initializeWorkflows(): void {
 // HOOK PARA REACT
 // =============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 
 /**
  * Hook para usar el workflow engine
