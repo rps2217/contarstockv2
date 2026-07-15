@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * =============================================================================
  * SYNC METRICS - Métricas y Monitoreo de Sincronización

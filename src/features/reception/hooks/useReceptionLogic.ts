@@ -1,5 +1,7 @@
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react'
+import { logger } from '@/services/logger';
+;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import * as sessionService from '../../../services/sessionService';

@@ -89,7 +89,7 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         await supabaseSyncService.pushBatch('SESIONES_CONTEO', [sessionPayload]);
       }
     } catch (pushErr) {
-      console.warn("[migrateMassiveToMaster] Auto-push falló, se sincronizará luego:", pushErr);
+      logger.warn('HammerSync', 'Auto-push falló, se sincronizará luego', { error: String(pushErr) });
     }
 
     const duration = performance.now() - startTime;

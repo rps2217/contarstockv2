@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 
 import { supabaseSyncService } from './supabaseSyncService';
 import { CloudOrderRowSchema } from './schemas';

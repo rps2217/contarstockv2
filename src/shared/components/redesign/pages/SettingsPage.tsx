@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { logger } from '@/services/logger';
+
 import { motion } from 'framer-motion'
 import {
   Settings as SettingsIcon,

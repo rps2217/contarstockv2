@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * ThemeService - Servicio para gestión de temas
  * 

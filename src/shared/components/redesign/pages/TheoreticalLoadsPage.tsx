@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { logger } from '@/services/logger';
+
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText, Cloud, HardDrive, Upload, Trash2, RefreshCw,

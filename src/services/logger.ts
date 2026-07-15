@@ -1,4 +1,3 @@
-
 import { db, SystemLog } from '../db';
 import { telemetry } from './telemetryService';
 

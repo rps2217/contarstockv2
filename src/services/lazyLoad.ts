@@ -1,4 +1,6 @@
-import { lazy, ComponentType, LazyExoticComponent, createElement } from 'react';
+import { lazy, ComponentType, LazyExoticComponent, createElement } from 'react'
+import { logger } from '@/services/logger';
+;
 
 /**
  * MOTOR DE CARGA RESILIENTE v4.3

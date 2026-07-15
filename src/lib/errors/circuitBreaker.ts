@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * CircuitBreaker - Prevents cascading failures in external services
  */

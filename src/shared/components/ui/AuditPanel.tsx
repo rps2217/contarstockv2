@@ -4,7 +4,9 @@
  * Muestra el historial de cambios de un registro o tabla.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';

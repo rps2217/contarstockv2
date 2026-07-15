@@ -1,5 +1,7 @@
 
-import React, { Suspense, useEffect, useState, useMemo, lazy } from 'react';
+import React, { Suspense, useEffect, useState, useMemo, lazy } from 'react'
+import { logger } from '@/services/logger';
+;
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores';
 import type { CountingSession } from '@/types';

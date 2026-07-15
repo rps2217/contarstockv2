@@ -6,7 +6,9 @@
  * Copia este patrón a los formularios que necesiten auto-guardado.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { X, Save, Loader2 } from 'lucide-react';
 import { useAutoSave, AutoSaveIndicator, DraftRecoveryBanner } from '@/shared/hooks/useAutoSave';
 import { cn } from '@/lib/utils';

@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { db } from "../db";
 import { AppSettings } from "../types";
 import { getSettings } from "./settings";

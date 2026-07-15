@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * LOGICOUNT PRO - THERMAL ENGINE v1.2
  * Soporte dual: WebUSB (PC) + Web Bluetooth (Android/Mobile)

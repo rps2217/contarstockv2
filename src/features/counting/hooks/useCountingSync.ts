@@ -7,7 +7,9 @@
  * Maneja errores 406 (tabla no existe o RLS bloquea acceso) gracefully.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 import { db } from '../../../db';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import type { LocalTableRepository } from '../../../services/supabaseSyncService';

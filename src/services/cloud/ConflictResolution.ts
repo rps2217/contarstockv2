@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * =============================================================================
  * CONFLICT RESOLUTION - Estrategias de Resolución de Conflictos

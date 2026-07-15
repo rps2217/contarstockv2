@@ -8,7 +8,9 @@
  * - Paneles expandibles
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react'
+import { logger } from '@/services/logger';
+;
 import { db } from '@/db';
 
 export interface ViewPreferences {

@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react'
+import { logger } from '@/services/logger';
+
 import { motion } from 'framer-motion'
 import { Upload, FileText, CheckCircle, Plus, X, Trash2, Save, Clipboard } from 'lucide-react'
 import { cn } from '@/lib/utils'

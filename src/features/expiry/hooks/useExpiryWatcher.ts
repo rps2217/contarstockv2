@@ -1,5 +1,7 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/stores';
 import { useExpiryStore } from '@/stores';

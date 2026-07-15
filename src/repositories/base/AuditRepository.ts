@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 /**
  * AuditRepository - Repositorio decorado con auditoría
  * 

@@ -7,7 +7,9 @@
  * @deprecated Usar useExpiryService de '@/services/ExpiryService' directamente
  */
 
-import { useCallback } from 'react';
+import { useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { normalizeSku } from '@/services/utils';

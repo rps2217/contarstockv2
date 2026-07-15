@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { format } from 'date-fns';
 import { getSettings } from '../../services/settings';
 
