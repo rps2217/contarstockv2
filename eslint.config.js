@@ -68,7 +68,8 @@ export default [
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'off',
-      'no-console': 'off',
+      // Bloquear console.* en producción, permitir en desarrollo
+      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
       'no-undef': 'off',
     },
   },
