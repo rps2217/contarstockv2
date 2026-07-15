@@ -277,7 +277,7 @@ export const auditService = {
 
     for (let i = 0; i < pending.length; i += BATCH_SIZE) {
       const batch = pending.slice(i, i + BATCH_SIZE);
-      const rows = batch.map(entry => ({
+      const rows = batch.map((entry: AuditLogEntry) => ({
         id: entry.id,
         table_name: entry.tableName,
         record_id: entry.recordId,
@@ -295,7 +295,7 @@ export const auditService = {
         const result = await supabaseSyncService.pushBatch('AUDIT_LOGS', rows);
         
         if (result?.success) {
-          batch.forEach(entry => {
+          batch.forEach((entry: AuditLogEntry) => {
             if (entry.id) syncedIds.push(entry.id);
           });
           synced += batch.length;

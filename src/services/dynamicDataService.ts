@@ -26,7 +26,7 @@ export const dynamicDataService = {
     await db.dynamic_data.put(record);
     
     // Attempt background sync
-    this.syncRecord(recordId).catch(err => {
+    this.syncRecord(recordId).catch((err: Error) => {
       logger.error('DYNAMIC_DATA', `Error syncing record ${recordId}`, err.message);
     });
 
