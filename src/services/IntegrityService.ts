@@ -124,8 +124,9 @@ export class IntegrityService {
       });
 
       return result;
-    } catch (error) {
-      logger.error('IntegrityService', 'Integrity check failed', String(error));
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('IntegrityService', 'Integrity check failed', error.message);
       throw error;
     }
   }

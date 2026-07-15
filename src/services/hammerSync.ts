@@ -98,11 +98,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
     logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado.`);
     return session.id;
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'migrateMassiveToMaster');
     const duration = performance.now() - startTime;
     telemetry.track('SESSION', 'MIGRATE_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('MASSIVE_MIGRATION_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 
@@ -140,11 +140,11 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
     
     logger.success('CLOUD_SYNC', `Sincronización exitosa para lote: ${batchId}`);
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'pushScansToCloud');
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PUSH_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('CLOUD_SYNC_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 
@@ -201,11 +201,11 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
     return itemsToSave.length;
 
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'importManifestFromCloud');
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 
@@ -257,11 +257,11 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
     return itemsToSave.length;
 
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'importExpectedOrderFromCloud');
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 
@@ -297,11 +297,11 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
     logger.success('CLOUD_MANIFEST', `Carga teórica local "${order?.metadata?.internalGuide || orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
     return itemsToSave.length;
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'importLocalExpectedOrderToHammer');
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'LOCAL_IMPORT_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 
@@ -370,11 +370,11 @@ export const migrateHammerManifestToExpectedOrders = async (batchId: string, ord
     return targetOrderId;
 
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'migrateHammerManifestToExpectedOrders');
     const duration = performance.now() - startTime;
     telemetry.track('SYNC' as any, 'MIGRATION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('MANIFEST_MIGRATION_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 
@@ -415,11 +415,11 @@ export const loadHammerManifestAsTestSession = async (batchId: string, orderId?:
     return { sessionId: session.id, orderId: migratedOrderId };
 
   } catch (err: unknown) {
-    const error = handleError(err);
+    const error = handleError(err, 'loadHammerManifestAsTestSession');
     const duration = performance.now() - startTime;
     telemetry.track('SYNC' as any, 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('HAMMER_TEST_SESSION_FAIL', error.message);
-    throw err;
+    throw error;
   }
 };
 

@@ -112,7 +112,8 @@ export const dynamicDataService = {
       } else {
         await db.dynamic_data.update(id, { syncStatus: 'error', syncError: response.error });
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
       await db.dynamic_data.update(id, { syncStatus: 'error', syncError: error.message });
       throw error;
     }
