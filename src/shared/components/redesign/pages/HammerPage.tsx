@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { logger } from '@/services/logger'
 
 import { useHammerLogic, HammerItem } from '@/features/hammer/hooks/useHammerLogic'
 import { useLocationManager } from '@/shared/hooks/useLocationManager'
@@ -803,11 +804,15 @@ export const RedesignHammerPage: React.FC = () => {
     // 2. La URL es /massive (sin batchId) O el batchId coincide con el efectivo
     // 3. Es una sesión nueva sin datos
     if (!skipModal && (!params.batchId || params.batchId === effectiveBatchId)) {
-      HammerDbRepository.getBatchCounts(effectiveBatchId).then(counts => {
-        if (counts.scans === 0 && counts.manifests === 0) {
-          setShowStartModal(true);
-        }
-      });
+      HammerDbRepository.getBatchCounts(effectiveBatchId)
+        .then(counts => {
+          if (counts.scans === 0 && counts.manifests === 0) {
+            setShowStartModal(true);
+          }
+        })
+        .catch(err => {
+          logger.error('HammerPage', 'Error checking batch counts', { error: String(err) });
+        });
     }
   }, [effectiveBatchId, params.batchId, skipModal]);
 

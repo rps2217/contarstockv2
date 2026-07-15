@@ -5,7 +5,9 @@
  * Después de un timeout, hace delete permanente.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react'
+import { logger } from '@/services/logger';
+;
 import { toast } from 'sonner';
 
 interface SoftDeleteOptions<T> {

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
+import { logger } from '@/services/logger';
+;
 import { Box, Lock, User, ArrowRight, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 

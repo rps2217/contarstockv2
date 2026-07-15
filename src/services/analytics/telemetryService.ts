@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { TelemetryEvent, TelemetryEventType } from '../../types';
 
 class TelemetryService {

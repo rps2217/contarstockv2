@@ -10,6 +10,7 @@ import * as sessionService from '../../../services/sessionService';
 import * as productService from '../../../services/productService';
 import { normalizeSku } from '../../../services/utils';
 import { shouldPromptForBatch } from '../../../services/uiLogic';
+import { logger } from '../../../services/logger';
 
 // ✅ Auto-save
 import { useAutoSave, useAutoSaveRecovery } from '@/shared/hooks/auto-save';
@@ -166,9 +167,13 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     selectItem: (b: string) => { 
       const norm = normalizeSku(b);
       const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
-      productService.getProductByBarcode(b).then(product => {
-        engine.actions.updateActiveItem(b, product || null, existing?.totalQuantity || 0, 0);
-      });
+      productService.getProductByBarcode(b)
+        .then(product => {
+          engine.actions.updateActiveItem(b, product || null, existing?.totalQuantity || 0, 0);
+        })
+        .catch(err => {
+          logger.error('CountingLogic', 'Error selecting item', { barcode: b, error: String(err) });
+        });
     },
     handlePharmaComplete: async (m?: number, y?: number, b?: string) => {
       if (engine.activeBarcode && m !== undefined && y !== undefined) {

@@ -3,7 +3,9 @@
  * Sigue el patrón de Arquitectura Lego: { state, actions }
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react'
+import { logger } from '@/services/logger';
+;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { useToastStore } from '@/stores';

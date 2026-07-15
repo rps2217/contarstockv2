@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 import { Html5Qrcode } from 'html5-qrcode';
 import { telemetry } from '../services/telemetryService';
 

@@ -30,6 +30,7 @@ import {
 } from '@/services/hammerSync';
 import { generateUUID } from '@/services/utils';
 import * as sessionService from '@/services/sessionService';
+import { logger } from '@/services/logger';
 
 // ============================================================================
 // TIPOS
@@ -152,7 +153,9 @@ export const useCountingEngine = (): UseCountingEngineReturn => {
             await migrateMassiveToMaster(session.id);
             
           } catch (importError) {
-            console.error('Error importing theoretical load:', importError);
+            logger.error('CountingEngine', 'Error importing theoretical load', { 
+              error: importError instanceof Error ? importError.message : String(importError) 
+            });
             toast.error('Error al importar carga teórica', {
               description: 'El conteo se inició pero sin la carga teórica',
             });
@@ -168,7 +171,9 @@ export const useCountingEngine = (): UseCountingEngineReturn => {
       }
 
     } catch (error) {
-      console.error('Error starting counting:', error);
+      logger.error('CountingEngine', 'Error starting counting', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       toast.error('Error al iniciar conteo');
       throw error;
     } finally {
@@ -274,7 +279,9 @@ export const useActiveSessions = (): {
 
       return Array.from(batchMap.values());
     } catch (error) {
-      console.error('Error fetching blind sessions:', error);
+      logger.error('CountingEngine', 'Error fetching blind sessions', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return [];
     }
   }, []);
@@ -290,7 +297,9 @@ export const useActiveSessions = (): {
         lastActivity: session.createdAt,
       }));
     } catch (error) {
-      console.error('Error fetching theoretical sessions:', error);
+      logger.error('CountingEngine', 'Error fetching theoretical sessions', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return [];
     }
   }, []);

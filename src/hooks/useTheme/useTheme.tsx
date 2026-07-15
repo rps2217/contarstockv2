@@ -8,7 +8,9 @@
  * - Temas: night (oscuro), gray (gris claro), light (blanco), high-contrast
  */
 
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react'
+import { logger } from '@/services/logger';
+;
 import { useSettingsStore } from '@/features/settings/store';
 
 // ============================================================

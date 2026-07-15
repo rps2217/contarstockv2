@@ -5,7 +5,9 @@
  * de la aplicación (vencimiento, inventario, eventos, conteos, etc.)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react'
+import { logger } from '@/services/logger';
+;
 import { toast } from 'sonner';
 
 export type ExportFormat = 'csv' | 'excel' | 'pdf';

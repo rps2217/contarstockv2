@@ -1,5 +1,7 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/stores';
 import { useExpiryStore } from '@/stores';
@@ -105,7 +107,7 @@ export const useExpiryWatcher = () => {
         
         lastCount.current = alertItems.length;
       } catch (err) {
-        console.error("[ExpiryWatcher] Analysis error:", err);
+        logger.error('ExpiryWatcher', 'Analysis error', { error: String(err) });
       }
     };
 

@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { hammerDb } from '../db';
 import { BlindScan } from '../types';
 

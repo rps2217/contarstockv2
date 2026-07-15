@@ -6,7 +6,9 @@
  * Incluye logging a Sentry y UI de fallback.
  */
 
-import React, { Component, type ReactNode } from 'react';
+import React, { Component, type ReactNode } from 'react'
+import { logger } from '@/services/logger';
+;
 import { AlertTriangle, RefreshCw, Home, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

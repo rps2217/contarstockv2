@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { syncMetrics, SyncHealth } from '@/services/cloud/SyncMetrics';
+import { logger } from '@/services/logger';
 
 const HEALTH_THRESHOLD = 70;
 const CHECK_INTERVAL_MS = 60 * 1000; // 1 minuto
@@ -36,7 +37,7 @@ export function useSyncHealthAlert(
       setHealth(healthData);
       return healthData;
     } catch (e) {
-      console.error('Error checking sync health:', e);
+      logger.error('SyncHealthAlert', 'Error checking sync health', { error: String(e) });
       return {
         isHealthy: false,
         score: 0,
@@ -84,19 +85,27 @@ export function useSyncHealthAlert(
     if (!enabled) return;
 
     // Check inicial
-    checkHealth().then(healthData => {
-      if (!healthData.isHealthy) {
-        showAlert(healthData);
-      }
-    });
-
-    // Configurar intervalo
-    intervalRef.current = window.setInterval(() => {
-      checkHealth().then(healthData => {
+    checkHealth()
+      .then(healthData => {
         if (!healthData.isHealthy) {
           showAlert(healthData);
         }
+      })
+      .catch(err => {
+        logger.error('SyncHealthAlert', 'Error checking health', { error: String(err) });
       });
+
+    // Configurar intervalo
+    intervalRef.current = window.setInterval(() => {
+      checkHealth()
+        .then(healthData => {
+          if (!healthData.isHealthy) {
+            showAlert(healthData);
+          }
+        })
+        .catch(err => {
+          logger.error('SyncHealthAlert', 'Error in periodic health check', { error: String(err) });
+        });
     }, CHECK_INTERVAL_MS);
 
     return () => {

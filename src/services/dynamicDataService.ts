@@ -26,7 +26,7 @@ export const dynamicDataService = {
     await db.dynamic_data.put(record);
     
     // Attempt background sync
-    this.syncRecord(recordId).catch(err => {
+    this.syncRecord(recordId).catch((err: Error) => {
       logger.error('DYNAMIC_DATA', `Error syncing record ${recordId}`, err.message);
     });
 
@@ -112,7 +112,8 @@ export const dynamicDataService = {
       } else {
         await db.dynamic_data.update(id, { syncStatus: 'error', syncError: response.error });
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
       await db.dynamic_data.update(id, { syncStatus: 'error', syncError: error.message });
       throw error;
     }

@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import { db } from "../db";
 import { AppSettings } from "../types";
 import { getSettings } from "./settings";
@@ -5,7 +6,7 @@ import { getSettings } from "./settings";
 /**
  * Solicita persistencia de datos al navegador de forma silenciosa.
  */
-export const initPersistence = async () => {
+export const initPersistence = async (): Promise<void> => {
   try {
     if (navigator.storage && navigator.storage.persist) {
       // Intentar persistir sin loggear resultado si es exitoso
@@ -17,7 +18,7 @@ export const initPersistence = async () => {
     }
   } catch (e) {
     // Solo loggear si hay un fallo real crítico
-    console.warn("[Storage] Persistence request failed:", e);
+    logger.warn('Storage', 'Persistence request failed', String(e));
   }
 };
 
@@ -56,7 +57,7 @@ export const createFullBackup = async (): Promise<void> => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("Backup failed:", error);
+    logger.error('BACKUP', 'Backup failed', String(error));
     throw new Error("No se pudo generar la copia de seguridad.");
   }
 };
@@ -105,7 +106,7 @@ export const restoreFullBackup = async (file: File): Promise<number> => {
 
         resolve(json.data.scans.length);
       } catch (err) {
-        console.error("Restore failed:", err);
+        logger.error('BACKUP', 'Restore failed', String(err));
         reject(err);
       }
     };
@@ -163,8 +164,8 @@ export const recoverFromEmergencySnapshot = async (): Promise<boolean> => {
     });
 
     return true;
-  } catch (e) {
-    console.error("Emergency recovery failed:", e);
+  } catch (err: unknown) {
+    logger.error('BACKUP', 'Emergency recovery failed', err instanceof Error ? err.message : String(err));
     return false;
   }
 };

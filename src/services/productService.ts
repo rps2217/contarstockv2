@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 
 
 import { Product } from '../types';

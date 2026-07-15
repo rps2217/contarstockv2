@@ -5,7 +5,9 @@
  * que puede ser configurado para cualquier módulo de la aplicación.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react'
+import { logger } from '@/services/logger';
+;
 import { X, Trash2, Edit3, Download, Search, Printer } from 'lucide-react';
 import { useTaskStore } from '@/stores';
 import { toast } from 'sonner';

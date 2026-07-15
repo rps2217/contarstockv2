@@ -5,7 +5,9 @@
  * Usa cache global compartido para poder invalidar desde cualquier lugar.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { logger } from '@/services/logger';
+;
 
 interface CacheEntry<T> {
   data: T;

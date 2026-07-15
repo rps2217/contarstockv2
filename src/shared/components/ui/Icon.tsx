@@ -15,7 +15,9 @@
  * ```
  */
 
-import React, { memo, Suspense, lazy, useMemo } from 'react';
+import React, { memo, Suspense, lazy, useMemo } from 'react'
+import { logger } from '@/services/logger';
+;
 import { cn } from '@/lib/utils';
 
 // Catálogo de SVG paths para iconos críticos (inline)
