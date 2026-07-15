@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/shared/components/ui/Switch';
+import { logger } from '@/services/logger';
 
 // Importar selector de cargas teóricas
 import { TheoreticalLoadSelector, type SelectedLoad } from './TheoreticalLoadSelector';
@@ -132,7 +133,7 @@ export const StartCountingModal: React.FC<StartCountingModalProps> = ({
       await new Promise(resolve => setTimeout(resolve, 100));
       await onStart(config);
     } catch (error) {
-      console.error('Error starting counting:', error);
+      logger.error('Counting', 'Error starting counting', { error: error instanceof Error ? error.message : String(error) });
       setIsStarting(false);
     }
   }, [canProceed, isStarting, mode, registerExpiry, selectedLoad, onClose, onStart]);

@@ -37,7 +37,7 @@ const writeLog = async (level: LogLevel, module: string, message: string, detail
     const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' 
       : level === 'success' ? 'color: #2ecc71' 
       : 'color: #3498db';
-    console.log(`%c[${module}] [${level.toUpperCase()}] ${messageStr}`, style, details || '');
+    console.debug(`%c[${module}] [${level.toUpperCase()}] ${messageStr}`, style, details || '');
 
     if (level === 'error') {
       telemetry.track('ERROR', module, { message: messageStr, details });
@@ -75,7 +75,7 @@ const writeLog = async (level: LogLevel, module: string, message: string, detail
   } catch (e) {
     // Fallback silencioso si falla IndexedDB (ej. cuota excedida o bloqueo)
     const errorMessage = e instanceof Error ? e.message : String(e);
-    console.warn("Logger persistency failed:", errorMessage);
+    console.warn(`[Logger] Persistency failed: ${errorMessage}`);
   }
 };
 
@@ -96,21 +96,76 @@ export const LOG_CONTEXT = {
 
 export type LogContext = typeof LOG_CONTEXT[keyof typeof LOG_CONTEXT];
 
+/**
+ * Wrapper de logger con firma flexible
+ * Detecta automáticamente el formato de los argumentos:
+ * - logger.info(module, message, details) - Normal
+ * - logger.info(message, error) - Console-style (para migración)
+ * - logger.info(message) - Solo mensaje
+ */
+const flexibleLogger = (
+  level: LogLevel,
+  moduleOrMessage: string,
+  messageOrError?: string | Error | LoggerDetails,
+  details?: LoggerDetails
+) => {
+  let module: string;
+  let message: string;
+  let logDetails: LoggerDetails | undefined;
+
+  if (messageOrError === undefined) {
+    // Solo mensaje: logger.info('simple message')
+    module = 'App';
+    message = moduleOrMessage;
+    logDetails = undefined;
+  } else if (typeof messageOrError === 'string') {
+    // Normal: logger.info('Module', 'message', details)
+    module = moduleOrMessage;
+    message = messageOrError;
+    logDetails = details;
+  } else if (messageOrError instanceof Error) {
+    // Console-style: logger.info('message', error)
+    module = moduleOrMessage;
+    message = messageOrError.message;
+    logDetails = { error: messageOrError, stack: messageOrError.stack };
+  } else {
+    // Details object: logger.info('message', { error: ... })
+    module = moduleOrMessage;
+    message = 'Log with details';
+    logDetails = messageOrError;
+  }
+
+  return writeLog(level, module, message, logDetails);
+};
+
 export const logger = {
-  info: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+  info: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
+    flexibleLogger('info', moduleOrMessage, messageOrError, details),
+  
+  warn: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
+    flexibleLogger('warn', moduleOrMessage, messageOrError, details),
+  
+  error: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
+    flexibleLogger('error', moduleOrMessage, messageOrError, details),
+  
+  success: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
+    flexibleLogger('success', moduleOrMessage, messageOrError, details),
+  
+  debug: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
+    flexibleLogger('info', moduleOrMessage, messageOrError, details),
+  
+  // Métodos originales con firma fija (para uso explícito)
+  infoFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
     writeLog('info', module, message, details),
   
-  warn: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+  warnFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
     writeLog('warn', module, message, details),
   
-  error: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+  errorFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
     writeLog('error', module, message, details),
   
-  success: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+  successFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
     writeLog('success', module, message, details),
-  
-  debug: (module: LogContext | string, message: string, details?: LoggerDetails) => 
-    writeLog('info', module, `[DEBUG] ${message}`, details),
   
   getRecent: async (limit = 200): Promise<SystemLog[]> => {
     return await db.logs.orderBy('timestamp').reverse().limit(limit).toArray();

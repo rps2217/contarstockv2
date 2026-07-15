@@ -34,9 +34,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  // Track error count for auto-recovery
  const newCount = this.state.errorCount + 1;
  
- console.error('[ErrorBoundary]', error.message);
- 
- // Log to telemetry service
+ // Log to telemetry service (already handles console logging internally)
  logger.error('SYSTEM_CRASH', error.message, { 
    stack: error.stack,
    componentStack: errorInfo.componentStack 
@@ -44,7 +42,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  
  // React Error #31 specific handling
  if (error.message?.includes('$$typeof') || error.message?.includes('render')) {
-   console.error('[ErrorBoundary] React #31 detected - attempting recovery');
+   logger.warn('ErrorBoundary', 'React #31 detected - attempting recovery');
    
    // Auto-recover by resetting error state after logging
    if (newCount <= 3) {
@@ -101,7 +99,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
  downloadAnchorNode.click();
  downloadAnchorNode.remove();
  } catch (err) {
- console.error("Fallo al exportar rescate:", err);
+ logger.error('ErrorBoundary', 'Fallo al exportar rescate', { 
+   error: err instanceof Error ? err.message : String(err) 
+ });
  } finally {
  this.setState({ isExporting: false });
  }

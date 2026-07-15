@@ -5,6 +5,7 @@ import { getProductByBarcode } from '../../services/productService';
 import { SoundFX } from '../../services/audio';
 import { getSettings } from '../../services/settings';
 import { telemetry } from '../../services/telemetryService';
+import { logger } from '../../services/logger';
 
 /**
  * PIPELINE CENTRAL DE ESCANEO

@@ -8,6 +8,7 @@ import { thermalPrinter } from '../../../core/hardware/ThermalPrinterEngine';
 import { SoundFX } from '../../../services/audio';
 import * as sessionService from '../../../services/sessionService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
+import { logger } from '../../../services/logger';
 
 interface SavedOrdersListProps {
   state: any;
@@ -62,7 +63,7 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
       setStartingSession(order.id);
       SoundFX.play('success');
       
-      console.log('[SavedOrdersList] order.id:', order.id);
+      logger.debug('SavedOrdersList', 'Starting counting', { orderId: order.id });
       
       // IMPORTANT: Read order directly from database to ensure we have fresh data
       const freshOrder = await ExpectedOrderRepository.getById(order.id);
@@ -71,7 +72,10 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
         throw new Error('No se encontró la orden en la base de datos');
       }
       
-      console.log('[SavedOrdersList] freshOrder.items:', freshOrder.items);
+      logger.debug('SavedOrdersList', 'Fresh order loaded', { 
+        orderId: freshOrder.id, 
+        itemsCount: freshOrder.items?.length 
+      });
       
       // Create session in test mode with the expected order items
       const session = await sessionService.createSession(
@@ -86,7 +90,9 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
       // Navigate to counting page
       navigate(`/counting/${session.id}`);
     } catch (err) {
-      console.error('Error starting counting session:', err);
+      logger.error('SavedOrdersList', 'Error starting counting session', { 
+        error: err instanceof Error ? err.message : String(err) 
+      });
       SoundFX.play('error');
       alert('Error al iniciar el conteo. Por favor intenta de nuevo.');
     } finally {
