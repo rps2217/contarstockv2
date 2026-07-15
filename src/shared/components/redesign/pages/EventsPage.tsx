@@ -64,18 +64,18 @@ const StatCard = ({ status, count, isActive, onClick }: { status: EventStatus; c
       animate={{ opacity: 1, scale: 1 }}
       onClick={onClick}
       className={cn(
-        "rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all border",
+        "rounded-xl p-2 sm:p-4 flex items-center gap-2 sm:gap-3 cursor-pointer transition-all border",
         isActive 
           ? "bg-blue-600/20 border-blue-500 shadow-lg shadow-blue-500/20" 
           : "bg-surface border-subtle hover:border-blue-500/50 hover:bg-surface/80"
       )}
     >
-      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", meta.bg, isActive ? "border-blue-500/50" : meta.border)}>
-        <Icon className={cn("w-5 h-5", isActive ? "text-white" : meta.text)} />
+      <div className={cn("w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center border", meta.bg, isActive ? "border-blue-500/50" : meta.border)}>
+        <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5", isActive ? "text-white" : meta.text)} />
       </div>
-      <div>
-        <p className={cn("text-2xl font-bold", isActive ? "text-white" : "text-primary")}>{count}</p>
-        <p className={cn("text-xs", isActive ? "text-blue-200" : "text-muted")}>{meta.label}</p>
+      <div className="min-w-0">
+        <p className={cn("text-xl sm:text-2xl font-bold", isActive ? "text-white" : "text-primary")}>{count}</p>
+        <p className={cn("text-[10px] sm:text-xs truncate", isActive ? "text-blue-200" : "text-muted")}>{meta.label}</p>
       </div>
     </motion.div>
   )
@@ -291,13 +291,13 @@ export const RedesignEventsPage: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-base">
       {/* Header */}
-      <div className="pt-8 px-4 sm:px-6 lg:px-8 shrink-0">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight flex items-center gap-3">
-                <Bell className="w-8 h-8 text-amber-500" />
-                Eventos
+      <div className="pt-4 px-4 sm:pt-6 sm:px-6 lg:px-8 shrink-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:mb-4 mb-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary tracking-tight flex items-center gap-2 sm:gap-3">
+                <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
+                <span className="hidden xs:inline">Eventos</span>
               </h1>
               {/* Indicador de sincronización */}
               <SyncIndicator 
@@ -306,17 +306,17 @@ export const RedesignEventsPage: React.FC = () => {
                 totalCount={syncStats.total}
               />
             </div>
-            <p className="text-secondary text-sm">Gestión de incidencias y actividades.</p>
+            <p className="text-secondary text-xs sm:text-sm hidden sm:block">Gestión de incidencias y actividades.</p>
           </div>
           
           {/* Acciones: Botón de sync + Tabs */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {/* Botón de sincronización */}
             <button
               onClick={() => syncEvents()}
               disabled={isSyncing || !navigator.onLine}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
+                "flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0",
                 isSyncing
                   ? "bg-blue-600/50 text-white/70 cursor-not-allowed"
                   : syncStatsHook?.pending && syncStatsHook.pending > 0
@@ -341,7 +341,7 @@ export const RedesignEventsPage: React.FC = () => {
                   <RefreshCw className={cn("w-4 h-4", syncStatsHook?.pending && syncStatsHook.pending > 0 && "text-blue-200")} />
                   <span className="hidden sm:inline">Sincronizar</span>
                   {syncStatsHook?.pending && syncStatsHook.pending > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-blue-400 text-blue-900 rounded-full text-xs font-bold">
+                    <span className="ml-1 px-1.5 py-0.5 bg-blue-400 text-blue-900 rounded-full text-[10px] sm:text-xs font-bold">
                       {syncStatsHook.pending}
                     </span>
                   )}
@@ -354,26 +354,26 @@ export const RedesignEventsPage: React.FC = () => {
               <button
                 onClick={() => setActiveTab('table')}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors",
                   activeTab === 'table' 
                     ? "bg-blue-600 text-white" 
                     : "text-muted hover:text-white"
                 )}
               >
-                <Table2 className="w-4 h-4" />
-                Tabla
+                <Table2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Tabla</span>
               </button>
               <button
                 onClick={() => setActiveTab('import')}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors",
                   activeTab === 'import' 
                     ? "bg-blue-600 text-white" 
                     : "text-muted hover:text-white"
                 )}
               >
-                <Upload className="w-4 h-4" />
-                Importar
+                <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Importar</span>
               </button>
             </div>
           </div>
@@ -381,7 +381,7 @@ export const RedesignEventsPage: React.FC = () => {
 
         {/* Stats - Clickeables para filtrar (solo en tabla) */}
         {activeTab === 'table' && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-2 sm:mb-6 mb-4">
             <StatCard 
               status="pending" 
               count={stats.pending} 

@@ -52,14 +52,14 @@ const StatCard = memo(({
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}
-    className="bg-surface border border-subtle rounded-xl p-3 flex items-center gap-3"
+    className="bg-surface border border-subtle rounded-xl p-2 sm:p-3 flex items-center gap-2 sm:gap-3"
   >
-    <div className="w-10 h-10 rounded-lg bg-elevated flex items-center justify-center">
-      <Icon className={cn('w-5 h-5', color)} />
+    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-elevated flex items-center justify-center">
+      <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', color)} />
     </div>
-    <div>
-      <p className={cn('text-lg font-bold', color)}>{value}</p>
-      <p className="text-xs text-muted">{label}</p>
+    <div className="min-w-0">
+      <p className={cn('text-base sm:text-lg font-bold', color)}>{value}</p>
+      <p className="text-[10px] sm:text-xs text-muted truncate">{label}</p>
     </div>
   </motion.div>
 ));
@@ -92,17 +92,17 @@ export const CountingHeader = memo(({
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-3 sm:space-y-4', className)}>
       {/* Title Bar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-primary">Conteo</h1>
-          <p className="text-xs text-muted">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl font-bold text-primary">Conteo</h1>
+          <p className="text-[10px] sm:text-xs text-muted truncate">
             {sessionName || 'Sin orden'} • {location}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* ✅ Indicador de Auto-Save */}
           <AnimatePresence mode="wait">
             {autoSave && (
@@ -111,7 +111,7 @@ export const CountingHeader = memo(({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
+                  'flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium transition-colors',
                   autoSave.isSaving
                     ? 'bg-blue-500/10 text-blue-400'
                     : autoSave.hasPendingChanges
@@ -122,48 +122,48 @@ export const CountingHeader = memo(({
               >
                 {autoSave.isSaving ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Guardando...</span>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="hidden sm:inline">Guardando...</span>
                   </>
                 ) : autoSave.hasPendingChanges ? (
                   <>
-                    <Cloud className="w-3.5 h-3.5" />
-                    <span>Pendiente</span>
+                    <Cloud className="w-3 h-3" />
+                    <span className="hidden sm:inline">Pendiente</span>
                   </>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Guardado</span>
+                    <Check className="w-3 h-3" />
+                    <span className="hidden sm:inline">Guardado</span>
                   </>
                 )}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <span className="text-xs text-muted font-mono">{formattedDuration}</span>
+          <span className="text-[10px] sm:text-xs text-muted font-mono hidden sm:inline">{formattedDuration}</span>
           {onUndo && (
             <button
               onClick={onUndo}
-              className="p-2 rounded-lg bg-surface hover:bg-elevated transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-surface hover:bg-elevated transition-colors"
               title="Deshacer último"
             >
-              <RefreshCw className="w-5 h-5 text-muted" />
+              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-muted" />
             </button>
           )}
           {onOpenOptions && (
             <button
               onClick={onOpenOptions}
-              className="p-2 rounded-lg bg-surface hover:bg-elevated transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-surface hover:bg-elevated transition-colors"
               title="Opciones"
             >
-              <Settings className="w-5 h-5 text-muted" />
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-muted" />
             </button>
           )}
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatCard icon={Package} label="Items" value={stats.total} />
         <StatCard icon={CheckCircle2} label="Completos" value={stats.complete} color="text-emerald-500" />
         <StatCard icon={AlertTriangle} label="Variación" value={stats.withVariance} color="text-amber-500" />
@@ -171,22 +171,22 @@ export const CountingHeader = memo(({
       </div>
 
       {/* Multiplier */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted">Cantidad:</span>
-        <div className="flex items-center gap-2 bg-surface rounded-lg p-1">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="text-xs sm:text-sm text-muted">Cantidad:</span>
+        <div className="flex items-center gap-1 sm:gap-2 bg-surface rounded-lg p-1">
           <MultiplierButton
             onClick={() => onMultiplierChange(Math.max(1, multiplier - 1))}
             icon="-"
             variant="danger"
           />
-          <span className="w-8 text-center font-bold text-primary">{multiplier}</span>
+          <span className="w-6 sm:w-8 text-center font-bold text-primary text-sm sm:text-base">{multiplier}</span>
           <MultiplierButton
             onClick={() => onMultiplierChange(multiplier + 1)}
             icon="+"
             variant="success"
           />
         </div>
-        <span className="text-xs text-muted">{itemsPerMinute}/min</span>
+        <span className="text-[10px] sm:text-xs text-muted">{itemsPerMinute}/min</span>
       </div>
     </div>
   );

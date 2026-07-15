@@ -235,7 +235,7 @@ export const RedesignCountingPage: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-base overflow-hidden">
       {/* Header - Usa componente refactorizado */}
-      <div className="pt-6 px-4 sm:px-6 shrink-0 bg-base border-b border-subtle">
+      <div className="pt-4 px-4 sm:pt-6 sm:px-6 shrink-0 bg-base border-b border-subtle">
         {/* Botón de cerrar */}
         <div className="flex justify-end mb-2">
           <button 
@@ -264,11 +264,11 @@ export const RedesignCountingPage: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-32">
         {/* Manual Mode Toggle */}
-        <div className="flex items-center gap-3 py-3 border-b border-subtle">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-3 border-b border-subtle">
           <button 
             onClick={() => setIsManualMode(!isManualMode)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors w-full sm:w-auto justify-center',
               isManualMode ? 'bg-blue-500 text-white' : 'bg-surface text-secondary'
             )}
           >
@@ -277,14 +277,14 @@ export const RedesignCountingPage: React.FC = () => {
           </button>
           
           {isManualMode && (
-            <div className="flex-1 flex gap-2">
+            <div className="flex gap-2 w-full">
               <input
                 type="text"
                 value={manualBarcode}
                 onChange={(e) => setManualBarcode(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
-                placeholder="Código de barras..."
-                className="flex-1 bg-surface border border-subtle rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 text-primary"
+                placeholder="Código..."
+                className="flex-1 bg-surface border border-subtle rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 text-primary"
                 autoFocus
               />
               <button 
@@ -322,18 +322,18 @@ export const RedesignCountingPage: React.FC = () => {
         
         {/* Activo actual */}
         {state.activeBarcode && (
-          <div className="my-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-blue-400 font-medium">Escaneando:</p>
-                <p className="text-lg font-bold text-primary">{state.activeBarcode}</p>
+          <div className="my-3 p-3 sm:p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] sm:text-xs text-blue-400 font-medium">Escaneando:</p>
+                <p className="text-base sm:text-lg font-bold text-primary truncate">{state.activeBarcode}</p>
                 {state.activeProduct && (
-                  <p className="text-sm text-secondary">{state.activeProduct.name}</p>
+                  <p className="text-xs sm:text-sm text-secondary truncate">{state.activeProduct.name}</p>
                 )}
               </div>
-              <div className="text-right">
-                <p className="text-3xl font-black text-blue-400">×{state.multiplier}</p>
-                <p className="text-xs text-muted">por escaneo</p>
+              <div className="text-right shrink-0">
+                <p className="text-2xl sm:text-3xl font-black text-blue-400">×{state.multiplier}</p>
+                <p className="text-[10px] sm:text-xs text-muted">por escaneo</p>
               </div>
             </div>
           </div>
