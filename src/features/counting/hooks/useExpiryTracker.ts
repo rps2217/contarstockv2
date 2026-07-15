@@ -89,7 +89,7 @@ export const useExpiryTracker = () => {
         await db.expirations.update(existing.id, { syncStatus: 'synced' });
       }
     } catch (error) {
-      console.error('[useExpiryTracker] Error al sincronizar:', error);
+      logger.error('ExpiryTracker', 'Error al sincronizar', { error: String(error) });
     }
   }, []);
 

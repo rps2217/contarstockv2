@@ -52,7 +52,7 @@ export const handlePrintExpirations = (processedScans: any[]) => {
                 margin: 0
               });
             } catch (e) {
-              console.error("Error barcode", e);
+              logger.error('ExpiryUtils', 'Error barcode', { error: String(e) });
             }
           });
           setTimeout(() => { window.print(); }, 500);
@@ -162,7 +162,7 @@ export const handlePrintLabels = (processedScans: any[]) => {
                             margin: 5
                         });
                     } catch (e) {
-                        console.error("Error generating barcode for " + item.barcode, e);
+                        logger.error('ExpiryUtils', 'Error generating barcode', { barcode: item.barcode, error: String(e) });
                     }
                 });
 
@@ -231,7 +231,7 @@ export const handlePrintSelectedEvents = (items: any[]) => {
               });
             }
           } catch (e) {
-            console.error("Error generating FRC barcode", e);
+            logger.error('ExpiryUtils', 'Error generating FRC barcode', { error: String(e) });
           }
           setTimeout(() => { window.print(); }, 500);
         };

@@ -37,7 +37,7 @@ export function useSyncHealthAlert(
       setHealth(healthData);
       return healthData;
     } catch (e) {
-      console.error('Error checking sync health:', e);
+      logger.error('SyncHealthAlert', 'Error checking sync health', { error: String(e) });
       return {
         isHealthy: false,
         score: 0,
