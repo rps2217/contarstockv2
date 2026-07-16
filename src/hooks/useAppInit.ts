@@ -19,29 +19,32 @@ export const useAppInit = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    initPersistence();
-    const authStatus = localStorage.getItem('logicount_auth') === 'true';
-    setIsAuthenticated(authStatus);
+    const timeoutId = setTimeout(() => {
+      initPersistence();
+      const authStatus = localStorage.getItem('logicount_auth') === 'true';
+      setIsAuthenticated(authStatus);
 
-    if (authStatus) {
-      InitializationService.run((step) => {
-        setInitStep(step);
-        if (step === 'ready') setBootState('ready');
-      });
+      if (authStatus) {
+        InitializationService.run((step) => {
+          setInitStep(step);
+          if (step === 'ready') setBootState('ready');
+        });
 
-      // ✅ Ejecutar verificación de integridad SOLO en desarrollo
-      if (IS_DEV) {
-        runIntegrityCheckInBackground();
+        // ✅ Ejecutar verificación de integridad SOLO en desarrollo
+        if (IS_DEV) {
+          runIntegrityCheckInBackground();
+        }
+
+        // ✅ Iniciar verificaciones periódicas de salud y notificaciones push
+        pushNotificationService.startPeriodicChecks();
+      } else {
+        setBootState('ready');
       }
-
-      // ✅ Iniciar verificaciones periódicas de salud y notificaciones push
-      pushNotificationService.startPeriodicChecks();
-    } else {
-      setBootState('ready');
-    }
+    }, 0);
 
     // Cleanup al desmontar
     return () => {
+      clearTimeout(timeoutId);
       pushNotificationService.stopPeriodicChecks();
     };
   }, []);

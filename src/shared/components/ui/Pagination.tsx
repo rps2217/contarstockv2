@@ -226,11 +226,14 @@ export const usePagination = (totalItems: number, defaultItemsPerPage = 25) => {
 
   // Reset a página 1 cuando cambia el total de items
   React.useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
-    } else if (currentPage === 0 && totalPages > 0) {
-      setCurrentPage(1);
-    }
+    const timeoutId = setTimeout(() => {
+      if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+      } else if (currentPage === 0 && totalPages > 0) {
+        setCurrentPage(1);
+      }
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [totalPages, currentPage]);
 
   return {

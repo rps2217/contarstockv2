@@ -34,68 +34,68 @@ export function useReducedMotion(): ReducedMotionConfig {
   });
 
   useEffect(() => {
-    // 1. Detectar preferencia del sistema
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    
-    // 2. Detectar dispositivo móvil
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    ) || window.innerWidth < 768;
-    
-    // 3. Detectar dispositivo táctil
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    
-    // 4. Detectar dispositivo de gama baja (heurística)
-    // Basado en memoria del dispositivo y características del hardware
-    const isLowEndDevice = (() => {
-      // Memoria del dispositivo (si está disponible)
-      const nav = navigator as Navigator & { deviceMemory?: number };
-      const deviceMemory = nav.deviceMemory || 4; // Default 4GB si no está disponible
+    // Usar timeout para evitar setState sincrono en effect
+    const timeoutId = setTimeout(() => {
+      // 1. Detectar preferencia del sistema
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       
-      // Núcleos de CPU
-      const cpuCores = navigator.hardwareConcurrency || 4;
+      // 2. Detectar dispositivo móvil
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      ) || window.innerWidth < 768;
       
-      // Pantalla pequeña + baja memoria + pocos núcleos = dispositivo de gama baja
-      return deviceMemory <= 2 || cpuCores <= 2 || (isMobile && deviceMemory <= 3 && cpuCores <= 4);
-    })();
+      // 3. Detectar dispositivo táctil
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      // 4. Detectar dispositivo de gama baja (heurística)
+      const isLowEndDevice = (() => {
+        const nav = navigator as Navigator & { deviceMemory?: number };
+        const deviceMemory = nav.deviceMemory || 4;
+        const cpuCores = navigator.hardwareConcurrency || 4;
+        return deviceMemory <= 2 || cpuCores <= 2 || (isMobile && deviceMemory <= 3 && cpuCores <= 4);
+      })();
 
-    // 5. Calcular duración de animaciones
-    let animationDuration = 1;
-    let transitionDuration = 150;
-    
-    if (prefersReducedMotion) {
-      animationDuration = 0; // Sin animaciones
-      transitionDuration = 0;
-    } else if (isLowEndDevice) {
-      animationDuration = 0.3; // Reducir al 30%
-      transitionDuration = 100;
-    } else if (isMobile && !isLowEndDevice) {
-      animationDuration = 0.5; // Reducir al 50%
-      transitionDuration = 150;
-    }
+      // 5. Calcular duración de animaciones
+      let animationDuration = 1;
+      let transitionDuration = 150;
+      
+      if (prefersReducedMotion) {
+        animationDuration = 0;
+        transitionDuration = 0;
+      } else if (isLowEndDevice) {
+        animationDuration = 0.3;
+        transitionDuration = 100;
+      } else if (isMobile && !isLowEndDevice) {
+        animationDuration = 0.5;
+        transitionDuration = 150;
+      }
 
-    setConfig({
-      shouldReduceMotion: prefersReducedMotion || isLowEndDevice,
-      isMobile,
-      isTouchDevice,
-      isLowEndDevice,
-      animationDuration,
-      transitionDuration,
-    });
+      setConfig({
+        shouldReduceMotion: prefersReducedMotion || isLowEndDevice,
+        isMobile,
+        isTouchDevice,
+        isLowEndDevice,
+        animationDuration,
+        transitionDuration,
+      });
 
-    // Escuchar cambios en la preferencia del sistema
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setConfig(prev => ({
-        ...prev,
-        shouldReduceMotion: e.matches || prev.isLowEndDevice,
-        animationDuration: e.matches ? 0 : prev.animationDuration,
-        transitionDuration: e.matches ? 0 : prev.transitionDuration,
-      }));
+      // Escuchar cambios en la preferencia del sistema
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        setConfig(prev => ({
+          ...prev,
+          shouldReduceMotion: e.matches || prev.isLowEndDevice,
+          animationDuration: e.matches ? 0 : prev.animationDuration,
+          transitionDuration: e.matches ? 0 : prev.transitionDuration,
+        }));
+      };
+
+      mediaQuery.addEventListener('change', handleChange);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
     };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   return config;
