@@ -144,7 +144,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
               setProduct(null);
             }
           } catch (error) {
-            console.warn('Error buscando producto:', error);
+            logger.warn('ExpiryCaptureModal', 'Error buscando producto', error instanceof Error ? error.message : String(error));
             setProduct(null);
           }
         };

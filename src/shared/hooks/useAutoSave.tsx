@@ -91,7 +91,7 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
         }
       }
     } catch (e) {
-      console.warn('Error checking auto-save draft:', e);
+      logger.warn('useAutoSave', 'Error checking auto-save draft', e instanceof Error ? e.message : String(e));
       localStorage.removeItem(storageKey);
     }
   }, [enabled, key, storageKey, maxAgeMs, onRestore]);

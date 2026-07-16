@@ -123,7 +123,7 @@ export function usePreloadResources() {
     try {
       await importFn();
     } catch (e) {
-      console.warn('Failed to preload module:', e);
+      logger.warn('usePerformanceOptimizations', 'Failed to preload module', e instanceof Error ? e.message : String(e));
     }
   }, []);
 

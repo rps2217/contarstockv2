@@ -259,7 +259,7 @@ export function saveThemeToStorage(theme: ThemeName): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch (e) {
-    console.warn('Failed to save theme to storage:', e);
+    logger.warn('ThemeService', 'Failed to save theme to storage', e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -267,7 +267,7 @@ export function loadThemeFromStorage(): ThemeName | null {
   try {
     return localStorage.getItem(THEME_STORAGE_KEY) as ThemeName | null;
   } catch (e) {
-    console.warn('Failed to load theme from storage:', e);
+    logger.warn('ThemeService', 'Failed to load theme from storage', e instanceof Error ? e.message : String(e));
     return null;
   }
 }
@@ -276,7 +276,7 @@ export function saveCustomThemesToStorage(themes: CustomTheme[]): void {
   try {
     localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(themes));
   } catch (e) {
-    console.warn('Failed to save custom themes to storage:', e);
+    logger.warn('ThemeService', 'Failed to save custom themes to storage', e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -285,7 +285,7 @@ export function loadCustomThemesFromStorage(): CustomTheme[] {
     const stored = localStorage.getItem(CUSTOM_THEMES_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch (e) {
-    console.warn('Failed to load custom themes from storage:', e);
+    logger.warn('ThemeService', 'Failed to load custom themes from storage', e instanceof Error ? e.message : String(e));
     return [];
   }
 }

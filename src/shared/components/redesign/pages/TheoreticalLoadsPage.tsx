@@ -676,9 +676,9 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
     setLoadingCloud(true)
     setError(null)
     try {
-      console.log("[TheoreticalLoads] Obteniendo cargas desde la nube...")
+      logger.info('TheoreticalLoadsPage', 'Obteniendo cargas desde la nube')
       const manifests = await erpService.downloadAllPendingManifests()
-      console.log("[TheoreticalLoads] Manifiestos recibidos:", manifests)
+      logger.info('TheoreticalLoadsPage', 'Manifiestos recibidos', { count: manifests?.length })
       setCloudManifests(manifests || [])
       if (manifests && manifests.length > 0) {
         toast.success(`Se encontraron ${manifests.length} cargas en la nube`)

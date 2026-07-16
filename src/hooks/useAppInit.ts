@@ -67,7 +67,7 @@ async function runIntegrityCheckInBackground(): Promise<void> {
 
     // Registrar métricas en HealthService
     if (!result.passed && result.criticalIssues > 0) {
-      console.warn('[IntegrityCheck] Problemas críticos encontrados:', result.criticalIssues);
+      logger.warn('useAppInit', 'Problemas críticos encontrados en IntegrityCheck', { count: result.criticalIssues });
     }
 
     // Auto-fix solo problemas menores automáticamente

@@ -166,7 +166,7 @@ const AppContent = () => {
         const uniqueLocations = [...new Set(products.map(p => p.location).filter(Boolean))];
         uniqueLocations.forEach(loc => { if (loc) rlsStore.addWarehouse(loc as string); });
       } catch (err) {
-        console.warn('Error cargando ubicaciones:', err);
+        logger.warn('App', 'Error cargando ubicaciones', err instanceof Error ? err.message : String(err));
       }
     };
     loadLocations();

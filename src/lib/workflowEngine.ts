@@ -253,7 +253,7 @@ async function executeAction(
       break;
 
     case 'log':
-      console.log(`[Workflow Log] ${renderedMessage}`, { record, context });
+      logger.info('workflowEngine', 'Workflow Log', { message: renderedMessage, record, context });
       break;
 
     case 'audit':
@@ -287,12 +287,12 @@ async function executeAction(
       break;
 
     case 'email':
-      console.log(`[Email] To: ${action.recipient}, Message: ${renderedMessage}`);
+      logger.info('workflowEngine', 'Email action', { recipient: action.recipient, message: renderedMessage });
       // Placeholder para implementación real
       break;
 
     case 'create_task':
-      console.log(`[Task Created] ${renderedMessage}, Assignee: ${action.recipient}`);
+      logger.info('workflowEngine', 'Task created', { message: renderedMessage, assignee: action.recipient });
       // Placeholder para implementación real
       break;
 

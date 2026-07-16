@@ -49,7 +49,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
           video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
         });
       } catch (e: any) {
-        console.warn("Failed to get environment camera, falling back to any camera...", e);
+        logger.warn('useOpticalEngine', 'Failed to get environment camera, falling back', e?.message || String(e));
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { width: { ideal: 1280 }, height: { ideal: 720 } } 
         });
@@ -68,7 +68,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
         detector = new window.BarcodeDetector({ formats });
         setEngineType('native');
       } catch (e) {
-        console.warn("BarcodeDetector API not available, falling back to legacy engine");
+        logger.warn('useOpticalEngine', 'BarcodeDetector API not available, falling back to legacy engine');
         startLegacyEngine();
         return;
       }
@@ -97,7 +97,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
       };
       requestRef.current = requestAnimationFrame(detectLoop);
     } catch (err: any) {
-      console.warn("Native engine failed completely:", err);
+      logger.warn('useOpticalEngine', 'Native engine failed completely', err?.message || String(err));
       startLegacyEngine();
     }
   };
@@ -118,7 +118,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
       try {
         await scannerInstance.start({ facingMode: "environment" }, config, onSuccess, onError);
       } catch (e: any) {
-        console.warn("Legacy engine environment camera failed, trying any camera", e);
+        logger.warn('useOpticalEngine', 'Legacy engine environment camera failed, trying any camera', e?.message || String(e));
         try {
           const devices = await Html5Qrcode.getCameras();
           if (devices && devices.length > 0) {
@@ -131,7 +131,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
         }
       }
     } catch (err: any) {
-      console.warn("Legacy engine failed:", err);
+      logger.warn('useOpticalEngine', 'Legacy engine failed', err?.message || String(err));
       if (isComponentMounted.current) {
         setError(`OPTICAL_ENGINE_FAILURE: ${err.message || 'Camera access denied or unavailable'}`);
       }

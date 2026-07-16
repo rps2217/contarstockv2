@@ -69,7 +69,7 @@ class TelemetryService {
       if (error) {
         // If table doesn't exist, we don't want to spam the console
         if (error.code === '42P01' || error.message?.includes('schema cache') || error.code === 'PGRST116' || error.message?.includes('404')) {
-          console.warn('[TelemetryService] Table TELEMETRIA not found. Disabling telemetry.');
+          logger.warn('TelemetryService', 'Table TELEMETRIA not found. Disabling telemetry.');
           this.buffer = [];
           if (this.flushTimer) {
             clearInterval(this.flushTimer);
@@ -86,7 +86,7 @@ class TelemetryService {
           this.buffer = [...eventsToFlush, ...this.buffer].slice(0, 500); // keep max 500 in offline mode
           return; // silent fallback 
       }
-      console.warn('[TelemetryService] Silent flush failure (prevents circular logging):', err.message);
+      logger.warn('TelemetryService', 'Silent flush failure', err.message);
     }
   }
 }

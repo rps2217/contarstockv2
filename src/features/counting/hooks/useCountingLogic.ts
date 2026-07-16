@@ -115,48 +115,63 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     const allowedStates = ['IDLE', 'LOOKING_UP', 'COMMITTING', 'MANUAL_ENTRY', 'AWAITING_PHARMA'];
     if (!allowedStates.includes(machineState)) return;
 
-    // Si viene de AWAITING_PHARMA con fecha (del modal), ir directo a guardar
-    if (machineState === 'AWAITING_PHARMA' && mm !== undefined && yyyy !== undefined) {
-      dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
-      await sessionService.addScanEvent(sessionId, barcode, qty, mm, yyyy, currentLocation, batch);
-      dispatch({ type: 'COMMIT_COMPLETE' });
-      return;
-    }
-
-    dispatch({ type: 'SCAN_INBOUND', barcode });
-    
-    const normBarcode = normalizeSku(barcode);
-    const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
-    const currentQty = existing?.totalQuantity || 0;
-
-    processScan(
-      barcode,
-      qty,
-      currentQty,
-      undefined, // Optimistic update is handled by engine internally
-      async (cleanBarcode, product, newQty) => {
-        const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
-        if (needsPharma) {
-          dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: true });
-          return;
-        }
+    try {
+      // Si viene de AWAITING_PHARMA con fecha (del modal), ir directo a guardar
+      if (machineState === 'AWAITING_PHARMA' && mm !== undefined && yyyy !== undefined) {
         dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
-
-        await sessionService.addScanEvent(sessionId, cleanBarcode, qty, mm, yyyy, currentLocation, batch);
+        await sessionService.addScanEvent(sessionId, barcode, qty, mm, yyyy, currentLocation, batch);
         dispatch({ type: 'COMMIT_COMPLETE' });
-      },
-      (err) => {
-        dispatch({ type: 'ERROR_OCCURRED' });
+        return;
       }
-    );
+
+      dispatch({ type: 'SCAN_INBOUND', barcode });
+      
+      const normBarcode = normalizeSku(barcode);
+      const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
+      const currentQty = existing?.totalQuantity || 0;
+
+      processScan(
+        barcode,
+        qty,
+        currentQty,
+        undefined, // Optimistic update is handled by engine internally
+        async (cleanBarcode, product, newQty) => {
+          try {
+            const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
+            if (needsPharma) {
+              dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: true });
+              return;
+            }
+            dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
+
+            await sessionService.addScanEvent(sessionId, cleanBarcode, qty, mm, yyyy, currentLocation, batch);
+            dispatch({ type: 'COMMIT_COMPLETE' });
+          } catch (err) {
+            logger.error('useCountingLogic', 'Error in scan commit', err instanceof Error ? err.message : String(err));
+            dispatch({ type: 'ERROR_OCCURRED' });
+          }
+        },
+        (err) => {
+          dispatch({ type: 'ERROR_OCCURRED' });
+        }
+      );
+    } catch (err) {
+      logger.error('useCountingLogic', 'Error in finalizeScanPipeline', err instanceof Error ? err.message : String(err));
+      dispatch({ type: 'ERROR_OCCURRED' });
+    }
   }, [sessionId, settings, currentLocation, consolidatedHistory, machineState, processScan]);
 
   const resetSession = useCallback(async () => {
     if (!sessionId || !confirm("¿Vaciar todo el contenido de este bulto?")) return;
-    await ScanRepository.deleteBySessions([sessionId]); 
-    await sessionService.updateSessionMetadata(sessionId);
-    engine.actions.resetActive();
-    engine.actions.triggerFeedback('undo');
+    try {
+      await ScanRepository.deleteBySessions([sessionId]); 
+      await sessionService.updateSessionMetadata(sessionId);
+      engine.actions.resetActive();
+      engine.actions.triggerFeedback('undo');
+    } catch (err) {
+      logger.error('useCountingLogic', 'Error resetting session', err instanceof Error ? err.message : String(err));
+      toast.error('Error al reiniciar la sesión');
+    }
   }, [sessionId, engine.actions]);
 
   const actions = useMemo(() => ({
@@ -176,45 +191,60 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
         });
     },
     handlePharmaComplete: async (m?: number, y?: number, b?: string) => {
-      if (engine.activeBarcode && m !== undefined && y !== undefined) {
-        // Verificar si es "omitir" (m=0 o y=9999)
-        const isSkip = isNoDateRecord(m, y);
-        
-        // Solo guardar en expiry si NO es omitir
-        if (!isSkip) {
-          // Registrar vencimiento
-          await saveExpiry({
-            barcode: engine.activeBarcode,
-            productName: engine.activeProduct?.name,
-            mm: m,
-            yyyy: y,
-            sessionId: sessionId
-          });
-          // Sincronizar a la nube si hay conexión
-          const entry = await getExpiryForBarcode(engine.activeBarcode);
-          if (entry) {
-            syncExpiry(entry);
+      try {
+        if (engine.activeBarcode && m !== undefined && y !== undefined) {
+          // Verificar si es "omitir" (m=0 o y=9999)
+          const isSkip = isNoDateRecord(m, y);
+          
+          // Solo guardar en expiry si NO es omitir
+          if (!isSkip) {
+            // Registrar vencimiento
+            await saveExpiry({
+              barcode: engine.activeBarcode,
+              productName: engine.activeProduct?.name,
+              mm: m,
+              yyyy: y,
+              sessionId: sessionId
+            });
+            // Sincronizar a la nube si hay conexión
+            const entry = await getExpiryForBarcode(engine.activeBarcode);
+            if (entry) {
+              syncExpiry(entry);
+            }
           }
+          
+          // Continuar con el flujo normal (para contar el producto)
+          finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
         }
-        
-        // Continuar con el flujo normal (para contar el producto)
-        finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
+      } catch (err) {
+        logger.error('useCountingLogic', 'Error in handlePharmaComplete', err instanceof Error ? err.message : String(err));
+        toast.error('Error al procesar el vencimiento');
       }
     },
     cancelPharma: () => {
       dispatch({ type: 'RESET' });
     },
     undoLastScan: async () => {
-      if(sessionId) {
-        const undone = await sessionService.undoLastAction(sessionId);
-        if(undone) engine.actions.triggerFeedback('undo');
+      try {
+        if(sessionId) {
+          const undone = await sessionService.undoLastAction(sessionId);
+          if(undone) engine.actions.triggerFeedback('undo');
+        }
+      } catch (err) {
+        logger.error('useCountingLogic', 'Error in undoLastScan', err instanceof Error ? err.message : String(err));
+        toast.error('Error al deshacer');
       }
     },
     toggleAutoLock: async () => {
-      if (sessionId && session) {
-        const newState = !session.isAutoLockEnabled;
-        await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
-        engine.actions.triggerFeedback(newState ? 'success' : 'undo');
+      try {
+        if (sessionId && session) {
+          const newState = !session.isAutoLockEnabled;
+          await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
+          engine.actions.triggerFeedback(newState ? 'success' : 'undo');
+        }
+      } catch (err) {
+        logger.error('useCountingLogic', 'Error in toggleAutoLock', err instanceof Error ? err.message : String(err));
+        toast.error('Error al cambiar auto-lock');
       }
     },
     setStatus: (s: 'manual' | 'idle') => {
@@ -222,14 +252,19 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
       else dispatch({ type: 'RESET' });
     },
     applyPotentialMatch: async () => {
-      if (!potentialMatch || !sessionId) return;
-      await SessionRepository.update(sessionId, {
-        erpOrder: potentialMatch.expectedOrder.internalId,
-        expectedItems: potentialMatch.expectedOrder.items,
-        isVerifiedMode: true
-      });
-      setPotentialMatch(null);
-      engine.actions.triggerFeedback('success');
+      try {
+        if (!potentialMatch || !sessionId) return;
+        await SessionRepository.update(sessionId, {
+          erpOrder: potentialMatch.expectedOrder.internalId,
+          expectedItems: potentialMatch.expectedOrder.items,
+          isVerifiedMode: true
+        });
+        setPotentialMatch(null);
+        engine.actions.triggerFeedback('success');
+      } catch (err) {
+        logger.error('useCountingLogic', 'Error in applyPotentialMatch', err instanceof Error ? err.message : String(err));
+        toast.error('Error al aplicar coincidencia');
+      }
     },
     dismissPotentialMatch: () => setPotentialMatch(null)
   }), [engine.setMultiplier, setCurrentLocation, finalizeScanPipeline, resetSession, engine.actions, engine.activeBarcode, engine.multiplier, sessionId, session, potentialMatch, setPotentialMatch]);

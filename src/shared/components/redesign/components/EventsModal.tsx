@@ -308,10 +308,10 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
               .equals(eventKey)
               .modify({ synced: true });
           } else {
-            console.warn('No se pudo eliminar de la nube:', deleteResult.error.message)
+            logger.warn('EventsModal', 'No se pudo eliminar de la nube', deleteResult.error.message)
           }
         } catch (cloudErr) {
-          console.warn('No se pudo eliminar de la nube:', cloudErr)
+          logger.warn('EventsModal', 'No se pudo eliminar de la nube', cloudErr instanceof Error ? cloudErr.message : String(cloudErr))
           // Continuar con eliminación local aunque falle la nube
         }
       }
@@ -370,7 +370,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 .equals(eventKey)
                 .modify({ synced: true })
             } catch (cloudErr) {
-              console.warn('No se pudo eliminar de la nube:', cloudErr)
+              logger.warn('EventsModal', 'No se pudo eliminar de la nube', cloudErr instanceof Error ? cloudErr.message : String(cloudErr))
             }
             
             // Eliminar localmente
@@ -480,7 +480,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
                 .equals(eventKey)
                 .modify({ synced: true })
             } catch (cloudErr) {
-              console.warn('No se pudo eliminar de la nube:', cloudErr)
+              logger.warn('EventsModal', 'No se pudo eliminar de la nube', cloudErr instanceof Error ? cloudErr.message : String(cloudErr))
             }
           }
           

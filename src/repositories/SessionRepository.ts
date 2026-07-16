@@ -273,7 +273,7 @@ export class SessionRepository {
     );
 
     if (invalid.length > 0) {
-      console.warn(`[SessionRepository] Filtradas ${invalid.length} sesiones con IDs inválidos`);
+      logger.warn('SessionRepository', 'Filtradas sesiones con IDs inválidos', { count: invalid.length });
     }
 
     const validSet = new Set(valid);

@@ -82,7 +82,7 @@ const playBeep = (frequency: number, duration: number = 100): void => {
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + duration / 1000);
   } catch {
-    console.warn('Audio feedback not available');
+    logger.warn('useScanFeedback', 'Audio feedback not available');
   }
 };
 
@@ -91,7 +91,7 @@ const vibrate = (pattern: number | number[]): void => {
     try {
       navigator.vibrate(pattern);
     } catch {
-      console.warn('Vibration not available');
+      logger.warn('useScanFeedback', 'Vibration not available');
     }
   }
 };

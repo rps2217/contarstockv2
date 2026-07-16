@@ -83,7 +83,7 @@ export function captureError(error: Error, context?: Record<string, unknown>) {
  */
 export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info') {
   if (!import.meta.env.PROD) {
-    console.log('[Message Capture]', message);
+    logger.info('monitoring', 'Message Capture', { message });
     return;
   }
 
@@ -120,7 +120,7 @@ export async function initWebVitals() {
   try {
     const reportWebVital = (metric: WebVitalsMetric) => {
       // Log en consola
-      console.log(`[WebVital] ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`);
+      logger.info('monitoring', 'WebVital', { name: metric.name, value: metric.value.toFixed(2), rating: metric.rating });
 
       // Enviar a Google Analytics 4 si está disponible
       if (typeof window !== 'undefined' && 'gtag' in window) {
@@ -177,7 +177,7 @@ interface AnalyticsEvent {
 export function trackEvent({ category, action, label, value }: AnalyticsEvent) {
   // Console log en desarrollo
   if (import.meta.env.DEV) {
-    console.log(`[Analytics] ${category} / ${action}`, { label, value });
+    logger.info('monitoring', 'Analytics Event', { category, action, label, value });
   }
 
   // Google Analytics 4

@@ -131,7 +131,7 @@ export const RedesignCapturePage: React.FC<CapturePageProps> = ({ onNavigate }) 
   const handleScan = useCallback((code: string) => {
     if (lastScannedCode.current === code) return
     lastScannedCode.current = code
-    console.log('Codigo escaneado:', code)
+    logger.debug('CapturePage', 'Codigo escaneado', { code })
     // Ir a /massive que muestra el modal de inicio unificado
     navigate('/massive')
   }, [navigate])

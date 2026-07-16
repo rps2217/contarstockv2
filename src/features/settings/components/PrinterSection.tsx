@@ -54,7 +54,7 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting, theme
         });
       }
     } catch (err: any) {
-      console.warn("Could not connect to USB printer:", err);
+      logger.warn("PrinterSection", "Could not connect to USB printer", err instanceof Error ? err.message : String(err));
       setErrorMessage(err?.message || "Ocurrió un error inesperado al conectar por USB.");
       setIsConnected(false);
     } finally {
@@ -77,7 +77,7 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting, theme
         });
       }
     } catch (err: any) {
-      console.warn("Could not connect to Bluetooth printer:", err);
+      logger.warn("PrinterSection", "Could not connect to Bluetooth printer", err instanceof Error ? err.message : String(err));
       setErrorMessage(err?.message || "Ocurrió un error inesperado al conectar por Bluetooth.");
       setIsConnected(false);
     } finally {

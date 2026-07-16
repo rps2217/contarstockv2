@@ -159,7 +159,7 @@ export class PushNotificationService {
    */
   async requestPermission(): Promise<boolean> {
     if (!this.isSupported) {
-      console.warn('Este navegador no soporta notificaciones push');
+      logger.warn('PushNotificationService', 'Este navegador no soporta notificaciones push');
       return false;
     }
 

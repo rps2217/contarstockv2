@@ -214,7 +214,8 @@ export async function withSyncRetry<T>(
   return withRetry(fn, {
     ...retryOptions,
     onRetry: (attempt, error, delay) => {
-      console.warn(
+      logger.warn('retry', 
+        'Sync retry',
         `[Sync] ${operation?.toUpperCase() || 'SYNC'} retry for ${tableName || 'unknown'}: ` +
         `Attempt ${attempt} failed. Retrying in ${Math.round(delay / 1000)}s...`
       );

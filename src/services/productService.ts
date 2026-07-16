@@ -39,12 +39,11 @@ export const resolveUnknownProducts = async (skus: string[], config: any) => {
           price: typeof p.price === 'number' ? p.price : parseFloat(String(p.price || p.PRICE || 0).replace(/[^0-9.]/g, '')),
           syncStatus: 'synced'
         });
-        console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.name}`);
       } else {
-        console.warn(`[Detective] SKU ${sku} no encontrado en Supabase.`);
+        logger.warn('productService', 'SKU no encontrado en Supabase', { sku });
       }
     } catch (e) {
-      console.warn(`[Detective] Error al resolver SKU ${sku}:`, e);
+      logger.warn('productService', 'Error al resolver SKU', { sku, error: e instanceof Error ? e.message : String(e) });
     }
   }
 };

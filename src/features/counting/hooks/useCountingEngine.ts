@@ -196,6 +196,12 @@ export const useCountingEngine = (): UseCountingEngineReturn => {
         // Sesión de modo teórico
         navigate(`/counting/${sessionId}`);
       }
+    } catch (error) {
+      logger.error('CountingEngine', 'Error resuming session', { 
+        error: error instanceof Error ? error.message : String(error),
+        sessionId 
+      });
+      toast.error('Error al reanudar la sesión');
     } finally {
       setIsStarting(false);
     }

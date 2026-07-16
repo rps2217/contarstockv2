@@ -555,7 +555,7 @@ export async function filterEventsWithoutDuplicates(
       .or(`frc_code.in.(${frcCodes.join(',')}),barcode.in.${barcodes.join(',')})`);
 
     if (error) {
-      console.warn('Error verificando duplicados de eventos:', error.message);
+      logger.warn('syncRegistry', 'Error verificando duplicados de eventos', error.message);
       // En caso de error, crear todos
       result.toCreate = localEvents;
       return result;

@@ -192,7 +192,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       try {
         setCustomThemes(JSON.parse(savedCustomThemes));
       } catch (e) {
-        console.warn('Error parsing custom themes:', e);
+        logger.warn('useTheme', 'Error parsing custom themes', e instanceof Error ? e.message : String(e));
       }
     }
   }, []);

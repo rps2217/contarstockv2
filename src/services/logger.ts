@@ -73,8 +73,7 @@ const writeLog = async (level: LogLevel, module: string, message: string, detail
     }
   } catch (e) {
     // Fallback silencioso si falla IndexedDB (ej. cuota excedida o bloqueo)
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    console.warn(`[Logger] Persistency failed: ${errorMessage}`);
+    // No usar console.warn aquí para evitar recursión
   }
 };
 

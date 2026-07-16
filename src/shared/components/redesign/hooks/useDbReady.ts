@@ -27,11 +27,11 @@ export const useDbReady = (timeout = 10000) => {
 
         if (mounted) {
           setIsReady(true);
-          console.log('[useDbReady] ✅ DB lista');
+          logger.info('useDbReady', 'DB lista')
         }
       } catch (err) {
         if (Date.now() - startTime > timeout) {
-          console.warn('[useDbReady] ⚠️ Timeout, continuando...');
+          logger.warn('useDbReady', 'Timeout, continuando')
           if (mounted) setIsReady(true);
           return;
         }

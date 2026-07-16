@@ -56,10 +56,10 @@ export class ThermalPrinterEngine {
     } catch (err: any) {
       const isSecurity = err?.name === 'SecurityError' || String(err?.message || '').includes('permissions policy') || String(err?.message || '').includes('disallowed');
       if (isSecurity) {
-        console.warn("[USB] Bloqueado por política de seguridad (iframe o permisos).");
+        logger.warn('ThermalPrinterEngine', 'USB blocked by security policy');
         throw new Error("El acceso USB está restringido por la directiva de seguridad del navegador. Abre la aplicación en una pestaña nueva para poder vincular la impresora.");
       }
-      console.warn("[USB] Error de conexión:", err?.message || err);
+      logger.warn('ThermalPrinterEngine', 'USB connection error', err?.message || String(err));
       throw err;
     }
   }
@@ -94,10 +94,10 @@ export class ThermalPrinterEngine {
     } catch (err: any) {
       const isSecurity = err?.name === 'SecurityError' || String(err?.message || '').includes('permissions policy') || String(err?.message || '').includes('disallowed');
       if (isSecurity) {
-        console.warn("[Bluetooth] Bloqueado por política de seguridad (iframe o permisos).");
+        logger.warn('ThermalPrinterEngine', 'Bluetooth blocked by security policy');
         throw new Error("El acceso Bluetooth está restringido por la directiva de seguridad del navegador. Abre la aplicación en una pestaña nueva para poder vincular la impresora.");
       }
-      console.warn("[Bluetooth] Error de conexión:", err?.message || err);
+      logger.warn('ThermalPrinterEngine', 'Bluetooth connection error', err?.message || String(err));
       throw err;
     }
   }
@@ -821,7 +821,7 @@ export class ThermalPrinterEngine {
       });
       return canvas.toDataURL("image/png");
     } catch (err) {
-      console.warn("Could not generate barcode with JSBarcode for:", barcode, err);
+      logger.warn('ThermalPrinterEngine', 'Could not generate barcode with JSBarcode', { barcode, error: err instanceof Error ? err.message : String(err) });
       return "";
     }
   }

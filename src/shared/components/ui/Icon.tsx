@@ -99,7 +99,7 @@ export const Icon = memo(({
   const path = INLINE_ICONS[name];
 
   if (!path) {
-    console.warn(`Icon "${name}" not found in inline catalog`);
+    logger.warn('Icon', 'Icon not found in inline catalog', { name });
     return null;
   }
 
