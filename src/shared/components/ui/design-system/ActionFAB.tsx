@@ -39,6 +39,7 @@ export const ActionFAB: React.FC<ActionFABProps> = ({
           : 'bg-neutral-900 text-white shadow-black/30 hover:bg-neutral-800'
         }
       `}
+      aria-label={label || 'Acción principal'}
     >
       {icon || <Plus className="w-5 h-5" />}
       {label && <span>{label}</span>}

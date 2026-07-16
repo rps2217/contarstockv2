@@ -7,6 +7,7 @@
 
 import React, { memo, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { sanitizeBackUrl } from '@/lib/urlSecurity';
 
 interface RedesignWrapperProps {
   children: ReactNode;
@@ -38,9 +39,9 @@ export const RedesignWrapper = memo(({
         <div className="shrink-0 border-b border-subtle">
           <div className="flex items-center justify-between px-4 py-4">
             <div className="flex items-center gap-3">
-              {headerBackUrl && (
+              {headerBackUrl && sanitizeBackUrl(headerBackUrl) && (
                 <a
-                  href={headerBackUrl}
+                  href={sanitizeBackUrl(headerBackUrl)!}
                   className="p-2 -ml-2 rounded-lg hover:bg-surface transition-colors"
                 >
                   <svg className="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">

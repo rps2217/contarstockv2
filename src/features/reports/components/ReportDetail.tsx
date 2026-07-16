@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react'
 import { logger } from '@/services/logger';
+import { sanitizeUrl } from '@/lib/urlSecurity';
 ;
 import { ChevronLeft, Trash2, Minus, Plus, Cloud, Printer, Loader2, FileSpreadsheet, FileText, Zap, Search, CheckCircle2 } from 'lucide-react';
 import * as sessionService from '../../../services/sessionService';
@@ -190,9 +191,9 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  }`}>
  <div className="flex items-center justify-between mb-2">
  <h3 className="text-[10px] font-black uppercase tracking-widest text-muted">Evidencia de Etiqueta</h3>
- {session.photoUrl && (
+ {session.photoUrl && sanitizeUrl(session.photoUrl) && (
  <a 
- href={session.photoUrl} 
+ href={sanitizeUrl(session.photoUrl)!} 
  target="_blank" 
  rel="noopener noreferrer"
  className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"

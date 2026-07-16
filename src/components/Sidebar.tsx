@@ -156,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
       </div>
 
       {/* Navegación Principal */}
-      <nav className={`flex-1 ${isCollapsed ? 'px-3' : 'px-4'} space-y-1 overflow-y-auto no-scrollbar py-6`}>
+      <nav className={`flex-1 ${isCollapsed ? 'px-3' : 'px-4'} space-y-1 overflow-y-auto no-scrollbar py-6`} aria-label="Navegación principal">
         {!isCollapsed && (
           <motion.div 
             initial={{ opacity: 0 }}
