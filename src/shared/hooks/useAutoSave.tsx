@@ -10,7 +10,7 @@
  * - Limpieza automática al guardar exitosamente
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { logger } from '@/services/logger';
 ;
 
@@ -233,7 +233,7 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
     }
   };
 
-  const formatRelativeTime = (date: Date) => {
+  const formatRelativeTime = useCallback((date: Date) => {
     const diff = Date.now() - date.getTime();
     const seconds = Math.floor(diff / 1000);
     if (seconds < 60) return 'recientemente';
@@ -241,9 +241,10 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
     if (minutes < 60) return `hace ${minutes}m`;
     const hours = Math.floor(minutes / 60);
     return `hace ${hours}h`;
-  };
+  }, []);
 
-  const label = getLabel();
+  // Usar useMemo para evitar llamada a función impura durante render
+  const label = useMemo(() => getLabel(), [status, lastSavedAt, formatRelativeTime]);
   
   if (!label && !showLabel) return null;
 
