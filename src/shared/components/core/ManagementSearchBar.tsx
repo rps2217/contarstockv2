@@ -33,7 +33,10 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
 
   // Synchronize local search text with global state
   useEffect(() => {
-    setLocalQuery(searchQuery);
+    const timeoutId = setTimeout(() => {
+      setLocalQuery(searchQuery);
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
   // Debounced search trigger for high performance

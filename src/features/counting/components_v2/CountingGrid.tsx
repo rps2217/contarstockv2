@@ -38,14 +38,25 @@ export const CountingGrid = memo(({
   // Decidir si usar virtualización basándose en la cantidad de items
   const shouldVirtualize = useVirtualization && items.length > VIRTUALIZATION_THRESHOLD;
 
-  if (items.length === 0) {
-    return <CountingEmptyState className={className} />;
-  }
-
-  // Handler para edición
+  // Handler para edición - definido antes de los returns
   const handleEditExpiry = (item: CountedItem) => {
     onEditExpiry?.(item);
   };
+
+  // Hook para virtualización - SE LLAMA ANTES de cualquier return
+  const {
+    virtualItems,
+    totalSize,
+    containerRef: virtualContainerRef,
+  } = useVirtualList({
+    items,
+    itemHeight: ESTIMATED_ROW_HEIGHT,
+    overscan: 5,
+  });
+
+  if (items.length === 0) {
+    return <CountingEmptyState className={className} />;
+  }
 
   // Renderizado simple para listas pequeñas
   if (!shouldVirtualize) {
@@ -65,17 +76,6 @@ export const CountingGrid = memo(({
       </div>
     );
   }
-
-  // Virtualización real para listas grandes
-  const {
-    virtualItems,
-    totalSize,
-    containerRef: virtualContainerRef,
-  } = useVirtualList({
-    items,
-    itemHeight: ESTIMATED_ROW_HEIGHT,
-    overscan: 5,
-  });
 
   return (
     <div

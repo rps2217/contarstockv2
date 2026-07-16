@@ -20,25 +20,39 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
  const UPDATE_INTERVAL = 16;
 
  useEffect(() => {
-  if (isHolding) {
-  const step = 100 / (UNLOCK_DURATION / UPDATE_INTERVAL);
-  intervalRef.current = setInterval(() => {
-  setProgress(prev => {
-  const next = prev + step;
-  return next >= 100 ? 100 : next;
-  });
-  }, UPDATE_INTERVAL);
-  } else {
-  if (intervalRef.current) clearInterval(intervalRef.current);
-  setProgress(0);
-  }
-  return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    if (isHolding) {
+      const step = 100 / (UNLOCK_DURATION / UPDATE_INTERVAL);
+      intervalRef.current = setInterval(() => {
+        setProgress(prev => {
+          const next = prev + step;
+          return next >= 100 ? 100 : next;
+        });
+      }, UPDATE_INTERVAL);
+      
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      // Usar timeout para evitar setState sincrono
+      const timeoutId = setTimeout(() => {
+        setProgress(0);
+      }, 0);
+      return () => {
+        clearTimeout(timeoutId);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    }
   }, [isHolding]);
 
   useEffect(() => {
-  if (progress >= 100) {
-  handleUnlockTrigger();
-  }
+    if (progress >= 100) {
+      const timeoutId = setTimeout(() => {
+        handleUnlockTrigger();
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+    return undefined;
   }, [progress]);
 
  const handleUnlockTrigger = () => {
