@@ -104,7 +104,7 @@ const useProductSearch = () => {
         .toArray()
       setSearchResults(products)
     } catch (error) {
-      console.error('Error searching products:', error)
+      logger.error('CapturePage', 'Error searching products', error instanceof Error ? error.message : String(error));
       setSearchResults([])
     } finally {
       setIsSearching(false)

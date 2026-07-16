@@ -998,7 +998,7 @@ export const RedesignHammerPage: React.FC = () => {
       // 3. Recargar la página para reiniciar todo desde cero
       window.location.reload()
     } catch (error) {
-      console.error('Error al limpiar sesión:', error)
+      logger.error('HammerPage', 'Error al limpiar sesión', error instanceof Error ? error.message : String(error));
       toast.error('Error al limpiar sesión')
     }
   }
@@ -1010,7 +1010,7 @@ export const RedesignHammerPage: React.FC = () => {
       setShowSessionModal(false)
       toast.success('Carga teórica eliminada. Los escaneos se mantienen.')
     } catch (error) {
-      console.error('Error al limpiar carga teórica:', error)
+      logger.error('HammerPage', 'Error al limpiar carga teórica', error instanceof Error ? error.message : String(error));
       toast.error('Error al limpiar carga teórica')
     }
   }

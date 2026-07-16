@@ -143,7 +143,7 @@ export const RedesignSyncPage: React.FC = () => {
       setSyncDuration(duration)
       setLastSyncTime(Date.now())
     } catch (error) {
-      console.error('Sync error:', error)
+      logger.error('SyncPage', 'Sync error', error instanceof Error ? error.message : String(error));
       addToast('Error en sincronizacion', 'error')
     } finally {
       setSyncing(false)
@@ -156,7 +156,7 @@ export const RedesignSyncPage: React.FC = () => {
       await db.syncQueue.clear()
       setPendingItems(0)
     } catch (error) {
-      console.error('Error clearing queue:', error)
+      logger.error('SyncPage', 'Error clearing queue', error instanceof Error ? error.message : String(error));
     }
   }
 

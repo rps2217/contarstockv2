@@ -169,8 +169,8 @@ export const RedesignEventsPage: React.FC = () => {
       // Refrescar datos después de sincronizar
       setRefreshKey(k => k + 1)
     },
-    onError: (error) => {
-      console.error('Error sincronizando eventos:', error)
+    onError: (errorMsg: string) => {
+      logger.error('EventsPage', 'Error sincronizando eventos', errorMsg);
     }
   })
 
@@ -193,7 +193,7 @@ export const RedesignEventsPage: React.FC = () => {
         syncStatus: e.syncStatus as 'synced' | 'pending' | 'error' | undefined
       }))
     } catch (error) {
-      console.error('Error loading events:', error)
+      logger.error('EventsPage', 'Error loading events', error instanceof Error ? error.message : String(error));
       return []
     }
   }, [refreshKey])
@@ -274,7 +274,7 @@ export const RedesignEventsPage: React.FC = () => {
         toast.warning('Todos los registros ya existen en el sistema')
       }
     } catch (err) {
-      console.error('Error guardando eventos:', err)
+      logger.error('EventsPage', 'Error guardando eventos', err instanceof Error ? err.message : String(err));
       toast.error('Error al guardar eventos')
     }
   }

@@ -94,7 +94,7 @@ export const getGlobalPendingCount = async (): Promise<number> => {
 
     return count;
   } catch (error) {
-    console.error('[getGlobalPendingCount] Fail:', error);
+    logger.error('Reconciliation', 'getGlobalPendingCount failed', error instanceof Error ? error.message : String(error));
     return 0;
   }
 };

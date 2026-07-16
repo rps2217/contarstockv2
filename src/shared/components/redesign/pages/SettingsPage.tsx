@@ -285,7 +285,7 @@ export const RedesignSettingsPage: React.FC = () => {
       }
     } catch (error) {
       toast.error('Error al ejecutar verificación de integridad')
-      console.error(error)
+      logger.error('SettingsPage', 'Integrity check error', error instanceof Error ? error.message : String(error));
     } finally {
       setIsRunningIntegrityCheck(false)
     }
@@ -300,7 +300,7 @@ export const RedesignSettingsPage: React.FC = () => {
       toast.success(`✅ Se corrigieron ${result.fixed} problemas automáticamente`)
     } catch (error) {
       toast.error('Error al ejecutar correcciones automáticas')
-      console.error(error)
+      logger.error('SettingsPage', 'Integrity check error', error instanceof Error ? error.message : String(error));
     }
   }
 

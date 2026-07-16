@@ -33,7 +33,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
    localStorage.setItem('logicount_operator_id', 'ADMIN');
    onLoginSuccess();
   } catch (e: any) {
-   console.error("Google Login Error:", e);
+   logger.error('Login', 'Google Login Error', e instanceof Error ? e.message : String(e));
    setError('Error al autenticar con Google: ' + e.message);
   } finally {
    setIsLoading(false);

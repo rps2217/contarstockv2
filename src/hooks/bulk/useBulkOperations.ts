@@ -98,7 +98,7 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
           .toArray();
         setHistory(entries || []);
       } catch (e) {
-        console.error('Error loading history:', e);
+        logger.error('useBulkOperations', 'Error loading history', e instanceof Error ? e.message : String(e));
       }
     };
     loadHistory();
@@ -142,7 +142,7 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
 
       return fullEntry;
     } catch (e) {
-      console.error('Error adding history entry:', e);
+      logger.error('useBulkOperations', 'Error adding history entry', e instanceof Error ? e.message : String(e));
       return null;
     }
   }, []);
@@ -152,7 +152,7 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
       await db.bulkHistory.update(id, { undone: true, canUndo: false });
       setHistory(prev => prev.map(e => e.id === id ? { ...e, undone: true, canUndo: false } : e));
     } catch (e) {
-      console.error('Error marking as undone:', e);
+      logger.error('useBulkOperations', 'Error marking as undone', e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -161,7 +161,7 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
       await db.bulkHistory.clear();
       setHistory([]);
     } catch (e) {
-      console.error('Error clearing history:', e);
+      logger.error('useBulkOperations', 'Error clearing history', e instanceof Error ? e.message : String(e));
     }
   }, []);
 

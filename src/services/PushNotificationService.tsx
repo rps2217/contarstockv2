@@ -449,7 +449,7 @@ export class PushNotificationService {
         }
       }
     } catch (error) {
-      console.error('Error en verificación periódica:', error);
+      logger.error('PushNotification', 'Error en verificación periódica', error instanceof Error ? error.message : String(error));
     }
   }
 }

@@ -114,7 +114,7 @@ export function useCloudCache<T>(
         isStale: false,
       });
     } catch (error) {
-      console.error(`[useCloudCache] Error fetching ${key}:`, error);
+      logger.error('useCloudCache', `Error fetching ${key}`, error instanceof Error ? error.message : String(error));
       // Si falla, mantener datos anteriores si existen
       if (cached) {
         setState({

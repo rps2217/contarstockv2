@@ -108,7 +108,7 @@ export function useBulkActions<T = any>(config: BulkActionsConfig<T>): UseBulkAc
 
     const action = config.actions.find(a => a.id === actionId);
     if (!action) {
-      console.error(`Acción no encontrada: ${actionId}`);
+      logger.error('useBulkActions', `Acción no encontrada: ${actionId}`);
       return;
     }
 

@@ -107,7 +107,7 @@ export const AutoSaveModal: React.FC<AutoSaveModalProps> = ({
       clear(); // Limpiar draft después de guardar exitosamente
       onClose();
     } catch (error) {
-      console.error('Error saving:', error);
+      logger.error('AutoSaveModalExample', 'Error saving', error instanceof Error ? error.message : String(error));
     } finally {
       setIsSaving(false);
     }

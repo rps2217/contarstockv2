@@ -15,7 +15,7 @@ export class HammerDbRepository {
     try {
       await hammerDb.blindScans.bulkAdd(scans as BlindScan[]);
     } catch (error) {
-      console.error('[HammerDbRepository] Error in bulkAdd:', error);
+      logger.error('HammerDbRepository', 'Error in bulkAdd', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }

@@ -134,7 +134,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       if (!db.events) return []
       return await db.events.orderBy('createdAt').reverse().toArray()
     } catch (error) {
-      console.error('Error loading events:', error)
+      logger.error('EventsModal', 'Error loading events', error instanceof Error ? error.message : String(error));
       return []
     }
   }, [refreshKey])
@@ -266,7 +266,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       setViewMode('table')
       setRefreshKey(k => k + 1)
     } catch (error) {
-      console.error('Error saving event:', error)
+      logger.error('EventsModal', 'Error saving event', error instanceof Error ? error.message : String(error));
       toast.error('Error al guardar el evento')
     } finally {
       setIsSaving(false)
@@ -321,7 +321,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       toast.success('Evento eliminado')
       setRefreshKey(k => k + 1)
     } catch (error) {
-      console.error('Error deleting event:', error)
+      logger.error('EventsModal', 'Error deleting event', error instanceof Error ? error.message : String(error));
       toast.error('Error al eliminar')
     }
   }
@@ -378,7 +378,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
             cleaned++
           }
         } catch (err) {
-          console.error('Error cleaning event:', err)
+          logger.error('EventsModal', 'Error cleaning event', err instanceof Error ? err.message : String(err));
           errors++
         }
       }
@@ -390,7 +390,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       }
       setRefreshKey(k => k + 1)
     } catch (error) {
-      console.error('Error cleaning orphan events:', error)
+      logger.error('EventsModal', 'Error cleaning orphan events', error instanceof Error ? error.message : String(error));
       toast.error('Error al limpiar eventos: ' + String(error))
     }
   }
@@ -488,7 +488,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
           await db.events.delete(id)
           deleted++
         } catch (err) {
-          console.error('Error deleting event:', err)
+          logger.error('EventsModal', 'Error deleting event', err instanceof Error ? err.message : String(err))
           errors++
         }
       }
@@ -504,7 +504,7 @@ export const EventsModal: React.FC<EventsModalProps> = ({ isOpen, onClose, embed
       
       setRefreshKey(k => k + 1)
     } catch (error) {
-      console.error('Error bulk deleting events:', error)
+      logger.error('EventsModal', 'Error bulk deleting events', error instanceof Error ? error.message : String(error));
       toast.error('Error al eliminar eventos')
     } finally {
       setIsDeletingBulk(false)

@@ -131,7 +131,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
       toast.success(`Exportados ${filteredLogs.length} registros a Excel`);
     } catch (err) {
       toast.error('Error al exportar');
-      console.error(err);
+      logger.error('AuditPanel', 'Error exporting audit', err instanceof Error ? err.message : String(err));
     } finally {
       setIsExporting(false);
     }
@@ -148,7 +148,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
       toast.success(`Exportados ${filteredLogs.length} registros a CSV`);
     } catch (err) {
       toast.error('Error al exportar');
-      console.error(err);
+      logger.error('AuditPanel', 'Error exporting audit', err instanceof Error ? err.message : String(err));
     } finally {
       setIsExporting(false);
     }

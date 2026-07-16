@@ -62,7 +62,7 @@ export function useViewPreferences(module: string): UseViewPreferencesReturn {
           });
         }
       } catch (e) {
-        console.error('Error loading preferences:', e);
+        logger.error('useViewPreferences', 'Error loading preferences', e instanceof Error ? e.message : String(e));
       }
     };
     loadPreferences();
@@ -81,7 +81,7 @@ export function useViewPreferences(module: string): UseViewPreferencesReturn {
     try {
       await db.viewPreferences.put(newPrefs);
     } catch (e) {
-      console.error('Error saving preferences:', e);
+      logger.error('useViewPreferences', 'Error saving preferences', e instanceof Error ? e.message : String(e));
     }
   }, [preferences, module]);
 

@@ -138,7 +138,7 @@ export const useExport = <T extends Record<string, any>>(
           break;
       }
     } catch (error) {
-      console.error('Export error:', error);
+      logger.error('useExport', 'Export error', error instanceof Error ? error.message : String(error));
       toast.error('Error al exportar datos');
     } finally {
       setIsExporting(false);

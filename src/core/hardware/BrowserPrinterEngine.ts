@@ -19,7 +19,7 @@ export function printTicket({ title, subtitle, content, footer, scripts, hideHea
   
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    console.error("No se pudo abrir la ventana de impresión. Verifique los bloqueadores de popups.");
+    logger.error('BrowserPrinterEngine', 'No se pudo abrir la ventana de impresión. Verifique los bloqueadores de popups');
     return;
   }
 

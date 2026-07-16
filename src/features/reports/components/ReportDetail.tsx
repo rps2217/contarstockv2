@@ -75,7 +75,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  const results = await DetectiveService.findMatchingOrders(consolidation);
  setMatchResults(results);
  } catch (err) {
- console.error("Detective Error:", err);
+ logger.error('ReportDetail', 'Detective Error', err instanceof Error ? err.message : String(err));
  } finally {
  setIsSearching(false);
  }

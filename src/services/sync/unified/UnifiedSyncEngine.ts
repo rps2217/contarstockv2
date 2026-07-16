@@ -119,7 +119,7 @@ export class UnifiedSyncEngine {
       try {
         listener(payload);
       } catch (e) {
-        console.error('[UnifiedSyncEngine] Listener error:', e);
+        logger.error('UnifiedSyncEngine', 'Listener error', e instanceof Error ? e.message : String(e));
       }
     });
   }

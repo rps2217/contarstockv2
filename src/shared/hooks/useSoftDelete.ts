@@ -83,7 +83,7 @@ export function useSoftDelete<T extends { id: string }>(
           return next;
         });
       } catch (error) {
-        console.error('Error en soft delete:', error);
+        logger.error('useSoftDelete', 'Error en soft delete', error instanceof Error ? error.message : String(error));
         toast.error('Error al eliminar');
       }
     }, timeoutMs);
@@ -115,7 +115,7 @@ export function useSoftDelete<T extends { id: string }>(
       await onRestore(item);
       toast.success('Restaurado correctamente');
     } catch (error) {
-      console.error('Error restaurando:', error);
+      logger.error('useSoftDelete', 'Error restaurando', error instanceof Error ? error.message : String(error));
       toast.error('Error al restaurar');
     }
   }, [deletedItems, onRestore]);

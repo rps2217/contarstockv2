@@ -80,7 +80,7 @@ export const HealthDashboard: React.FC<HealthDashboardProps> = ({
       // ✅ Cargar historial de métricas
       setMetricsHistory(history);
     } catch (error) {
-      console.error('Failed to load health data', error);
+      logger.error('HealthDashboard', 'Failed to load health data', error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +106,7 @@ export const HealthDashboard: React.FC<HealthDashboardProps> = ({
       alert(`Se corrigieron ${result.fixed} problemas automáticamente`);
       await loadData();
     } catch (error) {
-      console.error('Auto-fix failed', error);
+      logger.error('HealthDashboard', 'Auto-fix failed', error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
     }

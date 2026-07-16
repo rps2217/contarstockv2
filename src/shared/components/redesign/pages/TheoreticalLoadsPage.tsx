@@ -686,7 +686,7 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         toast.info("No hay cargas teoricas disponibles en la nube")
       }
     } catch (err: any) {
-      console.error("[TheoreticalLoads] Error:", err)
+      logger.error('TheoreticalLoadsPage', 'Error loading from cloud', err instanceof Error ? err.message : String(err));
       setError("No se pudieron obtener las cargas de la nube")
       toast.error(err.message || "Error al cargar desde la nube")
       setCloudManifests([])

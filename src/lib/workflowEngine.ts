@@ -15,6 +15,7 @@
  */
 
 import { Product } from '@/types';
+import { logger } from '@/services/logger';
 import { useToastStore } from '@/stores';
 import { evaluateExpression } from './expressionEngine';
 import type { BusinessRule } from './expressionEngine';
@@ -280,7 +281,7 @@ async function executeAction(
             body: JSON.stringify({ record, context, message: renderedMessage }),
           });
         } catch (err) {
-          console.error('Webhook failed:', err);
+          logger.error('workflowEngine', 'Webhook failed', err instanceof Error ? err.message : String(err));
         }
       }
       break;
@@ -516,9 +517,7 @@ export function initializeWorkflows(): void {
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react'
-import { logger } from '@/services/logger';
 ;
-
 /**
  * Hook para usar el workflow engine
  */

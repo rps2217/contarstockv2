@@ -123,7 +123,7 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
         // Volver a idle después de 2 segundos
         setTimeout(() => setStatus('idle'), 2000);
       } catch (e) {
-        console.error('Error saving draft:', e);
+        logger.error('useAutoSave', 'Error saving draft', e instanceof Error ? e.message : String(e));
         setStatus('error');
       }
     }, debounceMs);
@@ -143,7 +143,7 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
       localStorage.setItem(storageKey, JSON.stringify(payload));
       setLastSavedAt(new Date());
     } catch (e) {
-      console.error('Error saving immediate:', e);
+      logger.error('useAutoSave', 'Error saving immediate', e instanceof Error ? e.message : String(e));
     }
   }, [storageKey]);
 

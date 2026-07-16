@@ -73,7 +73,7 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
     try {
       await db.audit_logs.add(entry as AuditLogEntry);
     } catch (err) {
-      console.error('[AuditRepository] Failed to log audit:', err);
+      logger.error('AuditRepository', 'Failed to log audit', err instanceof Error ? err.message : String(err));
     }
   }
 

@@ -71,7 +71,7 @@ export async function initSentry() {
  */
 export function captureError(error: Error, context?: Record<string, unknown>) {
   if (!import.meta.env.PROD) {
-    console.error('[Error Capture]', error, context);
+    logger.error('monitoring', 'Error Capture', { error: error.message, context });
     return;
   }
 

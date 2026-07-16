@@ -75,6 +75,6 @@ async function runIntegrityCheckInBackground(): Promise<void> {
       await integrityService.autoFix();
     }
   } catch (error) {
-    console.error('[IntegrityCheck] Error en verificación:', error);
+    logger.error('useAppInit', 'IntegrityCheck error', error instanceof Error ? error.message : String(error));
   }
 }

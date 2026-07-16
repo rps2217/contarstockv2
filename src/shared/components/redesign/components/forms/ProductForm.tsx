@@ -32,7 +32,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onClo
       await onSave(form)
       onClose()
     } catch (error) {
-      console.error('Error saving product:', error)
+      logger.error('ProductForm', 'Error saving product', error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false)
     }

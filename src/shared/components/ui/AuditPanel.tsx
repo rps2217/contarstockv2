@@ -103,7 +103,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
       }
       setHasMore(hasMoreResults);
     } catch (err) {
-      console.error('Error loading audit history:', err);
+      logger.error('AuditPanel', 'Error loading audit history', err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

@@ -97,7 +97,7 @@ export const erpService = {
       if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors
       } else {
-        console.error("ERP Download Error:", error);
+        logger.error('erpService', 'ERP Download Error', error instanceof Error ? error.message : String(error));
       }
       throw new Error(`Error descargando manifest: ${msg}`);
     }
@@ -164,7 +164,7 @@ export const erpService = {
       if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors in logs
       } else {
-        console.error("ERP Download All Error:", msg);
+        logger.error('erpService', 'ERP Download All Error', msg);
       }
       throw new Error(msg);
     }

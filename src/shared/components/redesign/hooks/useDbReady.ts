@@ -60,7 +60,7 @@ export const safeDbOperation = async <T>(
     if (!db.isOpen()) await db.open();
     return await operation();
   } catch (error) {
-    console.error('[safeDbOperation] Error:', error);
+    logger.error('useDbReady', 'safeDbOperation Error', error instanceof Error ? error.message : String(error));
     return defaultValue;
   }
 };

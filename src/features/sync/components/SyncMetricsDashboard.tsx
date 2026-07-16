@@ -55,7 +55,7 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
         setStats(statsData);
         setHealth(healthData);
       } catch (e) {
-        console.error('Error loading metrics:', e);
+        logger.error('SyncMetricsDashboard', 'Error loading metrics', e instanceof Error ? e.message : String(e));
       } finally {
         setIsLoading(false);
       }

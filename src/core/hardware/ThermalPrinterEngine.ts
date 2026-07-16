@@ -242,7 +242,7 @@ export class ThermalPrinterEngine {
 
     const doc = iframe.contentWindow?.document || iframe.contentDocument;
     if (!doc) {
-      console.error("No se pudo iniciar el canal de impresión nativa.");
+      logger.error('ThermalPrinterEngine', 'No se pudo iniciar el canal de impresión nativa');
       return;
     }
 
@@ -520,7 +520,7 @@ export class ThermalPrinterEngine {
 
     const doc = iframe.contentWindow?.document || iframe.contentDocument;
     if (!doc) {
-      console.error("No se pudo iniciar el canal de impresión nativa.");
+      logger.error('ThermalPrinterEngine', 'No se pudo iniciar el canal de impresión nativa');
       return;
     }
 
@@ -849,7 +849,7 @@ export class ThermalPrinterEngine {
 
     const doc = iframe.contentWindow?.document || iframe.contentDocument;
     if (!doc) {
-      console.error("No se pudo iniciar el canal de impresion nativa.");
+      logger.error('ThermalPrinterEngine', 'No se pudo iniciar el canal de impresion nativa');
       return;
     }
 

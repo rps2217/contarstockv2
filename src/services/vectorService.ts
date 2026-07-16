@@ -66,7 +66,7 @@ export const VectorService = {
  successCount++;
  }
  } catch (e) {
- console.error(`Error en producto ${product.barcode}`, e);
+ logger.error('VectorService', `Error en producto ${product.barcode}`, e instanceof Error ? e.message : String(e));
  }
  }));
 
