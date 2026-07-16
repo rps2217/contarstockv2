@@ -69,7 +69,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(
           onMouseLeave={() => setShowTooltip(false)}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl transition-all duration-300 group relative ${
             isActive
-              ? 'bg-blue-500/10 text-blue-500'
+              ? 'bg-primary/10 text-primary'
               : 'text-secondary hover:bg-surface hover:text-primary'
           }`}
           aria-label={isCollapsed ? label : undefined}
@@ -78,7 +78,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(
           {isActive && !isCollapsed && (
             <motion.div
               layoutId="activeNav"
-              className="absolute left-0 w-1 h-6 bg-blue-500 rounded-r-full"
+              className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"
             />
           )}
 
@@ -87,13 +87,13 @@ const NavItem: React.FC<NavItemProps> = React.memo(
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full"
+              className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full"
             />
           )}
 
           <div className="relative">
             <Icon
-              className={`w-5 h-5 transition-colors ${isActive ? 'text-blue-500' : 'text-muted group-hover:text-secondary'}`}
+              className={`w-5 h-5 transition-colors ${isActive ? 'text-primary' : 'text-muted group-hover:text-secondary'}`}
             />
 
             {/* Badge - Siempre visible */}
@@ -101,7 +101,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className={`absolute ${isCollapsed ? '-top-1.5 -right-1.5' : '-top-1.5 -right-2'} min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[9px] font-bold px-1 rounded-full shadow-lg`}
+                className={`absolute ${isCollapsed ? '-top-1.5 -right-1.5' : '-top-1.5 -right-2'} min-w-[18px] h-[18px] flex items-center justify-center bg-primary text-white text-[9px] font-bold px-1 rounded-full shadow-lg`}
               >
                 {badge !== undefined && badge > 99 ? '99+' : (badge ?? 0)}
               </motion.span>
@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <motion.div
           whileHover={{ scale: 1.05, rotate: 5 }}
           whileTap={{ scale: 0.95 }}
-          className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0"
+          className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 shrink-0"
         >
           <DatabaseIcon className="w-6 h-6 text-white" />
         </motion.div>
@@ -341,7 +341,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Cloud className="w-3 h-3 text-blue-400" />
+                    <Cloud className="w-3 h-3 text-primary" />
                   </motion.div>
                 )}
                 <div
@@ -362,7 +362,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
                 initial={{ width: 0 }}
                 animate={{ width: isSyncing ? '100%' : '30%' }}
                 transition={{ duration: 2, repeat: isSyncing ? Infinity : 0 }}
-                className={`h-full ${isSyncing ? 'bg-blue-500' : 'bg-slate-600'}`}
+                className={`h-full ${isSyncing ? 'bg-blue-500' : 'bg-elevated'}`}
               />
             </div>
           </motion.div>
