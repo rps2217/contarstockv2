@@ -135,12 +135,12 @@ describe('CheckboxSwitch Component', () => {
   });
 
   describe('Interaction', () => {
-    it('calls onChange when clicked', () => {
+    it('calls onChange when checkbox input is clicked', () => {
       const handleChange = vi.fn();
-      render(<CheckboxSwitch onChange={handleChange} />);
+      render(<CheckboxSwitch label="Checkbox style" onChange={handleChange} />);
       
-      const label = screen.getByText('Checkbox style').parentElement!;
-      fireEvent.click(label);
+      const checkbox = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      fireEvent.click(checkbox);
       expect(handleChange).toHaveBeenCalledWith(true);
     });
   });

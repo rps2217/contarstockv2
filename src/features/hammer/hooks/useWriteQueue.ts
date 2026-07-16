@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { HammerDbRepository } from '../../../repositories/HammerDbRepository';
 import { pushScansToCloud } from '../../../services/hammerSync';
+import { logger } from '@/services/logger';
 
 interface WriteQueueItem {
   barcode: string;
@@ -106,7 +107,9 @@ export function useWriteQueue({
       retryCountRef.current = 0;
 
       if (autoSyncRef.current && mergedScans.length > 0) {
-        pushWithRetry().catch(() => {});
+        pushWithRetry().catch(err => {
+          logger.error('useWriteQueue', 'Auto-sync failed after batch write', err instanceof Error ? err.message : String(err));
+        });
       }
     } catch (e) {
       queueRef.current = [...batch, ...queueRef.current];

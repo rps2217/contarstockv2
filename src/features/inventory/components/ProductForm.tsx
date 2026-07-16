@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { Product } from '../../../types';
 import { Pencil, Plus, Save, Box, ScanLine, Copy } from 'lucide-react';
-import { useProductForm } from '../hooks/useProductForm';
+import { useProductForm, ProductFormData } from '../hooks/useProductForm';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { SettingsButton, SettingsInput } from '../../settings/components/common/SettingsElements';
 import { useProvidersQuery } from '../../suppliers/hooks/useProvidersQuery';
@@ -156,7 +156,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
     <input 
      type="number"
      placeholder="Defecto (30)"
-     value={(formData as any).withdrawalDays === '' ? '' : (formData as any).withdrawalDays}
+     value={formData.withdrawalDays ?? ''}
      onChange={(e) => updateField('withdrawalDays', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
      className="w-full h-11 px-4 bg-white dark:bg-base border border-indigo-200 dark:border-indigo-500/20 rounded-xl font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
     />
@@ -164,17 +164,17 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
    <div className="space-y-1.5 flex flex-col justify-center pt-5">
     <label className="flex items-center gap-3 cursor-pointer group">
      <div 
-      onClick={() => updateField('hasExchange', !(formData as any).hasExchange)}
+      onClick={() => updateField('hasExchange', !formData.hasExchange)}
       className={`w-12 h-6 rounded-full transition-all relative ${
-       (formData as any).hasExchange ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+       formData.hasExchange ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
       }`}
      >
       <div className={`absolute top-1 bottom-1 w-4 bg-white rounded-full transition-all ${
-       (formData as any).hasExchange ? 'left-7' : 'left-1'
+       formData.hasExchange ? 'left-7' : 'left-1'
       }`} />
      </div>
      <span className="text-[10px] font-black text-slate-600 dark:text-muted uppercase tracking-widest">
-      {(formData as any).hasExchange ? 'Tiene Canje' : 'Es Merma'}
+      {formData.hasExchange ? 'Tiene Canje' : 'Es Merma'}
      </span>
     </label>
    </div>

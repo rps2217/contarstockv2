@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import { db } from '../db';
 import { hammerDb } from '../db';
 import { createSession, updateSessionMetadata } from './sessionService';
@@ -9,6 +10,21 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { CloudStockSchema, CloudOrderRowSchema } from './schemas';
 import { telemetry } from './telemetryService';
 import { getSettings } from './settings';
+import type { ZodError } from 'zod';
+import type { Table } from 'dexie';
+
+/** Helper para transacciones Dexie con tipado correcto */
+const runTransaction = async <T>(
+  db: Dexie,
+  tables: Table[],
+  fn: () => Promise<T>
+): Promise<T> => {
+  return (db as unknown as { transaction<T>(mode: 'rw', tables: Table[], fn: () => Promise<T>): Promise<T> })
+    .transaction('rw', tables, fn);
+};
+
+// Tipos Dexie para las tablas
+type DexieTable = Table<unknown, number | string>;
 
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
   const startTime = performance.now();
@@ -48,7 +64,7 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
       };
     });
 
-    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+    await runTransaction(db, [db.scans, db.sessions], async () => {
       await db.scans.bulkAdd(recordsToMigrate);
       await updateSessionMetadata(session.id);
     });
@@ -169,7 +185,8 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
         const parsed = CloudStockSchema.safeParse(row);
         if (!parsed.success) {
           if (idx === 0) {
-            const errorMsg = (parsed as any).error.errors.map((e: any) => e.path.join('.')).join(', ');
+            const zodError = parsed.error as ZodError;
+            const errorMsg = zodError.errors.map(e => e.path.join('.')).join(', ');
             throw new Error(`Columnas no coinciden en fila 2. Error en: ${errorMsg}`);
           }
           return null;
@@ -189,7 +206,7 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
       throw new Error("No se encontraron registros con Stock mayor a 0 en el Excel.");
     }
 
-    await (hammerDb as any).transaction('rw', hammerDb.blindManifests, async () => {
+    await runTransaction(hammerDb, [hammerDb.blindManifests], async () => {
       await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
       await hammerDb.blindManifests.bulkAdd(itemsToSave);
     });
@@ -245,7 +262,7 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
       loc: ''
     }));
 
-    await (hammerDb as any).transaction('rw', hammerDb.blindManifests, async () => {
+    await hammerDb.transaction('rw', hammerDb.blindManifests, async () => {
       await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
       await hammerDb.blindManifests.bulkAdd(itemsToSave);
     });
@@ -286,7 +303,7 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
       loc: ''
     }));
 
-    await (hammerDb as any).transaction('rw', hammerDb.blindManifests, async () => {
+    await hammerDb.transaction('rw', hammerDb.blindManifests, async () => {
       await hammerDb.blindManifests.where('batchId').equals(batchId).delete();
       await hammerDb.blindManifests.bulkAdd(itemsToSave);
     });
@@ -364,7 +381,7 @@ export const migrateHammerManifestToExpectedOrders = async (batchId: string, ord
     await db.expectedOrders.put(expectedOrder);
 
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC' as any, 'MIGRATION_SUCCESS', { batchId, orderId: targetOrderId, itemCount: items.length }, duration, batchId);
+    telemetry.track('SYNC', 'MIGRATION_SUCCESS', { batchId, orderId: targetOrderId, itemCount: items.length }, duration, batchId);
 
     logger.success('MANIFEST_MIGRATION', `Manifest migrado: ${targetOrderId} con ${items.length} SKUs`);
     return targetOrderId;
@@ -372,7 +389,7 @@ export const migrateHammerManifestToExpectedOrders = async (batchId: string, ord
   } catch (err: unknown) {
     const error = handleError(err, 'migrateHammerManifestToExpectedOrders');
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC' as any, 'MIGRATION_FAIL', { batchId, error: error.message }, duration, batchId);
+    telemetry.track('SYNC', 'MIGRATION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('MANIFEST_MIGRATION_FAIL', error.message);
     throw error;
   }
@@ -409,7 +426,7 @@ export const loadHammerManifestAsTestSession = async (batchId: string, orderId?:
     );
 
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC' as any, 'TEST_SESSION_CREATED', { batchId, orderId: migratedOrderId, sessionId: session.id }, duration, batchId);
+    telemetry.track('SYNC', 'TEST_SESSION_CREATED', { batchId, orderId: migratedOrderId, sessionId: session.id }, duration, batchId);
 
     logger.success('HAMMER_TEST_SESSION', `Sesión de prueba creada: ${session.id}`);
     return { sessionId: session.id, orderId: migratedOrderId };
@@ -417,7 +434,7 @@ export const loadHammerManifestAsTestSession = async (batchId: string, orderId?:
   } catch (err: unknown) {
     const error = handleError(err, 'loadHammerManifestAsTestSession');
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC' as any, 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
+    telemetry.track('SYNC', 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('HAMMER_TEST_SESSION_FAIL', error.message);
     throw error;
   }

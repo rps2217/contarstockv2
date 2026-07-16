@@ -12,8 +12,14 @@ interface UseProductFormProps {
   onClose: () => void;
 }
 
+/** Tipo extendido de Product para el formulario */
+export type ProductFormData = Product & { 
+  withdrawalDays?: number; 
+  hasExchange?: boolean 
+};
+
 export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProductFormProps) => {
-  const [formData, setFormData] = useState<Product & { withdrawalDays?: number; hasExchange?: boolean }>({ 
+  const [formData, setFormData] = useState<ProductFormData>({ 
     barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: 0, hasExchange: false
   });
   const [isDuplicating, setIsDuplicating] = useState(false);

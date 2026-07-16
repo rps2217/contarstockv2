@@ -38,10 +38,8 @@ describe('Tooltip Component', () => {
     });
 
     it('shows tooltip on mouse enter after delay', async () => {
-      vi.useFakeTimers();
-      
       render(
-        <Tooltip content="Visible content" delay={200}>
+        <Tooltip content="Visible content" delay={100}>
           <button>Hover me</button>
         </Tooltip>
       );
@@ -49,19 +47,16 @@ describe('Tooltip Component', () => {
       const button = screen.getByRole('button');
       fireEvent.mouseEnter(button);
       
-      // Before delay
+      // Antes del delay
       expect(screen.queryByRole('tooltip')).toBeNull();
       
-      // After delay
-      vi.advanceTimersByTime(200);
+      // Esperar a que se muestre después del delay
+      await new Promise(resolve => setTimeout(resolve, 150));
       
-      expect(screen.queryByRole('tooltip')).toBeTruthy();
-      vi.useRealTimers();
+      expect(screen.getByRole('tooltip')).toBeInTheDocument();
     });
 
     it('hides tooltip on mouse leave', async () => {
-      vi.useFakeTimers();
-      
       render(
         <Tooltip content="Content" delay={100}>
           <button>Hover me</button>
@@ -70,14 +65,14 @@ describe('Tooltip Component', () => {
       
       const button = screen.getByRole('button');
       fireEvent.mouseEnter(button);
-      vi.advanceTimersByTime(100);
       
-      expect(screen.queryByRole('tooltip')).toBeTruthy();
+      // Esperar que se muestre
+      await new Promise(resolve => setTimeout(resolve, 150));
+      expect(screen.queryByRole('tooltip')).toBeInTheDocument();
       
       fireEvent.mouseLeave(button);
       
       expect(screen.queryByRole('tooltip')).toBeNull();
-      vi.useRealTimers();
     });
   });
 

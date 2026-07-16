@@ -5,6 +5,7 @@ import {
   Trash2, Pencil, Eye, CheckCircle2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { logger } from '@/services/logger'
 import { toast } from 'sonner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
@@ -30,6 +31,61 @@ interface Reception {
   observations?: string
   status: 'pending' | 'in-progress' | 'completed'
   syncStatus: 'pending' | 'synced' | 'error'
+}
+
+/** CountingSession extendido para recepciones */
+interface ReceptionSession {
+  id?: string
+  createdAt?: number
+  syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete'
+  sessionType: string
+  supplierName?: string
+  productName?: string
+  supplierRut?: string
+  documentNumber?: string
+  documentType?: string
+  userName?: string
+  receivedBy?: string
+  location?: string
+  timestamp?: number
+  items?: { barcode: string; name?: string; quantity: number; expiry?: string }[]
+  observations?: string
+  status?: string
+}
+
+/** Tipo combinado para guardar sesiones de recepción */
+type ReceptionSessionForSave = {
+  id?: string
+  erpOrder?: string
+  logisticsLabel?: string
+  createdAt: number
+  status: 'active' | 'completed' | 'draft'
+  sessionType: 'reception'
+  operatorId?: string
+  totalUnits?: number
+  totalSKUs?: number
+  lastSyncTimestamp?: number
+  isVerifiedMode?: boolean
+  expectedItems?: { barcode: string; name?: string; quantity: number; expiry?: string }[]
+  auditStatus?: 'verified' | 'warning' | 'failed' | 'pending'
+  auditScore?: number
+  auditTimestamp?: number
+  mm?: number
+  yyyy?: number
+  batch?: string
+  labelPhoto?: string
+  photoUrl?: string
+  isAutoLockEnabled?: boolean
+  syncStatus: 'synced' | 'pending' | 'error' | 'pending_delete'
+  // Campos específicos de recepción
+  supplierName?: string
+  supplierRut?: string
+  documentNumber?: string
+  documentType?: string
+  receivedBy?: string
+  location?: string
+  observations?: string
+  userName?: string
 }
 
 // ============================================================================
@@ -501,21 +557,24 @@ export const RedesignReceptionPage: React.FC = () => {
     const sessions = await db.sessions.toArray()
     return sessions
       .filter(s => s.sessionType === 'reception')
-      .map(s => ({
-        id: s.id?.toString() || Math.random().toString(),
-        supplierName: (s as any).supplierName || (s as any).productName || 'Recepción',
-        supplierRut: (s as any).supplierRut,
-        documentNumber: (s as any).documentNumber,
-        documentType: (s as any).documentType,
-        receivedBy: (s as any).userName || (s as any).receivedBy,
-        location: (s as any).location,
-        receivedAt: s.createdAt || (s as any).timestamp || Date.now(),
-        items: (s as any).items || [],
-        observations: (s as any).observations,
-        status: (s as any).status === 'completed' ? 'completed' : 
-                (s.syncStatus === 'synced' ? 'completed' : 'in-progress') as Reception['status'],
-        syncStatus: (s.syncStatus || 'pending') as Reception['syncStatus']
-      }))
+      .map((s): Reception => {
+        const session = s as unknown as ReceptionSession;
+        return {
+          id: session.id?.toString() || Math.random().toString(),
+          supplierName: session.supplierName || session.productName || 'Recepción',
+          supplierRut: session.supplierRut,
+          documentNumber: session.documentNumber,
+          documentType: session.documentType,
+          receivedBy: session.userName || session.receivedBy,
+          location: session.location,
+          receivedAt: session.createdAt || session.timestamp || Date.now(),
+          items: session.items || [],
+          observations: session.observations,
+          status: session.status === 'completed' ? 'completed' : 
+                  (session.syncStatus === 'synced' ? 'completed' : 'in-progress'),
+          syncStatus: (session.syncStatus || 'pending') as Reception['syncStatus']
+        };
+      })
       .sort((a, b) => b.receivedAt - a.receivedAt)
   }, [])
 
@@ -570,16 +629,27 @@ export const RedesignReceptionPage: React.FC = () => {
     try {
       if (editingReception) {
         // Update existing
-        await SessionRepository.save({
-          ...editingReception,
-          ...data,
-          syncStatus: 'pending'
-        } as any)
+        const updatedSession: ReceptionSessionForSave = {
+          id: editingReception.id,
+          sessionType: 'reception',
+          status: 'draft',
+          createdAt: editingReception.receivedAt,
+          syncStatus: 'pending',
+          supplierName: data.supplierName ?? editingReception.supplierName,
+          supplierRut: data.supplierRut ?? editingReception.supplierRut,
+          documentNumber: data.documentNumber ?? editingReception.documentNumber,
+          documentType: data.documentType ?? editingReception.documentType,
+          location: data.location ?? editingReception.location,
+          receivedBy: data.receivedBy ?? editingReception.receivedBy,
+          observations: data.observations ?? editingReception.observations,
+          expectedItems: editingReception.items
+        }
+        await SessionRepository.save(updatedSession as unknown as Parameters<typeof SessionRepository.save>[0])
         toast.success('Recepción actualizada correctamente')
       } else {
         // Create new
-        const newReception = {
-          sessionType: 'reception' as const,
+        const newReception: ReceptionSessionForSave = {
+          sessionType: 'reception',
           supplierName: data.supplierName,
           supplierRut: data.supplierRut,
           documentNumber: data.documentNumber,
@@ -587,15 +657,15 @@ export const RedesignReceptionPage: React.FC = () => {
           location: data.location,
           receivedBy: data.receivedBy,
           observations: data.observations,
-          items: [],
-          status: 'pending' as const,
+          status: 'draft',
           createdAt: Date.now(),
-          syncStatus: 'pending' as const
+          syncStatus: 'pending'
         }
-        await SessionRepository.save(newReception as any)
+        await SessionRepository.save(newReception as unknown as Parameters<typeof SessionRepository.save>[0])
         toast.success('Recepción creada correctamente')
       }
     } catch (error) {
+      logger.error('ReceptionPage', 'Error al guardar recepción', { error })
       toast.error('Error al guardar la recepción')
     }
   }

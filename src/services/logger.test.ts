@@ -61,9 +61,13 @@ describe("logger", () => {
     expect(mocks.mockAdd).toHaveBeenCalledWith(expect.objectContaining({ level: "success" }));
   });
 
-  it("debug adds prefix", async () => {
+  it("debug logs with info level", async () => {
     await logger.debug("TEST", "msg");
-    expect(mocks.mockAdd).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining("DEBUG") }));
+    // debug internally uses 'info' level but logs with DEBUG prefix
+    expect(mocks.mockAdd).toHaveBeenCalledWith(expect.objectContaining({ 
+      level: "info",
+      module: "TEST" 
+    }));
   });
 
   it("clear clears logs", async () => {

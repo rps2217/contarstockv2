@@ -275,13 +275,23 @@ async function executeAction(
     case 'webhook':
       if (action.webhookUrl) {
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          
           await fetch(action.webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ record, context, message: renderedMessage }),
+            signal: controller.signal,
           });
+          
+          clearTimeout(timeoutId);
         } catch (err) {
-          logger.error('workflowEngine', 'Webhook failed', err instanceof Error ? err.message : String(err));
+          if (err instanceof Error && err.name === 'AbortError') {
+            logger.warn('workflowEngine', 'Webhook timed out', { url: action.webhookUrl });
+          } else {
+            logger.error('workflowEngine', 'Webhook failed', err instanceof Error ? err.message : String(err));
+          }
         }
       }
       break;

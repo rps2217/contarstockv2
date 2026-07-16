@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/stores';
+import { usePermissions } from '@/shared/hooks/usePermissions';
 import { Product } from '@/types';
 import { ProductWithPolicy } from '@/features/product/types';
 import { useInventory } from './hooks/useInventory';
@@ -120,6 +121,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({
 const InventoryPage: React.FC = () => {
   const settings = useAppStore(state => state.settings);
   const isDark = settings?.theme !== 'light';
+  const { can } = usePermissions();
 
   const {
     filteredProducts,
@@ -414,6 +416,10 @@ const InventoryPage: React.FC = () => {
           }
         }}
         onDelete={() => {
+          if (!can('inventory:delete')) {
+            toast.error('No tienes permiso para eliminar productos');
+            return;
+          }
           if (ui.selectedProduct) {
             actions.deleteProduct(ui.selectedProduct.barcode);
             actions.closeDetail();

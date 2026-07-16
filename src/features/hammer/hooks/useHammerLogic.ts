@@ -421,7 +421,9 @@ export const useHammerLogic = (batchId: string) => {
           setOptimisticItems(prev => prev.filter(i => i.barcode !== barcode));
           
           if (autoSyncRef.current) {
-            pushScansToCloud(batchId).catch(() => {});
+            pushScansToCloud(batchId).catch(err => {
+              logger.warn('HammerLogic', 'Background sync failed after undo', err instanceof Error ? err.message : String(err));
+            });
           }
         }
         engine.actions.triggerFeedback('undo');

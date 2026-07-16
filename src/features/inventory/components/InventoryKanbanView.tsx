@@ -20,6 +20,13 @@ interface InventoryKanbanViewProps {
 
 type GroupBy = 'category' | 'policy' | 'sync';
 
+/** Tipo para grupo del kanban */
+interface KanbanGroup {
+  title: string;
+  icon: React.ReactNode;
+  items: ProductWithPolicy[];
+}
+
 // ============================================================================
 // MOBILE LIST VIEW - Simple, touch-friendly
 // ============================================================================
@@ -28,7 +35,7 @@ const MobileProductItem: React.FC<{
   onClick?: () => void;
   showGroup?: boolean;
   groupColor?: string;
-}> = ({ product, onClick, showGroup, groupColor }) => {
+}> = React.memo(({ product, onClick, showGroup, groupColor }) => {
   return (
     <button
       onClick={onClick}
@@ -71,12 +78,9 @@ const MobileProductItem: React.FC<{
       </div>
     </button>
   );
-};
+});
 
-// ============================================================================
-// DESKTOP KANBAN VIEW
-// ============================================================================
-const PolicyBadge: React.FC<{ hasExchange?: boolean; days?: number }> = ({ hasExchange, days }) => {
+const PolicyBadge: React.FC<{ hasExchange?: boolean; days?: number }> = React.memo(({ hasExchange, days }) => {
   if (days === undefined) return null;
   
   return (
@@ -89,12 +93,16 @@ const PolicyBadge: React.FC<{ hasExchange?: boolean; days?: number }> = ({ hasEx
       {days}D
     </span>
   );
-};
+});
+
+// ============================================================================
+// DESKTOP KANBAN VIEW
+// ============================================================================
 
 const KanbanCard: React.FC<{
   product: ProductWithPolicy;
   onClick?: () => void;
-}> = ({ product, onClick }) => {
+}> = React.memo(({ product, onClick }) => {
   return (
     <button
       onClick={onClick}
@@ -118,7 +126,7 @@ const KanbanCard: React.FC<{
       </div>
     </button>
   );
-};
+});
 
 // ============================================================================
 // MAIN COMPONENT
@@ -194,7 +202,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
       }
 
       if (!groups.has(key)) {
-        groups.set(key, { title, icon, items: [] } as any);
+        groups.set(key, { title, icon, items: [] as ProductWithPolicy[] });
       }
       groups.get(key)!.items.push(p);
     });
@@ -342,7 +350,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
 
       {/* Kanban Columns */}
       <div className="flex gap-3 overflow-x-auto pb-4">
-        {columns.slice(0, 8).map(col => {
+        {columns.slice(0, 8).map((col: KanbanGroup & { id: string }) => {
           const colors = colorForColumn(col.id);
           const isExpanded = expandedColumns.has(col.id);
           
@@ -362,7 +370,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
                     {String(col.title).slice(0, 12)}
                   </span>
                   <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full bg-elevated text-white`}>
-                    {(col as any).items?.length || 0}
+                    {col.items?.length || 0}
                   </span>
                 </div>
                 {isExpanded ? (
@@ -375,19 +383,19 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
               {/* Content */}
               {isExpanded && (
                 <div className="p-2 space-y-2 max-h-[350px] overflow-y-auto">
-                  {(col as any).items?.slice(0, 15).map((p: ProductWithPolicy) => (
+                  {col.items?.slice(0, 15).map((p: ProductWithPolicy) => (
                     <KanbanCard 
                       key={p.barcode} 
                       product={p} 
                       onClick={() => onItemClick?.(p)}
                     />
                   ))}
-                  {(col as any).items?.length > 15 && (
+                  {col.items?.length > 15 && (
                     <div className="text-center text-[9px] text-slate-500 py-2">
-                      +{(col as any).items.length - 15} más
+                      +{col.items.length - 15} más
                     </div>
                   )}
-                  {(col as any).items?.length === 0 && (
+                  {col.items?.length === 0 && (
                     <div className="text-center text-[9px] text-slate-500 py-4">
                       Sin elementos
                     </div>

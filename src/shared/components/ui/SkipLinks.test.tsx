@@ -1,10 +1,13 @@
 /**
  * SkipLinks Component Tests
+ * 
+ * Nota: SkipLinks retorna null cuando no es usuario de teclado,
+ * por lo que solo se renderiza cuando isKeyboardUser es true.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SkipLinks, SkipLinksProvider, useKeyboardNavigation } from './SkipLinks';
+import { SkipLinks, SkipLinksProvider } from './SkipLinks';
 import React from 'react';
 
 // Mock lucide-react
@@ -16,19 +19,30 @@ vi.mock('lucide-react', async () => {
   };
 });
 
+// Helper para simular que el usuario está navegando por teclado
+const simulateKeyboardUser = () => {
+  fireEvent.keyDown(window, { key: 'Tab' });
+};
+
 describe('SkipLinks', () => {
   beforeEach(() => {
-    // LimpiarEventListeners entre tests
     vi.clearAllMocks();
   });
 
-  it('renders skip links navigation', () => {
+  it('returns null by default (not a keyboard user)', () => {
+    const { container } = render(<SkipLinks />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders skip links navigation when Tab is pressed', () => {
     render(<SkipLinks />);
+    simulateKeyboardUser();
     expect(screen.getByRole('navigation', { name: /navegación rápida/i })).toBeInTheDocument();
   });
 
-  it('renders default skip links', () => {
+  it('renders default skip links when keyboard user', () => {
     render(<SkipLinks />);
+    simulateKeyboardUser();
     expect(screen.getByText('Ir al contenido principal')).toBeInTheDocument();
     expect(screen.getByText('Ir a navegación')).toBeInTheDocument();
   });
@@ -38,55 +52,24 @@ describe('SkipLinks', () => {
       { id: 'custom', label: 'Ir a custom', href: '#custom' }
     ];
     render(<SkipLinks links={customLinks} />);
+    simulateKeyboardUser();
     expect(screen.getByText('Ir a custom')).toBeInTheDocument();
   });
 
-  it('is hidden by default', () => {
+  it('hides when mouse is moved (loses keyboard user status)', async () => {
     render(<SkipLinks />);
-    const nav = screen.getByRole('navigation');
-    expect(nav).toHaveClass('opacity-0');
-    expect(nav).toHaveClass('-translate-y-full');
-  });
-
-  it('shows on focus event', async () => {
-    render(<SkipLinks />);
-    const nav = screen.getByRole('navigation');
+    simulateKeyboardUser();
     
-    // Simular focus en window
-    fireEvent.focusIn(window);
+    // Verificar que se muestra
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
     
+    // Simular movimiento de mouse
+    fireEvent.mouseMove(window, { clientX: 100, clientY: 100 });
+    
+    // El componente debería ocultarse (retornar null)
     await waitFor(() => {
-      expect(nav).toHaveClass('opacity-100');
-      expect(nav).not.toHaveClass('opacity-0');
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     });
-  });
-
-  it('hides on blur event', async () => {
-    render(<SkipLinks />);
-    const nav = screen.getByRole('navigation');
-    
-    // Primero mostrar
-    fireEvent.focusIn(window);
-    
-    // Luego ocultar
-    fireEvent.focusOut(window);
-    
-    await waitFor(() => {
-      expect(nav).toHaveClass('opacity-0');
-    });
-  });
-});
-
-describe('useKeyboardNavigation', () => {
-  it('returns false initially', () => {
-    const result = { current: false };
-    // Hook no puede ser testeado directamente, verificar en componente
-    expect(true).toBe(true);
-  });
-
-  it('detects Tab key press', () => {
-    // Testing keyboard detection would require a component
-    expect(true).toBe(true);
   });
 });
 
@@ -100,12 +83,13 @@ describe('SkipLinksProvider', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
-  it('renders SkipLinks component', () => {
+  it('renders navigation when keyboard user', () => {
     render(
       <SkipLinksProvider>
         <div>Content</div>
       </SkipLinksProvider>
     );
+    simulateKeyboardUser();
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 });

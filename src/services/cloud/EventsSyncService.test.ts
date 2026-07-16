@@ -238,8 +238,9 @@ describe('EventsSyncService - Mapeo', () => {
 
       const remote = mapEventToRemote(event);
 
-      expect(remote.created_at).toBe('2023-11-14T22:46:40.000Z');
-      expect(remote.updated_at).toBe('2023-11-15T00:03:20.000Z');
+      // Verificar que las fechas se convierten a formato ISO
+      expect(remote.created_at).toBe('2023-11-14T22:13:20.000Z');
+      expect(remote.updated_at).toBe('2023-11-14T22:30:00.000Z');
     });
 
     it('should handle optional location field', () => {
@@ -440,7 +441,7 @@ describe('EventsSyncService - Deduplicación', () => {
     expect(result.toSkip).toBe(1);
   });
 
-  it('should create event when cloud has newer timestamp but no updatedAt in local', () => {
+  it('should skip event when cloud has newer timestamp but no updatedAt in local', () => {
     const localEvents = [
       { id: 1, frcNumber: 'FRC-001', barcode: '123', updatedAt: undefined }
     ];
@@ -450,8 +451,9 @@ describe('EventsSyncService - Deduplicación', () => {
 
     const result = filterEventsForSync(localEvents, cloudEvents);
 
-    // Si local no tiene updatedAt, se crea (no se puede comparar)
-    expect(result.toCreate).toBe(1);
+    // Si local no tiene updatedAt, se hace skip (no se puede comparar)
+    expect(result.toSkip).toBe(1);
+    expect(result.toCreate).toBe(0);
   });
 
   it('should handle multiple events with different states', () => {

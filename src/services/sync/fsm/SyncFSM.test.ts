@@ -83,7 +83,7 @@ describe('SyncFSM', () => {
 
       expect(syncFSM.getState()).toBe('success');
       expect(progress).toContain('action');
-      expect(progress).toContain('Sincronización completada');
+      expect(progress).toContain('Sincronizacion completada');
     });
 
     it('should catch errors and transition to error state', async () => {

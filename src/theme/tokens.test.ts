@@ -22,7 +22,8 @@ import {
 describe('Theme Tokens', () => {
   describe('colors', () => {
     it('should have brand colors defined', () => {
-      expect(colors.brand.info).toBe('#3b82f6');
+      // brand.info usa gris (#6b7280) para consistencia con el tema monocromático
+      expect(colors.brand.info).toBe('#6b7280');
       expect(colors.brand.success).toBe('#22c55e');
       expect(colors.brand.warning).toBe('#f59e0b');
       expect(colors.brand.danger).toBe('#ef4444');

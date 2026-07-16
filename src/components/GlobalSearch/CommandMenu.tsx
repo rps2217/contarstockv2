@@ -11,6 +11,31 @@ import { Search, Package, FileText, Truck, Users, Clock, ArrowRight, X, Command,
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import type { Product, Provider, CountingSession } from '@/types';
+
+// ============================================================================
+// TIPOS LOCALES PARA BÚSQUEDA
+// ============================================================================
+
+interface ExpiryRecord {
+  id?: number;
+  claveUnica: string;
+  barcode: string;
+  productName?: string;
+  mm: number;
+  yyyy: number;
+  status: 'pending' | 'valid' | 'expired' | 'warning';
+  quantity?: number;
+  timestamp: number;
+  sessionId?: string;
+  syncStatus: 'synced' | 'pending' | 'error';
+  daysLeft?: number;
+}
+
+/** CountingSession con propiedades extendidas para búsqueda */
+interface SearchableSession extends CountingSession {
+  location?: string;
+}
 
 interface SearchResult {
   id: string;
@@ -62,10 +87,10 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Consultas a la base de datos
-  const products = useLiveQuery(() => db.products.toArray());
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-  const providers = useLiveQuery(() => db.providers.toArray());
-  const expirations = useLiveQuery(() => db.table('expirations').toArray() as any);
+  const products = useLiveQuery(() => db.products.toArray()) as Product[] | undefined;
+  const sessions = useLiveQuery(() => db.sessions.toArray()) as CountingSession[] | undefined;
+  const providers = useLiveQuery(() => db.providers.toArray()) as Provider[] | undefined;
+  const expirations = useLiveQuery(() => db.expirations.toArray()) as ExpiryRecord[] | undefined;
 
   // Focus input cuando se abre
   useEffect(() => {
@@ -91,7 +116,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
     products?.forEach(product => {
       if (product.barcode?.toLowerCase().includes(q) ||
           product.name?.toLowerCase().includes(q) ||
-          (product as any).sku?.toLowerCase().includes(q)) {
+          product.sku?.toLowerCase().includes(q)) {
         results.push({
           id: `product-${product.id}`,
           type: 'product',
@@ -104,16 +129,16 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
     });
 
     // Vencimientos
-    (expirations as any[])?.forEach((expiry: any) => {
+    expirations?.forEach(expiry => {
       if (expiry.barcode?.toLowerCase().includes(q) ||
-          (expiry as any).productName?.toLowerCase().includes(q) ||
+          expiry.productName?.toLowerCase().includes(q) ||
           String(expiry.mm).padStart(2, '0').includes(q) ||
           String(expiry.yyyy).includes(q)) {
         const daysLeft = expiry.daysLeft ?? 0;
         results.push({
           id: `expiry-${expiry.id}`,
           type: 'expiry',
-          title: (expiry as any).productName || expiry.barcode || 'Sin nombre',
+          title: expiry.productName || expiry.barcode || 'Sin nombre',
           subtitle: `${String(expiry.mm).padStart(2, '0')}/${expiry.yyyy} • ${daysLeft < 0 ? `Venció hace ${Math.abs(daysLeft)} días` : `Faltan ${daysLeft} días`}`,
           icon: CalendarClock,
           url: '/expiry'
@@ -122,15 +147,15 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
     });
 
     // Sesiones de conteo
-    sessions?.forEach(session => {
+    (sessions as SearchableSession[])?.forEach(session => {
       if (session.id?.toLowerCase().includes(q) ||
-          (session as any).erpOrder?.toLowerCase().includes(q) ||
-          (session as any).location?.toLowerCase().includes(q)) {
+          session.erpOrder?.toLowerCase().includes(q) ||
+          session.location?.toLowerCase().includes(q)) {
         results.push({
           id: `session-${session.id}`,
           type: 'event',
-          title: `Conteo: ${(session as any).erpOrder || session.id}`,
-          subtitle: `${(session as any).location || 'Sin ubicación'} • ${(session as any).totalSKUs || 0} SKUs`,
+          title: `Conteo: ${session.erpOrder || session.id}`,
+          subtitle: `${session.location || 'Sin ubicación'} • ${session.totalSKUs || 0} SKUs`,
           icon: FileText,
           url: `/reports/${session.id}`
         });
@@ -139,13 +164,13 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
 
     // Proveedores
     providers?.forEach(provider => {
-      if ((provider as any).name?.toLowerCase().includes(q) ||
-          (provider as any).rut?.toLowerCase().includes(q)) {
+      if (provider.name?.toLowerCase().includes(q) ||
+          provider.rut?.toLowerCase().includes(q)) {
         results.push({
           id: `provider-${provider.id}`,
           type: 'provider',
-          title: (provider as any).name || 'Sin nombre',
-          subtitle: `RUT: ${(provider as any).rut || 'N/A'}`,
+          title: provider.name || 'Sin nombre',
+          subtitle: `RUT: ${provider.rut || 'N/A'}`,
           icon: Users,
           url: '/providers'
         });
