@@ -84,16 +84,18 @@ export function useSyncHealthAlert(
   useEffect(() => {
     if (!enabled) return;
 
-    // Check inicial
-    checkHealth()
-      .then(healthData => {
-        if (!healthData.isHealthy) {
-          showAlert(healthData);
-        }
-      })
-      .catch(err => {
-        logger.error('SyncHealthAlert', 'Error checking health', { error: String(err) });
-      });
+    // Check inicial con timeout para evitar setState sincrono
+    const timeoutId = setTimeout(() => {
+      checkHealth()
+        .then(healthData => {
+          if (!healthData.isHealthy) {
+            showAlert(healthData);
+          }
+        })
+        .catch(err => {
+          logger.error('SyncHealthAlert', 'Error checking health', { error: String(err) });
+        });
+    }, 0);
 
     // Configurar intervalo
     intervalRef.current = window.setInterval(() => {
@@ -109,6 +111,7 @@ export function useSyncHealthAlert(
     }, CHECK_INTERVAL_MS);
 
     return () => {
+      clearTimeout(timeoutId);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }

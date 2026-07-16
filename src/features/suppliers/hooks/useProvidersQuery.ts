@@ -17,7 +17,10 @@ export const useProvidersQuery = () => {
   }, []);
 
   useEffect(() => {
-    loadProviders();
+    const timeoutId = setTimeout(() => {
+      loadProviders();
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [loadProviders]);
 
   const filteredProviders = useMemo(() => {
