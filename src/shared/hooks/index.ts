@@ -89,6 +89,11 @@ export { useVirtualList, useDynamicVirtualList } from './useVirtualList';
 export type { UseVirtualListOptions, UseVirtualListReturn, VirtualItem } from './useVirtualList';
 
 // ============================================================================
+// Keyboard Awareness (Móvil)
+// ============================================================================
+export { useKeyboardAware, KeyboardAwareContainer } from './useKeyboardAware';
+
+// ============================================================================
 // Permisos y Accesos (RBAC)
 // ============================================================================
 export { usePermissions, RequirePermission } from './usePermissions';
