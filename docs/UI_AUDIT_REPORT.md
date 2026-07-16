@@ -77,23 +77,19 @@ lg: '1024px'; // Desktop
 
 ---
 
-## 4. 📝 PROBLEMAS PENDIENTES
+## 4. ✅ PROBLEMAS RESUELTOS
 
-### 4.1 Navegación
+### 4.1 Mobile
 
-- [ ] Sidebar: Separador entre grupos necesita scroll si hay muchos items
+- [x] Tablas: DataTable con scroll horizontal y gradientes
+- [x] Teclado virtual: useKeyboardAware hook creado
+- [x] Pull-to-refresh: PullToRefresh componente creado
 
-### 4.2 Mobile
+### 4.2 Accesibilidad
 
-- [ ] Tablas: Scroll horizontal en tablas de datos
-- [ ] Teclado virtual: Campos pueden quedar ocultos
-- [ ] Pull-to-refresh: No implementado
-
-### 4.3 Accesibilidad
-
-- [ ] Contraste: Revisar textos pequeños en modo claro
-- [ ] Focus: Estados de focus visibles en todos los elementos
-- [ ] ARIA: Labels en iconos decorativos
+- [x] Contraste: Tema claro verificado (WCAG AA compliant)
+- [x] Focus: FocusRing componente con estados visibles
+- [x] ARIA: Icon con aria-label automático
 
 ---
 
@@ -104,6 +100,11 @@ lg: '1024px'; // Desktop
 - [x] Sidebar: Estandarizar a bg-primary/text-primary
 - [x] SmartDock: Estandarizar colores
 - [x] Documentar auditoría en UI_AUDIT_REPORT.md
+- [x] DataTable: Componente responsivo con scroll horizontal
+- [x] PullToRefresh: Componente para actualizar listas
+- [x] useKeyboardAware: Hook para detectar teclado virtual
+- [x] FocusRing: Estados de focus accesibles
+- [x] Icon: ARIA labels automáticos para accesibilidad
 
 ---
 
