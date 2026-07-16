@@ -1,7 +1,33 @@
 
 import React from 'react';
-import { Barcode, Trash2, Box, X, MapPin, Printer, Lock, Unlock } from 'lucide-react';
+import { Barcode, Trash2, Box, X, MapPin, Printer, Lock, Unlock, LucideIcon } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
+
+interface ToolButtonProps {
+ onClick?: () => void;
+ icon: LucideIcon;
+ label: string;
+ color?: string;
+ disabled?: boolean;
+ sublabel?: string;
+}
+
+// Componente ToolButton extraído para evitar re-creación en cada render
+const ToolButton: React.FC<ToolButtonProps> = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }) => (
+ <button
+ disabled={disabled}
+ onClick={onClick}
+ className={`flex flex-col items-center justify-center p-6 bg-surface rounded-[2rem] border-2 border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
+ >
+ <Icon className="w-8 h-8 mb-3" />
+ <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">{label}</span>
+ {sublabel && (
+ <span className="text-[8px] font-bold opacity-60 mt-1 uppercase tracking-tight truncate w-full px-2 text-center">
+ {sublabel}
+ </span>
+ )}
+ </button>
+);
 
 interface Props {
  isOpen: boolean;
@@ -24,21 +50,12 @@ export const ScannerToolsSheet: React.FC<Props> = ({
  onChangeLocation, onChangeLabel, onShowLabel, onReset, onPrintSummary
 }) => {
  
- const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
- <button
- disabled={disabled}
- onClick={() => { onClick(); onClose(); }}
- className={`flex flex-col items-center justify-center p-6 bg-surface rounded-[2rem] border-2 border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
- >
- <Icon className="w-8 h-8 mb-3" />
- <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">{label}</span>
- {sublabel && (
- <span className="text-[8px] font-bold opacity-60 mt-1 uppercase tracking-tight truncate w-full px-2 text-center">
- {sublabel}
- </span>
- )}
- </button>
- );
+ const handleToolClick = (callback?: () => void) => {
+   return () => {
+     callback?.();
+     onClose();
+   };
+ };
 
  return (
  <Modal 
@@ -61,41 +78,41 @@ export const ScannerToolsSheet: React.FC<Props> = ({
 
  <div className="grid grid-cols-2 gap-4">
  <ToolButton 
- onClick={onToggleAutoLock} 
+ onClick={handleToolClick(onToggleAutoLock)} 
  icon={isAutoLockEnabled ? Lock : Unlock} 
  label={isAutoLockEnabled ? "Auto-Bloqueo ON" : "Auto-Bloqueo OFF"} 
  sublabel={isAutoLockEnabled ? "Seguridad Activa" : "Modo Continuo"}
  color={isAutoLockEnabled ? "text-blue-400 border-blue-500/20" : "text-muted border-slate-500/20"} 
  />
  <ToolButton 
- onClick={onChangeLocation} 
+ onClick={handleToolClick(onChangeLocation)} 
  icon={MapPin} 
  label="Set Ubicación" 
  sublabel={location}
  color="text-blue-400 border-blue-500/20" 
  />
  <ToolButton 
- onClick={onChangeLabel} 
+ onClick={handleToolClick(onChangeLabel)} 
  icon={Box} 
  label="Cambiar Bulto" 
  sublabel={label}
  color="text-indigo-400 border-indigo-500/20" 
  />
  <ToolButton 
- onClick={onPrintSummary} 
+ onClick={handleToolClick(onPrintSummary)} 
  icon={Printer} 
  label="Imprimir Resumen" 
  color="text-emerald-400 border-emerald-500/20" 
  />
  <ToolButton 
  disabled={!hasActiveItem}
- onClick={onShowLabel} 
+ onClick={handleToolClick(onShowLabel)} 
  icon={Barcode} 
  label="Etiqueta SKU" 
  color="text-amber-400 border-amber-500/20" 
  />
  <ToolButton 
- onClick={onReset} 
+ onClick={handleToolClick(onReset)} 
  icon={Trash2} 
  label="Vaciar Bulto" 
  color="text-rose-500 border-rose-500/20" 
