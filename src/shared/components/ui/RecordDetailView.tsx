@@ -1,6 +1,6 @@
 /**
  * RecordDetailView - Vista Detalle Estilo AppSheet
- * 
+ *
  * Proporciona una vista completa de registro con:
  * - Header con información clave
  * - Secciones colapsables
@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
+import {
   ChevronLeft,
   ChevronDown,
   ChevronRight,
@@ -29,7 +29,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { AuditPanel } from './AuditPanel';
 import { useAudit } from '@/hooks/useAudit';
@@ -100,7 +100,13 @@ export interface RecordDetailViewProps {
 }
 
 // Componente de fila de información
-const InfoRow: React.FC<InfoRow & { index: number }> = ({ label, value, icon, copyable, index }) => {
+const RowItem: React.FC<InfoRow & { index: number }> = ({
+  label,
+  value,
+  icon,
+  copyable,
+  index,
+}) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -124,7 +130,7 @@ const InfoRow: React.FC<InfoRow & { index: number }> = ({ label, value, icon, co
           {label}
         </span>
       </div>
-      <div 
+      <div
         className={`flex-1 text-right font-medium text-sm ${
           copyable ? 'cursor-pointer hover:text-blue-400' : ''
         }`}
@@ -153,7 +159,7 @@ const CollapsibleSection: React.FC<Section & { children?: React.ReactNode }> = (
   defaultOpen = true,
   rows,
   content,
-  children
+  children,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -172,13 +178,12 @@ const CollapsibleSection: React.FC<Section & { children?: React.ReactNode }> = (
             {title}
           </span>
         </div>
-        {collapsible && (
-          isOpen ? (
+        {collapsible &&
+          (isOpen ? (
             <ChevronDown className="w-4 h-4 text-slate-500" />
           ) : (
             <ChevronRight className="w-4 h-4 text-slate-500" />
-          )
-        )}
+          ))}
       </button>
 
       {/* Content */}
@@ -191,9 +196,7 @@ const CollapsibleSection: React.FC<Section & { children?: React.ReactNode }> = (
             className="overflow-hidden"
           >
             <div className="px-4 pb-4">
-              {rows && rows.map((row, i) => (
-                <InfoRow key={i} {...row} index={i} />
-              ))}
+              {rows && rows.map((row, i) => <RowItem key={i} {...row} index={i} />)}
               {content}
               {children}
             </div>
@@ -246,7 +249,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
 
   const formatTimestamp = (ts?: number) => {
     if (!ts) return 'N/A';
-    return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
+    return format(new Date(ts), 'dd MMM yyyy, HH:mm', { locale: es });
   };
 
   const getSyncIcon = () => {
@@ -283,18 +286,14 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            
+
             <div>
               <div className="flex items-center gap-2 mb-1">
                 {icon && <span className="text-blue-400">{icon}</span>}
-                <h1 className="text-lg font-black text-white uppercase tracking-tight">
-                  {title}
-                </h1>
+                <h1 className="text-lg font-black text-white uppercase tracking-tight">{title}</h1>
                 {statusLabel && <DesignStatusBadge status={mappedStatus} label={statusLabel} />}
               </div>
-              {subtitle && (
-                <p className="text-sm text-muted ml-0">{subtitle}</p>
-              )}
+              {subtitle && <p className="text-sm text-muted ml-0">{subtitle}</p>}
             </div>
           </div>
 
@@ -332,7 +331,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                 <RefreshCw className="w-4 h-4" />
               </button>
             )}
-            
+
             <div className="relative hidden md:block">
               <button
                 onClick={() => setShowActionsMenu(!showActionsMenu)}
@@ -340,7 +339,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
-              
+
               <AnimatePresence>
                 {showActionsMenu && (
                   <motion.div
@@ -351,7 +350,10 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                   >
                     {onEdit && (
                       <button
-                        onClick={() => { onEdit(); setShowActionsMenu(false); }}
+                        onClick={() => {
+                          onEdit();
+                          setShowActionsMenu(false);
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm text-secondary hover:bg-elevated transition-colors"
                       >
                         <Pencil className="w-4 h-4 text-blue-400" />
@@ -360,7 +362,10 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                     )}
                     {onDelete && (
                       <button
-                        onClick={() => { onDelete(); setShowActionsMenu(false); }}
+                        onClick={() => {
+                          onDelete();
+                          setShowActionsMenu(false);
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-400 hover:bg-elevated transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -370,14 +375,21 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                     {actions.map(action => (
                       <button
                         key={action.id}
-                        onClick={() => { action.onClick(); setShowActionsMenu(false); }}
+                        onClick={() => {
+                          action.onClick();
+                          setShowActionsMenu(false);
+                        }}
                         disabled={action.loading}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-elevated transition-colors ${
                           action.variant === 'danger' ? 'text-rose-400' : 'text-secondary'
                         } ${action.loading ? 'opacity-50' : ''}`}
                       >
                         {action.icon && (
-                          <span className={action.variant === 'danger' ? 'text-rose-400' : 'text-blue-400'}>
+                          <span
+                            className={
+                              action.variant === 'danger' ? 'text-rose-400' : 'text-blue-400'
+                            }
+                          >
                             {action.icon}
                           </span>
                         )}
@@ -460,9 +472,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
               ) : (
                 <div className="bg-surface/50 rounded-2xl border border-subtle p-8 text-center">
                   <Clock className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-sm text-muted">
-                    Historial no disponible
-                  </p>
+                  <p className="text-sm text-muted">Historial no disponible</p>
                   <p className="text-[11px] text-slate-500 mt-1">
                     Se necesita ID de registro y nombre de tabla
                   </p>
@@ -488,12 +498,20 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
                     action.variant === 'primary'
                       ? 'bg-blue-600/10 border-blue-500/30 text-blue-400 hover:bg-blue-600/20'
                       : action.variant === 'danger'
-                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
-                      : 'bg-surface/50 border-subtle text-secondary hover:bg-surface hover:border-subtle'
+                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
+                        : 'bg-surface/50 border-subtle text-secondary hover:bg-surface hover:border-subtle'
                   } ${action.loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {action.icon && (
-                    <span className={action.variant === 'primary' ? 'text-blue-400' : action.variant === 'danger' ? 'text-rose-400' : 'text-muted'}>
+                    <span
+                      className={
+                        action.variant === 'primary'
+                          ? 'text-blue-400'
+                          : action.variant === 'danger'
+                            ? 'text-rose-400'
+                            : 'text-muted'
+                      }
+                    >
                       {action.icon}
                     </span>
                   )}
@@ -506,9 +524,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
               {actions.length === 0 && (
                 <div className="bg-surface/50 rounded-2xl border border-subtle p-8 text-center">
                   <Zap className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-sm text-muted">
-                    No hay acciones disponibles
-                  </p>
+                  <p className="text-sm text-muted">No hay acciones disponibles</p>
                 </div>
               )}
             </motion.div>

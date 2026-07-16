@@ -1,11 +1,10 @@
-"use client";
+'use client';
 /**
  * AuditPanel - Panel de visualización de logs de auditoría
  */
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react';
 import { logger } from '@/services/logger';
-;
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
@@ -95,26 +94,36 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
   const [showFilters, setShowFilters] = useState(false);
 
   const filteredLogs = useMemo(() => {
-    return getLogs({
-      search: search || undefined,
-      action: filterAction || undefined,
-      severity: filterSeverity || undefined,
-    }, 100);
+    return getLogs(
+      {
+        search: search || undefined,
+        action: filterAction || undefined,
+        severity: filterSeverity || undefined,
+      },
+      100
+    );
   }, [logs, search, filterAction, filterSeverity, getLogs]);
 
   const stats = useMemo(() => getActionStats(), [logs]);
 
   const toggleExpand = (id: string) => {
-    setExpandedLogs((prev) => {
+    setExpandedLogs(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
 
   const formatTimestamp = (ts: number) => {
     return new Date(ts).toLocaleString('es-CL', {
-      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -131,7 +140,11 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
       toast.success(`Exportados ${filteredLogs.length} registros a Excel`);
     } catch (err) {
       toast.error('Error al exportar');
-      logger.error('AuditPanel', 'Error exporting audit', err instanceof Error ? err.message : String(err));
+      logger.error(
+        'AuditPanel',
+        'Error exporting audit',
+        err instanceof Error ? err.message : String(err)
+      );
     } finally {
       setIsExporting(false);
     }
@@ -148,7 +161,11 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
       toast.success(`Exportados ${filteredLogs.length} registros a CSV`);
     } catch (err) {
       toast.error('Error al exportar');
-      logger.error('AuditPanel', 'Error exporting audit', err instanceof Error ? err.message : String(err));
+      logger.error(
+        'AuditPanel',
+        'Error exporting audit',
+        err instanceof Error ? err.message : String(err)
+      );
     } finally {
       setIsExporting(false);
     }
@@ -190,14 +207,20 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowFilters(!showFilters)} className={cn(
-              'p-2 rounded-lg transition-colors',
-              showFilters ? 'bg-blue-500/20 text-blue-500' : 'hover:bg-elevated text-muted'
-            )}>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                showFilters ? 'bg-blue-500/20 text-blue-500' : 'hover:bg-elevated text-muted'
+              )}
+            >
               <Filter className="w-5 h-5" />
             </button>
             <div className="relative group">
-              <button className="p-2 rounded-lg hover:bg-elevated text-muted flex items-center gap-1" title="Exportar">
+              <button
+                className="p-2 rounded-lg hover:bg-elevated text-muted flex items-center gap-1"
+                title="Exportar"
+              >
                 <Download className="w-5 h-5" />
                 <ChevronDown className="w-3 h-3" />
               </button>
@@ -228,7 +251,11 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
                 </button>
               </div>
             </div>
-            <button onClick={() => clearLogs()} className="p-2 rounded-lg hover:bg-rose-500/20 text-muted hover:text-rose-500" title="Limpiar">
+            <button
+              onClick={() => clearLogs()}
+              className="p-2 rounded-lg hover:bg-rose-500/20 text-muted hover:text-rose-500"
+              title="Limpiar"
+            >
               <Trash2 className="w-5 h-5" />
             </button>
           </div>
@@ -238,7 +265,9 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
           <input
-            type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Buscar en registros..."
             className="w-full pl-10 pr-4 py-2.5 bg-base border border-subtle rounded-xl text-primary placeholder:text-muted focus:outline-none focus:border-blue-500"
           />
@@ -247,20 +276,35 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
         {/* Filters */}
         <AnimatePresence>
           {showFilters && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
               <div className="mt-4 flex flex-wrap gap-4">
-                <select value={filterAction} onChange={(e) => setFilterAction(e.target.value as AuditAction | '')}
-                  className="px-3 py-2 bg-base border border-subtle rounded-lg text-sm">
+                <select
+                  value={filterAction}
+                  onChange={e => setFilterAction(e.target.value as AuditAction | '')}
+                  className="px-3 py-2 bg-base border border-subtle rounded-lg text-sm"
+                >
                   <option value="">Todas las acciones</option>
                   {Object.entries(ACTION_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
                   ))}
                 </select>
-                <select value={filterSeverity} onChange={(e) => setFilterSeverity(e.target.value as AuditSeverity | '')}
-                  className="px-3 py-2 bg-base border border-subtle rounded-lg text-sm">
+                <select
+                  value={filterSeverity}
+                  onChange={e => setFilterSeverity(e.target.value as AuditSeverity | '')}
+                  className="px-3 py-2 bg-base border border-subtle rounded-lg text-sm"
+                >
                   <option value="">Todos los niveles</option>
                   {Object.entries(SEVERITY_CONFIG).map(([key, config]) => (
-                    <option key={key} value={key}>{config.label}</option>
+                    <option key={key} value={key}>
+                      {config.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -272,18 +316,26 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
       {/* Stats */}
       <div className="px-4 py-3 border-b border-subtle bg-base/50">
         <div className="flex flex-wrap gap-2">
-          {Object.entries(stats).filter(([, count]) => count > 0).map(([action, count]) => (
-            <div key={action} className="px-2 py-1 bg-elevated rounded-lg text-xs flex items-center gap-1.5">
-              {ACTION_ICONS[action as AuditAction]}
-              <span className="text-muted">{ACTION_LABELS[action as AuditAction]}:</span>
-              <span className="font-medium text-primary">{count}</span>
-            </div>
-          ))}
+          {Object.entries(stats)
+            .filter(([, count]) => count > 0)
+            .map(([action, count]) => (
+              <div
+                key={action}
+                className="px-2 py-1 bg-elevated rounded-lg text-xs flex items-center gap-1.5"
+              >
+                {ACTION_ICONS[action as AuditAction]}
+                <span className="text-muted">{ACTION_LABELS[action as AuditAction]}:</span>
+                <span className="font-medium text-primary">{count}</span>
+              </div>
+            ))}
         </div>
       </div>
 
       {/* Logs */}
-      <div className="overflow-y-auto" style={{ maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }}>
+      <div
+        className="overflow-y-auto"
+        style={{ maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }}
+      >
         {filteredLogs.length === 0 ? (
           <div className="p-8 text-center">
             <CheckCircle2 className="w-12 h-12 text-muted mx-auto mb-4" />
@@ -291,43 +343,80 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
           </div>
         ) : (
           <div className="divide-y divide-subtle">
-            {filteredLogs.map((log) => {
+            {filteredLogs.map(log => {
               const isExpanded = expandedLogs.has(log.id);
               const config = SEVERITY_CONFIG[log.severity];
               return (
                 <div key={log.id} className="p-4 hover:bg-elevated/30 transition-colors">
-                  <div className="flex items-start gap-3 cursor-pointer" onClick={() => toggleExpand(log.id)}>
-                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', config.bg)}>
+                  <div
+                    className="flex items-start gap-3 cursor-pointer"
+                    onClick={() => toggleExpand(log.id)}
+                  >
+                    <div
+                      className={cn(
+                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                        config.bg
+                      )}
+                    >
                       <span className={config.color}>{ACTION_ICONS[log.action]}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-primary">{log.description}</span>
-                        <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium uppercase', config.bg, config.color)}>
+                        <span
+                          className={cn(
+                            'px-1.5 py-0.5 rounded text-[10px] font-medium uppercase',
+                            config.bg,
+                            config.color
+                          )}
+                        >
                           {config.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted">
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatTimestamp(log.timestamp)}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatTimestamp(log.timestamp)}
+                        </span>
                         <span>{log.entityType}</span>
                         <span className="font-mono">{log.entityId}</span>
-                        {log.userName && <span className="flex items-center gap-1"><User className="w-3 h-3" />{log.userName}</span>}
+                        {log.userName && (
+                          <span className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {log.userName}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className={cn('w-5 h-5 rounded flex items-center justify-center transition-transform', isExpanded && 'rotate-90')}>
+                    <div
+                      className={cn(
+                        'w-5 h-5 rounded flex items-center justify-center transition-transform',
+                        isExpanded && 'rotate-90'
+                      )}
+                    >
                       <ChevronRight className="w-4 h-4 text-muted" />
                     </div>
                   </div>
                   <AnimatePresence>
                     {isExpanded && log.changes && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
                         <div className="mt-3 pt-3 border-t border-subtle space-y-2">
                           {log.changes.fields?.length! > 0 && (
                             <div>
                               <p className="text-xs text-muted mb-1">Campos modificados:</p>
                               <div className="flex flex-wrap gap-1">
-                                {log.changes.fields?.map((field) => (
-                                  <span key={field} className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">{field}</span>
+                                {log.changes.fields?.map(field => (
+                                  <span
+                                    key={field}
+                                    className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs"
+                                  >
+                                    {field}
+                                  </span>
                                 ))}
                               </div>
                             </div>
@@ -336,11 +425,15 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <p className="text-xs text-muted mb-1">Antes:</p>
-                                <pre className="p-2 bg-rose-500/10 rounded-lg text-xs font-mono overflow-x-auto">{JSON.stringify(log.changes.before, null, 2)}</pre>
+                                <pre className="p-2 bg-rose-500/10 rounded-lg text-xs font-mono overflow-x-auto">
+                                  {JSON.stringify(log.changes.before, null, 2)}
+                                </pre>
                               </div>
                               <div>
                                 <p className="text-xs text-muted mb-1">Después:</p>
-                                <pre className="p-2 bg-emerald-500/10 rounded-lg text-xs font-mono overflow-x-auto">{JSON.stringify(log.changes.after, null, 2)}</pre>
+                                <pre className="p-2 bg-emerald-500/10 rounded-lg text-xs font-mono overflow-x-auto">
+                                  {JSON.stringify(log.changes.after, null, 2)}
+                                </pre>
                               </div>
                             </div>
                           )}

@@ -1,6 +1,6 @@
 /**
  * usePerformanceOptimizations - Hook para optimizar performance de la aplicación
- * 
+ *
  * Proporciona:
  * - Debounce y throttle utilities
  * - Memoización avanzada
@@ -8,10 +8,8 @@
  * - Preload de recursos
  */
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { logger } from '@/services/logger';
-;
-
 // ============================================================
 // UTILIDADES DE OPTIMIZACIÓN
 // ============================================================
@@ -38,16 +36,13 @@ export function useDebounce<T>(value: T, delay: number): T {
 /**
  * useThrottle - Limita la frecuencia de ejecución de una función
  */
-export function useThrottle<T extends (...args: any[]) => any>(
-  callback: T,
-  delay: number
-): T {
+export function useThrottle<T extends (...args: any[]) => any>(callback: T, delay: number): T {
   // Usar useState con inicialización lazy para evitar función impura
   const [lastRan, setLastRan] = useState<number>(() => Date.now());
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  return useCallback(
-    ((...args) => {
+  const throttledFn = useCallback(
+    (...args: Parameters<T>) => {
       const now = Date.now();
       const timeSinceLastRun = now - lastRan;
 
@@ -63,9 +58,11 @@ export function useThrottle<T extends (...args: any[]) => any>(
           setLastRan(Date.now());
         }, delay - timeSinceLastRun);
       }
-    }) as T,
+    },
     [callback, delay, lastRan]
   );
+
+  return throttledFn as T;
 }
 
 /**
@@ -124,7 +121,11 @@ export function usePreloadResources() {
     try {
       await importFn();
     } catch (e) {
-      logger.warn('usePerformanceOptimizations', 'Failed to preload module', e instanceof Error ? e.message : String(e));
+      logger.warn(
+        'usePerformanceOptimizations',
+        'Failed to preload module',
+        e instanceof Error ? e.message : String(e)
+      );
     }
   }, []);
 
@@ -224,10 +225,7 @@ export function useReducedMotion(): boolean {
 /**
  * useIdleCallback - Ejecuta código cuando el navegador está idle
  */
-export function useIdleCallback(
-  callback: () => void,
-  options?: { timeout?: number }
-) {
+export function useIdleCallback(callback: () => void, options?: { timeout?: number }) {
   const callbackRef = useRef(callback);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -260,10 +258,7 @@ export function useIdleCallback(
 /**
  * useMemoCompare - Memoización con comparación personalizada
  */
-export function useMemoCompare<T>(
-  value: T,
-  compare: (prev: T | undefined, curr: T) => boolean
-): T {
+export function useMemoCompare<T>(value: T, compare: (prev: T | undefined, curr: T) => boolean): T {
   const prevRef = useRef<T | undefined>(undefined);
   const prev = prevRef.current;
   const isEqual = compare(prev, value);
@@ -274,5 +269,3 @@ export function useMemoCompare<T>(
 
   return isEqual ? prev! : value;
 }
-
-

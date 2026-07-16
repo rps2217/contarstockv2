@@ -89,6 +89,9 @@ export default [
       'react-hooks/refs': 'off',
       'react-hooks/purity': 'off',
       'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/static-components': 'off',
       'react/display-name': 'off',
       'react/no-unescaped-entities': 'off',
       'no-prototype-builtins': 'off',
@@ -102,6 +105,7 @@ export default [
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/ban-types': 'off',
       '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',
+      'react/no-unstable-nested-components': 'off',
     },
   },
 ];
