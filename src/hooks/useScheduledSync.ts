@@ -98,14 +98,19 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
   // Efecto para el intervalo
   useEffect(() => {
     if (!config.enabled) {
-      setNextScheduledSync(null);
-      return;
+      const timeoutId = setTimeout(() => {
+        setNextScheduledSync(null);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
 
     const intervalMs = config.intervalMinutes * 60 * 1000;
     
-    // Calcular tiempo hasta la próxima sincronización
-    setNextScheduledSync(calculateNextSync());
+    // Usar timeout para evitar setState sincrono
+    const timeoutId = setTimeout(() => {
+      // Calcular tiempo hasta la próxima sincronización
+      setNextScheduledSync(calculateNextSync());
+    }, 0);
 
     intervalRef.current = setInterval(() => {
       if (shouldSync()) {
@@ -115,6 +120,7 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
     }, intervalMs);
 
     return () => {
+      clearTimeout(timeoutId);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }

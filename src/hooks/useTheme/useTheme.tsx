@@ -177,24 +177,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Cargar preferencias guardadas
   useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const timeoutId = setTimeout(() => {
+      // Cargar preset
+      const savedPreset = localStorage.getItem(PRESET_KEY) as ThemePreset | null;
+      const savedCustomThemes = localStorage.getItem(CUSTOM_THEMES_KEY);
 
-    // Cargar preset
-    const savedPreset = localStorage.getItem(PRESET_KEY) as ThemePreset | null;
-    const savedCustomThemes = localStorage.getItem(CUSTOM_THEMES_KEY);
-
-    if (savedPreset && PRESETS[savedPreset]) {
-      setPresetState(savedPreset);
-      setCurrentCustomTheme(PRESETS[savedPreset]);
-    }
-
-    if (savedCustomThemes) {
-      try {
-        setCustomThemes(JSON.parse(savedCustomThemes));
-      } catch (e) {
-        logger.warn('useTheme', 'Error parsing custom themes', e instanceof Error ? e.message : String(e));
+      if (savedPreset && PRESETS[savedPreset]) {
+        setPresetState(savedPreset);
+        setCurrentCustomTheme(PRESETS[savedPreset]);
       }
-    }
+
+      if (savedCustomThemes) {
+        try {
+          setCustomThemes(JSON.parse(savedCustomThemes));
+        } catch (e) {
+          logger.warn('useTheme', 'Error parsing custom themes', e instanceof Error ? e.message : String(e));
+        }
+      }
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Aplicar tema al documento
