@@ -1,6 +1,6 @@
 /**
  * Export Factory
- * 
+ *
  * Factory para crear exporters según el formato seleccionado.
  * Proporciona una interfaz unificada para todos los formatos de exportación.
  */
@@ -25,7 +25,6 @@ export interface ExportConfig {
  * Factory para exportar datos
  */
 export class ExportFactory {
-  
   /**
    * Exportar datos usando el formato especificado
    */
@@ -35,15 +34,11 @@ export class ExportFactory {
         case 'csv':
           await exportToCSV(config.data, config.fileName);
           break;
-          
+
         case 'excel':
-          await exportToExcel(
-            config.data, 
-            config.fileName,
-            config.options
-          );
+          await exportToExcel(config.data, config.fileName, config.options);
           break;
-          
+
         case 'pdf':
           if (config.options?.title) {
             await exportToPDF(
@@ -53,22 +48,18 @@ export class ExportFactory {
               { title: config.options.title }
             );
           } else {
-            await exportToPDF(
-              config.data,
-              [],
-              config.fileName
-            );
+            await exportToPDF(config.data, [], config.fileName);
           }
           break;
-          
+
         case 'json':
           this.exportJSON(config.data, config.fileName);
           break;
-          
+
         default:
           throw new Error(`Unsupported format: ${config.format}`);
       }
-      
+
       return {
         success: true,
         fileName: config.fileName,
@@ -92,16 +83,18 @@ export class ExportFactory {
   ): Promise<ExportResult> {
     try {
       switch (format) {
-        case 'excel':
+        case 'excel': {
           const { exportSessionToExcel } = await import('./excelExport');
           await exportSessionToExcel(session, items);
           break;
-          
-        case 'pdf':
+        }
+
+        case 'pdf': {
           await exportSessionManifestPDF(session, items);
           break;
-          
-        case 'csv':
+        }
+
+        case 'csv': {
           const csvData = items.map(item => ({
             barcode: item.barcode,
             productName: item.productName,
@@ -110,11 +103,12 @@ export class ExportFactory {
           }));
           await exportToCSV(csvData, `Conteo_${session.erpOrder}`);
           break;
-          
+        }
+
         default:
           throw new Error(`Unsupported format: ${format}`);
       }
-      
+
       return {
         success: true,
         fileName: `Conteo_${session.erpOrder}.${format}`,
@@ -138,29 +132,30 @@ export class ExportFactory {
   ): Promise<ExportResult> {
     try {
       switch (format) {
-        case 'excel':
+        case 'excel': {
           const { exportHammerToExcel } = await import('./excelExport');
           await exportHammerToExcel(batchId, items);
           break;
-          
-        case 'csv':
+        }
+
+        case 'csv': {
           const csvData = items.map(item => ({
             barcode: item.barcode,
             name: item.name,
             location: item.loc,
             quantity: item.totalQuantity,
             expected: item.expectedQty,
-            difference: item.expectedQty !== undefined 
-              ? item.totalQuantity - item.expectedQty 
-              : null,
+            difference:
+              item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : null,
           }));
           await exportToCSV(csvData, `Hammer_${batchId}`);
           break;
-          
+        }
+
         default:
           throw new Error(`Unsupported format: ${format}`);
       }
-      
+
       return {
         success: true,
         fileName: `Hammer_${batchId}.${format}`,
@@ -184,10 +179,7 @@ export class ExportFactory {
   ): Promise<ExportResult> {
     try {
       if (format === 'pdf') {
-        await exportDiscrepancyPDF(
-          match.discrepancies || [],
-          sessionLabel
-        );
+        await exportDiscrepancyPDF(match.discrepancies || [], sessionLabel);
       } else {
         const csvData = (match.discrepancies || []).map((d: any) => ({
           barcode: d.barcode,
@@ -198,7 +190,7 @@ export class ExportFactory {
         }));
         await exportToCSV(csvData, `Discrepancias_${sessionLabel}`);
       }
-      
+
       return {
         success: true,
         fileName: `Discrepancias_${sessionLabel}.${format}`,
@@ -235,11 +227,16 @@ export class ExportFactory {
    */
   static getExtension(format: ExportFormat): string {
     switch (format) {
-      case 'csv': return '.csv';
-      case 'excel': return '.xlsx';
-      case 'pdf': return '.pdf';
-      case 'json': return '.json';
-      default: return '.dat';
+      case 'csv':
+        return '.csv';
+      case 'excel':
+        return '.xlsx';
+      case 'pdf':
+        return '.pdf';
+      case 'json':
+        return '.json';
+      default:
+        return '.dat';
     }
   }
 
@@ -249,12 +246,17 @@ export class ExportFactory {
   static detectFormat(fileName: string): ExportFormat | null {
     const ext = fileName.toLowerCase().split('.').pop();
     switch (ext) {
-      case 'csv': return 'csv';
+      case 'csv':
+        return 'csv';
       case 'xlsx':
-      case 'xls': return 'excel';
-      case 'pdf': return 'pdf';
-      case 'json': return 'json';
-      default: return null;
+      case 'xls':
+        return 'excel';
+      case 'pdf':
+        return 'pdf';
+      case 'json':
+        return 'json';
+      default:
+        return null;
     }
   }
 

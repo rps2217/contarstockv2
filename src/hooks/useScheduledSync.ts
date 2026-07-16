@@ -1,10 +1,10 @@
 /**
  * useScheduledSync - Hook para sincronización automática periódica
- * 
+ *
  * Implementa sincronización configurable que funciona en background
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { useSyncStore } from '@/stores';
 import { useNetworkStatus } from './useNetworkStatus';
 
@@ -42,14 +42,14 @@ interface UseScheduledSyncOptions {
 
 export const useScheduledSync = (options: UseScheduledSyncOptions) => {
   const { config, onSync, onSyncSuccess, onSyncError } = options;
-  
+
   const isOnline = useNetworkStatus();
   const isSyncing = useSyncStore(state => state.isSyncing);
-  
+
   const [lastScheduledSync, setLastScheduledSync] = useState<Date | null>(null);
   const [nextScheduledSync, setNextScheduledSync] = useState<Date | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const backgroundRef = useRef<number | null>(null);
 
@@ -58,23 +58,27 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
     if (!config.enabled) return false;
     if (!isOnline) return false;
     if (isSyncing) return false;
-    
+
     // Verificar WiFi si está configurado
     if (config.wifiOnly) {
       const connection = (navigator as any).connection || (navigator as any).mozConnection;
       if (connection) {
-        const isWifi = connection.type === 'wifi' || connection.type === '2g' || connection.type === '3g' || connection.type === '4g';
+        const isWifi =
+          connection.type === 'wifi' ||
+          connection.type === '2g' ||
+          connection.type === '3g' ||
+          connection.type === '4g';
         if (!isWifi && !connection.saveData) return false;
       }
     }
-    
+
     return true;
   }, [config.enabled, config.wifiOnly, isOnline, isSyncing]);
 
   // Ejecutar sincronización
   const runSync = useCallback(async () => {
     if (!shouldSync()) return;
-    
+
     setIsRunning(true);
     try {
       await onSync();
@@ -105,7 +109,7 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
     }
 
     const intervalMs = config.intervalMinutes * 60 * 1000;
-    
+
     // Usar timeout para evitar setState sincrono
     const timeoutId = setTimeout(() => {
       // Calcular tiempo hasta la próxima sincronización
@@ -139,7 +143,7 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -157,7 +161,7 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
@@ -169,26 +173,26 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
   }, [runSync]);
 
   // Tiempo restante hasta la próxima sincronización
-  const getTimeUntilNextSync = (): number | null => {
+  const timeUntilNextSync = useMemo(() => {
     if (!nextScheduledSync) return null;
     return Math.max(0, nextScheduledSync.getTime() - Date.now());
-  };
+  }, [nextScheduledSync]);
 
   return {
     // Estado
     isEnabled: config.enabled,
     isRunning,
     shouldSync: shouldSync(),
-    
+
     // Tiempos
     lastScheduledSync,
     nextScheduledSync,
-    timeUntilNextSync: getTimeUntilNextSync(),
-    
+    timeUntilNextSync,
+
     // Configuración
     intervalMinutes: config.intervalMinutes,
     wifiOnly: config.wifiOnly,
-    
+
     // Métodos
     forceSync,
   };

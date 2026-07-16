@@ -1,6 +1,6 @@
 /**
  * IdValidator - Validación de IDs para prevenir errores 406
- * 
+ *
  * Valida que los IDs tengan el formato correcto antes de hacer queries
  * a Supabase para evitar errores de recursos no encontrados.
  */
@@ -102,7 +102,7 @@ export const IdValidator = {
    */
   validateForTable(id: string, tableName: string): { valid: boolean; reason?: string } {
     const config = TABLE_CONFIGS[tableName.toUpperCase()];
-    
+
     if (!config) {
       // Si no hay config específica, usar validación genérica
       if (!this.isValidId(id)) {
@@ -127,16 +127,24 @@ export const IdValidator = {
     // Verificar al menos un formato válido
     const formatValid = config.formats.some(format => {
       switch (format) {
-        case 'uuid': return this.isValidUuid(id);
-        case 'numeric': return this.isNumeric(id);
-        case 'erp': return this.isErpCode(id);
-        case 'string': return this.isValidId(id);
-        default: return false;
+        case 'uuid':
+          return this.isValidUuid(id);
+        case 'numeric':
+          return this.isNumeric(id);
+        case 'erp':
+          return this.isErpCode(id);
+        case 'string':
+          return this.isValidId(id);
+        default:
+          return false;
       }
     });
 
     if (!formatValid) {
-      return { valid: false, reason: `ID does not match any valid format: ${config.formats.join(', ')}` };
+      return {
+        valid: false,
+        reason: `ID does not match any valid format: ${config.formats.join(', ')}`,
+      };
     }
 
     return { valid: true };
@@ -170,7 +178,7 @@ export const IdValidator = {
    */
   sanitizeId(id: string): string {
     // Remover caracteres potencialmente peligrosos
-    return id.replace(/[\'";<>]/g, '').trim();
+    return id.replace(/['";<>]/g, '').trim();
   },
 
   /**
@@ -196,7 +204,7 @@ export const IdValidator = {
     if (this.isValidUuid(id)) {
       return false; // Intentar directamente, el error será manejado
     }
-    
+
     // IDs numéricos o strings deberían existir localmente
     return true;
   },

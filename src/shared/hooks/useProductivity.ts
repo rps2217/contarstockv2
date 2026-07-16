@@ -1,13 +1,13 @@
 /**
  * useProductivity - Hook para métricas de productividad en tiempo real
- * 
+ *
  * Calcula estadísticas como:
  * - Items por minuto
  * - Tiempo promedio por item
  * - Tendencia (¿va más rápido o más lento?)
  * - Duración de la sesión
  * - Mejor ritmo (bestPace)
- * 
+ *
  * @module shared/hooks
  */
 
@@ -34,7 +34,7 @@ interface ScanEvent {
 // Thresholds para fatiga
 const FATIGUE_THRESHOLDS = {
   DECELERATING_FOR_MINUTES: 2, // Minutos antes de marcar cansancio
-  TREND_DECLINE_FOR_FATIGUE: -15 // % de caída para marcar cansancio
+  TREND_DECLINE_FOR_FATIGUE: -15, // % de caída para marcar cansancio
 };
 
 export interface UseProductivityOptions {
@@ -47,7 +47,7 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
   const [bestPace, setBestPace] = useState<number>(0);
   const [fatigueStart, setFatigueStart] = useState<number | null>(null);
   const [sessionStart, setSessionStart] = useState<number>(() => Date.now());
-  
+
   const lastItemsCountRef = useRef<number>(0);
 
   // Track new items added
@@ -58,7 +58,7 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       const newItems = currentCount - lastItemsCountRef.current;
       setScanHistory(prev => [
         ...prev.slice(-49), // Keep last 50 events
-        { timestamp: Date.now(), quantity: newItems }
+        { timestamp: Date.now(), quantity: newItems },
       ]);
     }
     lastItemsCountRef.current = currentCount;
@@ -68,7 +68,7 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
   const stats = useMemo<ProductivityStats>(() => {
     const now = Date.now();
     const sessionDuration = Math.floor((now - sessionStart) / 1000);
-    
+
     // Calculate items per minute (using last 10 scans for accuracy)
     const recentScans = scanHistory.slice(-10);
     let itemsPerMinute = 0;
@@ -80,7 +80,7 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       const firstScan = recentScans[0];
       const lastScan = recentScans[recentScans.length - 1];
       const timeSpan = (lastScan.timestamp - firstScan.timestamp) / 1000 / 60; // minutes
-      
+
       if (timeSpan > 0) {
         itemsPerMinute = recentScans.length / timeSpan;
         averageTimePerItem = (timeSpan * 60 * 1000) / recentScans.length;
@@ -90,19 +90,21 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       const midpoint = Math.floor(recentScans.length / 2);
       const firstHalf = recentScans.slice(0, midpoint);
       const secondHalf = recentScans.slice(midpoint);
-      
+
       if (firstHalf.length > 0 && secondHalf.length > 0) {
-        const firstHalfTime = firstHalf.length > 1 
-          ? (firstHalf[firstHalf.length - 1].timestamp - firstHalf[0].timestamp) / 1000 / 60 
-          : 0;
-        const secondHalfTime = secondHalf.length > 1 
-          ? (secondHalf[secondHalf.length - 1].timestamp - secondHalf[0].timestamp) / 1000 / 60 
-          : 0;
+        const firstHalfTime =
+          firstHalf.length > 1
+            ? (firstHalf[firstHalf.length - 1].timestamp - firstHalf[0].timestamp) / 1000 / 60
+            : 0;
+        const secondHalfTime =
+          secondHalf.length > 1
+            ? (secondHalf[secondHalf.length - 1].timestamp - secondHalf[0].timestamp) / 1000 / 60
+            : 0;
 
         if (firstHalfTime > 0 && secondHalfTime > 0) {
           const firstRate = firstHalf.length / firstHalfTime;
           const secondRate = secondHalf.length / secondHalfTime;
-          
+
           if (secondRate > firstRate * 1.1) {
             trend = 'increasing';
             trendPercent = Math.round(((secondRate - firstRate) / firstRate) * 100);
@@ -152,7 +154,10 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
 
   // Update fatigue start in effect
   useEffect(() => {
-    if (stats.trend === 'decreasing' && stats.trendPercent < FATIGUE_THRESHOLDS.TREND_DECLINE_FOR_FATIGUE) {
+    if (
+      stats.trend === 'decreasing' &&
+      stats.trendPercent < FATIGUE_THRESHOLDS.TREND_DECLINE_FOR_FATIGUE
+    ) {
       if (fatigueStart === null) {
         setFatigueStart(Date.now());
       }

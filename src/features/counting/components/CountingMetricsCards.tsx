@@ -3,10 +3,10 @@
  */
 
 import React, { useMemo } from 'react';
-import { 
-  Boxes, 
-  Package, 
-  Clock, 
+import {
+  Boxes,
+  Package,
+  Clock,
   CheckCircle,
   AlertCircle,
   Cloud,
@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Zap,
   Timer,
-  History
+  History,
 } from 'lucide-react';
 
 interface Session {
@@ -34,11 +34,16 @@ interface CountingMetricsCardsProps {
   theme?: 'dark' | 'light' | 'gray' | 'high-contrast' | 'appsheet-dark' | 'night';
 }
 
-export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({ 
+export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
   sessions,
-  theme = 'dark' 
+  theme = 'dark',
 }) => {
-  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
+  const isDark =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
 
@@ -59,7 +64,7 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
 
     const now = Date.now();
     const today = new Date().setHours(0, 0, 0, 0);
-    
+
     let completed = 0;
     let inProgress = 0;
     let pendingSync = 0;
@@ -103,7 +108,11 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
   }, [sessions]);
 
   const textColor = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-900' : 'text-white';
-  const subtextColor = isHighContrast ? 'text-yellow-500' : isLight ? 'text-slate-500' : 'text-muted';
+  const subtextColor = isHighContrast
+    ? 'text-yellow-500'
+    : isLight
+      ? 'text-slate-500'
+      : 'text-muted';
 
   const cards = [
     {
@@ -111,46 +120,84 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
       value: metrics.total,
       icon: History,
       color: isHighContrast ? 'text-yellow-400' : isLight ? 'text-indigo-600' : 'text-indigo-400',
-      bgColor: isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-indigo-50' : 'bg-indigo-500/10',
+      bgColor: isHighContrast
+        ? 'bg-yellow-900/20 border-yellow-400/30'
+        : isLight
+          ? 'bg-indigo-50'
+          : 'bg-indigo-500/10',
     },
     {
       label: 'Hoy',
       value: metrics.todaySessions,
       icon: Zap,
       color: isHighContrast ? 'text-yellow-400' : isLight ? 'text-amber-600' : 'text-amber-400',
-      bgColor: isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-amber-50' : 'bg-amber-500/10',
+      bgColor: isHighContrast
+        ? 'bg-yellow-900/20 border-yellow-400/30'
+        : isLight
+          ? 'bg-amber-50'
+          : 'bg-amber-500/10',
     },
     {
       label: 'Completadas',
       value: metrics.completed,
       icon: CheckCircle,
       color: isHighContrast ? 'text-yellow-400' : isLight ? 'text-emerald-600' : 'text-emerald-400',
-      bgColor: isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-emerald-50' : 'bg-emerald-500/10',
+      bgColor: isHighContrast
+        ? 'bg-yellow-900/20 border-yellow-400/30'
+        : isLight
+          ? 'bg-emerald-50'
+          : 'bg-emerald-500/10',
     },
     {
       label: 'En Progreso',
       value: metrics.inProgress,
       icon: Clock,
       color: isHighContrast ? 'text-yellow-400' : isLight ? 'text-blue-600' : 'text-blue-400',
-      bgColor: isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-blue-50' : 'bg-blue-500/10',
+      bgColor: isHighContrast
+        ? 'bg-yellow-900/20 border-yellow-400/30'
+        : isLight
+          ? 'bg-blue-50'
+          : 'bg-blue-500/10',
     },
     {
       label: 'Items Totales',
       value: metrics.totalItems,
       icon: Package,
       color: isHighContrast ? 'text-yellow-400' : isLight ? 'text-purple-600' : 'text-purple-400',
-      bgColor: isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-purple-50' : 'bg-purple-500/10',
+      bgColor: isHighContrast
+        ? 'bg-yellow-900/20 border-yellow-400/30'
+        : isLight
+          ? 'bg-purple-50'
+          : 'bg-purple-500/10',
     },
     {
       label: 'Pendiente Sync',
       value: metrics.pendingSync,
       icon: CloudOff,
-      color: metrics.pendingSync > 0 
-        ? (isHighContrast ? 'text-yellow-400' : isLight ? 'text-rose-600' : 'text-rose-400')
-        : (isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-600' : 'text-muted'),
-      bgColor: metrics.pendingSync > 0
-        ? (isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-rose-50' : 'bg-rose-500/10')
-        : (isHighContrast ? 'bg-yellow-900/20 border-yellow-400/30' : isLight ? 'bg-slate-50' : 'bg-slate-500/10'),
+      color:
+        metrics.pendingSync > 0
+          ? isHighContrast
+            ? 'text-yellow-400'
+            : isLight
+              ? 'text-rose-600'
+              : 'text-rose-400'
+          : isHighContrast
+            ? 'text-yellow-400'
+            : isLight
+              ? 'text-slate-600'
+              : 'text-muted',
+      bgColor:
+        metrics.pendingSync > 0
+          ? isHighContrast
+            ? 'bg-yellow-900/20 border-yellow-400/30'
+            : isLight
+              ? 'bg-rose-50'
+              : 'bg-rose-500/10'
+          : isHighContrast
+            ? 'bg-yellow-900/20 border-yellow-400/30'
+            : isLight
+              ? 'bg-slate-50'
+              : 'bg-slate-500/10',
     },
   ];
 
@@ -169,9 +216,7 @@ export const CountingMetricsCards: React.FC<CountingMetricsCardsProps> = ({
               </span>
               <Icon className={`w-4 h-4 ${card.color}`} />
             </div>
-            <div className={`text-xl font-black ${textColor}`}>
-              {card.value.toLocaleString()}
-            </div>
+            <div className={`text-xl font-black ${textColor}`}>{card.value.toLocaleString()}</div>
           </button>
         );
       })}

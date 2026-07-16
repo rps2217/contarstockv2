@@ -12,7 +12,7 @@ describe('CircuitBreaker', () => {
     circuitBreaker = new CircuitBreaker('test', {
       failureThreshold: 3,
       successThreshold: 2,
-      timeout: 100
+      timeout: 100,
     });
   });
 
@@ -36,7 +36,9 @@ describe('CircuitBreaker', () => {
       for (let i = 0; i < 3; i++) {
         try {
           await circuitBreaker.execute(failingFn);
-        } catch {}
+        } catch (_err) {
+          // Expected error, ignore
+        }
       }
 
       expect(circuitBreaker.getMetrics().failures).toBe(3);
@@ -55,7 +57,9 @@ describe('CircuitBreaker', () => {
       for (let i = 0; i < 3; i++) {
         try {
           await circuitBreaker.execute(failingFn);
-        } catch {}
+        } catch (_err) {
+          // Expected error, ignore
+        }
       }
     });
 
@@ -72,7 +76,9 @@ describe('CircuitBreaker', () => {
       for (let i = 0; i < 3; i++) {
         try {
           await circuitBreaker.execute(failingFn);
-        } catch {}
+        } catch (_err) {
+          // Expected error, ignore
+        }
       }
       circuitBreaker.reset();
       expect(circuitBreaker.getState()).toBe('CLOSED');

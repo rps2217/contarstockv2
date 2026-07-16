@@ -34,18 +34,14 @@ const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: 'isNotEmpty', label: 'No está vacío' },
 ];
 
-export const SliceEditor: React.FC<Props> = ({
-  slice,
-  isOpen,
-  onClose,
-  onSave,
-  isDark,
-}) => {
+export const SliceEditor: React.FC<Props> = ({ slice, isOpen, onClose, onSave, isDark }) => {
   const [name, setName] = useState(slice?.name || '');
   const [description, setDescription] = useState(slice?.description || '');
   const [sourceTable, setSourceTable] = useState<SourceTable>(slice?.sourceTable || 'scans');
   const [filterField, setFilterField] = useState(slice?.filterField || 'syncStatus');
-  const [filterOperator, setFilterOperator] = useState<FilterOperator>(slice?.filterOperator || 'equals');
+  const [filterOperator, setFilterOperator] = useState<FilterOperator>(
+    slice?.filterOperator || 'equals'
+  );
   const [filterValue, setFilterValue] = useState(slice?.filterValue || 'pending');
   const [selectedColumns, setSelectedColumns] = useState<string[]>(slice?.selectedColumns || []);
   const [allowEdits, setAllowEdits] = useState(slice?.allowEdits ?? true);
@@ -54,11 +50,7 @@ export const SliceEditor: React.FC<Props> = ({
   const availableFields = TABLE_FIELDS[sourceTable] || [];
 
   const handleToggleColumn = (col: string) => {
-    setSelectedColumns(prev => 
-      prev.includes(col) 
-        ? prev.filter(c => c !== col)
-        : [...prev, col]
-    );
+    setSelectedColumns(prev => (prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]));
   };
 
   const handleSave = () => {
@@ -87,25 +79,31 @@ export const SliceEditor: React.FC<Props> = ({
   return (
     <div className="fixed inset-0 z-[300] flex items-end md:items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-brand-dark/40 transition-opacity animate-in fade-in duration-300"
         onClick={onClose}
       />
 
       {/* Content */}
-      <div className={`relative z-10 w-full max-w-2xl max-h-[90vh] rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 duration-300 overflow-hidden flex flex-col ${
-        isDark ? 'bg-brand-dark shadow-2xl' : 'bg-white shadow-2xl'
-      }`}>
+      <div
+        className={`relative z-10 w-full max-w-2xl max-h-[90vh] rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 duration-300 overflow-hidden flex flex-col ${
+          isDark ? 'bg-brand-dark shadow-2xl' : 'bg-white shadow-2xl'
+        }`}
+      >
         {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b shrink-0 ${
-          isDark ? 'border-white/5' : 'border-slate-100'
-        }`}>
-          <h2 className={`text-lg font-black uppercase tracking-tight leading-none ${
-            isDark ? 'text-white' : 'text-slate-900'
-          }`}>
+        <div
+          className={`flex items-center justify-between px-6 py-4 border-b shrink-0 ${
+            isDark ? 'border-white/5' : 'border-slate-100'
+          }`}
+        >
+          <h2
+            className={`text-lg font-black uppercase tracking-tight leading-none ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+          >
             {slice ? 'Editar Slice' : 'Nuevo Slice'}
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className={`p-2 rounded-full transition-colors ${
               isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'
@@ -119,19 +117,21 @@ export const SliceEditor: React.FC<Props> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Name */}
           <div>
-            <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-muted' : 'text-slate-500'
-            }`}>
+            <label
+              className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                isDark ? 'text-muted' : 'text-slate-500'
+              }`}
+            >
               Nombre
             </label>
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               placeholder="Mi Slice Personalizado"
               className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-colors ${
-                isDark 
-                  ? 'bg-white/5 text-white placeholder:text-slate-500 border border-white/10 focus:border-indigo-500' 
+                isDark
+                  ? 'bg-white/5 text-white placeholder:text-slate-500 border border-white/10 focus:border-indigo-500'
                   : 'bg-slate-100 text-slate-800 placeholder:text-muted border border-slate-200 focus:border-indigo-500'
               }`}
             />
@@ -139,19 +139,21 @@ export const SliceEditor: React.FC<Props> = ({
 
           {/* Description */}
           <div>
-            <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-muted' : 'text-slate-500'
-            }`}>
+            <label
+              className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                isDark ? 'text-muted' : 'text-slate-500'
+              }`}
+            >
               Descripción
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={e => setDescription(e.target.value)}
               placeholder="Describe qué datos muestra este slice..."
               rows={2}
               className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-colors resize-none ${
-                isDark 
-                  ? 'bg-white/5 text-white placeholder:text-slate-500 border border-white/10 focus:border-indigo-500' 
+                isDark
+                  ? 'bg-white/5 text-white placeholder:text-slate-500 border border-white/10 focus:border-indigo-500'
                   : 'bg-slate-100 text-slate-800 placeholder:text-muted border border-slate-200 focus:border-indigo-500'
               }`}
             />
@@ -159,26 +161,30 @@ export const SliceEditor: React.FC<Props> = ({
 
           {/* Source Table */}
           <div>
-            <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-muted' : 'text-slate-500'
-            }`}>
+            <label
+              className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                isDark ? 'text-muted' : 'text-slate-500'
+              }`}
+            >
               Tabla de Origen
             </label>
             <select
               value={sourceTable}
-              onChange={(e) => {
+              onChange={e => {
                 setSourceTable(e.target.value as SourceTable);
                 setFilterField('syncStatus');
                 setSelectedColumns([]);
               }}
               className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-colors ${
-                isDark 
-                  ? 'bg-white/5 text-white border border-white/10 focus:border-indigo-500' 
+                isDark
+                  ? 'bg-white/5 text-white border border-white/10 focus:border-indigo-500'
                   : 'bg-slate-100 text-slate-800 border border-slate-200 focus:border-indigo-500'
               }`}
             >
               {SOURCE_TABLES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
               ))}
             </select>
           </div>
@@ -186,58 +192,68 @@ export const SliceEditor: React.FC<Props> = ({
           {/* Filter */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-muted' : 'text-slate-500'
-              }`}>
+              <label
+                className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                  isDark ? 'text-muted' : 'text-slate-500'
+                }`}
+              >
                 Campo
               </label>
               <select
                 value={filterField}
-                onChange={(e) => setFilterField(e.target.value)}
+                onChange={e => setFilterField(e.target.value)}
                 className={`w-full px-3 py-2 rounded-xl text-sm outline-none ${
-                  isDark 
-                    ? 'bg-white/5 text-white border border-white/10' 
+                  isDark
+                    ? 'bg-white/5 text-white border border-white/10'
                     : 'bg-slate-100 text-slate-800 border border-slate-200'
                 }`}
               >
                 {availableFields.map(f => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-muted' : 'text-slate-500'
-              }`}>
+              <label
+                className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                  isDark ? 'text-muted' : 'text-slate-500'
+                }`}
+              >
                 Operador
               </label>
               <select
                 value={filterOperator}
-                onChange={(e) => setFilterOperator(e.target.value as FilterOperator)}
+                onChange={e => setFilterOperator(e.target.value as FilterOperator)}
                 className={`w-full px-3 py-2 rounded-xl text-sm outline-none ${
-                  isDark 
-                    ? 'bg-white/5 text-white border border-white/10' 
+                  isDark
+                    ? 'bg-white/5 text-white border border-white/10'
                     : 'bg-slate-100 text-slate-800 border border-slate-200'
                 }`}
               >
                 {FILTER_OPERATORS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-muted' : 'text-slate-500'
-              }`}>
+              <label
+                className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                  isDark ? 'text-muted' : 'text-slate-500'
+                }`}
+              >
                 Valor
               </label>
               <input
                 type="text"
                 value={filterValue}
-                onChange={(e) => setFilterValue(e.target.value)}
+                onChange={e => setFilterValue(e.target.value)}
                 className={`w-full px-3 py-2 rounded-xl text-sm outline-none ${
-                  isDark 
-                    ? 'bg-white/5 text-white border border-white/10' 
+                  isDark
+                    ? 'bg-white/5 text-white border border-white/10'
                     : 'bg-slate-100 text-slate-800 border border-slate-200'
                 }`}
               />
@@ -246,14 +262,18 @@ export const SliceEditor: React.FC<Props> = ({
 
           {/* Columns */}
           <div>
-            <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-              isDark ? 'text-muted' : 'text-slate-500'
-            }`}>
+            <label
+              className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                isDark ? 'text-muted' : 'text-slate-500'
+              }`}
+            >
               Columnas a Mostrar ({selectedColumns.length})
             </label>
-            <div className={`flex flex-wrap gap-2 p-3 rounded-xl ${
-              isDark ? 'bg-white/5' : 'bg-slate-100'
-            }`}>
+            <div
+              className={`flex flex-wrap gap-2 p-3 rounded-xl ${
+                isDark ? 'bg-white/5' : 'bg-slate-100'
+              }`}
+            >
               {availableFields.map(col => {
                 const isSelected = selectedColumns.includes(col);
                 return (
@@ -284,7 +304,7 @@ export const SliceEditor: React.FC<Props> = ({
               <input
                 type="checkbox"
                 checked={allowEdits}
-                onChange={(e) => setAllowEdits(e.target.checked)}
+                onChange={e => setAllowEdits(e.target.checked)}
                 className="w-4 h-4 rounded border-slate-300"
               />
               <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-700'}`}>
@@ -295,7 +315,7 @@ export const SliceEditor: React.FC<Props> = ({
               <input
                 type="checkbox"
                 checked={allowDeletes}
-                onChange={(e) => setAllowDeletes(e.target.checked)}
+                onChange={e => setAllowDeletes(e.target.checked)}
                 className="w-4 h-4 rounded border-slate-300"
               />
               <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-700'}`}>
@@ -306,14 +326,16 @@ export const SliceEditor: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-end gap-3 px-6 py-4 border-t shrink-0 ${
-          isDark ? 'border-white/5' : 'border-slate-100'
-        }`}>
+        <div
+          className={`flex items-center justify-end gap-3 px-6 py-4 border-t shrink-0 ${
+            isDark ? 'border-white/5' : 'border-slate-100'
+          }`}
+        >
           <button
             onClick={onClose}
             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-              isDark 
-                ? 'bg-white/10 hover:bg-white/20 text-white' 
+              isDark
+                ? 'bg-white/10 hover:bg-white/20 text-white'
                 : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
             }`}
           >

@@ -1,6 +1,6 @@
 /**
  * useBarcodeValidator - Hook para validar barcodes
- * 
+ *
  * Responsabilidad: Validación robusta de códigos de barras
  */
 
@@ -34,9 +34,9 @@ const COMMON_PATTERNS = {
   // UPC-A
   upcA: /^\d{12}$/,
   // Code 128
-  code128: /^[A-Za-z0-9\-\.$/+%\s]{1,48}$/,
+  code128: /^[A-Za-z0-9-.$/+%\s]{1,48}$/,
   // Code 39
-  code39: /^[A-Z0-9\-\.\/\+\%\s]{1,43}$/,
+  code39: /^[A-Z0-9-./+%]{1,43}$/,
   // QR (cualquier cosa hasta 4296 chars)
   qr: /^.{1,4296}$/,
 };
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG: BarcodeValidatorConfig = {
   maxLength: 48,
   allowedPrefixes: [], // Sin prefijos obligatorios
   disallowedPatterns: [
-    /[^\w\-.\/$+%\s]/, // Caracteres extraños
+    /[^\w-.$+%\s]/, // Caracteres extraños
   ],
 };
 
@@ -57,81 +57,90 @@ export function useBarcodeValidator(
 
   const normalize = useCallback((barcode: string): string => {
     if (!barcode) return '';
-    
+
     // 1. Trim espacios
     let normalized = barcode.trim();
-    
+
     // 2. Convertir a mayúsculas para códigos alfanuméricos
     // (No para numeric-only como EAN/UPC)
     if (!/^\d+$/.test(normalized)) {
       normalized = normalized.toUpperCase();
     }
-    
+
     // 3. Reemplazar tabs/newlines
     normalized = normalized.replace(/[\t\n\r]/g, '');
-    
+
     return normalized;
   }, []);
 
-  const validate = useCallback((barcode: string): BarcodeValidationResult => {
-    if (!barcode) {
-      return { isValid: false, normalized: '', error: 'Código vacío' };
-    }
+  const validate = useCallback(
+    (barcode: string): BarcodeValidationResult => {
+      if (!barcode) {
+        return { isValid: false, normalized: '', error: 'Código vacío' };
+      }
 
-    const normalized = normalize(barcode);
+      const normalized = normalize(barcode);
 
-    // Validaciones de longitud
-    if (normalized.length < (finalConfig.minLength || 4)) {
-      return { 
-        isValid: false, 
-        normalized, 
-        error: `Código muy corto (mín ${finalConfig.minLength} caracteres)` 
-      };
-    }
+      // Validaciones de longitud
+      if (normalized.length < (finalConfig.minLength || 4)) {
+        return {
+          isValid: false,
+          normalized,
+          error: `Código muy corto (mín ${finalConfig.minLength} caracteres)`,
+        };
+      }
 
-    if (normalized.length > (finalConfig.maxLength || 48)) {
-      return { 
-        isValid: false, 
-        normalized, 
-        error: `Código muy largo (máx ${finalConfig.maxLength} caracteres)` 
-      };
-    }
+      if (normalized.length > (finalConfig.maxLength || 48)) {
+        return {
+          isValid: false,
+          normalized,
+          error: `Código muy largo (máx ${finalConfig.maxLength} caracteres)`,
+        };
+      }
 
-    // Validación de patrones disallowed
-    if (finalConfig.disallowedPatterns) {
-      for (const pattern of finalConfig.disallowedPatterns) {
-        if (pattern.test(normalized)) {
-          return { 
-            isValid: false, 
-            normalized, 
-            error: 'Código contiene caracteres inválidos' 
-          };
+      // Validación de patrones disallowed
+      if (finalConfig.disallowedPatterns) {
+        for (const pattern of finalConfig.disallowedPatterns) {
+          if (pattern.test(normalized)) {
+            return {
+              isValid: false,
+              normalized,
+              error: 'Código contiene caracteres inválidos',
+            };
+          }
         }
       }
-    }
 
-    // Detectar tipo de código
-    const type = detectType(normalized);
-    if (!type) {
-      return { 
-        isValid: false, 
-        normalized, 
-        error: 'Formato de código no reconocido' 
-      };
-    }
+      // Detectar tipo de código
+      const type = detectType(normalized);
+      if (!type) {
+        return {
+          isValid: false,
+          normalized,
+          error: 'Formato de código no reconocido',
+        };
+      }
 
-    return { isValid: true, normalized };
-  }, [normalize, finalConfig]);
+      return { isValid: true, normalized };
+    },
+    [normalize, finalConfig]
+  );
 
-  const isValid = useCallback((barcode: string): boolean => {
-    return validate(barcode).isValid;
-  }, [validate]);
+  const isValid = useCallback(
+    (barcode: string): boolean => {
+      return validate(barcode).isValid;
+    },
+    [validate]
+  );
 
-  return useMemo(() => ({
-    validate,
-    normalize,
-    isValid
-  }), [validate, normalize, isValid]);
+  return useMemo(
+    () => ({
+      validate,
+      normalize,
+      isValid,
+    }),
+    [validate, normalize, isValid]
+  );
 }
 
 // Función helper para detectar tipo de barcode
@@ -148,7 +157,7 @@ function detectType(barcode: string): string | null {
   // Alfanumérico
   if (COMMON_PATTERNS.code128.test(barcode)) return 'CODE-128';
   if (COMMON_PATTERNS.code39.test(barcode)) return 'CODE-39';
-  
+
   // QR u otros
   if (barcode.length <= 4296) return 'QR/OTHER';
 

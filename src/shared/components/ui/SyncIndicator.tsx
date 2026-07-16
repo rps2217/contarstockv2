@@ -1,7 +1,7 @@
-"use client";
+'use client';
 /**
  * SyncIndicator - Indicador visual de estado de sincronización
- * 
+ *
  * Muestra:
  * - Estado de conexión (online/offline)
  * - Cantidad de pendientes
@@ -9,7 +9,7 @@
  * - Toast de notificaciones
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cloud,
@@ -35,13 +35,7 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
   showToast = true,
   className,
 }) => {
-  const {
-    isSupabaseConnected,
-    isSyncing,
-    pendingItems,
-    lastSyncTime,
-    syncError,
-  } = useSyncStore();
+  const { isSupabaseConnected, isSyncing, pendingItems, lastSyncTime, syncError } = useSyncStore();
 
   const [prevPending, setPrevPending] = useState(pendingItems);
   const [prevSyncing, setPrevSyncing] = useState(isSyncing);
@@ -83,20 +77,23 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
   // Toast cuando llegan nuevos pendientes
   useEffect(() => {
     if (!showToast) return;
-    
+
     if (pendingItems > prevPending && pendingItems > 0) {
       const newItems = pendingItems - prevPending;
-      toast.info(`${newItems} nuevo${newItems !== 1 ? 's' : ''} pendiente${newItems !== 1 ? 's' : ''} de sincronizar`, {
-        icon: <Cloud className="w-5 h-5 text-blue-500" />,
-        duration: 2000,
-      });
+      toast.info(
+        `${newItems} nuevo${newItems !== 1 ? 's' : ''} pendiente${newItems !== 1 ? 's' : ''} de sincronizar`,
+        {
+          icon: <Cloud className="w-5 h-5 text-blue-500" />,
+          duration: 2000,
+        }
+      );
     }
-    
+
     setPrevPending(pendingItems);
   }, [pendingItems, prevPending, showToast]);
 
   // Formatear tiempo relativo
-  const formatLastSync = () => {
+  const formattedLastSync = useMemo(() => {
     if (!lastSyncTime) return 'Nunca';
     const diff = Date.now() - lastSyncTime;
     const minutes = Math.floor(diff / 60000);
@@ -105,7 +102,7 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `Hace ${hours}h`;
     return `Hace ${Math.floor(hours / 24)}d`;
-  };
+  }, [lastSyncTime]);
 
   // Variante icono (para sidebar)
   if (variant === 'icon') {
@@ -144,10 +141,9 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
           {isSyncing ? (
             <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
           ) : isSupabaseConnected ? (
-            <Cloud className={cn(
-              'w-4 h-4',
-              pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500'
-            )} />
+            <Cloud
+              className={cn('w-4 h-4', pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500')}
+            />
           ) : (
             <CloudOff className="w-4 h-4 text-rose-500" />
           )}
@@ -158,9 +154,7 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
           )}
         </div>
         {pendingItems > 0 && !isSyncing && (
-          <span className="text-xs text-amber-500 font-medium">
-            {pendingItems}
-          </span>
+          <span className="text-xs text-amber-500 font-medium">{pendingItems}</span>
         )}
       </div>
     );
@@ -168,16 +162,20 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
 
   // Variante full (para settings o panel)
   return (
-    <div className={cn(
-      'flex items-center gap-3 p-3 rounded-xl border border-subtle bg-surface',
-      className
-    )}>
+    <div
+      className={cn(
+        'flex items-center gap-3 p-3 rounded-xl border border-subtle bg-surface',
+        className
+      )}
+    >
       {/* Estado de conexión */}
       <div className="flex items-center gap-2">
-        <div className={cn(
-          'w-8 h-8 rounded-lg flex items-center justify-center',
-          isSupabaseConnected ? 'bg-emerald-500/20' : 'bg-rose-500/20'
-        )}>
+        <div
+          className={cn(
+            'w-8 h-8 rounded-lg flex items-center justify-center',
+            isSupabaseConnected ? 'bg-emerald-500/20' : 'bg-rose-500/20'
+          )}
+        >
           {isSupabaseConnected ? (
             <Cloud className="w-4 h-4 text-emerald-500" />
           ) : (
@@ -185,15 +183,15 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
           )}
         </div>
         <div>
-          <p className={cn(
-            'text-sm font-medium',
-            isSupabaseConnected ? 'text-emerald-500' : 'text-rose-500'
-          )}>
+          <p
+            className={cn(
+              'text-sm font-medium',
+              isSupabaseConnected ? 'text-emerald-500' : 'text-rose-500'
+            )}
+          >
             {isSupabaseConnected ? 'Conectado' : 'Sin conexión'}
           </p>
-          <p className="text-xs text-muted">
-            {isSyncing ? 'Sincronizando...' : formatLastSync()}
-          </p>
+          <p className="text-xs text-muted">{isSyncing ? 'Sincronizando...' : formattedLastSync}</p>
         </div>
       </div>
 
@@ -202,10 +200,12 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
 
       {/* Pendientes */}
       <div className="flex items-center gap-2">
-        <div className={cn(
-          'w-8 h-8 rounded-lg flex items-center justify-center',
-          pendingItems > 0 ? 'bg-amber-500/20' : 'bg-emerald-500/20'
-        )}>
+        <div
+          className={cn(
+            'w-8 h-8 rounded-lg flex items-center justify-center',
+            pendingItems > 0 ? 'bg-amber-500/20' : 'bg-emerald-500/20'
+          )}
+        >
           {pendingItems > 0 ? (
             <AlertCircle className="w-4 h-4 text-amber-500" />
           ) : (
@@ -213,10 +213,12 @@ export const SyncIndicator: React.FC<SyncIndicatorProps> = ({
           )}
         </div>
         <div>
-          <p className={cn(
-            'text-sm font-medium',
-            pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500'
-          )}>
+          <p
+            className={cn(
+              'text-sm font-medium',
+              pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500'
+            )}
+          >
             {pendingItems} pendiente{pendingItems !== 1 ? 's' : ''}
           </p>
           <p className="text-xs text-muted">
@@ -261,9 +263,7 @@ export const SyncStatusDot: React.FC<{ className?: string }> = ({ className }) =
     return 'bg-emerald-500';
   };
 
-  return (
-    <span className={cn('inline-block w-2 h-2 rounded-full', getColor(), className)} />
-  );
+  return <span className={cn('inline-block w-2 h-2 rounded-full', getColor(), className)} />;
 };
 
 export default SyncIndicator;

@@ -1,6 +1,6 @@
 /**
  * SyncQueueService - Offline-First Queue System
- * 
+ *
  * Cola persistente de operaciones pendientes que se procesan cuando hay conexión.
  * Implementa retry automático con backoff exponencial.
  */
@@ -53,12 +53,15 @@ class SyncQueueService {
         ...operation,
         timestamp: Date.now(),
         retries: 0,
-        priority: operation.priority || 'normal'
+        priority: operation.priority || 'normal',
       };
 
       await db.syncQueue.add(queuedItem);
-      logger.info('SYNC_QUEUE', `Operación encolada: ${operation.operation} en ${operation.tableName}`);
-      
+      logger.info(
+        'SYNC_QUEUE',
+        `Operación encolada: ${operation.operation} en ${operation.tableName}`
+      );
+
       // Intentar procesar inmediatamente si hay conexión
       if (navigator.onLine) {
         this.processQueue();
@@ -68,7 +71,7 @@ class SyncQueueService {
       logger.error('SYNC_QUEUE', 'Error al encolar operación', {
         message: errorInfo.message,
         code: errorInfo.code,
-        context: errorInfo.context
+        context: errorInfo.context,
       });
     }
   }
@@ -85,7 +88,7 @@ class SyncQueueService {
     try {
       const all = await db.syncQueue.toArray();
       const failed = all.filter(item => item.retries >= MAX_RETRIES);
-      
+
       const byTable: Record<string, number> = {};
       all.forEach(item => {
         byTable[item.tableName] = (byTable[item.tableName] || 0) + 1;
@@ -95,14 +98,14 @@ class SyncQueueService {
         total: all.length,
         pending: all.length - failed.length,
         failed: failed.length,
-        byTable
+        byTable,
       };
     } catch (err) {
       const errorInfo = handleError(err);
       logger.error('SYNC_QUEUE', 'Error al obtener stats', {
         message: errorInfo.message,
         code: errorInfo.code,
-        context: errorInfo.context
+        context: errorInfo.context,
       });
       return { total: 0, pending: 0, failed: 0, byTable: {} };
     }
@@ -113,14 +116,11 @@ class SyncQueueService {
    */
   async processQueue(): Promise<void> {
     if (this.isProcessing || !navigator.onLine) return;
-    
+
     this.isProcessing = true;
-    
+
     try {
-      const pending = await db.syncQueue
-        .where('retries')
-        .below(MAX_RETRIES)
-        .sortBy('timestamp');
+      const pending = await db.syncQueue.where('retries').below(MAX_RETRIES).sortBy('timestamp');
 
       if (pending.length === 0) return;
 
@@ -128,7 +128,7 @@ class SyncQueueService {
 
       for (const item of pending) {
         const delay = this.calculateBackoff(item.retries);
-        
+
         // Verificar si debe esperar
         if (item.retries > 0) {
           const timeSinceLastAttempt = Date.now() - item.timestamp;
@@ -142,14 +142,15 @@ class SyncQueueService {
         } catch (err) {
           const errorMsg = handleError(err);
           const newRetries = item.retries + 1;
-          
+
           await db.syncQueue.update(item.id!, {
             retries: newRetries,
             lastError: errorMsg,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           });
 
-          logger.warn('SYNC_QUEUE', 
+          logger.warn(
+            'SYNC_QUEUE',
             `Reintento ${newRetries}/${MAX_RETRIES} para ${item.tableName}: ${errorMsg}`
           );
         }
@@ -168,26 +169,26 @@ class SyncQueueService {
     const data = { ...item.data };
 
     switch (item.operation) {
-      case 'create':
+      case 'create': {
         const { error: createError } = await supabase.from(table).insert(data);
         if (createError) throw new Error(createError.message);
         break;
+      }
 
-      case 'update':
+      case 'update': {
         const { error: updateError } = await supabase
           .from(table)
           .update(data)
           .eq('id', item.recordId);
         if (updateError) throw new Error(updateError.message);
         break;
+      }
 
-      case 'delete':
-        const { error: deleteError } = await supabase
-          .from(table)
-          .delete()
-          .eq('id', item.recordId);
+      case 'delete': {
+        const { error: deleteError } = await supabase.from(table).delete().eq('id', item.recordId);
         if (deleteError) throw new Error(deleteError.message);
         break;
+      }
     }
   }
 
@@ -212,7 +213,7 @@ class SyncQueueService {
     };
 
     window.addEventListener('online', this.onlineHandler);
-    
+
     // Procesar periódicamente cada 30 segundos si hay conexión
     this.syncIntervalId = setInterval(() => {
       if (navigator.onLine) {
@@ -225,8 +226,8 @@ class SyncQueueService {
    * Limpia operaciones fallidas antiguas (más de 7 días)
    */
   async cleanup(): Promise<void> {
-    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
     const oldFailed = await db.syncQueue
       .where('retries')
       .equals(MAX_RETRIES)
@@ -247,7 +248,7 @@ class SyncQueueService {
       .where('retries')
       .equals(MAX_RETRIES)
       .modify({ retries: 0, lastError: undefined });
-    
+
     this.processQueue();
   }
 }
