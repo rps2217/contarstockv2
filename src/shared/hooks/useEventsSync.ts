@@ -368,13 +368,18 @@ export function useEventsSync(
 
   useEffect(() => {
     if (!autoSync || isPaused) return;
-    if (navigator.onLine && stats && stats.pending > 0) syncEvents();
+    
+    // Usar timeout para evitar setState sincrono en effect
+    const timeoutId = setTimeout(() => {
+      if (navigator.onLine && stats && stats.pending > 0) syncEvents();
+    }, 0);
 
     intervalRef.current = setInterval(() => {
       if (navigator.onLine && !isPaused && stats && stats.pending > 0) syncEvents();
     }, autoSyncInterval);
 
     return () => {
+      clearTimeout(timeoutId);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;

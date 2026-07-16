@@ -71,29 +71,34 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
     if (!enabled || isInitializedRef.current) return;
     isInitializedRef.current = true;
 
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const { data, timestamp } = JSON.parse(stored);
-        const age = Date.now() - timestamp;
+    // Usar timeout para evitar setState sincrono en effect
+    const timeoutId = setTimeout(() => {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          const { data, timestamp } = JSON.parse(stored);
+          const age = Date.now() - timestamp;
 
-        if (age < maxAgeMs) {
-          setDraftData(data);
-          setHasDraft(true);
-          setStatus('restored');
-          
-          if (onRestore) {
-            onRestore(data);
+          if (age < maxAgeMs) {
+            setDraftData(data);
+            setHasDraft(true);
+            setStatus('restored');
+            
+            if (onRestore) {
+              onRestore(data);
+            }
+          } else {
+            // Draft expirado, eliminarlo
+            localStorage.removeItem(storageKey);
           }
-        } else {
-          // Draft expirado, eliminarlo
-          localStorage.removeItem(storageKey);
         }
+      } catch (e) {
+        logger.warn('useAutoSave', 'Error checking auto-save draft', e instanceof Error ? e.message : String(e));
+        localStorage.removeItem(storageKey);
       }
-    } catch (e) {
-      logger.warn('useAutoSave', 'Error checking auto-save draft', e instanceof Error ? e.message : String(e));
-      localStorage.removeItem(storageKey);
-    }
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [enabled, key, storageKey, maxAgeMs, onRestore]);
 
   // Guardar datos (con debounce)

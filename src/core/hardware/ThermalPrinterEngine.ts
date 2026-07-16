@@ -4,7 +4,6 @@ import { logger } from '@/services/logger';
  * Soporte dual: WebUSB (PC) + Web Bluetooth (Android/Mobile)
  */
 
-// @ts-ignore
 import JsBarcode from 'jsbarcode';
 
 interface USBDevice {
@@ -805,7 +804,6 @@ export class ThermalPrinterEngine {
     if (!barcode) return "";
     try {
       const canvas = document.createElement('canvas');
-      // @ts-ignore
       JsBarcode(canvas, barcode, {
         format: "CODE128",
         width: 2,

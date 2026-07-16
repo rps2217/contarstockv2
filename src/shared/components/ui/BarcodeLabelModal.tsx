@@ -2,7 +2,6 @@ import React from 'react';
 import { Printer, FileText, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { IndustrialButton } from './IndustrialButton';
-// @ts-ignore
 import Barcode from 'react-barcode';
 
 interface BarcodeLabelModalProps {

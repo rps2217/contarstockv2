@@ -86,7 +86,10 @@ export function usePaginatedQuery<T extends { id: string }, F = unknown>(
 
   // Carga inicial
   useEffect(() => {
-    loadPage(true);
+    const timeoutId = setTimeout(() => {
+      loadPage(true);
+    }, 0);
+    return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps]);
 

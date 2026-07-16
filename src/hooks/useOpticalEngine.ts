@@ -4,6 +4,40 @@ import { logger } from '@/services/logger';
 import { Html5Qrcode } from 'html5-qrcode';
 import { telemetry } from '../services/telemetryService';
 
+// Type para BarcodeDetector API (experimental - no disponible en TypeScript lib)
+type BarcodeDetectorOptions = {
+  formats: string[];
+};
+
+type BarcodeDetectorResult = {
+  boundingBox: DOMRectReadOnly;
+  cornerPoints: { x: number; y: number }[];
+  rawValue: string;
+  format: string;
+};
+
+class WebBarcodeDetector {
+  constructor(options: BarcodeDetectorOptions) {
+    this.formats = options.formats;
+  }
+  formats: string[];
+  async detect(_image: ImageBitmapSource): Promise<BarcodeDetectorResult[]> {
+    return [];
+  }
+  static getSupportedFormats(): Promise<string[]> {
+    return Promise.resolve([]);
+  }
+}
+
+declare global {
+  interface Window {
+    BarcodeDetector?: {
+      new(options: BarcodeDetectorOptions): WebBarcodeDetector;
+      getSupportedFormats(): Promise<string[]>;
+    };
+  }
+}
+
 export type EngineType = 'native' | 'wasm' | 'init';
 
 interface UseOpticalEngineProps {
@@ -64,7 +98,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
       const formats = ['qr_code', 'ean_13', 'code_128', 'code_39', 'ean_8', 'upc_a', 'itf'];
       let detector: any;
       try {
-        // @ts-ignore
+        if (!window.BarcodeDetector) throw new Error('BarcodeDetector not available');
         detector = new window.BarcodeDetector({ formats });
         setEngineType('native');
       } catch (e) {
@@ -140,7 +174,6 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
 
   useEffect(() => {
     isComponentMounted.current = true;
-    // @ts-ignore
     if ('BarcodeDetector' in window && typeof window.BarcodeDetector === 'function') {
       startNativeEngine();
     } else {
