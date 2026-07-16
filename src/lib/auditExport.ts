@@ -51,10 +51,13 @@ interface ExportRow {
 // HELPERS DE FORMATEO
 // =============================================================================
 
+// Re-usar funciones de lib/date.ts para evitar duplicación
+import { formatSyncDate, formatTimeHHMMSS } from './date';
+
 /**
- * Formatea fecha para Excel
+ * Formatea fecha para Excel (usa formatSyncDate sin hora)
  */
-function formatDate(date: Date | number): string {
+function formatDateForExcel(date: Date | number): string {
   const d = typeof date === 'number' ? new Date(date) : date;
   return d.toLocaleDateString('es-CL', {
     year: 'numeric',
@@ -66,7 +69,7 @@ function formatDate(date: Date | number): string {
 /**
  * Formatea hora para Excel
  */
-function formatTime(date: Date | number): string {
+function formatTimeForExcel(date: Date | number): string {
   const d = typeof date === 'number' ? new Date(date) : date;
   return d.toLocaleTimeString('es-CL', {
     hour: '2-digit',
@@ -76,19 +79,9 @@ function formatTime(date: Date | number): string {
 }
 
 /**
- * Formatea timestamp completo
+ * Formatea timestamp completo (alias para mantener compatibilidad)
  */
-function formatTimestamp(date: Date | number): string {
-  const d = typeof date === 'number' ? new Date(date) : date;
-  return d.toLocaleString('es-CL', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
+const formatTimestampForExcel = formatSyncDate;
 
 /**
  * Obtiene etiqueta legible para acción
@@ -172,9 +165,9 @@ function transformToExportRow(log: AuditLog, options: AuditExportOptions): Expor
   
   const baseRow: ExportRow = {
     ID: log.id || 0,
-    Timestamp: formatTimestamp(timestamp),
-    Date: formatDate(timestamp),
-    Time: formatTime(timestamp),
+    Timestamp: formatTimestampForExcel(timestamp),
+    Date: formatDateForExcel(timestamp),
+    Time: formatTimeForExcel(timestamp),
     User: log.userId || 'Sistema',
     Action: getActionLabel(log.action),
     Table: log.entityType || '-',
@@ -279,7 +272,7 @@ export async function exportAuditLogs(
     format = 'xlsx',
     includeChanges = false,
     includeDetails = true,
-    filename = `audit_export_${formatDate(new Date())}`,
+    filename = `audit_export_${formatDateForExcel(new Date())}`,
     startDate,
     endDate,
   } = options;

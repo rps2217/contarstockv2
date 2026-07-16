@@ -1,6 +1,20 @@
 // Base Repository Pattern
 export * from './base';
 
+// Clases base para nuevos repositorios
+export { BaseRepository, withSync, withSoftDelete, withCategories } from './BaseRepository';
+export type { 
+  BaseEntity, 
+  PaginationOptions, 
+  SortOptions, 
+  QueryOptions, 
+  BulkOperationResult 
+} from './BaseRepository';
+
+// Dexie Base (alternativa simple)
+export { BaseDexieRepository } from './core/BaseDexieRepository';
+export type { IBaseRepository } from './core/BaseDexieRepository';
+
 // Product Repository (Usar DexieProductRepository)
 export { DexieProductRepository, productRepository } from './DexieProductRepository';
 
