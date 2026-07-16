@@ -163,36 +163,48 @@ export { normalizeBarcode, normalizeSku, normalizeIdentity, normalizeHeader } fr
 
 ## 6. CÓDIGO POTENCIALMENTE MUERTO
 
-### Archivos sin imports detectados:
+### Archivos sin imports detectados (VERIFICADO):
+
+#### ⚠️ Pendiente de Eliminación - REQUIERE CONFIRMACIÓN DEL USUARIO:
+
+**src/features/settings/components/** (8 archivos)
+- `NavigationSection.tsx` - No se importa en ningún lugar
+- `PrinterSection.tsx` - No se importa en ningún lugar
+- `CloudSection.tsx` - No se importa en ningún lugar
+- `OperationalSection.tsx` - No se importa en ningún lugar
+- `SupportSection.tsx` - No se importa en ningún lugar
+- `ThemeSection.tsx` - No se importa en ningún lugar
+- `PreferencesSection.tsx` - No se importa en ningún lugar
+- `ModulesSection.tsx` - No se importa en ningún lugar
+
+**src/features/hammer/components/** (5 archivos)
+- `KeyboardShortcutsHelp.tsx` - No se importa en ningún lugar
+- `IndustrialScannerList.tsx` - No se importa en ningún lugar
+- `MassiveToolsSheet.tsx` - No se importa en ningún lugar
+- `IndustrialScanFeedback.tsx` - No se importa en ningún lugar
+- `HammerCameraView.tsx` - No se importa en ningún lugar
+
+**src/features/expected-orders/components/** (3 archivos)
+- `SavedOrdersList.tsx` - No se importa en ningún lugar
+- `OrderPreviewList.tsx` - No se importa en ningún lugar
+- `OrderImporter.tsx` - No se importa en ningún lugar
+
+**src/features/dashboard/** (1 archivo)
+- `DashboardPage.tsx` - No se usa fuera de su directorio (usa RedesignDashboard en su lugar)
+
+**Total: 17 archivos que pueden ser eliminados**
+
+### Recomendación:
+Antes de eliminar, verificar que:
+1. No se usan en rutas dinámicas
+2. No se referencian por nombre en strings
+3. No hay imports condicionales
+
+Para eliminar código muerto confirmado:
+```bash
+# Ejemplo para settings/components
+rm src/features/settings/components/{NavigationSection,PrinterSection,CloudSection,OperationalSection,SupportSection,ThemeSection,PreferencesSection,ModulesSection}.tsx
 ```
-src/features/settings/components/
-├── NavigationSection.tsx
-├── PrinterSection.tsx
-├── CloudSection.tsx
-├── OperationalSection.tsx
-├── SupportSection.tsx
-├── ThemeSection.tsx
-├── PreferencesSection.tsx
-└── ModulesSection.tsx
-
-src/features/hammer/components/
-├── KeyboardShortcutsHelp.tsx
-├── IndustrialScannerList.tsx
-├── MassiveToolsSheet.tsx
-├── IndustrialScanFeedback.tsx
-└── HammerCameraView.tsx
-
-src/features/expected-orders/components/
-├── SavedOrdersList.tsx
-├── OrderPreviewList.tsx
-└── OrderImporter.tsx
-
-src/features/dashboard/
-└── DashboardPage.tsx
-```
-
-### ⚠️ Nota:
-Algunos de estos pueden estar siendo usados dinámicamente o por nombre diferente. Se recomienda verificar con análisis más profundo.
 
 ---
 

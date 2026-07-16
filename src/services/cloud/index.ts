@@ -1,10 +1,24 @@
 /**
  * Cloud Services - Index
+ * 
+ * Unificado para centralizar exports de sync engines
  */
-export * from './BatchSyncService';
-export * from './ConflictResolution';
+
+// Sync Engines
 export * from './GenericSyncEngine';
+export * from './GenericSyncEngineEnhanced';  // Extiende GenericSyncEngine
+export * from './SyncBridge';                 // Conecta con Zustand
+
+// Batch Sync
+export * from './BatchSyncService';
+
+// Conflict Resolution
+export * from './ConflictResolution';
+
+// Events Sync
 export * from './EventsSyncService';
+
+// Utilities
 export * from './IdValidator';
 export * from './QueryErrorHandler';
 export * from './RealtimeSyncService';

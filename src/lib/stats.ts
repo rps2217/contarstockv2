@@ -65,19 +65,23 @@ export function calculateStatusStats<T extends { status?: string }>(
 }
 
 /**
- * Calcula estadísticas con suma de valores
+ * Calcula estadísticas con suma de valores numéricos
  */
-export function calculateValueStats<T>(
-  items: T[],
-  valueField: keyof T
+export function calculateValueStats(
+  items: Record<string, unknown>[],
+  valueField: string
 ): { total: number; average: number; min: number; max: number } {
   if (!items || items.length === 0) {
     return { total: 0, average: 0, min: 0, max: 0 };
   }
 
-  const values = items
-    .map(item => item[valueField])
-    .filter((v): v is number => typeof v === 'number');
+  const values: number[] = [];
+  for (const item of items) {
+    const value = item[valueField];
+    if (typeof value === 'number' && !isNaN(value)) {
+      values.push(value);
+    }
+  }
 
   if (values.length === 0) {
     return { total: 0, average: 0, min: 0, max: 0 };

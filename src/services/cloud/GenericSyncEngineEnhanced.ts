@@ -3,10 +3,13 @@
  * GENERIC SYNC ENGINE ENHANCED - Extensión con Retry y Métricas
  * =============================================================================
  * 
- * Esta versión extiende GenericSyncEngine con:
+ * Esta versión usa composición (delegación) sobre GenericSyncEngine:
  * - Retry automático con backoff exponencial
  * - Circuit breaker para proteger contra fallos en cascada
  * - Métricas de sync (duración, éxito, conflictos)
+ * 
+ * NOTA: Usa composición en lugar de herencia para evitar conflictos
+ * de firma de métodos entre el engine base y el enhanced.
  * 
  * @module GenericSyncEngineEnhanced
  */
@@ -21,7 +24,8 @@ import {
   getConfiguredStrategy, 
   applyStrategy 
 } from './ConflictResolution';
-import { withSyncRetry, withCircuitBreaker, type RetryResult } from '@/lib/retry';
+import { withSyncRetry, withCircuitBreaker } from '@/lib/retry';
+import { GenericSyncEngine, genericSyncEngine } from './GenericSyncEngine';
 
 export interface SyncMetrics {
   lastSyncAt: number;
@@ -43,8 +47,11 @@ export interface EnhancedSyncResult {
 
 /**
  * Versión mejorada del sync engine con retry y métricas
+ * Usa composición para agregar funcionalidad al engine base
  */
 export class EnhancedSyncEngine {
+  // Composición: usa el engine base
+  private baseEngine = genericSyncEngine;
   private metrics: Record<string, SyncMetrics> = {};
 
   /**
@@ -65,7 +72,7 @@ export class EnhancedSyncEngine {
       // 1. Pull con retry
       const pullRes = await this.pullWithRetry(registryKey, meta);
 
-      // 2. Push con retry
+      // 2. Push con retry  
       const pushRes = await this.pushWithRetry(registryKey, meta);
 
       // Actualizar métricas
@@ -103,7 +110,7 @@ export class EnhancedSyncEngine {
   }
 
   /**
-   * Pull con retry automático
+   * Pull con retry automático y circuit breaker
    */
   private async pullWithRetry(
     registryKey: string,
@@ -135,7 +142,7 @@ export class EnhancedSyncEngine {
       return { added: 0, updated: 0 };
     }
 
-    return this.processPullResult(registryKey, meta, result.data!.rows || [], lastSyncDate);
+    return this.processPullResult(registryKey, meta, result.data!.rows || []);
   }
 
   /**
@@ -217,8 +224,7 @@ export class EnhancedSyncEngine {
   private async processPullResult(
     registryKey: string,
     meta: any,
-    remoteRows: any[],
-    lastSyncDate: string | undefined
+    remoteRows: any[]
   ): Promise<{ added: number; updated: number }> {
     const localTable = (db as any)[meta.localTable];
     if (!localTable) return { added: 0, updated: 0 };
