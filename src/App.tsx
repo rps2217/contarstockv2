@@ -1,14 +1,12 @@
 
-import React, { Suspense, useEffect, useState, useMemo, lazy } from 'react'
+import React, { Suspense, useEffect, useState, useMemo, lazy, useRef } from 'react'
 import { logger } from '@/services/logger';
 ;
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores';
-import type { CountingSession } from '@/types';
-import { isModuleEnabled } from './services/moduleManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ErrorProvider } from '@/lib/errors';
-import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
+import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
 import { Toaster } from 'sonner';
 import { useAutoSync } from '@/hooks/useAutoSync';
@@ -36,13 +34,11 @@ import { DashboardSimple } from '@/shared/components/redesign/DashboardSimple';
 
 // Componentes de autenticación
 const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
-const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
 // Dashboard - carga diferida o versión simple según dispositivo
 const DashboardFull = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDashboard })));
 
 // Vistas principales (AppSheet-style) - Carga diferida
-const CapturePage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCapturePage })));
 const DataPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDataPage })));
 const SyncPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSyncPage })));
 const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage })));
@@ -50,7 +46,6 @@ const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').
 // Páginas en redesign (consolidadas)
 const ReportsLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage })));
 const ExpiryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
-const ExpiryLegacy = ExpiryPage;
 
 // Páginas redesignadas
 const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage })));
@@ -83,15 +78,9 @@ const ThemeDemoPage = () => <ThemeDemo />;
 const RedesignPreviewApp = lazyWithRetry(() => import('@/shared/components/redesign/AppShell').then(m => ({ default: m.RedesignAppShellWrapper })));
 const RedesignPreviewPage = () => <RedesignPreviewApp />;
 
-const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
-  return isModuleEnabled(moduleKey) ? <React.Fragment>{element}</React.Fragment> : <Navigate to="/" replace />;
-};
-
 const AppContent = () => {
   const location = useLocation();
   const settings = useAppStore(state => state.settings);
-  const isStartSessionModalOpen = useAppStore(state => state.isStartSessionModalOpen);
-  const setStartSessionModalOpen = useAppStore(state => state.setStartSessionModalOpen);
   const { bootState, initStep, isAuthenticated, handleLoginSuccess } = useAppInit();
   
   // Motion context para animaciones optimizadas
@@ -102,7 +91,7 @@ const AppContent = () => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [hasInitialRedirected, setHasInitialRedirected] = useState(false);
+  const hasInitialRedirectedRef = useRef(false);
   const navigate = useNavigate();
   
   // Activar hooks globales
@@ -177,29 +166,22 @@ const AppContent = () => {
   }, [settings]);
 
   useEffect(() => {
-    if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {
-      setHasInitialRedirected(true);
+    if (isAuthenticated && bootState === 'ready' && !hasInitialRedirectedRef.current) {
+      hasInitialRedirectedRef.current = true;
       if (settings.defaultStartModule && settings.defaultStartModule !== 'dashboard' && location.pathname === '/') {
         navigate(`/${settings.defaultStartModule}`, { replace: true });
       }
     }
-  }, [isAuthenticated, bootState, hasInitialRedirected, settings.defaultStartModule, location.pathname, navigate]);
+  }, [isAuthenticated, bootState, settings.defaultStartModule, location.pathname, navigate]);
 
-  const { isScanningMode, systemMode } = React.useMemo(() => {
+  const { isScanningMode } = React.useMemo(() => {
     const path = location.pathname;
     const scanningPaths = ['/counting/', '/reception', '/expiry/capture', '/events/capture', '/massive/'];
     
-    let mode: 'expiry' | 'reception' | 'counting' | 'events' | 'default' = 'default';
-    if (path.startsWith('/expiry')) mode = 'expiry';
-    else if (path.startsWith('/reception')) mode = 'reception';
-    else if (path.startsWith('/counting')) mode = 'counting';
-    else if (path.startsWith('/events')) mode = 'events';
-
     const isScanning = scanningPaths.some(p => path.startsWith(p));
 
     return {
       isScanningMode: isScanning,
-      systemMode: mode
     };
   }, [location.pathname]);
 
@@ -321,7 +303,6 @@ const AppContent = () => {
               shouldReduceMotion={shouldReduceMotion}
               motionVariants={motionVariants}
               pageTransition={pageTransition}
-              CapturePage={CapturePage}
               DataPage={DataPage}
               SyncPage={SyncPage}
               ReportsLegacy={ReportsLegacy}
@@ -377,7 +358,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
   ...pages
 }) => {
   const { 
-    CapturePage, DataPage, SyncPage, ReportsLegacy, ExpiryPage, 
+    DataPage, SyncPage, ReportsLegacy, ExpiryPage, 
     SettingsPage, CustomersPage, SuppliersPage, SlicesPage, 
     CountingPage, ReceptionPage, DynamicPage,
     HammerPage, TheoreticalLoadsPage, InventoryPage, AuditPage,

@@ -44,10 +44,11 @@ export interface UseProductivityOptions {
 
 export const useProductivity = (items: { barcode: string; totalQuantity: number }[]) => {
   const [scanHistory, setScanHistory] = useState<ScanEvent[]>([]);
-  const sessionStartRef = useRef<number>(Date.now());
+  const [bestPace, setBestPace] = useState<number>(0);
+  const [fatigueStart, setFatigueStart] = useState<number | null>(null);
+  const [sessionStart, setSessionStart] = useState<number>(() => Date.now());
+  
   const lastItemsCountRef = useRef<number>(0);
-  const bestPaceRef = useRef<number>(0);
-  const fatigueStartRef = useRef<number | null>(null);
 
   // Track new items added
   useEffect(() => {
@@ -66,7 +67,7 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
   // Calculate stats
   const stats = useMemo<ProductivityStats>(() => {
     const now = Date.now();
-    const sessionDuration = Math.floor((now - sessionStartRef.current) / 1000);
+    const sessionDuration = Math.floor((now - sessionStart) / 1000);
     
     // Calculate items per minute (using last 10 scans for accuracy)
     const recentScans = scanHistory.slice(-10);
@@ -113,24 +114,16 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       }
     }
 
-    // Update best pace
-    if (itemsPerMinute > bestPaceRef.current) {
-      bestPaceRef.current = itemsPerMinute;
-    }
-
-    // Calculate fatigue level
+    // Calculate fatigue level based on trend
     let fatigueLevel: 'fresh' | 'normal' | 'tired' = 'normal';
     if (trend === 'decreasing' && trendPercent < FATIGUE_THRESHOLDS.TREND_DECLINE_FOR_FATIGUE) {
-      if (fatigueStartRef.current === null) {
-        fatigueStartRef.current = now;
-      } else if ((now - fatigueStartRef.current) / 60000 >= FATIGUE_THRESHOLDS.DECELERATING_FOR_MINUTES) {
+      if (fatigueStart === null) {
+        fatigueLevel = 'normal'; // Will be updated in effect
+      } else if ((now - fatigueStart) / 60000 >= FATIGUE_THRESHOLDS.DECELERATING_FOR_MINUTES) {
         fatigueLevel = 'tired';
       }
-    } else {
-      fatigueStartRef.current = null;
-      if (trend === 'increasing' && trendPercent > 10) {
-        fatigueLevel = 'fresh';
-      }
+    } else if (trend === 'increasing' && trendPercent > 10) {
+      fatigueLevel = 'fresh';
     }
 
     const totalQuantity = items.reduce((acc, item) => acc + item.totalQuantity, 0);
@@ -144,17 +137,36 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       trend,
       trendPercent,
       lastScanTime: scanHistory.length > 0 ? scanHistory[scanHistory.length - 1].timestamp : null,
-      bestPace: Math.round(bestPaceRef.current * 10) / 10,
+      bestPace: Math.round(bestPace * 10) / 10,
       fatigueLevel,
     };
-  }, [items, scanHistory]);
+  }, [items, scanHistory, bestPace, fatigueStart, sessionStart]);
+
+  // Update best pace in effect
+  useEffect(() => {
+    const currentBestPace = stats.itemsPerMinute;
+    if (currentBestPace > bestPace) {
+      setBestPace(currentBestPace);
+    }
+  }, [stats.itemsPerMinute, bestPace]);
+
+  // Update fatigue start in effect
+  useEffect(() => {
+    if (stats.trend === 'decreasing' && stats.trendPercent < FATIGUE_THRESHOLDS.TREND_DECLINE_FOR_FATIGUE) {
+      if (fatigueStart === null) {
+        setFatigueStart(Date.now());
+      }
+    } else if (fatigueStart !== null) {
+      setFatigueStart(null);
+    }
+  }, [stats.trend, stats.trendPercent, fatigueStart]);
 
   // Reset session
   const resetSession = () => {
-    sessionStartRef.current = Date.now();
+    setSessionStart(Date.now());
     lastItemsCountRef.current = 0;
-    bestPaceRef.current = 0;
-    fatigueStartRef.current = null;
+    setBestPace(0);
+    setFatigueStart(null);
     setScanHistory([]);
   };
 

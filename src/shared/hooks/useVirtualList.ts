@@ -78,7 +78,7 @@ export function useVirtualList<T>({
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = externalContainerRef || internalContainerRef;
   
-  const [scrollTop, setScrollTop] = useState(initialScrollOffset);
+  const [scrollTop, _setScrollTop] = useState(initialScrollOffset);
   const [containerHeight, setContainerHeight] = useState(0);
 
   // Medir altura del contenedor
@@ -99,11 +99,6 @@ export function useVirtualList<T>({
 
     return () => resizeObserver.disconnect();
   }, [containerRef]);
-
-  // Manejar scroll
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  }, []);
 
   // Calcular items virtuales
   const { virtualItems, totalSize, visibleRange } = useMemo(() => {
@@ -194,8 +189,8 @@ export function useDynamicVirtualList<T>({
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = externalContainerRef || internalContainerRef;
   
-  // Cache de alturas de items
-  const itemHeights = useRef<Map<number, number>>(new Map());
+  // Cache de alturas de items usando estado para evitar refs durante render
+  const [itemHeights, setItemHeights] = useState<Map<number, number>>(new Map());
   
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
@@ -218,19 +213,24 @@ export function useDynamicVirtualList<T>({
     return () => resizeObserver.disconnect();
   }, [containerRef]);
 
+  // Helper para obtener altura de item
+  const getItemHeight = useCallback((index: number): number => {
+    return itemHeights.get(index) || estimatedItemHeight;
+  }, [itemHeights, estimatedItemHeight]);
+
   // Calcular offsets cumulativos
   const offsets = useMemo(() => {
     const result: number[] = [0];
     let currentOffset = 0;
 
     for (let i = 0; i < items.length; i++) {
-      const height = itemHeights.current.get(i) || estimatedItemHeight;
+      const height = getItemHeight(i);
       currentOffset += height;
       result.push(currentOffset);
     }
 
     return result;
-  }, [items.length, estimatedItemHeight]);
+  }, [items.length, getItemHeight]);
 
   // Calcular total height
   const totalHeight = useMemo(() => {
@@ -271,7 +271,7 @@ export function useDynamicVirtualList<T>({
 
     for (let i = startIndex; i <= endIndex; i++) {
       const start = offsets[i];
-      const height = itemHeights.current.get(i) || estimatedItemHeight;
+      const height = getItemHeight(i);
       
       virtuals.push({
         index: i,
@@ -292,14 +292,18 @@ export function useDynamicVirtualList<T>({
       virtualItems: virtuals,
       visibleRange: { start: startIndex, end: endIndex },
     };
-  }, [items, scrollTop, containerHeight, offsets, estimatedItemHeight, overscan, findIndex]);
+  }, [items, scrollTop, containerHeight, offsets, getItemHeight, overscan, findIndex]);
 
   // Medir altura de item (para usar con ref en elementos)
   const measureItem = useCallback((index: number, height: number) => {
-    if (height > 0 && height !== itemHeights.current.get(index)) {
-      itemHeights.current.set(index, height);
+    if (height > 0 && height !== getItemHeight(index)) {
+      setItemHeights(prev => {
+        const newMap = new Map(prev);
+        newMap.set(index, height);
+        return newMap;
+      });
     }
-  }, []);
+  }, [getItemHeight]);
 
   return {
     virtualItems,

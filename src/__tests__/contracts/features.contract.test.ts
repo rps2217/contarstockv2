@@ -12,8 +12,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 describe('CONTRATO: Feature Flags', () => {
-  const originalLocalStorage = { ...localStorage }
-
   beforeEach(() => {
     // Limpiar localStorage antes de cada test
     localStorage.clear()
@@ -44,8 +42,7 @@ describe('CONTRATO: Feature Flags', () => {
         const { FEATURES_REGISTRY } = await import('@/config/features')
         const feature = FEATURES_REGISTRY.find((f: { key: string }) => f.key === featureKey)
 
-        expect(feature).toBeDefined(),
-          `Feature '${featureKey}' debe estar registrada en FEATURES_REGISTRY`
+        expect(feature).toBeDefined()
       })
     })
   })
@@ -106,7 +103,7 @@ describe('CONTRATO: Feature Flags', () => {
 
   describe('resetAllFeatures', () => {
     it('DEBE resetear todas las features a sus valores default', async () => {
-      const { resetAllFeatures, isFeatureEnabled, getAllFeatures } = await import('@/config/features')
+      const { resetAllFeatures, isFeatureEnabled } = await import('@/config/features')
 
       // Cambiar algunas features
       const { setFeature } = await import('@/config/features')

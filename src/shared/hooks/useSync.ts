@@ -19,7 +19,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { unifiedSyncEngine } from '@/services/sync/unified';
-import { syncBridge, SYNC_ORDER } from '@/services/cloud/SyncBridge';
 import { useSyncStore } from '@/store/useSyncStore';
 import { useToastStore } from '@/stores';
 import { logger } from '@/services/logger';
@@ -212,9 +211,13 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
   useEffect(() => {
     if (mode === 'manual' || isPaused) return;
     
-    // Sync inicial
+    // Sync inicial con timeout para evitar setState sincrono en effect
+    let initialSyncTimeout: ReturnType<typeof setTimeout> | null = null;
+    
     if (navigator.onLine) {
-      executeSync();
+      initialSyncTimeout = setTimeout(() => {
+        executeSync();
+      }, 0);
     }
     
     // Configurar intervalo para modo scheduled
@@ -230,6 +233,9 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
     }
     
     return () => {
+      if (initialSyncTimeout) {
+        clearTimeout(initialSyncTimeout);
+      }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
