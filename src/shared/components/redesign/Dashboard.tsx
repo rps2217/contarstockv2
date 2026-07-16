@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/shared/utils/common';
 import { useSyncStore, useAppStore } from '@/stores';
 import { useDashboard, type ActivityItem } from '@/features/dashboard/hooks/useDashboard';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -48,9 +49,17 @@ interface StatCardProps {
   linkTo?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, trend, icon: Icon, colorClass, onClick, linkTo }) => {
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  trend,
+  icon: Icon,
+  colorClass,
+  onClick,
+  linkTo,
+}) => {
   const navigate = useNavigate();
-  
+
   const handleClick = () => {
     if (onClick) {
       onClick();
@@ -104,7 +113,14 @@ interface ActionCardProps {
   onClick: () => void;
 }
 
-const ActionCard: React.FC<ActionCardProps> = ({ title, description, icon: Icon, primary, delay, onClick }) => (
+const ActionCard: React.FC<ActionCardProps> = ({
+  title,
+  description,
+  icon: Icon,
+  primary,
+  delay,
+  onClick,
+}) => (
   <motion.button
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -128,9 +144,7 @@ const ActionCard: React.FC<ActionCardProps> = ({ title, description, icon: Icon,
       <Icon className="w-5 h-5" />
     </div>
     <div>
-      <h4 className={cn('font-semibold mb-1', primary ? 'text-white' : 'text-primary')}>
-        {title}
-      </h4>
+      <h4 className={cn('font-semibold mb-1', primary ? 'text-white' : 'text-primary')}>{title}</h4>
       <p className={cn('text-xs leading-relaxed', primary ? 'text-blue-100' : 'text-muted')}>
         {description}
       </p>
@@ -149,71 +163,110 @@ const useDashboardMetrics = () => {
       return 0;
     }
   };
-  
-  const productCount = useLiveQuery(async () => {
-    return safeCount(db?.products);
-  }, [], 0);
-  
-  const customerCount = useLiveQuery(async () => {
-    return safeCount(db?.customers);
-  }, [], 0);
-  
-  const providerCount = useLiveQuery(async () => {
-    return safeCount(db?.providers);
-  }, [], 0);
-  
-  const sessionCount = useLiveQuery(async () => {
-    return safeCount(db?.sessions);
-  }, [], 0);
-  
-  const scanCount = useLiveQuery(async () => {
-    return safeCount(db?.scans);
-  }, [], 0);
-  
-  const syncQueueCount = useLiveQuery(async () => {
-    return safeCount(db?.syncQueue);
-  }, [], 0);
-  
+
+  const productCount = useLiveQuery(
+    async () => {
+      return safeCount(db?.products);
+    },
+    [],
+    0
+  );
+
+  const customerCount = useLiveQuery(
+    async () => {
+      return safeCount(db?.customers);
+    },
+    [],
+    0
+  );
+
+  const providerCount = useLiveQuery(
+    async () => {
+      return safeCount(db?.providers);
+    },
+    [],
+    0
+  );
+
+  const sessionCount = useLiveQuery(
+    async () => {
+      return safeCount(db?.sessions);
+    },
+    [],
+    0
+  );
+
+  const scanCount = useLiveQuery(
+    async () => {
+      return safeCount(db?.scans);
+    },
+    [],
+    0
+  );
+
+  const syncQueueCount = useLiveQuery(
+    async () => {
+      return safeCount(db?.syncQueue);
+    },
+    [],
+    0
+  );
+
   // Sesiones de hoy
-  const todaySessions = useLiveQuery(async () => {
-    try {
-      if (!db?.sessions) return 0;
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const sessions = await db.sessions.where('createdAt').above(startOfDay.getTime()).toArray();
-      return sessions.filter(s => s.status === 'completed').length;
-    } catch { return 0; }
-  }, [], 0);
-  
+  const todaySessions = useLiveQuery(
+    async () => {
+      try {
+        if (!db?.sessions) return 0;
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const sessions = await db.sessions.where('createdAt').above(startOfDay.getTime()).toArray();
+        return sessions.filter(s => s.status === 'completed').length;
+      } catch {
+        return 0;
+      }
+    },
+    [],
+    0
+  );
+
   // Métricas de vencimiento
-  const expiryMetrics = useLiveQuery(async () => {
-    try {
-      if (!db) return { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 };
-      const expirations = await db.table('expirations').toArray() as any[];
-      
-      let expired = 0, critical = 0, warning = 0, safe = 0;
-      
-      expirations.forEach(e => {
-        const daysLeft = e.daysLeft ?? 0;
-        if (daysLeft < 0) expired++;
-        else if (daysLeft <= 7) critical++;
-        else if (daysLeft <= 30) warning++;
-        else safe++;
-      });
-      
-      return { expired, critical, warning, safe, total: expirations.length };
-    } catch { return { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 }; }
-  }, [], { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 });
-  
-  return { 
-    productCount: productCount ?? 0, 
-    customerCount: customerCount ?? 0, 
-    providerCount: providerCount ?? 0, 
-    sessionCount: sessionCount ?? 0, 
-    scanCount: scanCount ?? 0, 
-    syncQueueCount: syncQueueCount ?? 0, 
+  const expiryMetrics = useLiveQuery(
+    async () => {
+      try {
+        if (!db) return { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 };
+        const expirations = (await db.table('expirations').toArray()) as any[];
+
+        let expired = 0,
+          critical = 0,
+          warning = 0,
+          safe = 0;
+
+        expirations.forEach(e => {
+          const daysLeft = e.daysLeft ?? 0;
+          if (daysLeft < 0) expired++;
+          else if (daysLeft <= 7) critical++;
+          else if (daysLeft <= 30) warning++;
+          else safe++;
+        });
+
+        return { expired, critical, warning, safe, total: expirations.length };
+      } catch {
+        return { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 };
+      }
+    },
+    [],
+    { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 }
+  );
+
+  return {
+    productCount: productCount ?? 0,
+    customerCount: customerCount ?? 0,
+    providerCount: providerCount ?? 0,
+    sessionCount: sessionCount ?? 0,
+    scanCount: scanCount ?? 0,
+    syncQueueCount: syncQueueCount ?? 0,
     todaySessions: todaySessions ?? 0,
-    expiryMetrics 
+    expiryMetrics,
   };
 };
 
@@ -221,19 +274,13 @@ export const RedesignDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { pendingItems, isSupabaseConnected, lastSyncTime, latencyMs } = useSyncStore();
   const metrics = useDashboardMetrics();
-  
-  const {
-    totalItems,
-    pendingSyncCount,
-    expiringItems,
-    recentActivity,
-    isOnline,
-    todayStats
-  } = useDashboard();
+
+  const { totalItems, pendingSyncCount, expiringItems, recentActivity, isOnline, todayStats } =
+    useDashboard();
 
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 300);
     return () => clearTimeout(timer);
@@ -275,13 +322,7 @@ export const RedesignDashboard: React.FC = () => {
     navigate('/massive');
   };
 
-  // Formatear números
-  const formatNumber = (num: number) => {
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
-  };
+  // formatNumber imported from @/shared/utils/common
 
   return (
     <div className="h-full overflow-y-auto no-scrollbar bg-base pb-24 md:pb-8">
@@ -307,21 +348,25 @@ export const RedesignDashboard: React.FC = () => {
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-secondary bg-surface border border-subtle px-3 py-1.5 rounded-full">
-            <div className={cn(
-              'w-2 h-2 rounded-full animate-pulse',
-              isOnline ? 'bg-emerald-500' : 'bg-rose-500'
-            )} />
+            <div
+              className={cn(
+                'w-2 h-2 rounded-full animate-pulse',
+                isOnline ? 'bg-emerald-500' : 'bg-rose-500'
+              )}
+            />
             {isOnline ? 'Sistema en línea' : 'Sistema sin conexión'}
           </div>
         </header>
 
         {/* Sync Status Banner */}
-        <div className={cn(
-          'rounded-2xl p-4 mb-6 border',
-          isSupabaseConnected 
-            ? 'bg-emerald-500/10 border-emerald-500/30' 
-            : 'bg-rose-500/10 border-rose-500/30'
-        )}>
+        <div
+          className={cn(
+            'rounded-2xl p-4 mb-6 border',
+            isSupabaseConnected
+              ? 'bg-emerald-500/10 border-emerald-500/30'
+              : 'bg-rose-500/10 border-rose-500/30'
+          )}
+        >
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               {isSupabaseConnected ? (
@@ -342,15 +387,18 @@ export const RedesignDashboard: React.FC = () => {
                 </span>
               )}
               {latencyMs && (
-                <span className="text-xs text-muted flex items-center gap-1">
-                  {latencyMs}ms
-                </span>
+                <span className="text-xs text-muted flex items-center gap-1">{latencyMs}ms</span>
               )}
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-muted">Pendiente:</span>
-                <span className={cn('font-bold', pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500')}>
+                <span
+                  className={cn(
+                    'font-bold',
+                    pendingItems > 0 ? 'text-amber-500' : 'text-emerald-500'
+                  )}
+                >
                   {pendingItems}
                 </span>
               </div>
@@ -417,9 +465,7 @@ export const RedesignDashboard: React.FC = () => {
 
         {/* Quick Actions Grid */}
         <div>
-          <h2 className="text-lg font-semibold text-primary mb-4">
-            Acciones rápidas
-          </h2>
+          <h2 className="text-lg font-semibold text-primary mb-4">Acciones rápidas</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             <ActionCard
               title="Nuevo conteo"

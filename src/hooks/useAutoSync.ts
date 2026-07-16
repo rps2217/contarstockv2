@@ -4,13 +4,13 @@ import { useToastStore } from '@/stores';
 import { useSyncStore } from '@/stores';
 import { logger } from '@/services/logger';
 import { SyncError } from '@/lib/errors';
-import { withRetry } from '@/lib/errors/retry';
+import { withRetry } from '@/lib/retry';
 import { getCircuitBreaker } from '@/lib/errors/circuitBreaker';
 
 // Circuit breaker para proteger sync
 const syncCircuitBreaker = getCircuitBreaker('auto-sync', {
   failureThreshold: 5,
-  timeout: 60000 // 1 minuto
+  timeout: 60000, // 1 minuto
 });
 
 export const useAutoSync = () => {
@@ -28,14 +28,19 @@ export const useAutoSync = () => {
       return '';
     }
 
-    const errorMsg = error instanceof Error ? error.message :
-                     typeof error === 'object' ? JSON.stringify(error) : String(error);
+    const errorMsg =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object'
+          ? JSON.stringify(error)
+          : String(error);
 
-    const isNetworkError = errorMsg.includes('Failed to fetch') ||
-                           errorMsg.includes('Cerrado por falta de red') ||
-                           errorMsg.includes('offline');
-    const isMissingTable = errorMsg.includes('Table not found') ||
-                           errorMsg.includes('does not exist');
+    const isNetworkError =
+      errorMsg.includes('Failed to fetch') ||
+      errorMsg.includes('Cerrado por falta de red') ||
+      errorMsg.includes('offline');
+    const isMissingTable =
+      errorMsg.includes('Table not found') || errorMsg.includes('does not exist');
 
     if (isNetworkError) {
       return '';
@@ -62,7 +67,7 @@ export const useAutoSync = () => {
           baseDelay: 1000,
           onRetry: (attempt, error, delay) => {
             logger.info('AutoSync', `Retry ${attempt}, esperando ${delay}ms: ${error.message}`);
-          }
+          },
         }
       );
 
@@ -74,8 +79,8 @@ export const useAutoSync = () => {
           addToast(`Sync completada: ↑${uploaded} ↓${downloaded}`, 'success');
         }
       } else if (result.data?.errors && result.data?.errors.length > 0) {
-        const visibleErrors = result.data?.errors.filter(e =>
-          !e.includes('Table not found') && !e.includes('does not exist')
+        const visibleErrors = result.data?.errors.filter(
+          e => !e.includes('Table not found') && !e.includes('does not exist')
         );
         if (visibleErrors.length > 0) {
           addToast(`Sync con errores: ${visibleErrors[0]}`, 'error');

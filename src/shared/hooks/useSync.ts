@@ -1,13 +1,13 @@
 /**
  * useSync - Hook unificado de sincronización
- * 
+ *
  * Combina: useAutoSync, useGenericSync, useSyncQueue, useScheduledSync, useRealtimeSync
- * 
+ *
  * USO:
- * 
+ *
  * // Modo automático (default)
  * const { triggerSync, isSyncing, pendingCount } = useSync();
- * 
+ *
  * // Modo manual con opciones
  * const sync = useSync({
  *   mode: 'manual',
@@ -23,7 +23,7 @@ import { useSyncStore } from '@/store/useSyncStore';
 import { useToastStore } from '@/stores';
 import { logger } from '@/services/logger';
 import { SyncError } from '@/lib/errors';
-import { withRetry } from '@/lib/errors/retry';
+import { withRetry } from '@/lib/retry';
 import { getCircuitBreaker } from '@/lib/errors/circuitBreaker';
 import type { SyncResult } from '@/services/sync/unified';
 
@@ -80,7 +80,7 @@ export interface UseSyncReturn {
 const syncCircuitBreaker = getCircuitBreaker('shared-sync', {
   failureThreshold: 5,
   successThreshold: 2,
-  timeout: 60000
+  timeout: 60000,
 });
 
 // ============================================================================
@@ -97,23 +97,23 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
     onSuccess,
     onError,
     onProgress,
-    circuitBreaker = true
+    circuitBreaker = true,
   } = options;
 
   // Stores
   const setSyncError = useSyncStore(state => state.setSyncError);
   const addToast = useToastStore(state => state.addToast);
-  
+
   // Estado local
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
-  
+
   // Refs
   const syncInProgress = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Pending count del store
   const pendingCount = useSyncStore(state => state.pendingItems);
 
@@ -123,78 +123,86 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
 
   const executeSync = useCallback(async (): Promise<SyncResult | null> => {
     if (syncInProgress.current || !navigator.onLine) return null;
-    
+
     syncInProgress.current = true;
     setIsSyncing(true);
     setSyncError(null);
     onStart?.();
-    
+
     try {
       // Construir función de sync con opciones
       const syncFn = async () => {
         const result = await unifiedSyncEngine.syncAll();
-          
+
         return result;
       };
-      
+
       // Ejecutar con retry y circuit breaker si está habilitado
       let result: SyncResult;
-      
+
       if (circuitBreaker) {
         result = await syncCircuitBreaker.execute(syncFn);
       } else if (autoRetry) {
-        result = await withRetry(syncFn, { 
+        result = await withRetry(syncFn, {
           maxRetries,
           baseDelay: 1000,
           onRetry: (attempt, error, delay) => {
             logger.info('useSync', `Retry ${attempt}, esperando ${delay}ms`);
-          }
+          },
         });
       } else {
         result = await syncFn();
       }
-      
+
       // Procesar resultado
       if (result.success) {
         setLastSyncTime(Date.now());
         setLastError(null);
         onSuccess?.(result);
       } else if (result.errors?.length) {
-        const visibleErrors = result.errors.filter(e => 
-          !e.includes('Table not found') && !e.includes('does not exist')
+        const visibleErrors = result.errors.filter(
+          e => !e.includes('Table not found') && !e.includes('does not exist')
         );
         if (visibleErrors.length > 0) {
           setLastError(visibleErrors[0]);
           addToast(`Sync: ${visibleErrors[0]}`, 'error');
         }
       }
-      
+
       return result;
-      
     } catch (error) {
       let errorMsg = 'Error de sincronización';
-      
+
       if (error instanceof SyncError) {
         errorMsg = error.message;
         logger.error('useSync', error.code, error.toJSON() as Record<string, unknown>);
         onError?.(error);
-        
+
         if (error.code === 'SYNC_CIRCUIT_OPEN') {
           addToast('Demasiados errores. Reintentando en breve...', 'warning');
         }
       } else if (error instanceof Error) {
         errorMsg = error.message;
       }
-      
+
       setLastError(errorMsg);
       setSyncError(errorMsg);
       return null;
-      
     } finally {
       syncInProgress.current = false;
       setIsSyncing(false);
     }
-  }, [autoRetry, circuitBreaker, maxRetries, onError, onProgress, onStart, onSuccess, setSyncError, addToast]);
+  }, [
+    autoRetry,
+    circuitBreaker,
+    maxRetries,
+    onError,
+    onProgress,
+    onStart,
+    onSuccess,
+    setSyncError,
+    addToast,
+  ]);
 
   // ============================================================================
   // MODO MANUAL
@@ -210,16 +218,16 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
 
   useEffect(() => {
     if (mode === 'manual' || isPaused) return;
-    
+
     // Sync inicial con timeout para evitar setState sincrono en effect
     let initialSyncTimeout: ReturnType<typeof setTimeout> | null = null;
-    
+
     if (navigator.onLine) {
       initialSyncTimeout = setTimeout(() => {
         executeSync();
       }, 0);
     }
-    
+
     // Configurar intervalo para modo scheduled
     if (mode === 'scheduled' || mode === 'auto') {
       intervalRef.current = setInterval(() => {
@@ -231,7 +239,7 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
         }
       }, interval);
     }
-    
+
     return () => {
       if (initialSyncTimeout) {
         clearTimeout(initialSyncTimeout);
@@ -248,14 +256,14 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
 
   useEffect(() => {
     if (mode !== 'realtime' || isPaused) return;
-    
+
     const handleOnline = () => {
       addToast('Conexión restaurada. Sincronizando...', 'info');
       executeSync();
     };
-    
+
     window.addEventListener('online', handleOnline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
     };
@@ -285,7 +293,7 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
     lastSyncTime,
     pause,
     resume,
-    isPaused
+    isPaused,
   };
 }
 
@@ -306,7 +314,7 @@ export const useManualSync = () => useSync({ mode: 'manual' });
 /**
  * @deprecated Usar useSync({ mode: 'scheduled', interval: X }) en su lugar
  */
-export const useScheduledSyncLegacy = (interval = 60000) => 
+export const useScheduledSyncLegacy = (interval = 60000) =>
   useSync({ mode: 'scheduled', interval });
 
 // Re-exportar SyncBridge para uso directo

@@ -1,21 +1,14 @@
 /**
  * Common Utils - Utilidades compartidas para toda la aplicación
- * 
+ *
  * Este archivo centraliza funciones utilitarias que se usan en múltiples lugares
  * para evitar duplicación de código.
  */
 
-/**
- * Normaliza un SKU/EAN/Barcode eliminando espacios y caracteres especiales
- */
-export function normalizeSku(input: string | null | undefined): string {
-  if (!input) return '';
-  return input
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toUpperCase();
-}
+// NOTA: normalizeSku ha sido movido a @/lib/normalize
+
+// Re-export normalize functions from centralized location
+export { normalizeSku, sanitizeBarcode, normalizeIdentity, normalizeHeader } from '@/lib/normalize';
 
 /**
  * Formatea un timestamp a fecha legible
@@ -28,7 +21,7 @@ export function formatTimestamp(timestamp: number | string | null | undefined): 
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 }
 
@@ -49,7 +42,7 @@ export function formatTime(timestamp: number | string | null | undefined): strin
   const date = new Date(typeof timestamp === 'string' ? timestamp : timestamp);
   return date.toLocaleTimeString('es-CL', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 }
 
@@ -104,7 +97,7 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
     currency: 'CLP',
-    minimumFractionDigits: 0
+    minimumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -130,21 +123,21 @@ export function validateRut(rut: string): boolean {
   if (!rut) return false;
   const cleaned = rut.replace(/[^0-9kK]/g, '');
   if (cleaned.length < 8) return false;
-  
+
   const body = cleaned.slice(0, -1);
   const dv = cleaned.slice(-1).toUpperCase();
-  
+
   let sum = 0;
   let multiplier = 2;
-  
+
   for (let i = body.length - 1; i >= 0; i--) {
     sum += parseInt(body[i]) * multiplier;
     multiplier = multiplier === 7 ? 2 : multiplier + 1;
   }
-  
+
   const expectedDv = String(11 - (sum % 11));
   const calculatedDv = expectedDv === '11' ? '0' : expectedDv === '10' ? 'K' : expectedDv;
-  
+
   return calculatedDv === dv;
 }
 
@@ -155,10 +148,10 @@ export function formatRut(rut: string): string {
   if (!rut) return '';
   const cleaned = rut.replace(/[^0-9kK]/g, '');
   if (cleaned.length < 8) return rut;
-  
+
   const body = cleaned.slice(0, -1);
   const dv = cleaned.slice(-1).toUpperCase();
-  
+
   return `${parseInt(body).toLocaleString('es-CL')}-${dv}`;
 }
 
@@ -181,14 +174,17 @@ export function isEmpty(obj: Record<string, unknown> | null | undefined): boolea
  * Agrupa un array por una clave específica
  */
 export function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
-  return array.reduce((result, item) => {
-    const groupKey = String(item[key]);
-    if (!result[groupKey]) {
-      result[groupKey] = [];
-    }
-    result[groupKey].push(item);
-    return result;
-  }, {} as Record<string, T[]>);
+  return array.reduce(
+    (result, item) => {
+      const groupKey = String(item[key]);
+      if (!result[groupKey]) {
+        result[groupKey] = [];
+      }
+      result[groupKey].push(item);
+      return result;
+    },
+    {} as Record<string, T[]>
+  );
 }
 
 /**
@@ -198,7 +194,7 @@ export function sortBy<T>(array: T[], key: keyof T, order: 'asc' | 'desc' = 'asc
   return [...array].sort((a, b) => {
     const aVal = a[key];
     const bVal = b[key];
-    
+
     if (aVal < bVal) return order === 'asc' ? -1 : 1;
     if (aVal > bVal) return order === 'asc' ? 1 : -1;
     return 0;
@@ -241,13 +237,13 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  
+
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
       timeout = null;
       func(...args);
     };
-    
+
     if (timeout !== null) {
       clearTimeout(timeout);
     }
@@ -271,7 +267,7 @@ export async function retryWithBackoff<T>(
   baseDelay = 1000
 ): Promise<T> {
   let lastError: Error;
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
@@ -282,6 +278,6 @@ export async function retryWithBackoff<T>(
       }
     }
   }
-  
+
   throw lastError!;
 }
