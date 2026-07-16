@@ -79,8 +79,8 @@ export const useDashboard = () => {
     
     return records.filter(r => {
       const data = r.data || {};
-      const mm = data.mm;
-      const yyyy = data.yyyy;
+      const mm = data.mm as number;
+      const yyyy = data.yyyy as number;
       if (!mm || !yyyy) return false;
       
       const expiryDate = new Date(yyyy, mm - 1);

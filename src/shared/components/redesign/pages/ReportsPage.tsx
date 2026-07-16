@@ -130,7 +130,7 @@ export const RedesignReportsPage: React.FC = () => {
     let expired = 0, critical = 0, upcoming = 0, safe = 0
     records.forEach(r => {
       const data = r.data || {}
-      const mm = data.mm || data.month, yyyy = data.yyyy || data.year
+      const mm = (data.mm || data.month) as number, yyyy = (data.yyyy || data.year) as number
       if (!mm || !yyyy) return
       const daysLeft = Math.floor((new Date(yyyy, mm - 1).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       if (daysLeft < 0) expired++; else if (daysLeft <= 15) critical++; else if (daysLeft <= 30) upcoming++; else safe++

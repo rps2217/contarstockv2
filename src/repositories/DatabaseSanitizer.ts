@@ -48,7 +48,7 @@ export class DatabaseSanitizer {
       let needsUpdate = false;
       const expiryData = r.data || {};
       
-      const cleanBarcode = normalizeSku(expiryData.barcode || '');
+      const cleanBarcode = normalizeSku(String(expiryData.barcode || ''));
       if (expiryData.barcode !== cleanBarcode) {
         expiryData.barcode = cleanBarcode;
         needsUpdate = true; 

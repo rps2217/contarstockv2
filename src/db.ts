@@ -70,7 +70,7 @@ export interface LocationEntry {
 export interface DynamicRecord {
   id: string;
   tableName: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   timestamp: number;
   syncStatus: 'synced' | 'pending' | 'error' | 'pending_delete';
   syncError?: string;

@@ -85,7 +85,7 @@ export class ExpiryRepository {
     const records: DynamicRecord[] = expiries.map(e => ({
       id: e.id,
       tableName: tableName || this.tableName,
-      data: e,
+      data: e as unknown as Record<string, unknown>,
       timestamp: e.timestamp || Date.now(),
       syncStatus: e.syncStatus || 'synced'
     }));

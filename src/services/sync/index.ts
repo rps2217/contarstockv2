@@ -111,3 +111,7 @@ export {
 // Alias para compatibilidad (evitar breaking changes)
 // =============================================================================
 export { unifiedSyncEngine as syncOrchestrator } from './unified';
+
+// Alias para compatibilidad con hooks que usan GenericSyncEngine
+// TODO: Migrar gradualmente a unifiedSyncEngine
+export { unifiedSyncEngine as genericSyncEngine } from './unified';

@@ -14,7 +14,7 @@ export class EmailTemplateRepository {
 
   static async getAll(module?: 'expiry' | 'events'): Promise<EmailTemplate[]> {
     const records = await dynamicDataService.getRecordsByTable(this.tableName);
-    const templates = records.map(r => r.data as EmailTemplate);
+    const templates = records.map(r => r.data as unknown as EmailTemplate);
     if (module) {
         return templates.filter(t => t.module === module || !t.module);
     }

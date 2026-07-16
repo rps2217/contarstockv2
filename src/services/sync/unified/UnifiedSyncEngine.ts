@@ -251,6 +251,30 @@ export class UnifiedSyncEngine {
   }
 
   /**
+   * Sincroniza una tabla específica por su registry key.
+   * Compatibilidad con GenericSyncEngine.sync(key)
+   */
+  async sync(registryKey: string): Promise<{ success: boolean; errors: string[] }> {
+    const meta = syncRegistry[registryKey];
+    if (!meta) {
+      return { success: false, errors: [`Registry key ${registryKey} not found`] };
+    }
+
+    try {
+      const result = await this.syncTable(registryKey);
+      return {
+        success: result.errors.length === 0,
+        errors: result.errors
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        errors: [error instanceof Error ? error.message : 'Unknown error'] 
+      };
+    }
+  }
+
+  /**
    * Sincroniza solo catálogos (productos, proveedores)
    */
   async syncCatalogs(): Promise<SyncResult> {
