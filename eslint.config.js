@@ -1,7 +1,8 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
-import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
+import react from 'eslint-plugin-react';
 
 export default [
   js.configs.recommended,
@@ -59,19 +60,30 @@ export default [
         performance: 'readonly',
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
+        React: 'readonly',
+        JSX: 'readonly',
       },
     },
     plugins: {
       '@typescript-eslint': tseslint,
+      'react-hooks': reactHooks,
+      react,
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      ...react.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'off',
-      // Bloquear console.* en producción, permitir en desarrollo
-      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+      'no-console': 'warn',
       'no-undef': 'off',
     },
   },
-  prettier,
 ];

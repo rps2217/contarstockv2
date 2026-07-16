@@ -7,7 +7,6 @@
     "@google/genai": "^1.51.0",
     "@sentry/browser": "^10.63.0",
     "@sentry/react": "^10.63.0",
-    "@sentry/tracing": "^7.120.4",
     "@supabase/supabase-js": "^2.104.0",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/react-virtual": "^3.13.23",
@@ -18,7 +17,7 @@
     "date-fns": "^3.3.1",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
-    "dompurify": "^2.5.9",
+    "dompurify": "^3.4.12",
     "framer-motion": "^12.36.0",
     "fuse.js": "^7.3.0",
     "html5-qrcode": "2.3.8",
@@ -50,14 +49,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && eslint src/",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
@@ -66,8 +66,16 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.64.0",
+    "@typescript-eslint/parser": "^8.64.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.5",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.9.3",
     "vercel": "^55.0.0",
@@ -77,5 +85,14 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   }
 }
