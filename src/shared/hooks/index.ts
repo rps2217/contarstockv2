@@ -1,20 +1,20 @@
 /**
  * Shared Hooks - Índice de hooks compartidos
- * 
+ *
  * Arquitectura reorganizada para seguir el patrón Lego:
- * 
+ *
  * Hooks de productividad:
  * - useProductivity: Métricas de productividad en tiempo real
  * - useTurboMode: Modo turbo de conteo rápido
- * 
+ *
  * Hooks de sincronización:
  * - useSync: Hook unificado de sincronización
- * 
+ *
  * Hooks de bulk operations:
  * - useBulkOperations: Operaciones masivas sobre registros
  * - useBulkExport: Exportación de datos
  * - useViewPreferences: Preferencias de vista
- * 
+ *
  * Hooks de búsqueda:
  * - useGlobalSearch: Búsqueda global unificada
  * - useScanner: Wrapper unificado para escaneo
@@ -45,6 +45,12 @@ export { useSync, useAutoSyncLegacy, useManualSync, useScheduledSyncLegacy } fro
 export type { UseSyncOptions, UseSyncReturn, SyncMode } from './useSync';
 
 // ============================================================================
+// Cola offline
+// ============================================================================
+export { useOfflineSync, OfflineIndicator, OfflineRecoveryBanner } from './useOfflineSync';
+export type { UseOfflineSyncReturn } from './useOfflineSync';
+
+// ============================================================================
 // Sincronización de eventos (con deduplicación)
 // ============================================================================
 export { useEventsSync, eventsSyncService } from './useEventsSync';
@@ -61,7 +67,12 @@ export type { ExportFormat, ExportColumn, UseExportOptions, UseExportReturn } fr
 // Búsqueda y escaneo
 // ============================================================================
 export { useGlobalSearch } from './useGlobalSearch';
-export type { SearchResult, SearchResults, UseGlobalSearchOptions, UseGlobalSearchReturn } from './useGlobalSearch';
+export type {
+  SearchResult,
+  SearchResults,
+  UseGlobalSearchOptions,
+  UseGlobalSearchReturn,
+} from './useGlobalSearch';
 
 export { useScanner } from './useScanner';
 export type { UseScannerOptions, UseScannerReturn } from './useScanner';
@@ -75,11 +86,7 @@ export * from '@/hooks/bulk';
 // Virtualization
 // ============================================================================
 export { useVirtualList, useDynamicVirtualList } from './useVirtualList';
-export type { 
-  UseVirtualListOptions, 
-  UseVirtualListReturn, 
-  VirtualItem 
-} from './useVirtualList';
+export type { UseVirtualListOptions, UseVirtualListReturn, VirtualItem } from './useVirtualList';
 
 // ============================================================================
 // Permisos y Accesos (RBAC)
@@ -89,4 +96,9 @@ export { usePermissions, RequirePermission } from './usePermissions';
 // ============================================================================
 // Undo/Redo
 // ============================================================================
-export { showUndoToast, useUndoToast, UndoIndicator, useUndoRedoShortcuts } from '@/shared/components/ui/UndoRedoToast';
+export {
+  showUndoToast,
+  useUndoToast,
+  UndoIndicator,
+  useUndoRedoShortcuts,
+} from '@/shared/components/ui/UndoRedoToast';

@@ -1,19 +1,18 @@
-"use client";
+'use client';
 /**
  * useAutoSave - Hook para auto-guardado de formularios
- * 
+ *
  * Funcionalidades:
  * - Guardado automático con debounce
  * - Persistencia en localStorage
  * - Recuperación de drafts
  * - Indicador de estado (guardando/guardado/error)
  * - Limpieza automática al guardar exitosamente
+ * - Detección de cierre de pestaña (guardado inmediato)
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { logger } from '@/services/logger';
-;
-
 export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'restored';
 
 interface AutoSaveOptions<T> {
@@ -27,6 +26,10 @@ interface AutoSaveOptions<T> {
   onRestore?: (data: T) => void;
   /** Habilitar/deshabilitar auto-guardado */
   enabled?: boolean;
+  /** Datos actuales para guardar en cierre de pestaña */
+  currentData?: T | null;
+  /** Guardar inmediatamente en cierre de pestaña (default: true) */
+  saveOnUnload?: boolean;
 }
 
 interface AutoSaveReturn<T> {
@@ -54,6 +57,8 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
     maxAgeMs = DEFAULT_MAX_AGE_MS,
     onRestore,
     enabled = true,
+    currentData = null,
+    saveOnUnload = true,
   } = options;
 
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
@@ -63,8 +68,40 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitializedRef = useRef(false);
+  const currentDataRef = useRef<T | null>(currentData);
+
+  // Mantener ref actualizado
+  useEffect(() => {
+    currentDataRef.current = currentData;
+  }, [currentData]);
 
   const storageKey = `autosave_${key}`;
+
+  // Función interna para guardar
+  const saveToStorage = useCallback(
+    (data: T) => {
+      try {
+        const payload = {
+          data,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+        setDraftData(data);
+        setLastSavedAt(new Date());
+        setStatus('saved');
+        return true;
+      } catch (e) {
+        logger.error(
+          'useAutoSave',
+          'Error saving draft',
+          e instanceof Error ? e.message : String(e)
+        );
+        setStatus('error');
+        return false;
+      }
+    },
+    [storageKey]
+  );
 
   // Verificar si hay un draft válido al iniciar
   useEffect(() => {
@@ -83,7 +120,7 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
             setDraftData(data);
             setHasDraft(true);
             setStatus('restored');
-            
+
             if (onRestore) {
               onRestore(data);
             }
@@ -93,7 +130,11 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
           }
         }
       } catch (e) {
-        logger.warn('useAutoSave', 'Error checking auto-save draft', e instanceof Error ? e.message : String(e));
+        logger.warn(
+          'useAutoSave',
+          'Error checking auto-save draft',
+          e instanceof Error ? e.message : String(e)
+        );
         localStorage.removeItem(storageKey);
       }
     }, 0);
@@ -102,55 +143,75 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>): AutoSaveReturn<T> {
   }, [enabled, key, storageKey, maxAgeMs, onRestore]);
 
   // Guardar datos (con debounce)
-  const save = useCallback((data: T) => {
-    if (!enabled) return;
+  const save = useCallback(
+    (data: T) => {
+      if (!enabled) return;
 
-    // Limpiar timeout anterior
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+      // Limpiar timeout anterior
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
 
-    setStatus('saving');
+      setStatus('saving');
 
-    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
+        saveToStorage(data);
+        setHasDraft(false);
+        // Volver a idle después de 2 segundos
+        setTimeout(() => setStatus('idle'), 2000);
+      }, debounceMs);
+    },
+    [enabled, debounceMs, storageKey, saveToStorage]
+  );
+
+  // Detectar cierre de pestaña y guardar inmediatamente
+  useEffect(() => {
+    if (!enabled || !saveOnUnload) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Solo guardar si hay datos actuales y está habilitado
+      if (currentDataRef.current !== null) {
+        // Guardar inmediatamente (sincrónico para beforeunload)
+        saveToStorage(currentDataRef.current);
+
+        // Mostrar confirmación al usuario
+        e.preventDefault();
+        e.returnValue = '¿Salir sin guardar?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [enabled, saveOnUnload, saveToStorage]);
+
+  // Guardar inmediatamente y marcar como limpio
+  const saveImmediate = useCallback(
+    (data: T) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
       try {
         const payload = {
           data,
           timestamp: Date.now(),
         };
         localStorage.setItem(storageKey, JSON.stringify(payload));
-        
-        setDraftData(data);
-        setHasDraft(false); // Ya no hay draft pendiente (se acaba de guardar)
         setLastSavedAt(new Date());
-        setStatus('saved');
-
-        // Volver a idle después de 2 segundos
-        setTimeout(() => setStatus('idle'), 2000);
       } catch (e) {
-        logger.error('useAutoSave', 'Error saving draft', e instanceof Error ? e.message : String(e));
-        setStatus('error');
+        logger.error(
+          'useAutoSave',
+          'Error saving immediate',
+          e instanceof Error ? e.message : String(e)
+        );
       }
-    }, debounceMs);
-  }, [enabled, debounceMs, storageKey]);
-
-  // Guardar inmediatamente y marcar como limpio
-  const saveImmediate = useCallback((data: T) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    try {
-      const payload = {
-        data,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(storageKey, JSON.stringify(payload));
-      setLastSavedAt(new Date());
-    } catch (e) {
-      logger.error('useAutoSave', 'Error saving immediate', e instanceof Error ? e.message : String(e));
-    }
-  }, [storageKey]);
+    },
+    [storageKey]
+  );
 
   // Eliminar draft
   const clear = useCallback(() => {
@@ -245,15 +306,17 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
 
   // Usar useMemo para evitar llamada a función impura durante render
   const label = useMemo(() => getLabel(), [status, lastSavedAt, formatRelativeTime]);
-  
+
   if (!label && !showLabel) return null;
 
   return (
-    <div className={cn(
-      'flex items-center gap-1.5 text-xs transition-opacity',
-      status === 'error' ? 'text-rose-500' : 'text-muted',
-      className
-    )}>
+    <div
+      className={cn(
+        'flex items-center gap-1.5 text-xs transition-opacity',
+        status === 'error' ? 'text-rose-500' : 'text-muted',
+        className
+      )}
+    >
       {getIcon()}
       {showLabel && label}
     </div>
@@ -279,9 +342,7 @@ export const DraftRecoveryBanner: React.FC<DraftRecoveryBannerProps> = ({
   return (
     <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 flex items-center gap-4">
       <div className="flex-1">
-        <p className="text-sm font-medium text-amber-500">
-          ¿Recuperar {formName}?
-        </p>
+        <p className="text-sm font-medium text-amber-500">¿Recuperar {formName}?</p>
         <p className="text-xs text-secondary mt-1">
           Encontramos un borrador guardado anteriormente.
         </p>
