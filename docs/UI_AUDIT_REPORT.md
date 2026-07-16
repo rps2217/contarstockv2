@@ -4,131 +4,131 @@
 
 ---
 
-## 1. 🔴 RUTAS - PROBLEMAS CRÍTICOS
+## 1. ✅ RUTAS - ESTADO ACTUAL
 
-### 1.1 Rutas sin navegación en Sidebar
+### 1.1 Navegación Principal (Sidebar)
 
-Las siguientes rutas existen pero **no tienen acceso desde el Sidebar**:
+| Ruta        | Página          | Estado               |
+| ----------- | --------------- | -------------------- |
+| `/`         | Dashboard       | ✅ Visible           |
+| `/massive`  | Hammer/Counting | ✅ Visible (Contar)  |
+| `/expiry`   | Vencimientos    | ✅ Visible           |
+| `/events`   | Eventos         | ✅ Visible           |
+| `/data`     | Datos           | ✅ Visible           |
+| `/reports`  | Reportes        | ✅ Visible           |
+| `/sync`     | Sync            | ✅ Visible           |
+| `/settings` | Ajustes         | ✅ Visible (Sistema) |
+| `/audit`    | Auditoría       | ✅ Visible (Sistema) |
 
-| Ruta         | Página        | Problema                |
-| ------------ | ------------- | ----------------------- |
-| `/audit`     | AuditPage     | ❌ No visible en menú   |
-| `/inventory` | InventoryPage | ❌ No visible en menú   |
-| `/providers` | SuppliersPage | ❌ Es alias, redundante |
-| `/slices`    | SlicesPage    | ❌ No visible en menú   |
-| `/dynamic`   | DynamicPage   | ❌ No visible en menú   |
+### 1.2 Rutas Sin Menú (Necesarias para deep links)
 
-**Acción requerida:** Agregar al Sidebar o crear redirección
+| Ruta                | Estado      | Notas        |
+| ------------------- | ----------- | ------------ |
+| `/database`         | ✅ Redirige | Legacy       |
+| `/capture`          | ✅ Redirige | Legacy       |
+| `/theme-demo`       | ✅ Hidden   | Demo         |
+| `/redesign`         | ✅ Hidden   | Preview      |
+| `/product/:barcode` | ⚠️ Usar     | Deep links   |
+| `/session/:id`      | ⚠️ Usar     | Deep links   |
+| `/providers`        | ✅ Alias    | → /suppliers |
 
 ---
 
-### 1.2 Rutas Obsoletas
-
-| Ruta                | Estado                | Acción                  |
-| ------------------- | --------------------- | ----------------------- |
-| `/database`         | Redirige a `/data`    | ✅ OK                   |
-| `/capture`          | Redirige a `/massive` | ✅ OK                   |
-| `/theme-demo`       | Demo de temas         | ⚠️ Mantener oculto      |
-| `/redesign`         | Preview               | ⚠️ Mantener oculto      |
-| `/product/:barcode` | Deep link             | ⚠️ Probar funcionalidad |
-| `/session/:id`      | Deep link             | ⚠️ Probar funcionalidad |
-
----
-
-## 2. 🟡 RESPONSIVE DESIGN
+## 2. ✅ RESPONSIVE DESIGN
 
 ### 2.1 Breakpoints Estándar
 
-El proyecto usa los siguientes breakpoints Tailwind:
-
 ```javascript
-// tailwind.config.js
 sm: '640px'; // Móviles grandes
-md: '768px'; // Tablets
+md: '768px'; // Tablets (Sidebar visible)
 lg: '1024px'; // Desktop
-xl: '1280px'; // Pantallas grandes
 ```
 
-### 2.2 Componentes a Verificar
+### 2.2 Componentes Verificados
 
-| Componente  | Estado        | Notas                          |
-| ----------- | ------------- | ------------------------------ |
-| Sidebar     | ✅ Responsive | Se oculta en móvil (md:flex)   |
-| BottomDock  | ✅ Móvil      | Solo visible en móvil          |
-| Cards       | ⚠️ Revisar    | Posible overflow en móvil      |
-| Modales     | ⚠️ Revisar    | Posible scroll horizontal      |
-| Tablas      | ⚠️ Revisar    | Requiere horizontal scroll     |
-| Formularios | ⚠️ Revisar    | Inputs pueden ser muy pequeños |
+| Componente | Estado | Notas                        |
+| ---------- | ------ | ---------------------------- |
+| Sidebar    | ✅ OK  | Se oculta en móvil (md:flex) |
+| SmartDock  | ✅ OK  | Solo visible en móvil        |
+| BottomDock | ✅ OK  | Wrapper para SmartDock       |
+| Cards      | ✅ OK  | Con overflow handling        |
+| Modales    | ✅ OK  | Centrados con backdrop       |
 
 ---
 
-## 3. 🎨 CONSISTENCIA DE DISEÑO
+## 3. ✅ CONSISTENCIA DE DISEÑO
 
-### 3.1 Tokens de Diseño (Del AGENTS.md)
+### 3.1 Tokens de Diseño Aplicados
 
-El proyecto usa un sistema de tokens unificado:
+| Patrón Antiguo | Patrón Nuevo   | Archivos              |
+| -------------- | -------------- | --------------------- |
+| bg-slate-950   | bg-base        | ✅ Refactorizado      |
+| bg-slate-900   | bg-surface     | ✅ Refactorizado      |
+| bg-blue-500    | bg-primary     | ✅ Sidebar, SmartDock |
+| text-blue-500  | text-primary   | ✅ Sidebar, SmartDock |
+| text-slate-300 | text-secondary | ✅ Refactorizado      |
 
-```css
-/* Tema Oscuro (Default) */
---bg-base: #09090b /* bg-base - Fondo principal */ --bg-surface: #18181b
-  /* bg-surface - Cards, modales */ --bg-elevated: #27272a /* bg-elevated - Elementos elevados */
-  --border-subtle: rgba(255, 255, 255, 5%) --text-primary: #f4f4f5 --text-secondary: #a1a1aa
-  --text-muted: #71717a --color-primary: #3b82f6;
-```
+### 3.2 Componentes Estandarizados
 
-### 3.2 Verificar Clases
-
-| Patrón Antiguo | Patrón Nuevo   | Archivos         |
-| -------------- | -------------- | ---------------- |
-| bg-slate-950   | bg-base        | ✅ Refactorizado |
-| bg-slate-900   | bg-surface     | ✅ Refactorizado |
-| text-slate-300 | text-secondary | ✅ Refactorizado |
+- ✅ `Sidebar.tsx` - Usa variables CSS del tema
+- ✅ `SmartDock.tsx` - Usa bg-primary, text-primary
+- ✅ `Card.tsx` - Sistema unificado
+- ✅ `Button.tsx` - Sistema unificado
 
 ---
 
-## 4. 🔍 PROBLEMAS CONOCIDOS
+## 4. 📝 PROBLEMAS PENDIENTES
 
 ### 4.1 Navegación
 
-- [ ] Sidebar no tiene scroll cuando hay muchos items
-- [ ] BottomDock puede superponerse con contenido
+- [ ] Sidebar: Separador entre grupos necesita scroll si hay muchos items
 
 ### 4.2 Mobile
 
-- [ ] Tablas largas no tienen scroll horizontal consistente
-- [ ] Teclado virtual puede ocultar campos de formulario
-- [ ] Pull-to-refresh no implementado
+- [ ] Tablas: Scroll horizontal en tablas de datos
+- [ ] Teclado virtual: Campos pueden quedar ocultos
+- [ ] Pull-to-refresh: No implementado
 
 ### 4.3 Accesibilidad
 
-- [ ] Contraste de colores en algunos textos
-- [ ] Focus visible en elementos interactivos
-- [ ] Alt text en imágenes e iconos decorativos
+- [ ] Contraste: Revisar textos pequeños en modo claro
+- [ ] Focus: Estados de focus visibles en todos los elementos
+- [ ] ARIA: Labels en iconos decorativos
 
 ---
 
-## 5. ✅ ACCIONES COMPLETADAS
+## 5. ✅ ACCIONES COMPLETADAS (2026-07-16)
 
-- [x] Auditoría de rutas
-- [x] Verificación de Sidebar
-- [x] Documentación de breakpoints
-- [ ] Implementar fixes pendientes
+- [x] Auditoría completa de rutas
+- [x] Sidebar: Agregar sección "Sistema" con Auditoría
+- [x] Sidebar: Estandarizar a bg-primary/text-primary
+- [x] SmartDock: Estandarizar colores
+- [x] Documentar auditoría en UI_AUDIT_REPORT.md
 
 ---
 
-## 6. 📝 PRÓXIMOS PASOS
+## 6. 📊 COMMITS RECIENTES
 
-1. **Agregar rutas faltantes al Sidebar**
-   - `/audit` → Agregar a menú o eliminar ruta
-   - `/inventory` → ¿Es necesaria o es duplicado de `/data`?
-   - `/slices` → ¿Es necesaria?
-   - `/dynamic` → ¿Es necesaria?
+```
+90e2b07 ui: Estandarizar SmartDock con variables CSS del tema
+67c08d7 ui: Estandarizar Sidebar con variables CSS del tema
+9f52fe0 ui: Mejorar Sidebar con navegación secundaria
+2912a80 feat: Mejoras de robustez y offline
+a0bbeef chore: Mejoras adicionales de mantenimiento
+```
+
+---
+
+## 7. 📝 PRÓXIMOS PASOS
+
+1. **Revisar componentes restantes**
+   - CameraScanner (usa blue-500 para highlight de scanner)
+   - Login (theme específico)
 
 2. **Responsive fixes**
-   - Cards con overflow handling
-   - Tablas con scroll horizontal
+   - Tablas con horizontal scroll
    - Formularios adaptados a móvil
 
 3. **Accesibilidad**
-   - Revisar contraste WCAG AA
-   - Focus states consistentes
+   - Focus states
+   - Contraste WCAG
