@@ -6,13 +6,27 @@
  */
 
 // Hook principal de lógica unificada
-export { useCountingEngine, useActiveSessions, useSessionInfo, type CountingMode, type CountingSessionInfo, type SessionSummary } from './useCountingEngine';
+export {
+  useCountingEngine,
+  useActiveSessions,
+  useSessionInfo,
+  type CountingMode,
+  type CountingSessionInfo,
+  type SessionSummary,
+} from './useCountingEngine';
 
 // Hooks existentes (mantener compatibilidad)
 export { useCountingLogic } from './useCountingLogic';
 export { useCountingSync } from './useCountingSync';
 export { useCountingQueries } from './useCountingQueries';
 export { useCountingAI } from './useCountingAI';
+export { useCountingValidation } from './useCountingValidation';
+export {
+  useCountingKeyboardShortcuts,
+  KeyboardHelpModal,
+  type ShortcutConfig,
+  type ShortcutDefinition,
+} from './useCountingKeyboardShortcuts';
 
 // Re-exports desde shared/hooks para compatibilidad
 export { useProductivity, type ProductivityStats } from '@/shared/hooks';
