@@ -1,6 +1,16 @@
 import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
-import { Product, CountingSession, ScanRecord, ExpectedOrder, VisualGuide, ErpOrderSession, Provider, Customer, MessageTemplate } from './types';
+import {
+  Product,
+  CountingSession,
+  ScanRecord,
+  ExpectedOrder,
+  VisualGuide,
+  ErpOrderSession,
+  Provider,
+  Customer,
+  MessageTemplate,
+} from './types';
 import { DbMigrator } from './db/migrations/DbMigrator';
 
 // ============================================================================
@@ -92,17 +102,17 @@ export interface SyncLog {
 // Audit Log - Registro de cambios para trazabilidad (estilo AppSheet)
 export interface AuditLogEntry {
   id?: number;
-  tableName: string;      // 'events', 'sessions', 'products', etc.
-  recordId: string;      // ID del registro afectado
+  tableName: string; // 'events', 'sessions', 'products', etc.
+  recordId: string; // ID del registro afectado
   action: 'CREATE' | 'UPDATE' | 'DELETE';
-  fieldName?: string;    // Campo específico modificado (opcional)
-  oldValue?: string;     // Valor anterior (JSON stringified)
-  newValue?: string;     // Valor nuevo (JSON stringified)
-  userId?: string;       // ID del usuario
-  deviceInfo?: string;   // Info del dispositivo
+  fieldName?: string; // Campo específico modificado (opcional)
+  oldValue?: string; // Valor anterior (JSON stringified)
+  newValue?: string; // Valor nuevo (JSON stringified)
+  userId?: string; // ID del usuario
+  deviceInfo?: string; // Info del dispositivo
   timestamp: number;
-  synced: boolean;        // Si ya fue sincronizado a la nube
-  syncStatus?: 'synced' | 'pending' | 'error';  // Estado de sincronización
+  synced: boolean; // Si ya fue sincronizado a la nube
+  syncStatus?: 'synced' | 'pending' | 'error'; // Estado de sincronización
 }
 
 export interface ProductProvider {
@@ -117,7 +127,7 @@ export interface ProductProvider {
   marca?: string;
   createdAt?: number;
   updatedAt?: number;
-  syncStatus?: 'synced' | 'pending' | 'error';  // Estado de sincronización
+  syncStatus?: 'synced' | 'pending' | 'error'; // Estado de sincronización
 }
 
 // View Preferences - Para persistir preferencias de vista por módulo
@@ -195,9 +205,9 @@ export class LogiCountDB extends Dexie {
   audit_logs!: Table<AuditLogEntry>;
   viewPreferences!: Table<ViewPreferences>;
   bulkHistory!: Table<BulkHistoryEntry>;
-    expirations!: Table<{
+  expirations!: Table<{
     id?: number;
-    claveUnica: string;  // barcode + mm + yyyy
+    claveUnica: string; // barcode + mm + yyyy
     barcode: string;
     productName?: string;
     mm: number;
@@ -219,6 +229,16 @@ export class LogiCountDB extends Dexie {
     error?: string;
     metadata?: Record<string, unknown>;
   }>;
+  /** Locks de sesiones para prevenir conflictos entre operadores */
+  sessionLocks!: Table<{
+    sessionId: string;
+    lockedBy: string;
+    lockedByName?: string;
+    lockedAt: number;
+    expiresAt: number;
+    lastHeartbeat?: number;
+    metadata?: Record<string, unknown>;
+  }>;
 
   constructor() {
     super('LogiCountDB');
@@ -228,4 +248,3 @@ export class LogiCountDB extends Dexie {
 
 export const db = new LogiCountDB();
 export const hammerDb = db; // Shortcut for transition
-

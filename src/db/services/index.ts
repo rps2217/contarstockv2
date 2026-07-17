@@ -43,3 +43,14 @@ export type {
 
 export { IntegrityValidator } from './IntegrityValidator';
 export type { IntegrityIssue, IntegrityReport, IntegrityMetrics } from './IntegrityValidator';
+
+export { TransactionalSyncQueue } from './TransactionalSyncQueue';
+export type {
+  SyncQueueStats,
+  SyncResult,
+  SyncOperationType,
+  SyncPriority,
+} from './TransactionalSyncQueue';
+
+export { SessionLockManager } from './SessionLockManager';
+export type { SessionLock, LockResult, LockInfo } from './SessionLockManager';

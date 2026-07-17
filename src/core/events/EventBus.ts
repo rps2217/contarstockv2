@@ -273,6 +273,7 @@ export const AppEvents = {
   SYNC_COMPLETED: 'sync:completed',
   SYNC_FAILED: 'sync:failed',
   SYNC_PROGRESS: 'sync:progress',
+  SYNC_QUEUE_CHANGED: 'sync:queue-changed',
 
   // ui
   THEME_CHANGED: 'ui:theme-changed',
@@ -287,6 +288,9 @@ export const AppEvents = {
   // session
   SESSION_EXPIRED: 'session:expired',
   SESSION_RESTORED: 'session:restored',
+  SESSION_LOCK_ACQUIRED: 'session:lock-acquired',
+  SESSION_LOCK_RELEASED: 'session:lock-released',
+  SESSION_LOCK_FORCED: 'session:lock-forced',
 } as const;
 
 // ============================================================================
