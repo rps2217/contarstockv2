@@ -23,7 +23,7 @@ export { SessionRepository, sessionRepository } from './session/SessionRepositor
 export { SessionRepositoryLegacy } from './session/SessionRepository';
 
 // Scan Repositories
-export { ScanRepository, scanRepository } from './ScanRepository';
+export { ScanRepository, scanRepository, ScanRepositoryLegacy } from './scan/ScanRepository';
 
 // Queue Repositories
 export { SyncQueueRepository, syncQueueRepository } from './SyncQueueRepository';
