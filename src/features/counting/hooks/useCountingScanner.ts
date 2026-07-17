@@ -48,6 +48,11 @@ export interface UseCountingScannerResult {
   activeBarcode: string | null;
   activeProduct: any | null;
   optimisticQty: number;
+
+  // Multiplicador
+  multiplier: number;
+  incrementMultiplier: () => void;
+  decrementMultiplier: () => void;
 }
 
 export type ScannerStatus = 'idle' | 'scanning' | 'pharma' | 'manual' | 'error';
@@ -88,6 +93,17 @@ export function useCountingScanner(defaultMultiplier = 1): UseCountingScannerRes
   const isWaitingPharma = machineState === 'AWAITING_PHARMA';
   const isError = machineState === 'FEEDBACK_ERROR';
 
+  // Multiplicador
+  const multiplier = engine.multiplier;
+
+  const incrementMultiplier = () => {
+    engine.setMultiplier(multiplier + 1);
+  };
+
+  const decrementMultiplier = () => {
+    engine.setMultiplier(Math.max(1, multiplier - 1));
+  };
+
   return {
     machineState,
     dispatch,
@@ -108,6 +124,9 @@ export function useCountingScanner(defaultMultiplier = 1): UseCountingScannerRes
     activeBarcode: engine.activeBarcode,
     activeProduct: engine.activeProduct,
     optimisticQty: engine.optimisticQty || 0,
+    multiplier,
+    incrementMultiplier,
+    decrementMultiplier,
   };
 }
 

@@ -37,3 +37,18 @@ export { useVoiceCommands, VoiceIndicator } from './useVoiceCommands';
 // Re-exports desde shared/hooks para compatibilidad
 export { useProductivity, type ProductivityStats } from '@/shared/hooks';
 export { useTurboMode, type TurboState, type UseTurboModeReturn } from '@/shared/hooks';
+
+// =============================================================================
+// NUEVOS HOOKS - Refactor del Orquestador (Sprint 1)
+// =============================================================================
+// Estos hooks son parte del plan de refactor para dividir useCountingLogic
+// @see REFACTOR_ORCHESTRATOR.md
+
+export { useCountingSession } from './useCountingSession';
+export {
+  useCountingScanner,
+  stateToStatus,
+  shouldShowPharmaModal,
+  shouldProcessBarcodeInput,
+} from './useCountingScanner';
+export { useCountingAutosave, type CountingSessionSnapshot } from './useCountingAutosave';
