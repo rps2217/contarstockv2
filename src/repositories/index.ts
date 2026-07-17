@@ -35,7 +35,10 @@ export { productProviderRepository } from './ProductProviderRepository';
 // ProductProviderRepository es un objeto singleton, no una clase
 export type { ProductProvider } from './ProductProviderRepository';
 export { CustomerRepository, customerRepository } from './CustomerRepository';
-export { ExpectedOrderRepository } from './ExpectedOrderRepository';
+export {
+  ExpectedOrderRepository,
+  expectedOrderRepository,
+} from './expected/ExpectedOrderRepository';
 export { ExpiryRepository } from './ExpiryRepository';
 export { LocationRepository } from './LocationRepository';
 export { MessageTemplateRepository } from './MessageTemplateRepository';
