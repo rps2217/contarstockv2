@@ -1,176 +1,83 @@
-/**
- * useCountingLogic v2 - Refactorizado usando hooks extraídos
- *
- * Este archivo es una versión refactorizada de useCountingLogic.ts
- * que usa los hooks extraídos del Sprint 1:
- * - useCountingSession
- * - useCountingScanner
- * - useCountingAutosave
- *
- * Una vez validado, reemplazar useCountingLogic.ts con este contenido.
- *
- * @see REFACTOR_ORCHESTRATOR.md
- */
-
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { toast } from 'sonner';
-import { getSettings } from '@/services/settings';
-import { ConsolidatedItem } from '@/types';
-import { normalizeSku } from '@/services/utils';
+import { getSettings } from '../../../services/settings';
+import { scannerReducer } from '../../../services/scannerMachine';
+import { ConsolidatedItem } from '../../../types';
+import { useScanPipeline } from '../../../shared/hooks/useScanPipeline';
+import { SessionRepository } from '../../../repositories/SessionRepository';
+import { ScanRepository } from '../../../repositories/ScanRepository';
+import * as sessionService from '../../../services/sessionService';
+import * as productService from '../../../services/productService';
+import { normalizeSku } from '../../../services/utils';
+import { shouldPromptForBatch } from '../../../services/uiLogic';
+import { logger } from '../../../services/logger';
+
+// ✅ Auto-save
+import { useAutoSave, useAutoSaveRecovery } from '@/shared/hooks/auto-save';
+
+// ✅ Configuración de vencimiento
 import { isNoDateRecord } from '@/lib/expiryConfig';
-import { logger } from '@/services/logger';
 
-import * as sessionService from '@/services/sessionService';
-import * as productService from '@/services/productService';
+// Domain (Lego Architecture)
+import { shouldPromptBatch, findItemByBarcode, evaluateProduct } from '../domain/countingDomain';
 
-import { SessionRepository } from '@/repositories/SessionRepository';
-import { ScanRepository } from '@/repositories/ScanRepository';
-
-import { shouldPromptBatch, findItemByBarcode } from '../domain/countingDomain';
-
-// =============================================================================
-// HOOKS EXTRAÍDOS DEL SPRINT 1
-// =============================================================================
-
-import { useCountingSession } from './useCountingSession';
-import { useCountingScanner } from './useCountingScanner';
-import { useCountingAutosave, type CountingSessionSnapshot } from './useCountingAutosave';
-
+// Lego Hooks
 import { useCountingSync } from './useCountingSync';
 import { useExpiryTracker } from './useExpiryTracker';
 import { useCountingQueries } from './useCountingQueries';
 import { useCountingAI } from './useCountingAI';
-import { shouldPromptForBatch } from '@/services/uiLogic';
 
-// =============================================================================
-// TIPOS
-// =============================================================================
+// ============================================================================
+// TIPOS PARA AUTO-SAVE
+// ============================================================================
 
-interface UseCountingLogicResult {
-  state: {
-    isLoading: boolean;
-    status: string;
-    machineState: ReturnType<typeof useCountingScanner>['machineState'];
-    feedback: string | null;
-    multiplier: number;
-    currentLocation: string;
-    activeBarcode: string | null;
-    activeProduct: any | null;
-    optimisticQty: number;
-    potentialMatch: any | null;
-    autoSave: {
-      hasPendingChanges: boolean;
-      lastSaveTime: number | null;
-      isSaving: boolean;
-    };
-  };
-  sessionData: {
-    session: any;
-    history: ConsolidatedItem[];
-  };
-  actions: {
-    setMultiplier: (value: number) => void;
-    setCurrentLocation: (location: string) => void;
-    handleExternalScan: (
-      barcode: string,
-      qty?: number,
-      mm?: number,
-      yyyy?: number,
-      batch?: string
-    ) => Promise<void>;
-    resetSession: () => Promise<void>;
-    selectItem: (barcode: string) => void;
-    handlePharmaComplete: (m?: number, y?: number, batch?: string) => Promise<void>;
-    cancelPharma: () => void;
-    undoLastScan: () => Promise<void>;
-    toggleAutoLock: () => Promise<void>;
-    setStatus: (status: 'manual' | 'idle') => void;
-    applyPotentialMatch: () => Promise<void>;
-  };
+interface CountingSessionSnapshot {
+  sessionId: string;
+  items: ConsolidatedItem[];
+  currentLocation: string;
+  multiplier: number;
+  timestamp: number;
 }
 
-// =============================================================================
+// ============================================================================
 // HOOK PRINCIPAL
-// =============================================================================
+// ============================================================================
 
-export const useCountingLogic_v2 = (
-  sessionId: string | undefined,
-  onExit: () => void
-): UseCountingLogicResult => {
+export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
   const settings = getSettings();
   const itemsRef = useRef<ConsolidatedItem[]>([]);
 
-  // =============================================================================
-  // HOOKS EXTRAÍDOS
-  // =============================================================================
-
-  // useCountingSession - Gestión de sesión, multiplicador, ubicación
-  const {
-    session,
-    isLoading,
-    multiplier,
-    currentLocation,
-    setCurrentLocation,
-    resetSession: resetSessionAction,
-  } = useCountingSession(sessionId);
-
-  // useCountingScanner - State machine y engine
-  const {
-    machineState,
-    dispatch,
-    engine,
-    processScan,
-    activeBarcode,
-    activeProduct,
-    optimisticQty,
-    feedback,
-    setMultiplier,
-  } = useCountingScanner(multiplier);
-
-  // useCountingAutosave - Persistencia automática
-  const { hasPendingChanges, lastSaveTime, isSaving, saveData, recoveredData, clearRecovery } =
-    useCountingAutosave(sessionId, {
-      interval: 30000,
-      showToasts: true,
-    });
-
-  // =============================================================================
-  // HOOKS EXISTENTES (mantener por ahora)
-  // =============================================================================
-
-  useCountingSync(sessionId);
-
-  const { consolidatedHistory } = useCountingQueries(sessionId, activeBarcode, itemsRef);
-
-  const { potentialMatch, setPotentialMatch } = useCountingAI(
-    consolidatedHistory,
-    session,
-    settings
+  const [currentLocation, setCurrentLocation] = useState(
+    () => localStorage.getItem('last_loc') || 'BODEGA_GRAL'
   );
-
-  const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker();
-
-  // =============================================================================
-  // AUTO-SAVE: Guardar cuando hay cambios
-  // =============================================================================
-
   useEffect(() => {
-    if (sessionId && consolidatedHistory) {
-      const snapshot: CountingSessionSnapshot = {
-        sessionId,
-        items: consolidatedHistory,
-        currentLocation,
-        multiplier: engine.multiplier,
-        timestamp: Date.now(),
-      };
-      saveData(snapshot, sessionId);
-    }
-  }, [sessionId, consolidatedHistory, currentLocation, engine.multiplier, saveData]);
+    localStorage.setItem('last_loc', currentLocation);
+  }, [currentLocation]);
 
-  // =============================================================================
-  // AUTO-SAVE: Mostrar toast de recovery
-  // =============================================================================
+  const { engine, processScan } = useScanPipeline(1);
+  const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
 
+  // ✅ AUTO-SAVE: Configurar guardado automático
+  const autoSaveKey = sessionId ? `counting_session_${sessionId}` : 'counting_session';
+
+  const {
+    state: autoSaveState,
+    saveData,
+    saveNow,
+    getRecoveredData,
+    clearSavedData,
+  } = useAutoSave<CountingSessionSnapshot>({
+    interval: 30000, // Cada 30 segundos
+    storageKey: autoSaveKey,
+    enabled: !!sessionId,
+    showToasts: false, // No mostrar toasts en cada save
+  });
+
+  // ✅ AUTO-SAVE: Recuperar datos si hay sesión anterior
+  const { recoveredData, clearRecovery } =
+    useAutoSaveRecovery<CountingSessionSnapshot>(autoSaveKey);
+
+  // ✅ AUTO-SAVE: Mostrar toast si hay datos recuperables al montar
   useEffect(() => {
     if (recoveredData && sessionId && recoveredData.sessionId === sessionId) {
       toast.info('📦 Sesión anterior recuperada', {
@@ -186,12 +93,36 @@ export const useCountingLogic_v2 = (
     }
   }, [recoveredData, sessionId, clearRecovery]);
 
-  // =============================================================================
-  // ACCIONES
-  // =============================================================================
+  // Composability
+  useCountingSync(sessionId);
+  const { session, consolidatedHistory } = useCountingQueries(
+    sessionId,
+    engine.activeBarcode,
+    itemsRef
+  );
+
+  // ✅ AUTO-SAVE: Guardar cuando hay cambios en los items
+  useEffect(() => {
+    if (sessionId && consolidatedHistory) {
+      const snapshot: CountingSessionSnapshot = {
+        sessionId,
+        items: consolidatedHistory,
+        currentLocation,
+        multiplier: engine.multiplier,
+        timestamp: Date.now(),
+      };
+      saveData(snapshot, sessionId);
+    }
+  }, [sessionId, consolidatedHistory, currentLocation, engine.multiplier, saveData]);
+  const { potentialMatch, setPotentialMatch } = useCountingAI(
+    consolidatedHistory,
+    session,
+    settings
+  );
+  const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker();
 
   const finalizeScanPipeline = useCallback(
-    async (barcode: string, qty?: number, mm?: number, yyyy?: number, batch?: string) => {
+    async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
       if (!sessionId) return;
       const allowedStates = ['IDLE', 'LOOKING_UP', 'COMMITTING', 'MANUAL_ENTRY', 'AWAITING_PHARMA'];
       if (!allowedStates.includes(machineState)) return;
@@ -218,14 +149,13 @@ export const useCountingLogic_v2 = (
         const normBarcode = normalizeSku(barcode);
         const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
         const currentQty = existing?.totalQuantity || 0;
-        const scanQty = qty ?? engine.multiplier;
 
         processScan(
           barcode,
-          scanQty,
+          qty,
           currentQty,
-          undefined,
-          async (cleanBarcode: string, product: any, newQty: number) => {
+          undefined, // Optimistic update is handled by engine internally
+          async (cleanBarcode, product, newQty) => {
             try {
               const needsPharma =
                 shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) &&
@@ -255,7 +185,7 @@ export const useCountingLogic_v2 = (
               dispatch({ type: 'ERROR_OCCURRED' });
             }
           },
-          () => {
+          err => {
             dispatch({ type: 'ERROR_OCCURRED' });
           }
         );
@@ -268,7 +198,7 @@ export const useCountingLogic_v2 = (
         dispatch({ type: 'ERROR_OCCURRED' });
       }
     },
-    [sessionId, settings, currentLocation, consolidatedHistory, machineState, dispatch, engine]
+    [sessionId, settings, currentLocation, consolidatedHistory, machineState, processScan]
   );
 
   const resetSession = useCallback(async () => {
@@ -290,7 +220,7 @@ export const useCountingLogic_v2 = (
 
   const actions = useMemo(
     () => ({
-      setMultiplier,
+      setMultiplier: engine.setMultiplier,
       setCurrentLocation,
       handleExternalScan: finalizeScanPipeline,
       resetSession,
@@ -312,9 +242,12 @@ export const useCountingLogic_v2 = (
       handlePharmaComplete: async (m?: number, y?: number, b?: string) => {
         try {
           if (engine.activeBarcode && m !== undefined && y !== undefined) {
+            // Verificar si es "omitir" (m=0 o y=9999)
             const isSkip = isNoDateRecord(m, y);
 
+            // Solo guardar en expiry si NO es omitir
             if (!isSkip) {
+              // Registrar vencimiento
               await saveExpiry({
                 barcode: engine.activeBarcode,
                 productName: engine.activeProduct?.name,
@@ -322,12 +255,14 @@ export const useCountingLogic_v2 = (
                 yyyy: y,
                 sessionId: sessionId,
               });
+              // Sincronizar a la nube si hay conexión
               const entry = await getExpiryForBarcode(engine.activeBarcode);
               if (entry) {
                 syncExpiry(entry);
               }
             }
 
+            // Continuar con el flujo normal (para contar el producto)
             finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
           }
         } catch (err) {
@@ -383,65 +318,88 @@ export const useCountingLogic_v2 = (
           await SessionRepository.update(sessionId, {
             erpOrder: potentialMatch.expectedOrder.internalId,
             expectedItems: potentialMatch.expectedOrder.items,
+            isVerifiedMode: true,
           });
-          engine.actions.triggerFeedback('success');
           setPotentialMatch(null);
+          engine.actions.triggerFeedback('success');
         } catch (err) {
           logger.error(
             'useCountingLogic',
             'Error in applyPotentialMatch',
             err instanceof Error ? err.message : String(err)
           );
-          toast.error('Error al aplicar sugerencia');
+          toast.error('Error al aplicar coincidencia');
         }
       },
+      dismissPotentialMatch: () => setPotentialMatch(null),
     }),
     [
-      sessionId,
-      session,
-      settings,
-      currentLocation,
-      consolidatedHistory,
-      machineState,
-      engine,
-      dispatch,
+      engine.setMultiplier,
+      setCurrentLocation,
       finalizeScanPipeline,
       resetSession,
-      setMultiplier,
-      setCurrentLocation,
+      engine.actions,
+      engine.activeBarcode,
+      engine.multiplier,
+      sessionId,
+      session,
       potentialMatch,
       setPotentialMatch,
-      saveExpiry,
-      syncExpiry,
-      getExpiryForBarcode,
     ]
   );
 
-  // =============================================================================
-  // RETORNO
-  // =============================================================================
+  // ✅ AUTO-SAVE: Guardar y limpiar al desmontar o salir
+  useEffect(() => {
+    return () => {
+      // Guardar datos pendientes antes de desmontar
+      if (autoSaveState.hasPendingChanges && sessionId) {
+        saveNow();
+      }
+      // Limpiar datos guardados al salir
+      if (recoveredData && sessionId === recoveredData.sessionId) {
+        clearSavedData();
+      }
+    };
+  }, [autoSaveState.hasPendingChanges, sessionId, saveNow, recoveredData, clearSavedData]);
+
+  // ✅ AUTO-SAVE: Confirmar antes de salir si hay cambios pendientes
+  // Usar ref para evitar re-registro de listeners en cada cambio
+  const hasPendingChangesRef = useRef(autoSaveState.hasPendingChanges);
+  hasPendingChangesRef.current = autoSaveState.hasPendingChanges;
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasPendingChangesRef.current) {
+        e.preventDefault();
+        e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de salir?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []); // Dependencia vacía - el ref se actualiza automáticamente
 
   return {
     state: {
-      isLoading,
+      isLoading: session === undefined,
       status: machineState.toLowerCase(),
-      machineState,
-      feedback,
-      multiplier,
+      machineState, // Exportar para detectar AWAITING_PHARMA en UI
+      feedback: engine.feedback,
+      multiplier: engine.multiplier,
       currentLocation,
-      activeBarcode,
-      activeProduct,
-      optimisticQty,
+      activeBarcode: engine.activeBarcode,
+      activeProduct: engine.activeProduct,
+      optimisticQty: engine.optimisticQty || 0,
       potentialMatch,
+      // ✅ AUTO-SAVE: Exportar estado
       autoSave: {
-        hasPendingChanges,
-        lastSaveTime,
-        isSaving,
+        hasPendingChanges: autoSaveState.hasPendingChanges,
+        lastSaveTime: autoSaveState.lastSaveTime,
+        isSaving: autoSaveState.isSaving,
       },
     },
     sessionData: { session, history: consolidatedHistory || [] },
     actions,
   };
 };
-
-export default useCountingLogic_v2;
