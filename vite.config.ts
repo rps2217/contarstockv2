@@ -1,4 +1,3 @@
-
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -32,18 +31,22 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            // Separar UI para mejor cache - tree-shaking parcial
             'vendor-ui': ['lucide-react', 'framer-motion', 'motion', 'sonner'],
             'vendor-charts': ['recharts'],
             'vendor-db': ['dexie', 'dexie-react-hooks'],
-            'vendor-export': ['xlsx', 'jspdf', 'jspdf-autotable'],
+            // SEPARADO: Export chunks para lazy loading independiente
+            'vendor-xlsx': ['xlsx'],
+            'vendor-pdf': ['jspdf', 'jspdf-autotable'],
             'vendor-parse': ['papaparse', 'jszip'],
+            // date-fns con tree-shaking - importar solo lo necesario
             'vendor-date': ['date-fns'],
             'vendor-scanner': ['html5-qrcode', 'qrcode.react'],
             // AI chunks - cargados lazily
             'vendor-gemini': ['@google/genai'],
-            'vendor-transformers': ['@xenova/transformers']
-          }
-        }
+            'vendor-transformers': ['@xenova/transformers'],
+          },
+        },
       },
     },
     plugins: [
@@ -78,38 +81,38 @@ export default defineConfig(({ mode }) => {
               src: 'pwa-icon.svg',
               sizes: '192x192',
               type: 'image/svg+xml',
-              purpose: 'any maskable'
+              purpose: 'any maskable',
             },
             {
               src: 'pwa-icon.svg',
               sizes: '512x512',
               type: 'image/svg+xml',
-              purpose: 'any maskable'
-            }
+              purpose: 'any maskable',
+            },
           ],
           shortcuts: [
             {
-              name: "Recepción",
-              short_name: "Recepción",
-              description: "Ir a Recepción de Mercadería",
-              url: "/#/reception",
-              icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
+              name: 'Recepción',
+              short_name: 'Recepción',
+              description: 'Ir a Recepción de Mercadería',
+              url: '/#/reception',
+              icons: [{ src: 'pwa-icon.svg', sizes: '192x192' }],
             },
             {
-              name: "Vencimientos",
-              short_name: "Vencimientos",
-              description: "Ir a Control de Vencimientos",
-              url: "/#/expiry",
-              icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
+              name: 'Vencimientos',
+              short_name: 'Vencimientos',
+              description: 'Ir a Control de Vencimientos',
+              url: '/#/expiry',
+              icons: [{ src: 'pwa-icon.svg', sizes: '192x192' }],
             },
             {
-              name: "Conteo a Ciegas",
-              short_name: "Conteo",
-              description: "Ir a Conteo a Ciegas",
-              url: "/#/counting",
-              icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
-            }
-          ]
+              name: 'Conteo a Ciegas',
+              short_name: 'Conteo',
+              description: 'Ir a Conteo a Ciegas',
+              url: '/#/counting',
+              icons: [{ src: 'pwa-icon.svg', sizes: '192x192' }],
+            },
+          ],
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -121,12 +124,12 @@ export default defineConfig(({ mode }) => {
                 cacheName: 'google-fonts-cache',
                 expiration: {
                   maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
+                  statuses: [0, 200],
+                },
+              },
             },
             {
               urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
@@ -135,22 +138,26 @@ export default defineConfig(({ mode }) => {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: {
                   maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
-            }
-          ]
-        }
-      })
+                  statuses: [0, 200],
+                },
+              },
+            },
+          ],
+        },
+      }),
     ],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || ""),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || ""),
-      'global': 'window',
-      'process.env.NODE_ENV': JSON.stringify(mode)
-    }
+      'process.env.API_KEY': JSON.stringify(
+        env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''
+      ),
+      'process.env.GEMINI_API_KEY': JSON.stringify(
+        env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''
+      ),
+      global: 'window',
+      'process.env.NODE_ENV': JSON.stringify(mode),
+    },
   };
 });
