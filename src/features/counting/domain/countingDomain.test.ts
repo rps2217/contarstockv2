@@ -19,8 +19,8 @@ import {
   isValidExpiryDate,
   formatBarcode,
   getCountingSummary,
-  type ConsolidatedItem,
 } from './countingDomain';
+import type { ConsolidatedItem } from '@/types';
 
 // Mock de normalizeSku
 vi.mock('@/services/utils', () => ({
@@ -37,8 +37,18 @@ vi.mock('@/features/expiry/constants', () => ({
 const createMockItem = (overrides: Partial<ConsolidatedItem> = {}): ConsolidatedItem => ({
   barcode: '7801234567890',
   productName: 'Producto Test',
+  batch: undefined,
+  expiryDate: undefined,
   totalQuantity: 10,
+  expectedQuantity: undefined,
+  difference: undefined,
+  scans: 1,
+  location: undefined,
+  mm: undefined,
+  yyyy: undefined,
   isIncident: false,
+  frc: undefined,
+  embedding: undefined,
   ...overrides,
 });
 
