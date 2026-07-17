@@ -58,6 +58,11 @@ export type { UseEventsSyncOptions, UseEventsSyncReturn, EventStats } from './us
 export type { EventSyncResult } from '@/services/cloud/EventsSyncService';
 
 // ============================================================================
+// Acciones reutilizables (conteo, Hammer)
+// ============================================================================
+export { useExpiryActions } from './useExpiryActions';
+
+// ============================================================================
 // Exportación de datos
 // ============================================================================
 export { useExport } from './useExport';
