@@ -1,7 +1,5 @@
-
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from 'react';
 import { logger } from '@/services/logger';
-;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import * as sessionService from '../../../services/sessionService';
@@ -24,19 +22,19 @@ export const RECEPTION_BULK_ACTIONS = (
     variant: 'success',
     requiresConfirmation: true,
     confirmMessage: '¿Finalizar las recepciones seleccionadas?',
-    onClick: async (items) => {
+    onClick: async items => {
       for (const item of items) {
         await SessionRepository.markAsCompleted(item.id);
       }
       SoundFX.play('success');
-    }
+    },
   },
   {
     id: 'export',
     label: 'Exportar',
     icon: Download,
     variant: 'default',
-    onClick: onExport
+    onClick: onExport,
   },
   {
     id: 'delete',
@@ -45,8 +43,8 @@ export const RECEPTION_BULK_ACTIONS = (
     variant: 'danger',
     requiresConfirmation: true,
     confirmMessage: '¿Eliminar las recepciones seleccionadas? Esta acción es irreversible.',
-    onClick: onDelete
-  }
+    onClick: onDelete,
+  },
 ];
 
 // Configuración de edición masiva para Reception
@@ -54,11 +52,14 @@ export const RECEPTION_BULK_EDIT_CONFIG: BulkEditConfig = {
   title: 'Actualizar Recepciones',
   description: 'Modificar el estado o información de las recepciones seleccionadas.',
   fields: [],
-  onApply: async () => {}
+  onApply: async () => {},
 };
 
 export const useReceptionLogic = () => {
-  const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
+  const [lastAction, setLastAction] = useState<{
+    type: 'success' | 'duplicate';
+    label: string;
+  } | null>(null);
   const [flashActive, setFlashActive] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -67,53 +68,68 @@ export const useReceptionLogic = () => {
 
   const { addToast } = useToastStore();
 
-  const unsyncedDrafts = useLiveQuery(() => 
-    SessionRepository.getDraftReceptionSessions(50)
-  , [], []);
+  const unsyncedDrafts = useLiveQuery(
+    () => SessionRepository.getAllDraftReceptionSessions(),
+    [],
+    []
+  );
 
   const draftCount = unsyncedDrafts?.filter(s => s.status === 'draft').length || 0;
 
-  const handleScan = useCallback(async (code: string, erpToUse?: string) => {
-    const cleanCode = sanitizeBarcode(code);
-    if (!cleanCode || cleanCode.length < 3) return;
+  const handleScan = useCallback(
+    async (code: string, erpToUse?: string) => {
+      const cleanCode = sanitizeBarcode(code);
+      if (!cleanCode || cleanCode.length < 3) return;
 
-    // Comprobación de integridad: Evitar bultos duplicados en el mismo turno
-    const alreadyExists = await sessionService.checkLabelExists(cleanCode);
-    
-    if (alreadyExists) {
-      setLastAction({ type: 'duplicate', label: cleanCode });
-      SoundFX.play('error');
-      setTimeout(() => setLastAction(prev => prev?.label === cleanCode ? null : prev), 3000);
-      return;
-    }
+      // Comprobación de integridad: Evitar bultos duplicados en el mismo turno
+      const alreadyExists = await sessionService.checkLabelExists(cleanCode);
 
-    try {
-      // En lugar de crear la sesión inmediatamente, activamos el modo foto
-      setPendingPhotoCode(cleanCode);
-      SoundFX.play('success');
-      if (navigator.vibrate) navigator.vibrate(40);
-    } catch (err) { 
-      SoundFX.play('error'); 
-    }
-  }, [currentErp]);
+      if (alreadyExists) {
+        setLastAction({ type: 'duplicate', label: cleanCode });
+        SoundFX.play('error');
+        setTimeout(() => setLastAction(prev => (prev?.label === cleanCode ? null : prev)), 3000);
+        return;
+      }
 
-  const completeReceptionWithPhoto = useCallback(async (photo: string) => {
-    if (!pendingPhotoCode) return;
-    
-    try {
-      await sessionService.createSession(currentErp, pendingPhotoCode, 'reception', undefined, photo, undefined);
-      
-      setLastAction({ type: 'success', label: pendingPhotoCode });
-      setFlashActive(true);
-      setPendingPhotoCode(null);
-      
-      setTimeout(() => setFlashActive(false), 150);
-      setTimeout(() => setLastAction(null), 1500);
-    } catch (err) {
-      SoundFX.play('error');
-      addToast('Error al guardar la fotografía', 'error');
-    }
-  }, [pendingPhotoCode, currentErp, addToast]);
+      try {
+        // En lugar de crear la sesión inmediatamente, activamos el modo foto
+        setPendingPhotoCode(cleanCode);
+        SoundFX.play('success');
+        if (navigator.vibrate) navigator.vibrate(40);
+      } catch (err) {
+        SoundFX.play('error');
+      }
+    },
+    [currentErp]
+  );
+
+  const completeReceptionWithPhoto = useCallback(
+    async (photo: string) => {
+      if (!pendingPhotoCode) return;
+
+      try {
+        await sessionService.createSession(
+          currentErp,
+          pendingPhotoCode,
+          'reception',
+          undefined,
+          photo,
+          undefined
+        );
+
+        setLastAction({ type: 'success', label: pendingPhotoCode });
+        setFlashActive(true);
+        setPendingPhotoCode(null);
+
+        setTimeout(() => setFlashActive(false), 150);
+        setTimeout(() => setLastAction(null), 1500);
+      } catch (err) {
+        SoundFX.play('error');
+        addToast('Error al guardar la fotografía', 'error');
+      }
+    },
+    [pendingPhotoCode, currentErp, addToast]
+  );
 
   const finalizeReception = useCallback(async () => {
     if (!unsyncedDrafts?.length) return false;
@@ -122,26 +138,30 @@ export const useReceptionLogic = () => {
       const ids = unsyncedDrafts.map(d => d.id);
       await Promise.all(ids.map(id => SessionRepository.markAsCompleted(id)));
       SoundFX.play('success');
-      
+
       // Automatic cloud synchronization
       if (navigator.onLine) {
         addToast('Sincronizando recepción con la nube...', 'info');
         const groups = await getPendingUploadGroups();
         const receptionGroup = groups.find(g => g.type === 'reception');
-        
+
         if (receptionGroup) {
           try {
             await uploadGroupCompat(receptionGroup);
             addToast('Recepción sincronizada correctamente', 'success');
           } catch (syncError: unknown) {
-            logger.error('useReceptionLogic', 'Sync error', syncError instanceof Error ? syncError.message : String(syncError));
+            logger.error(
+              'useReceptionLogic',
+              'Sync error',
+              syncError instanceof Error ? syncError.message : String(syncError)
+            );
             addToast('Error al sincronizar. Se reintentará automáticamente.', 'warning');
           }
         }
       } else {
         addToast('Recepción guardada localmente. Se sincronizará al conectar.', 'info');
       }
-      
+
       return true;
     } catch (err: unknown) {
       SoundFX.play('error');
@@ -158,8 +178,8 @@ export const useReceptionLogic = () => {
   };
 
   const discardAll = useCallback(async () => {
-    if (confirm("¿Borrar toda la cola de recepción?")) {
-      await SessionRepository.deleteDraftReceptionSessions();
+    if (confirm('¿Borrar toda la cola de recepción?')) {
+      await SessionRepository.deleteAllDraftReceptionSessions();
       SoundFX.play('delete');
     }
   }, []);
@@ -176,24 +196,29 @@ export const useReceptionLogic = () => {
 
       const groups = await getPendingUploadGroups();
       const receptionGroup = groups.find(g => g.type === 'reception');
-      
+
       if (receptionGroup) {
         await uploadGroupCompat(receptionGroup);
       }
 
       // RECONCILIACIÓN: Limpiar registros borrados en otros dispositivos
       const reconcileResult = await reconcileReception();
-      
+
       if (receptionGroup || reconcileResult.deleted > 0) {
         let msg = 'Recepción sincronizada correctamente';
-        if (reconcileResult.deleted > 0) msg += `. Se limpiaron ${reconcileResult.deleted} registros obsoletos.`;
+        if (reconcileResult.deleted > 0)
+          msg += `. Se limpiaron ${reconcileResult.deleted} registros obsoletos.`;
         addToast(msg, 'success');
         SoundFX.play('success');
       } else {
         addToast('No hay datos pendientes de sincronizar', 'info');
       }
     } catch (err: unknown) {
-      logger.error('useReceptionLogic', 'Manual sync error', err instanceof Error ? err.message : String(err));
+      logger.error(
+        'useReceptionLogic',
+        'Manual sync error',
+        err instanceof Error ? err.message : String(err)
+      );
       addToast('Error al sincronizar con la nube', 'error');
       SoundFX.play('error');
     } finally {
@@ -201,21 +226,40 @@ export const useReceptionLogic = () => {
     }
   }, [isSyncing, unsyncedDrafts, addToast]);
 
-  const actions = React.useMemo(() => ({
-    handleScan, 
-    handleManualInput: handleScan, 
-    deleteDraft, 
-    finalizeReception, 
-    discardAll, 
-    syncToCloud, 
-    setCurrentErp,
-    setPendingPhotoCode,
-    completeReceptionWithPhoto
-  }), [handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp, completeReceptionWithPhoto]);
+  const actions = React.useMemo(
+    () => ({
+      handleScan,
+      handleManualInput: handleScan,
+      deleteDraft,
+      finalizeReception,
+      discardAll,
+      syncToCloud,
+      setCurrentErp,
+      setPendingPhotoCode,
+      completeReceptionWithPhoto,
+    }),
+    [
+      handleScan,
+      deleteDraft,
+      finalizeReception,
+      discardAll,
+      syncToCloud,
+      setCurrentErp,
+      completeReceptionWithPhoto,
+    ]
+  );
 
   return {
-    state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp, pendingPhotoCode },
-    actions
+    state: {
+      lastAction,
+      flashActive,
+      draftCount,
+      unsyncedDrafts,
+      isFinalizing,
+      isSyncing,
+      currentErp,
+      pendingPhotoCode,
+    },
+    actions,
   };
 };
-

@@ -1,6 +1,5 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react';
 import { logger } from '@/services/logger';
-;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ScanRepository } from '../../../repositories/ScanRepository';
@@ -16,26 +15,33 @@ export const useReceptionHistory = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [isExporting, setIsExporting] = useState(false);
 
-  const startTimestamp = useMemo(() => startDate ? new Date(startDate).getTime() : undefined, [startDate]);
-  const endTimestamp = useMemo(() => endDate ? new Date(endDate).getTime() + 86399999 : undefined, [endDate]);
+  const startTimestamp = useMemo(
+    () => (startDate ? new Date(startDate).getTime() : undefined),
+    [startDate]
+  );
+  const endTimestamp = useMemo(
+    () => (endDate ? new Date(endDate).getTime() + 86399999 : undefined),
+    [endDate]
+  );
 
   const sessions = useLiveQuery(
-    () => SessionRepository.getReceptionHistory(searchQuery, limit, startTimestamp, endTimestamp),
-    [searchQuery, limit, startTimestamp, endTimestamp]
+    () =>
+      SessionRepository.getReceptionHistory(startTimestamp ?? 0, endTimestamp ?? Date.now(), limit),
+    [startTimestamp, endTimestamp, limit]
   );
 
   // Descarga inicial de datos de recepción desde la nube
   const [isInitialLoading, setIsInitialLoading] = useState(false);
-  
+
   const pullCloudData = useCallback(async () => {
     if (isInitialLoading) return;
     setIsInitialLoading(true);
     try {
       const config = (await import('../../../services/settings')).getSettings().cloudConfig;
-      const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
+      const targetTable = config?.receptionTableName || 'RECEPCION_BULTOS';
       const { supabaseSyncService } = await import('../../../services/supabaseSyncService');
       const { db } = await import('../../../db');
-      
+
       const response = await supabaseSyncService.pullBatch(targetTable);
       if (response.success && response.rows) {
         const sessionsToPut = response.rows.map((r: any) => ({
@@ -47,7 +53,7 @@ export const useReceptionHistory = () => {
           sessionType: 'reception' as const,
           lastSyncTimestamp: r.lastSyncTimestamp || Date.now(),
           totalUnits: r.totalUnits || 0,
-          totalSKUs: r.totalSKUs || 0
+          totalSKUs: r.totalSKUs || 0,
         }));
 
         if (sessionsToPut.length > 0) {
@@ -55,7 +61,11 @@ export const useReceptionHistory = () => {
         }
       }
     } catch (err: unknown) {
-      logger.error('useReceptionHistory', 'Error pulling reception data', err instanceof Error ? err.message : String(err));
+      logger.error(
+        'useReceptionHistory',
+        'Error pulling reception data',
+        err instanceof Error ? err.message : String(err)
+      );
     } finally {
       setIsInitialLoading(false);
     }
@@ -75,13 +85,13 @@ export const useReceptionHistory = () => {
     setIsExporting(true);
     try {
       const data = sessions.map(s => ({
-        'ID': s.id,
-        'ERP_ORDEN': s.erpOrder,
-        'ETIQUETA_LOGISTICA': s.logisticsLabel,
-        'FECHA': format(s.createdAt, 'yyyy-MM-dd'),
-        'HORA': format(s.createdAt, 'HH:mm:ss'),
-        'ESTADO': s.status,
-        'SINCRONIZADO': s.lastSyncTimestamp ? 'SÍ' : 'NO'
+        ID: s.id,
+        ERP_ORDEN: s.erpOrder,
+        ETIQUETA_LOGISTICA: s.logisticsLabel,
+        FECHA: format(s.createdAt, 'yyyy-MM-dd'),
+        HORA: format(s.createdAt, 'HH:mm:ss'),
+        ESTADO: s.status,
+        SINCRONIZADO: s.lastSyncTimestamp ? 'SÍ' : 'NO',
       }));
 
       const csv = Papa.unparse(data);
@@ -106,10 +116,7 @@ export const useReceptionHistory = () => {
 
   // Limpiar todas las sesiones de recepción
   const clearAll = useCallback(async () => {
-    const sessionsToDelete = await db.sessions
-      .where('sessionType')
-      .equals('reception')
-      .toArray();
+    const sessionsToDelete = await db.sessions.where('sessionType').equals('reception').toArray();
     const ids = sessionsToDelete.map(s => s.id);
     if (ids.length > 0) {
       await db.sessions.bulkDelete(ids);
@@ -123,7 +130,7 @@ export const useReceptionHistory = () => {
       startDate,
       endDate,
       isExporting,
-      hasMore: sessions?.length === limit
+      hasMore: sessions?.length === limit,
     },
     actions: {
       setSearchQuery,
@@ -132,7 +139,7 @@ export const useReceptionHistory = () => {
       loadMore,
       exportToCSV,
       deleteSession,
-      clearAll
-    }
+      clearAll,
+    },
   };
 };

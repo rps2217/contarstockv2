@@ -34,6 +34,7 @@ describe('CustomerRepository Types', () => {
       phone: '+56912345678',
       syncStatus: 'pending',
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     expect(customer.firstName).toBe('Juan');

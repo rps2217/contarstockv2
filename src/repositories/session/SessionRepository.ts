@@ -134,6 +134,31 @@ export class SessionRepository {
     return { data, total };
   }
 
+  static async getPaginatedWithCursor(options: {
+    cursor?: string | number;
+    limit: number;
+    sortBy?: string;
+    filter?: Record<string, string>;
+  }): Promise<{
+    items: CountingSession[];
+    hasMore: boolean;
+    nextCursor: string | null;
+  }> {
+    // Apply sorting
+    const sortField = options.sortBy || 'createdAt';
+    const data = await db.sessions
+      .orderBy(sortField)
+      .reverse()
+      .limit(options.limit + 1)
+      .toArray();
+
+    const hasMore = data.length > options.limit;
+    const items = hasMore ? data.slice(0, -1) : data;
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+
+    return { items, hasMore, nextCursor };
+  }
+
   static async markSynced(ids: string[]): Promise<void> {
     const timestamp = Date.now();
     await db.sessions.where('id').anyOf(ids).modify({
@@ -176,6 +201,24 @@ export class SessionRepository {
 
   static async restore(id: string): Promise<void> {
     await db.sessions.update(id, { status: 'draft', syncStatus: 'pending' });
+  }
+
+  // ============================================================================
+  // MÉTODOS ESTÁTICOS ADICIONALES (para uso legacy sin argumentos)
+  // ============================================================================
+  static async getAllDraftReceptionSessions(): Promise<CountingSession[]> {
+    return await db.sessions
+      .filter(s => s.sessionType === 'reception' && s.status === 'draft')
+      .toArray();
+  }
+
+  static async deleteAllDraftReceptionSessions(): Promise<void> {
+    const sessions = await db.sessions
+      .filter(s => s.sessionType === 'reception' && s.status === 'draft')
+      .toArray();
+    if (sessions.length > 0) {
+      await db.sessions.bulkDelete(sessions.map(s => s.id));
+    }
   }
 
   // ============================================================================
