@@ -32,6 +32,7 @@ export {
 export { useOptimisticCounting } from './useOptimisticCounting';
 export { useProductivityMetrics } from './useProductivityMetrics';
 export { useHapticFeedback } from './useHapticFeedback';
+export { useVoiceCommands, VoiceIndicator } from './useVoiceCommands';
 
 // Re-exports desde shared/hooks para compatibilidad
 export { useProductivity, type ProductivityStats } from '@/shared/hooks';
