@@ -16,5 +16,6 @@ export { CountingFinishModal, CountingFinishModalLegacy } from './CountingFinish
 
 // Nuevos componentes
 export { CountingMetricsBar, CountingMetricsCompact } from './CountingMetricsBar';
+export { ProductivityDashboard } from './ProductivityDashboard';
 export { DiscrepancyReport } from './DiscrepancyReport';
 export { CountingHistory, type CountingHistoryItem } from './CountingHistory';
