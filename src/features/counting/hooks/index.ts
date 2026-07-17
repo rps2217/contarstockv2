@@ -52,3 +52,4 @@ export {
   shouldProcessBarcodeInput,
 } from './useCountingScanner';
 export { useCountingAutosave, type CountingSessionSnapshot } from './useCountingAutosave';
+export { useCountingActions } from './useCountingActions';

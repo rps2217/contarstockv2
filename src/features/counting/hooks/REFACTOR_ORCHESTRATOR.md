@@ -1,8 +1,8 @@
 # Refactor del Orquestador - useCountingLogic
 
-**Estado:** ✅ COMPLETADO
+**Estado:** ✅ COMPLETADO (Sprint 2)
 **Fecha:** 2026-07-16
-**Commits:** 6 (fa6f7fa → d2affac)
+**Commits:** 7+
 
 ---
 
@@ -11,12 +11,13 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ ANTES: useCountingLogic.ts (405 LOC) - GOD HOOK            │
-│ DESPUÉS: 3 hooks + orquestador (~450 LOC total)            │
+│ DESPUÉS: 4 hooks + orquestador (~520 LOC total)            │
 ├─────────────────────────────────────────────────────────────┤
 │ ✅ useCountingSession (~150 LOC)                           │
 │ ✅ useCountingScanner (~90 LOC)                             │
 │ ✅ useCountingAutosave (~200 LOC)                           │
-│ ✅ useCountingLogic.ts (orquestador ~450 LOC)              │
+│ ✅ useCountingActions (~300 LOC) - NUEVO Sprint 2           │
+│ ✅ useCountingLogic.ts (orquestador ~215 LOC)              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,6 +66,45 @@ const { saveNow, hasPendingChanges, lastSaveTime, clearSavedData, recoveredData 
   useCountingAutosave(sessionId, options);
 ```
 
+### 4. `useCountingActions` - Acciones de Conteo (NUEVO Sprint 2)
+
+**Responsabilidad:** Todas las acciones del flujo de conteo extraídas para reutilización
+
+**Tamaño actual:** ~300 LOC
+
+```typescript
+// Uso:
+const actions = useCountingActions({
+  sessionId,
+  engine,
+  settings,
+  consolidatedHistory,
+  currentLocation,
+  multiplier,
+  activeBarcode,
+  activeProduct,
+  machineState,
+  potentialMatch,
+  dispatch,
+  saveExpiry,
+  getExpiryForBarcode,
+  syncExpiry,
+});
+
+// Acciones disponibles:
+actions.finalizeScanPipeline; // Escanear producto
+actions.resetSession; // Resetear sesión
+actions.selectItem; // Seleccionar item
+actions.handlePharmaComplete; // Completar fecha vencimiento
+actions.cancelPharma; // Cancelar pharma
+actions.undoLastScan; // Deshacer último escaneo
+actions.toggleAutoLock; // Toggle auto-lock
+actions.setStatus; // Cambiar status
+actions.applyPotentialMatch; // Aplicar sugerencia AI
+```
+
+**Reutilizable en:** Hammer, Reception
+
 ---
 
 ## 🔄 ARQUITECTURA IMPLEMENTADA
@@ -72,16 +112,16 @@ const { saveNow, hasPendingChanges, lastSaveTime, clearSavedData, recoveredData 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    useCountingLogic.ts                       │
-│                    (Wrapper/Composer ~450 LOC)               │
+│                    (Orquestador ~215 LOC)                   │
 ├─────────────────────────────────────────────────────────────┤
 │  ✅ useCountingSession   → Sesión, multiplicador, location │
-│  ✅ useCountingScanner   → State machine, processScan      │
-│  ✅ useCountingAutosave  → Persistencia, recovery         │
-│  useCountingActions     → Pendiente (inline por ahora)     │
-│  useCountingSync        → Ya existe                       │
-│  useCountingQueries     → Ya existe                       │
-│  useCountingAI          → Ya existe                       │
-│  useExpiryTracker       → Ya existe                       │
+│  ✅ useCountingScanner   → State machine, processScan       │
+│  ✅ useCountingAutosave  → Persistencia, recovery          │
+│  ✅ useCountingActions   → Acciones (REUTILIZABLE)          │
+│  ✅ useCountingSync      → Sincronización                  │
+│  ✅ useCountingQueries   → Queries consolidadas              │
+│  ✅ useCountingAI       → Sugerencias AI                   │
+│  ✅ useExpiryTracker    → Tracking de vencimiento           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -144,22 +184,24 @@ interface CountingState {
 - [x] `useCountingLogic.ts` refactorizado usando hooks
 - [x] Hooks extraídos reutilizables
 - [x] TypeScript sin errores
-- [x] Tests pasando (915 tests)
+- [x] Tests pasando (955 tests)
 - [x] Build exitoso
-- [ ] `useCountingLogic.ts` ≤ 100 LOC (pendiente, actualmente ~450 LOC)
+- [x] Acciones extraídas a `useCountingActions`
+- [x] Hooks reutilizables en otros módulos (Hammer, Reception)
 - [ ] Tests para cada hook (parcialmente)
 
 ---
 
 ## 📈 MÉTRICAS
 
-| Métrica              | Antes | Después |
-| -------------------- | ----- | ------- |
-| LOC useCountingLogic | ~405  | ~450    |
-| Hooks reutilizables  | 0     | 3       |
-| Tests countingDomain | 0     | 42      |
-| Tests sessionTypes   | 0     | 23      |
-| Total tests          | 915   | 915     |
+| Métrica                | Antes | Después |
+| ---------------------- | ----- | ------- |
+| LOC useCountingLogic   | ~405  | ~216    |
+| LOC useCountingActions | 0     | ~305    |
+| Hooks reutilizables    | 0     | 4       |
+| Tests countingDomain   | 0     | 42      |
+| Tests sessionTypes     | 0     | 23      |
+| Total tests            | 915   | 955     |
 
 ---
 
