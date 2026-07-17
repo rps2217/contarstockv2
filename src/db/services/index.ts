@@ -40,3 +40,6 @@ export type {
   SearchResponse,
   SearchHistory,
 } from './FullTextSearchService';
+
+export { IntegrityValidator } from './IntegrityValidator';
+export type { IntegrityIssue, IntegrityReport, IntegrityMetrics } from './IntegrityValidator';
