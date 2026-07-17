@@ -3,3 +3,4 @@
  */
 
 export * from './countingDomain';
+export * from './sessionTypes';
