@@ -65,3 +65,14 @@ export type {
   VersionHistory,
   RollbackResult,
 } from './VersionManager';
+
+export { QualityMetricsCollector } from './QualityMetricsCollector';
+export type {
+  QualityMetrics,
+  CountingMetrics,
+  SyncMetrics,
+  DataQualityMetrics,
+  QualitySummary,
+  QualityIssue,
+  QualityTrend,
+} from './QualityMetricsCollector';
