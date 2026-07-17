@@ -2,19 +2,19 @@
  * =============================================================================
  * UNIFIED SYNC MODULE - Índice Público
  * =============================================================================
- * 
+ *
  * Punto de entrada único para el sistema de sincronización unificado.
  * Reemplaza: GenericSyncEngine, BatchSyncService, RealtimeSyncService, SyncQueueService
- * 
+ *
  * @example
  * import { unifiedSyncEngine, syncCatalogs, syncAll } from '@/services/sync/unified';
- * 
+ *
  * // Sincronización completa
  * await syncAll();
- * 
+ *
  * // Solo catálogos
  * await syncCatalogs();
- * 
+ *
  * // Encolar un cambio
  * await unifiedSyncEngine.enqueue({
  *   tableName: 'products',
@@ -22,15 +22,15 @@
  *   operation: 'update',
  *   data: { name: 'New Name' },
  * });
- * 
+ *
  * @module sync/unified
  */
 
 // Motor principal
-export { 
-  UnifiedSyncEngine, 
+export {
+  UnifiedSyncEngine,
   unifiedSyncEngine,
-  default as UnifiedSyncEngineDefault 
+  default as UnifiedSyncEngineDefault,
 } from './UnifiedSyncEngine';
 
 // Tipos
@@ -40,31 +40,31 @@ export type {
   SyncStatus,
   SyncResult,
   TableSyncResult,
-  
+
   // Estados FSM
   SyncState,
   SyncEvent,
-  
+
   // Cola offline
   QueuedSyncItem,
   QueueProcessResult,
-  
+
   // Conflictos
   ConflictResolution,
   ConflictStrategy,
   SyncConflict,
-  
+
   // Stats
   SyncStats,
   SyncMetrics,
-  
+
   // Configuración
   SyncEngineConfig,
   DEFAULT_SYNC_CONFIG,
-  
+
   // Registry
   TableSyncMeta,
-  
+
   // Eventos
   SyncEventType,
   SyncEventPayload,
@@ -72,7 +72,7 @@ export type {
 } from './types';
 
 // Registry
-export { 
+export {
   syncRegistry,
   CATALOG_TABLES,
   UPLOAD_ONLY_TABLES,
@@ -101,7 +101,7 @@ export const syncBatches = () => unifiedSyncEngine.syncBatches();
 /**
  * Encola un cambio para sincronización offline
  */
-export const enqueueSync = (item: Parameters<typeof unifiedSyncEngine.enqueue>[0]) => 
+export const enqueueSync = (item: Parameters<typeof unifiedSyncEngine.enqueue>[0]) =>
   unifiedSyncEngine.enqueue(item);
 
 /**
@@ -138,20 +138,27 @@ export const getSyncState = () => unifiedSyncEngine.getState();
 export { uploadBatch, resetSyncLock };
 
 // Conflict resolution exports
-export {
-  CONFLICT_RESOLUTIONS,
-  getConflictResolutionLabel,
-} from './ConflictResolutionHelper';
-
+export { CONFLICT_RESOLUTIONS, getConflictResolutionLabel } from './ConflictResolutionHelper';
 
 // Metrics service export
+export { syncMetricsService, default as SyncMetricsService } from './SyncMetricsService';
+export type { MetricRecord, MetricOperation, TableMetrics, SyncTrend } from './SyncMetricsService';
+
+// =============================================================================
+// MÓDULOS REFACTORIZADOS (Julio 2026)
+// =============================================================================
+
+// Helpers utilitarios (Único módulo refactorizado completado)
 export {
-  syncMetricsService,
-  default as SyncMetricsService,
-} from './SyncMetricsService';
-export type {
-  MetricRecord,
-  MetricOperation,
-  TableMetrics,
-  SyncTrend,
-} from './SyncMetricsService';
+  formatError,
+  extractColumnNameFromError,
+  sanitizeData,
+  recordSyncMetric,
+} from './syncHelpers';
+
+// NOTA: Los siguientes módulos están en desarrollo:
+// - SyncFSM
+// - SyncQueueProcessor
+// - ConflictResolver
+// - SyncRealtimeManager
+// Pendiente: Corregir tipos para completar la refactorización
