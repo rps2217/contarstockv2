@@ -131,8 +131,8 @@ Solo existe la tabla `sessions`. El resto del schema no está versionado.
 
 ### Sprint DB-3: Consistencia Repositorios
 
-- [ ] Elegir estilo canónico (instancia + singleton)
-- [ ] Migrar consumidores
+- [x] Elegir estilo (singleton) canónico (instancia + singleton)
+- [x] Migrar consumidores (SessionRepository) consumidores
 - [ ] Deprecation wrappers
 
 ---
