@@ -23,3 +23,20 @@ export type {
   RestoreResult,
   RecoveryPoint,
 } from './BackupService';
+
+export { DatabaseCleanupService } from './DatabaseCleanupService';
+export type {
+  CleanupPolicy,
+  CleanupResult,
+  CleanupReport,
+  CleanupConfig,
+} from './DatabaseCleanupService';
+
+export { FullTextSearchService } from './FullTextSearchService';
+export type {
+  SearchableField,
+  SearchConfig,
+  SearchResult,
+  SearchResponse,
+  SearchHistory,
+} from './FullTextSearchService';
