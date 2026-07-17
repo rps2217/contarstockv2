@@ -13,6 +13,11 @@
     <!-- Performance: Preconnect a Google Fonts (reducir DNS lookup) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Performance: Preload chunks críticos para primer render -->
+    <link rel="modulepreload" href="/assets/vendor-react.module.js" />
+    <link rel="modulepreload" href="/assets/vendor-ui.module.js" />
+    <link rel="modulepreload" href="/assets/AppShell.module.js" />
     
     <!-- Performance: Fonts con display=swap para no bloquear render -->
     <!-- DM Sans: Fuente principal de la UI -->

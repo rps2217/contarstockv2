@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       chunkSizeWarningLimit: 2000,
+      // Generar tamaños para análisis
+      brotliSize: true,
       rollupOptions: {
         output: {
           manualChunks: {
