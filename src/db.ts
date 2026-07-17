@@ -239,6 +239,21 @@ export class LogiCountDB extends Dexie {
     lastHeartbeat?: number;
     metadata?: Record<string, unknown>;
   }>;
+  /** Snapshots de versiones para rollback */
+  snapshots!: Table<{
+    id: string;
+    tableName: string;
+    recordId: string;
+    version: number;
+    type: 'manual' | 'auto' | 'pre_sync' | 'pre_delete';
+    createdAt: number;
+    createdBy?: string;
+    description?: string;
+    checksum: string;
+    recordCount: number;
+    sizeBytes: number;
+    data: any;
+  }>;
 
   constructor() {
     super('LogiCountDB');

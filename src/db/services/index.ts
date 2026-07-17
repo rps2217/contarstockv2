@@ -54,3 +54,14 @@ export type {
 
 export { SessionLockManager } from './SessionLockManager';
 export type { SessionLock, LockResult, LockInfo } from './SessionLockManager';
+
+export { VersionManager } from './VersionManager';
+export type {
+  SnapshotType,
+  SnapshotMetadata,
+  SnapshotData,
+  SnapshotMetrics,
+  VersionDiff,
+  VersionHistory,
+  RollbackResult,
+} from './VersionManager';

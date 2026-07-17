@@ -291,6 +291,10 @@ export const AppEvents = {
   SESSION_LOCK_ACQUIRED: 'session:lock-acquired',
   SESSION_LOCK_RELEASED: 'session:lock-released',
   SESSION_LOCK_FORCED: 'session:lock-forced',
+
+  // snapshots
+  SNAPSHOT_CREATED: 'snapshot:created',
+  SNAPSHOT_RESTORED: 'snapshot:restored',
 } as const;
 
 // ============================================================================
