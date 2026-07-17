@@ -56,130 +56,88 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions) {
   const [isSupported, setIsSupported] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
+  // Refs para callbacks (evitar stale closures)
   const callbacksRef = useRef(callbacks);
+  const isMutedRef = useRef(isMuted);
+  const showToastsRef = useRef(showToasts);
   callbacksRef.current = callbacks;
-
-  const handleCommandRef = useRef(handleCommand);
-  handleCommandRef.current = handleCommand;
+  isMutedRef.current = isMuted;
+  showToastsRef.current = showToasts;
 
   // Verificar soporte
   useEffect(() => {
     setIsSupported(VoiceCommandService.isSupported());
   }, []);
 
-  // Configurar servicio
-  useEffect(() => {
-    VoiceCommandService.updateConfig({
-      language,
-      enabled,
-      onListening: setIsListening,
-      onCommand: result => {
-        setLastCommand(result);
-        handleCommandRef.current(result);
-      },
-      onStart: () => {
-        if (showToasts) {
-          toast.info('🎤 Escuchando comandos de voz...', { duration: 2000 });
-        }
-      },
-      onEnd: () => {
-        if (showToasts) {
-          // toast info deshabilitado para no spamear
-        }
-      },
-      onError: error => {
-        logger.error('VoiceCommands', 'Error', { error });
-        if (showToasts) {
-          toast.error(`Error de voz: ${error}`);
-        }
-      },
-    });
-  }, [language, enabled, showToasts]);
-
-  // Auto-start si está habilitado
-  const startRef = useRef(start);
-  startRef.current = start;
-
-  useEffect(() => {
-    if (autoStart && enabled && isSupported) {
-      startRef.current();
-    }
-
-    return () => {
-      VoiceCommandService.stop();
-    };
-  }, [autoStart, enabled, isSupported]);
-
   /**
    * Procesar comando
    */
-  const handleCommand = useCallback(
-    (result: VoiceCommandResult) => {
-      const { command, quantity } = result;
+  const processCommand = useCallback((result: VoiceCommandResult) => {
+    const { command, quantity } = result;
 
-      logger.debug('VoiceCommands', 'Processing command', { command, quantity });
+    logger.debug('VoiceCommands', 'Processing command', { command, quantity });
 
-      switch (command) {
-        case 'NEXT':
-          callbacksRef.current.onNext?.();
-          if (showToasts) toast.info('Siguiente');
-          break;
+    switch (command) {
+      case 'NEXT':
+        callbacksRef.current.onNext?.();
+        if (showToastsRef.current) toast.info('→ Siguiente');
+        break;
 
-        case 'PREVIOUS':
-          callbacksRef.current.onPrevious?.();
-          if (showToasts) toast.info('Anterior');
-          break;
+      case 'PREVIOUS':
+        callbacksRef.current.onPrevious?.();
+        if (showToastsRef.current) toast.info('← Anterior');
+        break;
 
-        case 'CONFIRM':
-          callbacksRef.current.onConfirm?.();
-          if (showToasts) toast.success('✓ Confirmado');
-          break;
+      case 'CONFIRM':
+        callbacksRef.current.onConfirm?.();
+        if (showToastsRef.current) toast.success('✓ Confirmado');
+        break;
 
-        case 'CANCEL':
-          callbacksRef.current.onCancel?.();
-          if (showToasts) toast.warning('✗ Cancelado');
-          break;
+      case 'CANCEL':
+        callbacksRef.current.onCancel?.();
+        if (showToastsRef.current) toast.warning('✗ Cancelado');
+        break;
 
-        case 'SET_QUANTITY':
-          if (quantity !== undefined) {
-            callbacksRef.current.onSetQuantity?.(quantity);
-            if (showToasts) toast.info(`Cantidad: ${quantity}`);
-          }
-          break;
+      case 'SET_QUANTITY':
+        if (quantity !== undefined) {
+          callbacksRef.current.onSetQuantity?.(quantity);
+          if (showToastsRef.current) toast.info(`Cantidad: ×${quantity}`);
+        }
+        break;
 
-        case 'UNDO':
-          callbacksRef.current.onUndo?.();
-          if (showToasts) toast.info('Deshacer');
-          break;
+      case 'UNDO':
+        callbacksRef.current.onUndo?.();
+        if (showToastsRef.current) toast.info('↩ Deshacer');
+        break;
 
-        case 'FINISH':
-          callbacksRef.current.onFinish?.();
-          if (showToasts) toast.success('✓ Finalizando...');
-          break;
+      case 'FINISH':
+        callbacksRef.current.onFinish?.();
+        if (showToastsRef.current) toast.success('✓ Finalizando...');
+        break;
 
-        case 'HELP':
-          callbacksRef.current.onHelp?.();
-          break;
+      case 'HELP':
+        callbacksRef.current.onHelp?.();
+        break;
 
-        case 'MUTE':
-          setIsMuted(prev => !prev);
-          callbacksRef.current.onMute?.();
-          if (showToasts) toast.info(isMuted ? 'Sonido activado' : 'Silenciado');
-          break;
+      case 'MUTE':
+        setIsMuted(prev => !prev);
+        callbacksRef.current.onMute?.();
+        if (showToastsRef.current) {
+          toast.info(isMutedRef.current ? '🔊 Sonido activado' : '🔇 Silenciado');
+        }
+        break;
 
-        case 'REPEAT':
-          callbacksRef.current.onRepeat?.();
-          break;
+      case 'REPEAT':
+        callbacksRef.current.onRepeat?.();
+        break;
 
-        case 'UNKNOWN':
-          if (showToasts) {
-            toast.warning(`Comando no reconocido: "${result.transcript}"`);
-          }
-          break;
-      }
-    },
-    [showToasts, isMuted]
-  );
+      case 'UNKNOWN':
+        if (showToastsRef.current) {
+          toast.warning(`Comando no reconocido: "${result.transcript}"`);
+        }
+        break;
+    }
+  }, []);
 
   /**
    * Iniciar escucha
@@ -198,6 +156,48 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions) {
     }
     return success;
   }, [isSupported, isListening, showToasts]);
+
+  // Ref para start (para auto-start effect)
+  const startRef = useRef(start);
+  startRef.current = start;
+
+  // Configurar servicio
+  useEffect(() => {
+    VoiceCommandService.updateConfig({
+      language,
+      enabled,
+      onListening: setIsListening,
+      onCommand: result => {
+        setLastCommand(result);
+        processCommand(result);
+      },
+      onStart: () => {
+        if (showToastsRef.current) {
+          toast.info('🎤 Escuchando comandos de voz...', { duration: 2000 });
+        }
+      },
+      onEnd: () => {
+        // No spamear toasts al detener
+      },
+      onError: error => {
+        logger.error('VoiceCommands', 'Error', { error });
+        if (showToastsRef.current) {
+          toast.error(`Error de voz: ${error}`);
+        }
+      },
+    });
+  }, [language, enabled, processCommand]);
+
+  // Auto-start si está habilitado
+  useEffect(() => {
+    if (autoStart && enabled && isSupported) {
+      startRef.current();
+    }
+
+    return () => {
+      VoiceCommandService.stop();
+    };
+  }, [autoStart, enabled, isSupported]);
 
   /**
    * Detener escucha
