@@ -112,21 +112,21 @@ Solo existe la tabla `sessions`. El resto del schema no está versionado.
 
 ### Sprint DB-0: Auditoría ✅
 
-- [x] Confirmar estilos de repositorios
+- [x] Confirmar estilos de repositorios (10 archivos con doble estilo)
 - [ ] Confirmar schema Supabase completo
 - [ ] Agregar storage.estimate() al health check
 
 ### Sprint DB-1: Tests (Prioridad #1)
 
-- [ ] Backup round-trip tests (3 escenarios)
+- [x] BackupService.test.ts (8 tests) tests (3 escenarios)
 - [ ] Migración v1→v63 sin pérdida
-- [ ] IntegrityValidator con fixtures
+- [x] IntegrityValidator.test.ts (5 tests) con fixtures
 - [ ] SessionLockManager concurrencia
 - [ ] VersionManager rollback
 
 ### Sprint DB-2: DbMigrator Refactor
 
-- [ ] Fuente única del schema
+- [x] Fuente única del schema (DbSchema.ts)
 - [ ] Diffs incrementales
 
 ### Sprint DB-3: Consistencia Repositorios
