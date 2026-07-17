@@ -6,6 +6,7 @@
  * - Barcode activo y feedback
  * - Multiplicador
  * - Dispatch de acciones
+ * - Process scan
  *
  * Parte del plan de refactor del orquestador.
  * @see REFACTOR_ORCHESTRATOR.md
@@ -24,15 +25,11 @@ export interface UseCountingScannerResult {
   machineState: ScannerState;
   dispatch: React.Dispatch<any>;
 
-  // Engine (tipado flexible)
-  engine: {
-    multiplier: number;
-    setMultiplier: (value: number) => void;
-    feedback: string | null;
-    activeBarcode: string | null;
-    activeProduct: any | null;
-    optimisticQty: number | null;
-  };
+  // Engine del scan pipeline (expuesto completamente)
+  engine: ReturnType<typeof useScanPipeline>['engine'];
+
+  // Process scan function
+  processScan: ReturnType<typeof useScanPipeline>['processScan'];
 
   // Estado derivado
   isIdle: boolean;
@@ -51,6 +48,7 @@ export interface UseCountingScannerResult {
 
   // Multiplicador
   multiplier: number;
+  setMultiplier: (value: number) => void;
   incrementMultiplier: () => void;
   decrementMultiplier: () => void;
 }
@@ -71,6 +69,7 @@ export type ScannerStatus = 'idle' | 'scanning' | 'pharma' | 'manual' | 'error';
  *     machineState,
  *     dispatch,
  *     engine,
+ *     processScan,
  *     activeBarcode,
  *     feedback,
  *   } = useCountingScanner();
@@ -83,8 +82,8 @@ export function useCountingScanner(defaultMultiplier = 1): UseCountingScannerRes
   // State machine
   const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
 
-  // Engine
-  const { engine } = useScanPipeline(defaultMultiplier);
+  // Engine y processScan
+  const { engine, processScan } = useScanPipeline(defaultMultiplier);
 
   // Estados derivados
   const isIdle = machineState === 'IDLE';
@@ -95,6 +94,7 @@ export function useCountingScanner(defaultMultiplier = 1): UseCountingScannerRes
 
   // Multiplicador
   const multiplier = engine.multiplier;
+  const setMultiplier = engine.setMultiplier;
 
   const incrementMultiplier = () => {
     engine.setMultiplier(multiplier + 1);
@@ -107,14 +107,8 @@ export function useCountingScanner(defaultMultiplier = 1): UseCountingScannerRes
   return {
     machineState,
     dispatch,
-    engine: {
-      multiplier: engine.multiplier,
-      setMultiplier: engine.setMultiplier,
-      feedback: engine.feedback,
-      activeBarcode: engine.activeBarcode,
-      activeProduct: engine.activeProduct,
-      optimisticQty: engine.optimisticQty,
-    },
+    engine,
+    processScan,
     isIdle,
     isScanning,
     isLookingUp,
@@ -125,6 +119,7 @@ export function useCountingScanner(defaultMultiplier = 1): UseCountingScannerRes
     activeProduct: engine.activeProduct,
     optimisticQty: engine.optimisticQty || 0,
     multiplier,
+    setMultiplier,
     incrementMultiplier,
     decrementMultiplier,
   };
