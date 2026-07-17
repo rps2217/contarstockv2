@@ -5,7 +5,7 @@
  *
  * PATRÓN ACTUAL (v2):
  * - export const expectedOrderRepository - Instancia singleton
- * - export class ExpectedOrderRepository - Clase con métodos de instancia
+ * - export class ExpectedOrderRepository - Clase con métodos de instancia + estáticos
  *
  * @deprecated Los métodos estáticos serán eliminados en v4
  */
@@ -18,6 +18,66 @@ import { logger } from '../../services/logger';
 const MODULE = 'ExpectedOrderRepository';
 
 export class ExpectedOrderRepository {
+  // ============================================================================
+  // MÉTODOS ESTÁTICOS (Legacy - para backwards compatibility)
+  // ============================================================================
+  static async save(order: ExpectedOrder): Promise<void> {
+    try {
+      await db.expectedOrders.put(order);
+      logger.info(MODULE, 'Order saved', { orderId: order.id });
+    } catch (err: any) {
+      logger.error(MODULE, 'Error saving order', { orderId: order.id, error: err.message });
+      throw err;
+    }
+  }
+
+  static async getById(id: string): Promise<ExpectedOrder | undefined> {
+    try {
+      return await db.expectedOrders.get(id);
+    } catch (err: any) {
+      logger.error(MODULE, 'Error getting order by id', { orderId: id, error: err.message });
+      throw err;
+    }
+  }
+
+  static async getAll(): Promise<ExpectedOrder[]> {
+    try {
+      return await db.expectedOrders.toArray();
+    } catch (err: any) {
+      logger.error(MODULE, 'Error getting all orders', { error: err.message });
+      throw err;
+    }
+  }
+
+  static async delete(id: string): Promise<void> {
+    try {
+      await db.expectedOrders.delete(id);
+      logger.info(MODULE, 'Order deleted', { orderId: id });
+    } catch (err: any) {
+      logger.error(MODULE, 'Error deleting order', { orderId: id, error: err.message });
+      throw err;
+    }
+  }
+
+  static async downloadFromCloud(): Promise<{
+    success: boolean;
+    orders: ExpectedOrder[];
+    error?: string;
+  }> {
+    return new ExpectedOrderRepository().downloadFromCloud();
+  }
+
+  static async uploadToCloud(order: ExpectedOrder): Promise<{ success: boolean; error?: string }> {
+    return new ExpectedOrderRepository().uploadToCloud(order);
+  }
+
+  static async deleteFromCloud(orderId: string): Promise<{ success: boolean; error?: string }> {
+    return new ExpectedOrderRepository().deleteFromCloud(orderId);
+  }
+
+  // ============================================================================
+  // MÉTODOS DE INSTANCIA (Nuevo patrón)
+  // ============================================================================
   private table = () => db.expectedOrders;
 
   private ensureErrorCapture() {

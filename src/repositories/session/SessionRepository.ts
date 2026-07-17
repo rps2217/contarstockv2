@@ -5,7 +5,7 @@
  *
  * PATRÓN ACTUAL (v2):
  * - export const sessionRepository - Instancia singleton
- * - export class SessionRepository - Clase con métodos de instancia
+ * - export class SessionRepository - Clase con métodos de instancia + estáticos
  *
  * @deprecated Los métodos estáticos serán eliminados en v4
  */
@@ -15,6 +15,172 @@ import { CountingSession } from '../../types';
 import { CountingSessionSchema } from '../../schemas/database';
 
 export class SessionRepository {
+  // ============================================================================
+  // MÉTODOS ESTÁTICOS (Legacy - para backwards compatibility)
+  // ============================================================================
+  static async save(session: CountingSession): Promise<void> {
+    const record = CountingSessionSchema.parse({
+      ...session,
+      syncStatus: session.syncStatus || 'pending',
+    }) as CountingSession;
+    await db.sessions.put(record);
+  }
+
+  static async saveBatch(sessions: CountingSession[]): Promise<void> {
+    const records = sessions.map(s =>
+      CountingSessionSchema.parse({
+        ...s,
+        syncStatus: s.syncStatus || 'pending',
+      })
+    ) as CountingSession[];
+    await db.sessions.bulkPut(records);
+  }
+
+  static async getById(id: string): Promise<CountingSession | undefined> {
+    return await db.sessions.get(id);
+  }
+
+  static async getAll(): Promise<CountingSession[]> {
+    return await db.sessions.toArray();
+  }
+
+  static async delete(id: string): Promise<void> {
+    await db.sessions.delete(id);
+  }
+
+  static async update(id: string, changes: Partial<CountingSession>): Promise<void> {
+    await db.sessions.update(id, changes);
+  }
+
+  static async getByStatus(status: string): Promise<CountingSession[]> {
+    return await db.sessions.where('status').equals(status).toArray();
+  }
+
+  static async markAsSynced(ids: string[]): Promise<void> {
+    await db.sessions.where('id').anyOf(ids).modify({
+      syncStatus: 'synced',
+      synced: Date.now(),
+    });
+  }
+
+  static async getUnsynced(): Promise<CountingSession[]> {
+    return await db.sessions.where('syncStatus').equals('pending').toArray();
+  }
+
+  static async clearAll(): Promise<void> {
+    await db.sessions.clear();
+  }
+
+  static async getRecent(limit: number = 50): Promise<CountingSession[]> {
+    return await db.sessions.orderBy('createdAt').reverse().limit(limit).toArray();
+  }
+
+  static async getActiveSessions(): Promise<CountingSession[]> {
+    return await db.sessions.where('status').equals('active').toArray();
+  }
+
+  static async getByLocation(locationId: string): Promise<CountingSession[]> {
+    return await db.sessions.where('locationId').equals(locationId).toArray();
+  }
+
+  static async markAsCompleted(id: string): Promise<void> {
+    await db.sessions.update(id, { status: 'completed', syncStatus: 'pending' });
+  }
+
+  static async getReceptionHistory(
+    startDate: number,
+    endDate: number,
+    limit: number
+  ): Promise<CountingSession[]> {
+    return await db.sessions
+      .where('createdAt')
+      .between(startDate, endDate)
+      .reverse()
+      .limit(limit)
+      .toArray();
+  }
+
+  static async getByDateRange(startDate: number, endDate: number): Promise<CountingSession[]> {
+    return await db.sessions.where('createdAt').between(startDate, endDate).toArray();
+  }
+
+  static async deleteDraftReceptionSessions(receptionId: string): Promise<void> {
+    const sessions = await db.sessions
+      .where('erpOrder')
+      .equals(receptionId)
+      .filter(s => s.status === 'draft')
+      .toArray();
+
+    if (sessions.length > 0) {
+      await db.sessions.bulkDelete(sessions.map(s => s.id));
+    }
+  }
+
+  static async getDraftReceptionSessions(receptionId: string): Promise<CountingSession[]> {
+    return await db.sessions
+      .where('erpOrder')
+      .equals(receptionId)
+      .filter(s => s.status === 'draft')
+      .toArray();
+  }
+
+  static async getPaginated(
+    page: number,
+    pageSize: number
+  ): Promise<{ data: CountingSession[]; total: number }> {
+    const offset = (page - 1) * pageSize;
+    const total = await db.sessions.count();
+    const data = await db.sessions.offset(offset).limit(pageSize).toArray();
+    return { data, total };
+  }
+
+  static async markSynced(ids: string[]): Promise<void> {
+    const timestamp = Date.now();
+    await db.sessions.where('id').anyOf(ids).modify({
+      syncStatus: 'synced',
+      lastSyncTimestamp: timestamp,
+    });
+  }
+
+  static async getPendingSync(): Promise<CountingSession[]> {
+    return await db.sessions.where('syncStatus').equals('pending').toArray();
+  }
+
+  static async getValidForSync(): Promise<CountingSession[]> {
+    return await db.sessions
+      .where('syncStatus')
+      .equals('pending')
+      .filter(s => s.status === 'completed')
+      .toArray();
+  }
+
+  static async getSyncedCount(): Promise<number> {
+    return await db.sessions.where('syncStatus').equals('synced').count();
+  }
+
+  static async getPendingSyncCount(): Promise<number> {
+    return await db.sessions.where('syncStatus').equals('pending').count();
+  }
+
+  static async deleteMany(ids: string[]): Promise<void> {
+    await db.sessions.bulkDelete(ids);
+  }
+
+  static async getByType(type: string): Promise<CountingSession[]> {
+    return await db.sessions.where('sessionType').equals(type).toArray();
+  }
+
+  static async softDelete(id: string): Promise<void> {
+    await db.sessions.update(id, { status: 'deleted', syncStatus: 'pending' });
+  }
+
+  static async restore(id: string): Promise<void> {
+    await db.sessions.update(id, { status: 'draft', syncStatus: 'pending' });
+  }
+
+  // ============================================================================
+  // MÉTODOS DE INSTANCIA (Nuevo patrón)
+  // ============================================================================
   private table = () => db.sessions;
 
   async save(session: CountingSession): Promise<void> {
