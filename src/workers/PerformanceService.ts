@@ -6,7 +6,19 @@
  */
 
 import { logger } from '@/services/logger';
-import type { WorkerTask, WorkerResult, WorkerTaskType } from './PerformanceWorker';
+import type {
+  WorkerTask,
+  WorkerResult,
+  WorkerTaskType,
+  WorkerTaskPayload,
+} from './PerformanceWorker';
+
+// ============================================================================
+// TIPOS
+// ============================================================================
+
+/** Resultado genérico del worker */
+type WorkerResultValue = unknown;
 
 // ============================================================================
 // SINGLETON
@@ -17,7 +29,7 @@ class PerformanceServiceClass {
   private pendingTasks = new Map<
     string,
     {
-      resolve: (result: any) => void;
+      resolve: (result: WorkerResultValue) => void;
       reject: (error: Error) => void;
     }
   >();
@@ -204,20 +216,23 @@ class PerformanceServiceClass {
   /**
    * Ejecutar tarea en el worker
    */
-  async execute<T = any>(type: WorkerTaskType, payload: any): Promise<T> {
+  async execute<T = unknown>(type: WorkerTaskType, payload: WorkerTaskPayload): Promise<T> {
     // Inicializar si no está hecho
     this.init();
 
     // Si el worker no está disponible, ejecutar en main thread
     if (!this.worker) {
       logger.warn('PerformanceService', 'Worker not available, executing in main thread');
-      return this.executeInMainThread(type, payload);
+      return this.executeInMainThread(type, payload) as T;
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const id = crypto.randomUUID();
 
-      this.pendingTasks.set(id, { resolve, reject });
+      this.pendingTasks.set(id, {
+        resolve: resolve as (result: WorkerResultValue) => void,
+        reject,
+      });
 
       this.worker!.postMessage({ id, type, payload });
 
@@ -234,17 +249,25 @@ class PerformanceServiceClass {
   /**
    * Fallback: ejecutar en main thread
    */
-  private executeInMainThread(type: WorkerTaskType, payload: any): any {
+  private executeInMainThread(type: WorkerTaskType, payload: WorkerTaskPayload): WorkerResultValue {
     switch (type) {
-      case 'CALCULATE_METRICS':
-        return this.calculateMetrics(payload.items, payload.startTime);
-
-      case 'SEARCH_ITEMS':
-        return this.searchItems(payload.items, payload.query, payload.fields, payload.limit);
-
-      case 'SERIALIZE_DATA':
-        return JSON.stringify(payload.data);
-
+      case 'CALCULATE_METRICS': {
+        const p = payload as { items: Record<string, unknown>[]; startTime: number };
+        return this.calculateMetrics(p.items, p.startTime);
+      }
+      case 'SEARCH_ITEMS': {
+        const p = payload as {
+          items: Record<string, unknown>[];
+          query: string;
+          fields: string[];
+          limit?: number;
+        };
+        return this.searchItems(p.items, p.query, p.fields, p.limit);
+      }
+      case 'SERIALIZE_DATA': {
+        const p = payload as { data: unknown };
+        return JSON.stringify(p.data);
+      }
       default:
         throw new Error(`Unsupported task type: ${type}`);
     }
@@ -253,7 +276,7 @@ class PerformanceServiceClass {
   /**
    * Calcular métricas (fallback main thread)
    */
-  private calculateMetrics(items: any[], startTime: number) {
+  private calculateMetrics(items: Record<string, unknown>[], startTime: number) {
     const elapsed = Date.now() - startTime;
 
     return {
@@ -271,21 +294,29 @@ class PerformanceServiceClass {
   /**
    * Calcular métricas de productividad
    */
-  calculateProductivityMetrics(items: any[], startTime: number): Promise<any> {
+  calculateProductivityMetrics(
+    items: Record<string, unknown>[],
+    startTime: number
+  ): Promise<unknown> {
     return this.execute('CALCULATE_METRICS', { items, startTime });
   }
 
   /**
    * Buscar en items
    */
-  searchItems(items: any[], query: string, fields: string[], limit = 50): Promise<any> {
+  searchItems(
+    items: Record<string, unknown>[],
+    query: string,
+    fields: string[],
+    limit = 50
+  ): Promise<unknown> {
     return this.execute('SEARCH_ITEMS', { items, query, fields, limit });
   }
 
   /**
    * Serializar datos
    */
-  serializeData(data: any, format: 'json' | 'csv' = 'json'): Promise<string> {
+  serializeData(data: unknown, format: 'json' | 'csv' = 'json'): Promise<string> {
     return this.execute('SERIALIZE_DATA', { data, format });
   }
 

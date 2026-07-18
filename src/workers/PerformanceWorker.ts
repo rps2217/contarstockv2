@@ -61,7 +61,7 @@ interface SerializeDataPayload {
 }
 
 /** Payload unificado para tasks */
-type WorkerTaskPayload =
+export type WorkerTaskPayload =
   | CalculateMetricsPayload
   | ProcessBatchPayload
   | SearchItemsPayload
