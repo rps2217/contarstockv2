@@ -10,26 +10,42 @@ import { CountingSession, ExpectedOrder, ExpectedItem, ScanRecord } from '../typ
 // ✅ Unit of Work para operaciones atómicas
 import { createUnitOfWork, withUnitOfWork, UnitOfWork } from '@/repositories/core/UnitOfWork';
 
-let pendingBuffer: any[] = [];
+interface PendingScanEvent {
+  id: string;
+  sessionId: string;
+  barcode: string;
+  quantity: number;
+  mm?: number;
+  yyyy?: number;
+  location?: string;
+  batch?: string;
+  synced: number;
+  timestamp: number;
+}
+
+let pendingBuffer: PendingScanEvent[] = [];
 
 export const getPendingBuffer = () => pendingBuffer;
 
 export const createSession = async (
-  erpOrder: string, 
-  logisticsLabel: string, 
-  sessionType: 'standard' | 'hammer' | 'reception', 
+  erpOrder: string,
+  logisticsLabel: string,
+  sessionType: 'standard' | 'hammer' | 'reception',
   expectedItems?: ExpectedItem[] | { items: ExpectedItem[] },
   photoUrl?: string,
   isAutoLockEnabled?: boolean
 ): Promise<CountingSession> => {
   // Support both direct array or { items: [] } format
-  const itemsToSave: ExpectedItem[] = Array.isArray(expectedItems) 
-    ? expectedItems 
-    : (expectedItems?.items || []);
-    
-  logger.debug('SessionService', 'expectedItems input', { expectedItems, itemsToSaveCount: itemsToSave.length });
+  const itemsToSave: ExpectedItem[] = Array.isArray(expectedItems)
+    ? expectedItems
+    : expectedItems?.items || [];
+
+  logger.debug('SessionService', 'expectedItems input', {
+    expectedItems,
+    itemsToSaveCount: itemsToSave.length,
+  });
   logger.debug('SessionService', 'itemsToSave sample', { items: itemsToSave.slice(0, 2) });
-  
+
   const session: CountingSession = {
     id: crypto.randomUUID(),
     erpOrder: erpOrder.toUpperCase(),
@@ -41,13 +57,15 @@ export const createSession = async (
     photoUrl,
     isAutoLockEnabled,
     totalUnits: 0,
-    totalSKUs: 0
+    totalSKUs: 0,
   };
-  
-  logger.debug('SessionService', 'session.expectedItems before save', { expectedItems: session.expectedItems });
-  
+
+  logger.debug('SessionService', 'session.expectedItems before save', {
+    expectedItems: session.expectedItems,
+  });
+
   // ✅ Usar UnitOfWork para crear sesión atómicamente
-  const result = await withUnitOfWork(async (uow) => {
+  const result = await withUnitOfWork(async uow => {
     uow.addOperation('CREATE', 'session', session, async () => {
       await SessionRepository.delete(session.id);
     });
@@ -59,7 +77,9 @@ export const createSession = async (
     throw new Error(`Error al crear sesión: ${result.error}`);
   }
 
-  logger.debug('SessionService', 'session saved', { expectedItemsCount: session.expectedItems?.length });
+  logger.debug('SessionService', 'session saved', {
+    expectedItemsCount: session.expectedItems?.length,
+  });
   logger.info('SESSION', `Sesión creada: ${session.id}`);
   return session;
 };
@@ -78,16 +98,41 @@ export const closeSession = async (id: string) => {
   const session = await SessionRepository.getById(id);
   if (!session) return;
   await SessionRepository.save({ ...session, status: 'completed' });
-  
+
   if (navigator.onLine) {
-      supabaseSyncService.pushBatch('SESIONES_CONTEO', [session as any]).catch((err) => 
-        logger.error('sessionService', 'Error en pushBatch', err instanceof Error ? err.message : String(err))
+    supabaseSyncService
+      .pushBatch('SESIONES_CONTEO', [session as any])
+      .catch(err =>
+        logger.error(
+          'sessionService',
+          'Error en pushBatch',
+          err instanceof Error ? err.message : String(err)
+        )
       );
   }
 };
 
-export const addScanEvent = async (sessionId: string, barcode: string, quantity: number = 1, mm?: number, yyyy?: number, location?: string, batch?: string) => {
-  const event = { id: crypto.randomUUID(), sessionId, barcode, quantity, mm, yyyy, location, batch, synced: 0, timestamp: Date.now() };
+export const addScanEvent = async (
+  sessionId: string,
+  barcode: string,
+  quantity: number = 1,
+  mm?: number,
+  yyyy?: number,
+  location?: string,
+  batch?: string
+) => {
+  const event = {
+    id: crypto.randomUUID(),
+    sessionId,
+    barcode,
+    quantity,
+    mm,
+    yyyy,
+    location,
+    batch,
+    synced: 0,
+    timestamp: Date.now(),
+  };
   pendingBuffer.push({ ...event });
   if (pendingBuffer.length >= 5) {
     await db.scans.bulkAdd(pendingBuffer);
@@ -107,8 +152,8 @@ export const undoLastAction = async (sessionId: string): Promise<boolean> => {
   if (scans.length > 0) {
     const last = scans.pop();
     if (last?.id) {
-        await db.scans.delete(last.id);
-        return true;
+      await db.scans.delete(last.id);
+      return true;
     }
   }
   return false;
@@ -118,17 +163,17 @@ export const deleteSessionItem = async (sessionId: string, barcode: string) => {
   const scans = await ScanRepository.getBySession(sessionId);
   const toDelete = scans.filter(s => s.barcode === barcode).map(s => s.id!);
   if (toDelete.length > 0) {
-      await db.scans.bulkDelete(toDelete);
+    await db.scans.bulkDelete(toDelete);
   }
   pendingBuffer = pendingBuffer.filter(s => !(s.sessionId === sessionId && s.barcode === barcode));
 };
 
 export const deleteSession = async (id: string) => {
   // ✅ Usar UnitOfWork para eliminar sesión atómicamente
-  const result = await withUnitOfWork(async (uow) => {
+  const result = await withUnitOfWork(async uow => {
     // Primero obtener los scans para poder eliminarlos
     const scans = await ScanRepository.getBySession(id);
-    
+
     // Agregar operación para eliminar scans
     for (const scan of scans) {
       uow.addOperation('DELETE', 'scan', scan, async () => {
@@ -136,7 +181,7 @@ export const deleteSession = async (id: string) => {
         await db.scans.add(scan);
       });
     }
-    
+
     // Agregar operación para eliminar sesión
     const session = await SessionRepository.getById(id);
     if (session) {
@@ -144,7 +189,7 @@ export const deleteSession = async (id: string) => {
         await SessionRepository.save(session);
       });
     }
-    
+
     return { scansDeleted: scans.length, sessionDeleted: !!session };
   });
 
@@ -159,56 +204,61 @@ export const deleteSession = async (id: string) => {
 export { cleanSyncedSessions } from './maintenance';
 
 export const checkLabelExists = async (labelId: string) => {
-  const existing = await db.sessions.where('logisticsLabel').equals(labelId.toUpperCase()).toArray();
+  const existing = await db.sessions
+    .where('logisticsLabel')
+    .equals(labelId.toUpperCase())
+    .toArray();
   return existing.length > 0;
 };
 
-export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedOrder | null> => {
-   const cleanId = erpOrder.toUpperCase().trim();
-   try {
-     // Intenta obtenerlo localmente primero
-     const local = await ExpectedOrderRepository.getById(cleanId);
-     if (local) return local;
+export const fetchExpectedItemsFromCloud = async (
+  erpOrder: string
+): Promise<ExpectedOrder | null> => {
+  const cleanId = erpOrder.toUpperCase().trim();
+  try {
+    // Intenta obtenerlo localmente primero
+    const local = await ExpectedOrderRepository.getById(cleanId);
+    if (local) return local;
 
-     // Si no está registrado en local, consulta en tiempo real en la nube usando erpService
-     if (navigator.onLine) {
-       const { erpService } = await import('./erpService');
-       const manifest = await erpService.downloadManifest(cleanId);
-       
-       if (manifest && manifest.items && manifest.items.length > 0) {
-         const mappedItems = manifest.items.map((item: Record<string, unknown>) => ({
-           barcode: String(item.barcode),
-           name: String(item.name || "") || `Producto ${item.barcode}`,
-           expectedQty: (item.qty as number) || 0
-         }));
+    // Si no está registrado en local, consulta en tiempo real en la nube usando erpService
+    if (navigator.onLine) {
+      const { erpService } = await import('./erpService');
+      const manifest = await erpService.downloadManifest(cleanId);
 
-         const newExpectedOrder: ExpectedOrder = {
-           id: cleanId,
-           internalId: cleanId,
-           items: mappedItems,
-           totalExpectedUnits: mappedItems.reduce((acc, i) => acc + i.expectedQty, 0),
-           totalExpectedSKUs: mappedItems.length,
-           importedAt: Date.now(),
-           metadata: {
-             documentType: 'Picking List',
-             date: new Date().toLocaleDateString(),
-             orderNote: 'Generado desde consulta en la nube'
-           }
-         };
+      if (manifest && manifest.items && manifest.items.length > 0) {
+        const mappedItems = manifest.items.map((item: Record<string, unknown>) => ({
+          barcode: String(item.barcode),
+          name: String(item.name || '') || `Producto ${item.barcode}`,
+          expectedQty: (item.qty as number) || 0,
+        }));
 
-         // Guardar automáticamente en el IndexedDB local
-         await ExpectedOrderRepository.save(newExpectedOrder);
-         return newExpectedOrder;
-       }
-     }
-   } catch (err) {
-     logger.warn('SessionService', 'Error al descargar teórico desde nube', { error: String(err) });
-   }
-   return await ExpectedOrderRepository.getById(cleanId) || null;
+        const newExpectedOrder: ExpectedOrder = {
+          id: cleanId,
+          internalId: cleanId,
+          items: mappedItems,
+          totalExpectedUnits: mappedItems.reduce((acc, i) => acc + i.expectedQty, 0),
+          totalExpectedSKUs: mappedItems.length,
+          importedAt: Date.now(),
+          metadata: {
+            documentType: 'Picking List',
+            date: new Date().toLocaleDateString(),
+            orderNote: 'Generado desde consulta en la nube',
+          },
+        };
+
+        // Guardar automáticamente en el IndexedDB local
+        await ExpectedOrderRepository.save(newExpectedOrder);
+        return newExpectedOrder;
+      }
+    }
+  } catch (err) {
+    logger.warn('SessionService', 'Error al descargar teórico desde nube', { error: String(err) });
+  }
+  return (await ExpectedOrderRepository.getById(cleanId)) || null;
 };
 
 export const markScansAsSynced = async (scanIds: string[]) => {
-   await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
+  await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
 };
 
 /**
@@ -256,7 +306,8 @@ export const addScanWithExpiry = async (
     syncStatus: 'pending',
     status: 'critical',
     daysLeft: Math.ceil(
-      (new Date(expiryData.yyyy, expiryData.mm - 1, 1).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(expiryData.yyyy, expiryData.mm - 1, 1).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24)
     ),
     expiryDate: new Date(expiryData.yyyy, expiryData.mm - 1, 1).toISOString(),
     expiryDateObj: new Date(expiryData.yyyy, expiryData.mm - 1, 1),
@@ -268,7 +319,7 @@ export const addScanWithExpiry = async (
     type: 'Individual' as const,
   };
 
-  return withUnitOfWork(async (uow) => {
+  return withUnitOfWork(async uow => {
     uow.addOperation('CREATE', 'scan', scanEvent, async () => {
       await db.scans.delete(scanId);
     });
