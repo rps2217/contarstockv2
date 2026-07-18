@@ -50,6 +50,17 @@ class ScanBufferServiceClass {
     lastFlushTime: 0,
     flushErrors: 0,
   };
+  
+  // Referencia al handler para cleanup
+  private beforeUnloadHandler: (e: BeforeUnloadEvent) => void = () => {
+    if (this.buffer.length > 0) {
+      const data = JSON.stringify(this.buffer);
+      localStorage.setItem(STORAGE_KEY, data);
+      logger.debug('ScanBuffer', 'Saved to localStorage on unload', {
+        count: this.buffer.length,
+      });
+    }
+  };
 
   constructor() {
     this.init();
@@ -63,7 +74,7 @@ class ScanBufferServiceClass {
     this.startFlushTimer();
 
     // Registrar beforeunload
-    this.registerBeforeUnload();
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
 
     logger.info('ScanBuffer', 'Initialized', {
       restoredCount: this.buffer.length,
@@ -217,24 +228,6 @@ class ScanBufferServiceClass {
   }
 
   /**
-   * Registrar beforeunload para flush de emergencia
-   */
-  private registerBeforeUnload(): void {
-    const handler = () => {
-      if (this.buffer.length > 0) {
-        // Intentar sincrono - esto es lo mejor que podemos hacer
-        const data = JSON.stringify(this.buffer);
-        localStorage.setItem(STORAGE_KEY, data);
-        logger.debug('ScanBuffer', 'Saved to localStorage on unload', {
-          count: this.buffer.length,
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handler);
-  }
-
-  /**
    * Persistir buffer en localStorage
    */
   private persistToStorage(): void {
@@ -292,6 +285,7 @@ class ScanBufferServiceClass {
    */
   destroy(): void {
     this.stopFlushTimer();
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     this.flush().catch(() => {
       // Ignore errors on destroy
     });
