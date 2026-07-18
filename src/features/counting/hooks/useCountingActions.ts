@@ -27,27 +27,32 @@ import * as sessionService from '@/services/sessionService';
 import * as productService from '@/services/productService';
 import { SessionRepository } from '@/repositories/SessionRepository';
 import { ScanRepository } from '@/repositories/ScanRepository';
-import type { ConsolidatedItem } from '@/types';
+import type { ConsolidatedItem, Product, MatchResult, AppSettings, CountingSession } from '@/types';
+import type { ExpiryEntry } from '@/services/ExpiryService';
 
 interface UseCountingActionsOptions {
   sessionId: string | undefined;
 
   engine: any; // CountingEngine - tipo complejo de useScanPipeline
+
   settings: any;
   consolidatedHistory: ConsolidatedItem[] | null;
   currentLocation: string;
   multiplier: number;
   activeBarcode: string | null;
-  activeProduct: any | null;
+  activeProduct: Product | null;
   machineState: string;
-  potentialMatch: any | null;
+  potentialMatch: MatchResult | null;
+
   dispatch: (action: any) => void;
   // Callbacks para efectos secundarios
   onPharmaNeeded?: (barcode: string, qty: number) => void;
   onError?: (error: string) => void;
-  // Servicios de expiry
+
   saveExpiry?: (data: any) => Promise<any>;
+
   getExpiryForBarcode?: (barcode: string) => Promise<any>;
+
   syncExpiry?: (entry: any) => Promise<any>;
 }
 
@@ -64,11 +69,20 @@ interface UseCountingActionsResult {
   handlePharmaComplete: (m?: number, y?: number, batch?: string) => Promise<void>;
   cancelPharma: () => void;
   undoLastScan: () => Promise<void>;
-  toggleAutoLock: (session: any) => Promise<void>;
+  toggleAutoLock: (session: CountingSession) => Promise<void>;
   setStatus: (status: 'manual' | 'idle') => void;
+
   applyPotentialMatch: (setPotentialMatch: (val: any) => void) => Promise<void>;
   updateMultiplier: (value: number) => void;
   updateLocation: (location: string) => void;
+}
+
+/** Tipo para acciones del reducer de conteo */
+interface CountingAction {
+  type: string;
+  payload?: Record<string, unknown>;
+  needsPharma?: boolean;
+  barcode?: string;
 }
 
 export const useCountingActions = (
@@ -129,6 +143,7 @@ export const useCountingActions = (
           scanQty,
           currentQty,
           undefined,
+
           async (cleanBarcode: string, product: any, newQty: number) => {
             try {
               // TODO: Usar shouldPromptForBatch cuando esté disponible
