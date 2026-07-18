@@ -16,10 +16,10 @@ import { logger } from '@/services/logger';
 // TIPOS
 // ============================================================================
 
-export type Factory<T = any> = () => T;
-export type Resolver<T = any> = (container: any) => T;
+export type Factory<T = unknown> = () => T;
+export type Resolver<T = unknown> = (container: ContainerClass) => T;
 
-export interface Registration<T = any> {
+export interface Registration<T = unknown> {
   factory: T;
   singleton: boolean;
   instance?: T;
@@ -121,19 +121,19 @@ class ContainerClass {
 
       if (registration.singleton && registration.instance !== undefined) {
         // Ya existe instancia
-        instance = registration.instance;
+        instance = registration.instance as T;
         this.log('resolve', { token, mode: 'cached' });
       } else {
         // Crear nueva instancia
         if (typeof registration.factory === 'function') {
           instance = (registration.factory as Factory<T>)();
         } else {
-          instance = registration.factory;
+          instance = registration.factory as T;
         }
         this.log('resolve', { token, mode: 'new' });
 
         if (registration.singleton) {
-          registration.instance = instance;
+          (registration as Registration<T>).instance = instance;
         }
       }
 
@@ -149,10 +149,10 @@ class ContainerClass {
   private autoWire<T>(token: string): T {
     // Intentar encontrar la clase
     const parts = token.split('.');
-    let obj: any = window as any;
+    let obj: unknown = window;
 
     for (const part of parts) {
-      obj = obj?.[part];
+      obj = (obj as Record<string, unknown>)?.[part];
       if (!obj) break;
     }
 
@@ -160,7 +160,8 @@ class ContainerClass {
       // Es una clase, intentar instanciar
       try {
         // Intentar inyección por nombre de parámetro (similar a Angular)
-        return new obj();
+        const Constructor = obj as new () => T;
+        return new Constructor();
       } catch (error) {
         logger.warn('Container', 'Auto-wire failed', { token, error });
         throw error;
@@ -227,7 +228,7 @@ class ContainerClass {
   /**
    * Logging
    */
-  private log(action: string, data: any): void {
+  private log(action: string, data: Record<string, unknown>): void {
     if (this.config.debug) {
       logger.debug('Container', action, data);
     }
@@ -238,11 +239,13 @@ class ContainerClass {
 // DECORATORS (para uso futuro con TypeScript experimental)
 // ============================================================================
 
+type Constructor<T = unknown> = new (...args: unknown[]) => T;
+
 /**
  * Marcar una clase como inyectable
  */
 export function Injectable() {
-  return function <T extends new (...args: any[]) => any>(constructor: T) {
+  return function <T extends Constructor>(constructor: T) {
     // Por ahora solo marca, en el futuro puede agregar metadata
     return constructor;
   };
@@ -252,7 +255,11 @@ export function Injectable() {
  * Marcar un parámetro como inyectable
  */
 export function Inject(token: string) {
-  return function (target: any, propertyKey: string | symbol | undefined, parameterIndex: number) {
+  return function (
+    target: unknown,
+    propertyKey: string | symbol | undefined,
+    parameterIndex: number
+  ) {
     // Por ahora solo marca
     // En producción usar reflect-metadata
   };
