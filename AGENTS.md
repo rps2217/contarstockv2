@@ -5,7 +5,7 @@
 ### ✅ VALIDACIÓN ACTUAL
 
 ```bash
-npm run test:run   # 964 tests passing
+npm run test:run   # 915 tests passing (actualizado 2026-07-18)
 npx tsc --noEmit   # 0 errores TypeScript
 npm run build      # Build exitoso
 ```
@@ -1103,3 +1103,44 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 3. ~~Actualizar Sidebar~~ - Hecho: "Capturar" → "/counting"
 4. ~~Agregar tests unitarios~~ - Tests de contrato para useCountingEngine (22 tests)
 5. **UX Review** - Pendiente: Probar flujo completo en ambiente local
+
+---
+
+## Auditoría de Código - Sesión 2026-07-18
+
+### Commits Realizados
+
+| Commit    | Descripción                                             | LOC Eliminadas |
+| --------- | ------------------------------------------------------- | -------------- |
+| `1fca789` | Unificar funciones de formateo de fecha                 | ~15            |
+| `5d30d0e` | Usar generateUUID centralizado en EventsSyncService     | ~11            |
+| `64a380a` | Usar normalizeIdentity centralizado en providerImporter | ~5             |
+
+### Funciones Centralizadas
+
+| Archivo Original            | Función Duplicada          | Función Centralizada                |
+| --------------------------- | -------------------------- | ----------------------------------- |
+| CountingHistory.tsx         | formatDate                 | formatDetailDateTime                |
+| ConflictResolverModal.tsx   | formatTimestamp            | formatDetailDateTime                |
+| ConflictResolutionModal.tsx | formatDate                 | formatDetailDateTime                |
+| AuditPanel.tsx (ui)         | formatTimestamp            | formatDetailDateTime                |
+| AuditPanel.tsx (audit)      | formatTimestamp            | formatDetailDateTime                |
+| RecordDetailView.tsx        | formatTimestamp            | formatDetailDateTime                |
+| EventsSyncPanel.tsx         | formatTime, formatFullDate | formatTimeAgo, formatDetailDateTime |
+| EventsSyncService.ts        | generateUUID               | generateUUID                        |
+| providerImporter.ts         | normalizeIdentity          | normalizeIdentity                   |
+
+### Verificación de Memory Leaks
+
+Se verificó que todos los servicios con `addEventListener` tienen métodos `destroy()` con `removeEventListener`:
+
+- ✅ SyncQueue.ts - método destroy() presente
+- ✅ OfflineSyncQueue.ts - método destroy() presente
+- ✅ ScanBufferService.ts - método destroy() presente
+- ✅ SyncQueueService.ts - método destroy() presente
+
+### Estado Final
+
+- **Tests**: 915/915 ✅
+- **TypeScript**: 0 errores ✅
+- **Commits sesión**: 3 refactorizaciones menores
