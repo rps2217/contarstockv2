@@ -1,23 +1,24 @@
 /**
  * EventsSyncService - Servicio SIMPLIFICADO para sincronización de eventos
- * 
+ *
  * Diseño limpio:
  * - Local -> Nube: INSERT (índice único rechaza duplicados)
  * - Nube -> Local: SELECT + upsert local
  * - Sin lógica compleja de reconciliación
- * 
+ *
  * Tabla EVENTOS en Supabase (ESQUEMA LIMPIO):
  * - id UUID, barcode, frc, product_name, event_type, description
  * - quantity, location, destination, batch_number, expiry_date
  * - traspaso_doc, notes, status, clave_unica
  * - created_at, updated_at, synced_at
- * 
+ *
  * @module services/cloud/EventsSyncService
  */
 
 import { supabase } from '@/lib/supabase';
 import { db, InventoryEvent } from '@/db';
 import { logger } from '@/services/logger';
+import { generateUUID } from '@/services/utils';
 
 // ============================================================================
 // TIPOS
@@ -48,10 +49,6 @@ function normalize(value: string | null | undefined): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-function generateUUID(): string {
-  return crypto.randomUUID();
-}
-
 function toISO(date: Date): string {
   return date.toISOString();
 }
@@ -60,16 +57,16 @@ function parseDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
   const d = normalize(dateStr);
   if (!d) return null;
-  
+
   // Si ya está en formato ISO, devolver
   if (/^\d{4}-\d{2}-\d{2}/.test(d)) return d;
-  
+
   // Convertir DD/MM/YYYY a YYYY-MM-DD
   const parts = d.split('/');
   if (parts.length === 3) {
     return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
   }
-  
+
   return d;
 }
 
@@ -116,10 +113,11 @@ function toRemote(event: InventoryEvent): Record<string, unknown> {
  */
 function toLocal(remote: Record<string, unknown>): Partial<InventoryEvent> {
   // Generar ID numérico a partir del UUID si es necesario
-  const id = typeof remote.id === 'string' && remote.id.includes('-')
-    ? parseInt(remote.id.replace(/-/g, '').substring(0, 8), 16)
-    : (remote.id as number);
-    
+  const id =
+    typeof remote.id === 'string' && remote.id.includes('-')
+      ? parseInt(remote.id.replace(/-/g, '').substring(0, 8), 16)
+      : (remote.id as number);
+
   return {
     id,
     barcode: remote.barcode as string,
@@ -133,12 +131,10 @@ function toLocal(remote: Record<string, unknown>): Partial<InventoryEvent> {
     destino: remote.destination as string,
     traspasoNumber: remote.traspaso_doc as string,
     status: (remote.status as InventoryEvent['status']) || 'pending',
-    createdAt: typeof remote.created_at === 'string' 
-      ? new Date(remote.created_at).getTime() 
-      : Date.now(),
-    updatedAt: typeof remote.updated_at === 'string' 
-      ? new Date(remote.updated_at).getTime() 
-      : undefined,
+    createdAt:
+      typeof remote.created_at === 'string' ? new Date(remote.created_at).getTime() : Date.now(),
+    updatedAt:
+      typeof remote.updated_at === 'string' ? new Date(remote.updated_at).getTime() : undefined,
     syncStatus: 'synced' as const,
   };
 }
@@ -148,7 +144,6 @@ function toLocal(remote: Record<string, unknown>): Partial<InventoryEvent> {
 // ============================================================================
 
 export class EventsSyncService {
-  
   /**
    * Alias para syncAll (compatibilidad)
    */
@@ -166,7 +161,7 @@ export class EventsSyncService {
       updated: 0,
       skipped: 0,
       failed: 0,
-      errors: []
+      errors: [],
     };
 
     try {
@@ -187,9 +182,7 @@ export class EventsSyncService {
       const rows = pendingEvents.map(toRemote);
 
       // 3. INSERT en Supabase (índice único rechaza duplicados)
-      const { error } = await supabase
-        .from('EVENTOS')
-        .insert(rows);
+      const { error } = await supabase.from('EVENTOS').insert(rows);
 
       if (error) {
         // Si es error de duplicado, contar como skipped
@@ -208,12 +201,9 @@ export class EventsSyncService {
       }
 
       // 4. Marcar como sincronizados
-      await db.events.bulkPut(
-        pendingEvents.map(e => ({ ...e, syncStatus: 'synced' as const }))
-      );
+      await db.events.bulkPut(pendingEvents.map(e => ({ ...e, syncStatus: 'synced' as const })));
 
       logger.info('EventsSync', `Éxito: ${result.created}, Skipped: ${result.skipped}`);
-
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
       logger.error('EventsSync', `Error en pushToCloud: ${msg}`);
@@ -260,7 +250,7 @@ export class EventsSyncService {
       // Convertir y guardar localmente
       for (const remote of data) {
         const local = toLocal(remote);
-        
+
         // Buscar por barcode y frc
         const barcode = remote.barcode as string;
         const frc = remote.frc as string;
@@ -269,7 +259,7 @@ export class EventsSyncService {
           .equals(barcode)
           .filter(e => e.frcNumber === frc)
           .first();
-        
+
         if (existing) {
           // Actualizar si la versión de la nube es más reciente
           if (remote.updated_at > (existing.updatedAt?.toString() || '')) {
@@ -284,7 +274,6 @@ export class EventsSyncService {
       }
 
       logger.info('EventsSync', `Agregados: ${added}, Actualizados: ${updated}`);
-
     } catch (err) {
       logger.error('EventsSync', 'Error en pullFromCloud', err);
     }
@@ -298,7 +287,7 @@ export class EventsSyncService {
   async syncAll(): Promise<EventSyncResult> {
     const pushResult = await this.pushToCloud();
     const { added, updated } = await this.pullFromCloud();
-    
+
     return {
       ...pushResult,
       updated: pushResult.updated + updated,
