@@ -1,45 +1,82 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate, useParams } from 'react-router-dom'
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Hammer, Package, Trash2, RefreshCw, Check, X,
-  AlertTriangle, TrendingUp, Settings, Download, Scan, Keyboard,
-  Cloud, CloudOff, Volume2, VolumeX, Play,
-  FileSpreadsheet, BarChart3, MapPin, Zap, RotateCcw, Printer,
-  HardDrive, Loader2, Eye, ShoppingCart, Calendar, 
-  ChevronRight, Package2, ListChecks, Wifi, WifiOff, ArrowLeft
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { logger } from '@/services/logger'
+  Hammer,
+  Package,
+  Trash2,
+  RefreshCw,
+  Check,
+  X,
+  AlertTriangle,
+  TrendingUp,
+  Settings,
+  Download,
+  Scan,
+  Keyboard,
+  Cloud,
+  CloudOff,
+  Volume2,
+  VolumeX,
+  Play,
+  FileSpreadsheet,
+  BarChart3,
+  MapPin,
+  Zap,
+  RotateCcw,
+  Printer,
+  HardDrive,
+  Loader2,
+  Eye,
+  ShoppingCart,
+  Calendar,
+  ChevronRight,
+  Package2,
+  ListChecks,
+  Wifi,
+  WifiOff,
+  ArrowLeft,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { logger } from '@/services/logger';
 
-import { useHammerLogic, HammerItem } from '@/features/hammer/hooks/useHammerLogic'
-import { useLocationManager } from '@/shared/hooks/useLocationManager'
-import { useHIDScanner } from '@/hooks/useHIDScanner'
-import { useAppStore } from '@/stores'
-import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '@/services/hammerSync'
-import { exportHammerToExcel } from '@/services/export'
-import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine'
-import { HammerDbRepository } from '@/repositories/HammerDbRepository'
-import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository'
-import type { ExpectedOrder } from '@/types'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
-import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal'
-import { formatTimeAgo } from '@/lib/date'
-import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpiryModal'
+import { useHammerLogic, HammerItem } from '@/features/hammer/hooks/useHammerLogic';
+import { useLocationManager } from '@/shared/hooks/useLocationManager';
+import { useHIDScanner } from '@/hooks/useHIDScanner';
+import { useAppStore } from '@/stores';
+import {
+  migrateMassiveToMaster,
+  importManifestFromCloud,
+  importExpectedOrderFromCloud,
+  importLocalExpectedOrderToHammer,
+  migrateHammerManifestToExpectedOrders,
+} from '@/services/hammerSync';
+import { exportHammerToExcel } from '@/services/export';
+import { thermalPrinter } from '@/core/hardware/ThermalPrinterEngine';
+import { HammerDbRepository } from '@/repositories/HammerDbRepository';
+import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository';
+import type { ExpectedOrder } from '@/types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/db';
+import { LocationSelectorModal } from '@/shared/components/ui/LocationSelectorModal';
+import { formatTimeAgo } from '@/lib/date';
+import { TestModeExpiryModal } from '@/features/counting/components/TestModeExpiryModal';
 
 // Importar modal de inicio unificado
-import { StartCountingModal, type StartCountingConfig } from '@/features/counting/components/StartCountingModal'
-import { useCountingEngine } from '@/features/counting/hooks/useCountingEngine'
+import {
+  StartCountingModal,
+  type StartCountingConfig,
+} from '@/features/counting/components/StartCountingModal';
+import { useCountingEngine } from '@/features/counting/hooks/useCountingEngine';
 
 // Importar componentes compartidos
-import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
-import { SearchInput } from '@/shared/components/ui/SearchInput'
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard';
+import { SearchInput } from '@/shared/components/ui/SearchInput';
 
 // Importar componentes de Hammer extraídos
-import { ToolItem, ItemRow, ToolsSheet, ImportModal } from '@/features/hammer/components'
-
+import { ToolItem, ItemRow, ToolsSheet, ImportModal } from '@/features/hammer/components';
+import { HammerHeader } from './HammerPage/HammerHeader';
 
 // ============================================================================
 // Componente principal
@@ -53,22 +90,22 @@ const generateSimpleId = (): string => {
 };
 
 export const RedesignHammerPage: React.FC = () => {
-  const navigate = useNavigate()
-  const params = useParams()
-  
+  const navigate = useNavigate();
+  const params = useParams();
+
   // Hook del motor de conteo
-  const { startCounting, isStarting } = useCountingEngine()
-  
+  const { startCounting, isStarting } = useCountingEngine();
+
   // Modal de inicio unificado
 
   // Ref para evitar que el modal se reabra durante navegación
   const isNavigatingRef = useRef(false);
 
-  const [showStartModal, setShowStartModal] = useState(false)
-  
+  const [showStartModal, setShowStartModal] = useState(false);
+
   // Estado para saber si debemos omitir el modal (viene de StartCountingModal)
-  const [skipModal, setSkipModal] = useState(false)
-  
+  const [skipModal, setSkipModal] = useState(false);
+
   // Generar un batchId único si no se proporciona uno, para evitar recuperar datos de sesiones anteriores
   const [effectiveBatchId] = useState(() => {
     const paramBatchId = params.batchId;
@@ -78,7 +115,7 @@ export const RedesignHammerPage: React.FC = () => {
     // Generar un nuevo batchId único usando función simple
     return generateSimpleId();
   });
-  
+
   // Si el batchId proporcionado es 'CORE' o está vacío, redirigir a uno nuevo
   useEffect(() => {
     if (params.batchId === 'CORE' || !params.batchId || params.batchId.trim() === '') {
@@ -95,7 +132,7 @@ export const RedesignHammerPage: React.FC = () => {
     // Verificar si skipModal está en la URL (viene de StartCountingModal)
     const urlParams = new URLSearchParams(window.location.search);
     const shouldSkipModal = urlParams.get('skipModal') === 'true';
-    
+
     if (shouldSkipModal) {
       // Marcar que debemos omitir el modal
       setSkipModal(true);
@@ -131,7 +168,7 @@ export const RedesignHammerPage: React.FC = () => {
     // Marcar que el usuario interactuó para evitar que el modal se reabra
     userInteractedWithModalRef.current = true;
     isNavigatingRef.current = true;
-    
+
     try {
       if (config.mode === 'blind') {
         // Modo ciego - ya estamos aquí, simplemente continuar
@@ -149,33 +186,33 @@ export const RedesignHammerPage: React.FC = () => {
     }
   };
 
-  const { settings, updateSetting } = useAppStore()
+  const { settings, updateSetting } = useAppStore();
 
-  const { state, actions } = useHammerLogic(effectiveBatchId)
-  const locManager = useLocationManager(`hammer_loc_${effectiveBatchId}`)
+  const { state, actions } = useHammerLogic(effectiveBatchId);
+  const locManager = useLocationManager(`hammer_loc_${effectiveBatchId}`);
 
-  const [isManualMode, setIsManualMode] = useState(false)
-  const [manualBarcode, setManualBarcode] = useState('')
-  const [isToolsOpen, setIsToolsOpen] = useState(false)
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-  const [isMigrating, setIsMigrating] = useState(false)
-  
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+
   // Modal de sesión existente - también guarda los conteos para mostrar al usuario
-  const [showSessionModal, setShowSessionModal] = useState(false)
-  const [sessionCounts, setSessionCounts] = useState({ 
-    scans: 0, 
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [sessionCounts, setSessionCounts] = useState({
+    scans: 0,
     manifests: 0,
     totalScannedUnits: 0,
     totalExpectedUnits: 0,
-    lastScanTimestamp: null as number | null
-  })
+    lastScanTimestamp: null as number | null,
+  });
 
   // Verificar si hay datos existentes al cargar y auto-descartar carga teórica antigua
   useEffect(() => {
     const checkExistingSession = async () => {
       // Usar getBatchSessionInfo para obtener información más detallada
       const sessionInfo = await HammerDbRepository.getBatchSessionInfo(effectiveBatchId);
-      
+
       // Si no hay datos, no mostrar modal
       if (!sessionInfo.hasData) {
         return;
@@ -188,14 +225,13 @@ export const RedesignHammerPage: React.FC = () => {
       const ONE_DAY_MS = 24 * 60 * 60 * 1000;
       const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
       const now = Date.now();
-      const sessionAge = sessionInfo.lastScanTimestamp 
-        ? now - sessionInfo.lastScanTimestamp 
+      const sessionAge = sessionInfo.lastScanTimestamp
+        ? now - sessionInfo.lastScanTimestamp
         : ONE_DAY_MS; // Si no hay escaneos, considerar como 1 día
 
-      const hasOldManifests = sessionInfo.manifests > 0 && (
-        sessionAge > ONE_DAY_MS || 
-        (sessionInfo.scans === 0 && sessionInfo.manifests > 0)
-      );
+      const hasOldManifests =
+        sessionInfo.manifests > 0 &&
+        (sessionAge > ONE_DAY_MS || (sessionInfo.scans === 0 && sessionInfo.manifests > 0));
 
       // Si tiene manifests sin escaneos (sesión nunca usada) o manifests muy antiguos
       if (sessionInfo.manifests > 0 && sessionInfo.scans === 0) {
@@ -207,7 +243,7 @@ export const RedesignHammerPage: React.FC = () => {
           manifests: 0,
           totalScannedUnits: 0,
           totalExpectedUnits: 0,
-          lastScanTimestamp: null
+          lastScanTimestamp: null,
         });
         return;
       }
@@ -220,7 +256,7 @@ export const RedesignHammerPage: React.FC = () => {
           manifests: sessionInfo.manifests,
           totalScannedUnits: sessionInfo.totalScannedUnits,
           totalExpectedUnits: sessionInfo.totalExpectedUnits,
-          lastScanTimestamp: sessionInfo.lastScanTimestamp
+          lastScanTimestamp: sessionInfo.lastScanTimestamp,
         });
         setShowSessionModal(true);
         return;
@@ -233,7 +269,7 @@ export const RedesignHammerPage: React.FC = () => {
           manifests: 0,
           totalScannedUnits: sessionInfo.totalScannedUnits,
           totalExpectedUnits: 0,
-          lastScanTimestamp: sessionInfo.lastScanTimestamp
+          lastScanTimestamp: sessionInfo.lastScanTimestamp,
         });
         setShowSessionModal(true);
         return;
@@ -245,153 +281,161 @@ export const RedesignHammerPage: React.FC = () => {
         manifests: sessionInfo.manifests,
         totalScannedUnits: sessionInfo.totalScannedUnits,
         totalExpectedUnits: sessionInfo.totalExpectedUnits,
-        lastScanTimestamp: sessionInfo.lastScanTimestamp
+        lastScanTimestamp: sessionInfo.lastScanTimestamp,
       });
       setShowSessionModal(true);
     };
     checkExistingSession();
-  }, [effectiveBatchId]) // Solo al montar
+  }, [effectiveBatchId]); // Solo al montar
 
   // Alias para mantener compatibilidad con el resto del código
   const batchId = effectiveBatchId;
 
   // HID Scanner
   useHIDScanner({
-    onScan: (barcode) => {
-      actions.registerScan(barcode)
+    onScan: barcode => {
+      actions.registerScan(barcode);
     },
     isEnabled: !isMigrating && !isToolsOpen && !isImportModalOpen && !showSessionModal,
-    maxLatency: 40
-  })
+    maxLatency: 40,
+  });
 
   // Sync location
   useEffect(() => {
     if (locManager.location) {
-      actions.setCurrentLocation(locManager.location)
+      actions.setCurrentLocation(locManager.location);
     }
-  }, [locManager.location])
+  }, [locManager.location]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleShortcuts = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
       if (e.key.toLowerCase() === 'm' && e.altKey) {
-        e.preventDefault()
-        setIsManualMode(prev => !prev)
+        e.preventDefault();
+        setIsManualMode(prev => !prev);
       } else if (e.key.toLowerCase() === 's' && e.altKey) {
-        e.preventDefault()
-        actions.syncToCloud()
+        e.preventDefault();
+        actions.syncToCloud();
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleShortcuts)
-    return () => window.removeEventListener('keydown', handleShortcuts)
-  }, [actions])
+    window.addEventListener('keydown', handleShortcuts);
+    return () => window.removeEventListener('keydown', handleShortcuts);
+  }, [actions]);
 
   // Continuar con la sesión existente
   const handleContinueSession = () => {
-    setShowSessionModal(false)
-  }
+    setShowSessionModal(false);
+  };
 
   // Empezar nueva sesión (limpiar datos)
   const handleNewSession = async () => {
     try {
       // 1. Eliminar todos los escaneos
-      await HammerDbRepository.deleteBlindScansByBatch(batchId)
-      
+      await HammerDbRepository.deleteBlindScansByBatch(batchId);
+
       // 2. ELIMINAR también la carga teórica (manifests)
       // Esto es lo que faltaba - los manifests nunca se eliminaban
-      await HammerDbRepository.deleteBlindManifestsByBatch(batchId)
-      
+      await HammerDbRepository.deleteBlindManifestsByBatch(batchId);
+
       // 3. Recargar la página para reiniciar todo desde cero
-      window.location.reload()
+      window.location.reload();
     } catch (error) {
-      logger.error('HammerPage', 'Error al limpiar sesión', error instanceof Error ? error.message : String(error));
-      toast.error('Error al limpiar sesión')
+      logger.error(
+        'HammerPage',
+        'Error al limpiar sesión',
+        error instanceof Error ? error.message : String(error)
+      );
+      toast.error('Error al limpiar sesión');
     }
-  }
+  };
 
   // Limpiar solo la carga teórica (manifests) pero mantener los escaneos
   const handleClearTheoreticalOnly = async () => {
     try {
-      await HammerDbRepository.deleteBlindManifestsByBatch(batchId)
-      setShowSessionModal(false)
-      toast.success('Carga teórica eliminada. Los escaneos se mantienen.')
+      await HammerDbRepository.deleteBlindManifestsByBatch(batchId);
+      setShowSessionModal(false);
+      toast.success('Carga teórica eliminada. Los escaneos se mantienen.');
     } catch (error) {
-      logger.error('HammerPage', 'Error al limpiar carga teórica', error instanceof Error ? error.message : String(error));
-      toast.error('Error al limpiar carga teórica')
+      logger.error(
+        'HammerPage',
+        'Error al limpiar carga teórica',
+        error instanceof Error ? error.message : String(error)
+      );
+      toast.error('Error al limpiar carga teórica');
     }
-  }
+  };
 
   // Empezar nueva sesión con ID único (para no reutilizar datos)
   const handleNewSessionWithNewId = () => {
     // Generar un nuevo batchId único
-    const newBatchId = generateSimpleId()
-    
+    const newBatchId = generateSimpleId();
+
     // Guardar en localStorage para que el router lo use
-    localStorage.setItem('hammer_last_batch', newBatchId)
-    
+    localStorage.setItem('hammer_last_batch', newBatchId);
+
     // Navegar a la nueva sesión
-    navigate(`/massive/${newBatchId}`)
-  }
+    navigate(`/massive/${newBatchId}`);
+  };
 
   const handleManualScan = () => {
     if (manualBarcode.trim()) {
-      actions.registerScan(manualBarcode.trim())
-      setManualBarcode('')
-      toast.success('Escaneado')
+      actions.registerScan(manualBarcode.trim());
+      setManualBarcode('');
+      toast.success('Escaneado');
     }
-  }
+  };
 
   const handleFinalize = async () => {
-    if (!state.items.length || isMigrating) return
-    if (!confirm('Cerrar auditoria y consolidar registros?')) return
-    
-    setIsMigrating(true)
+    if (!state.items.length || isMigrating) return;
+    if (!confirm('Cerrar auditoria y consolidar registros?')) return;
+
+    setIsMigrating(true);
     try {
-      await migrateMassiveToMaster(batchId)
-      toast.success('Auditoria finalizada')
-      navigate('/reports?type=hammer')
+      await migrateMassiveToMaster(batchId);
+      toast.success('Auditoria finalizada');
+      navigate('/reports?type=hammer');
     } catch (err) {
-      toast.error('Error al finalizar')
-      setIsMigrating(false)
+      toast.error('Error al finalizar');
+      setIsMigrating(false);
     }
-  }
+  };
 
   const handleStartTestCounting = async () => {
     if (state.items.length === 0) {
-      toast.error('Primero importa una carga teorica')
-      return
+      toast.error('Primero importa una carga teorica');
+      return;
     }
     try {
-      const sessionId = await migrateHammerManifestToExpectedOrders(batchId)
-      toast.success('Conteo de prueba iniciado')
-      navigate(`/counting/${sessionId}`)
+      const sessionId = await migrateHammerManifestToExpectedOrders(batchId);
+      toast.success('Conteo de prueba iniciado');
+      navigate(`/counting/${sessionId}`);
     } catch (err) {
-      toast.error('Error al iniciar conteo')
+      toast.error('Error al iniciar conteo');
     }
-  }
+  };
 
   const handleExport = () => {
-    exportHammerToExcel(batchId, state.items)
-    toast.success('Exportando...')
-  }
+    exportHammerToExcel(batchId, state.items);
+    toast.success('Exportando...');
+  };
 
   const handleImportLocal = async (orderId: string) => {
     try {
-      await importLocalExpectedOrderToHammer(batchId, orderId)
-      toast.success('Carga teorica importada')
+      await importLocalExpectedOrderToHammer(batchId, orderId);
+      toast.success('Carga teorica importada');
     } catch (err: any) {
-      toast.error(err.message || 'Error al importar')
+      toast.error(err.message || 'Error al importar');
     }
-  }
+  };
 
   const handlePrintTicket = () => {
     if (state.items.length === 0) {
-      toast.error('No hay items para imprimir')
-      return
+      toast.error('No hay items para imprimir');
+      return;
     }
 
     // Crear un objeto ExpectedOrder con los items del hammer
@@ -403,7 +447,7 @@ export const RedesignHammerPage: React.FC = () => {
         name: item.name,
         expectedQty: item.expectedQty || 0,
         quantity: item.totalQuantity,
-        location: item.loc || ''
+        location: item.loc || '',
       })),
       totalExpectedUnits: state.items.reduce((sum, i) => sum + i.totalQuantity, 0),
       totalExpectedSKUs: state.items.length,
@@ -412,24 +456,24 @@ export const RedesignHammerPage: React.FC = () => {
         documentType: 'CONTEO HAMMER',
         internalGuide: `Lote ${batchId}`,
         purchaseOrder: locManager.location || 'ZONA-A',
-        date: new Date().toLocaleDateString()
-      }
-    }
+        date: new Date().toLocaleDateString(),
+      },
+    };
 
-    thermalPrinter.printHammerTicket(hammerOrder)
-    toast.success('Imprimiendo ticket...')
-  }
+    thermalPrinter.printHammerTicket(hammerOrder);
+    toast.success('Imprimiendo ticket...');
+  };
 
   // Stats
   const stats = useMemo(() => {
-    const items = state.items || []
-    const total = items.length
-    const withExpected = items.filter(i => i.expectedQty !== undefined)
-    const complete = withExpected.filter(i => i.totalQuantity === i.expectedQty).length
-    const withVariance = withExpected.filter(i => i.totalQuantity !== i.expectedQty).length
-    const totalQty = items.reduce((acc, i) => acc + i.totalQuantity, 0)
-    return { total, complete, withVariance, totalQty, hasExpected: withExpected.length > 0 }
-  }, [state.items])
+    const items = state.items || [];
+    const total = items.length;
+    const withExpected = items.filter(i => i.expectedQty !== undefined);
+    const complete = withExpected.filter(i => i.totalQuantity === i.expectedQty).length;
+    const withVariance = withExpected.filter(i => i.totalQuantity !== i.expectedQty).length;
+    const totalQty = items.reduce((acc, i) => acc + i.totalQuantity, 0);
+    return { total, complete, withVariance, totalQty, hasExpected: withExpected.length > 0 };
+  }, [state.items]);
 
   if (!state.items) {
     return (
@@ -437,102 +481,24 @@ export const RedesignHammerPage: React.FC = () => {
         <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-muted mt-4">Cargando modo hammer...</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="h-full flex flex-col bg-base overflow-hidden">
       {/* Header */}
-      <div className="pt-4 px-4 sm:px-6 shrink-0 bg-base border-b border-subtle">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/dashboard')} className="p-2 rounded-lg hover:bg-surface transition-colors">
-              <X className="w-5 h-5 text-muted" />
-            </button>
-            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
-              <Hammer className="w-5 h-5 text-orange-500" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-primary">Modo Rafaga</h1>
-              <p className="text-xs text-muted font-mono">{batchId}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => locManager.openModal?.()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-subtle text-sm font-medium hover:bg-elevated transition-colors"
-            >
-              <MapPin className="w-4 h-4 text-blue-400" />
-              <span className="hidden sm:inline">{locManager.location || 'ZONA-A'}</span>
-            </button>
-
-            <div className={cn(
-              'w-8 h-8 rounded-lg flex items-center justify-center',
-              state.autoSyncEnabled ? 'bg-emerald-500/10' : 'bg-subtle'
-            )}>
-              {state.autoSyncEnabled ? (
-                <Cloud className="w-4 h-4 text-emerald-500" />
-              ) : (
-                <CloudOff className="w-4 h-4 text-muted" />
-              )}
-            </div>
-
-            <button 
-              onClick={() => actions.syncToCloud()}
-              disabled={state.isSyncing}
-              className={cn(
-                'p-2 rounded-lg transition-colors',
-                state.isSyncing ? 'bg-blue-500 text-white' : 'bg-surface hover:bg-elevated'
-              )}
-            >
-              <RefreshCw className={cn('w-5 h-5', state.isSyncing && 'animate-spin')} />
-            </button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-          <HorizontalStatCard icon={Package} label="SKUs" value={stats.total} />
-          <HorizontalStatCard icon={Check} label="OK" value={stats.complete} color="text-emerald-500" />
-          <HorizontalStatCard icon={AlertTriangle} label="Variacion" value={stats.withVariance} color="text-amber-500" />
-          <HorizontalStatCard icon={TrendingUp} label="Unidades" value={stats.totalQty} color="text-blue-500" />
-        </div>
-
-        {/* Progress */}
-        {stats.hasExpected && (
-          <div className="space-y-2 mb-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted">Progreso</span>
-              <span className="font-mono">{stats.complete}/{stats.total} OK</span>
-            </div>
-            <div className="h-2 bg-elevated rounded-full overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${stats.total > 0 ? (stats.complete / stats.total) * 100 : 0}%` }}
-                className="h-full bg-emerald-500 rounded-full"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Status */}
-        {state.pendingWrites > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 text-sm text-amber-500 mb-2"
-          >
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span>{state.pendingWrites} escrituras pendientes</span>
-          </motion.div>
-        )}
-        {state.syncError && (
-          <div className="flex items-center gap-2 text-sm text-rose-500 mb-2">
-            <AlertTriangle className="w-4 h-4" />
-            <span>{state.syncError}</span>
-          </div>
-        )}
-      </div>
+      <HammerHeader
+        batchId={batchId}
+        onBack={() => navigate('/dashboard')}
+        location={locManager.location}
+        onOpenLocation={() => locManager.openModal?.()}
+        autoSyncEnabled={state.autoSyncEnabled}
+        isSyncing={state.isSyncing}
+        pendingWrites={state.pendingWrites}
+        syncError={state.syncError}
+        onSync={() => actions.syncToCloud()}
+        stats={stats}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-28">
@@ -542,7 +508,9 @@ export const RedesignHammerPage: React.FC = () => {
             onClick={() => setIsManualMode(!isManualMode)}
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-              isManualMode ? 'bg-blue-500 text-white' : 'bg-surface text-secondary hover:text-primary'
+              isManualMode
+                ? 'bg-blue-500 text-white'
+                : 'bg-surface text-secondary hover:text-primary'
             )}
           >
             <Keyboard className="w-4 h-4" />
@@ -554,13 +522,13 @@ export const RedesignHammerPage: React.FC = () => {
               <input
                 type="text"
                 value={manualBarcode}
-                onChange={(e) => setManualBarcode(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
+                onChange={e => setManualBarcode(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleManualScan()}
                 placeholder="Ingresa codigo..."
                 className="flex-1 bg-surface border border-default rounded-xl px-4 py-2 text-sm font-mono text-primary focus:outline-none focus:border-[var(--accent)]"
                 autoFocus
               />
-              <button 
+              <button
                 onClick={handleManualScan}
                 className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium"
               >
@@ -573,8 +541,9 @@ export const RedesignHammerPage: React.FC = () => {
         {/* Items List */}
         <div className="flex flex-col gap-2 py-3">
           {state.items.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className="text-center py-16"
             >
               <div className="w-20 h-20 rounded-full bg-elevated flex items-center justify-center mx-auto mb-4">
@@ -582,7 +551,8 @@ export const RedesignHammerPage: React.FC = () => {
               </div>
               <p className="text-lg font-medium text-primary mb-2">Sin escaneos</p>
               <p className="text-sm text-muted max-w-xs mx-auto">
-                Escanea codigos de barras con tu dispositivo o activa el modo manual para ingresar codigos.
+                Escanea codigos de barras con tu dispositivo o activa el modo manual para ingresar
+                codigos.
               </p>
               <button
                 onClick={() => setIsImportModalOpen(true)}
@@ -593,7 +563,7 @@ export const RedesignHammerPage: React.FC = () => {
             </motion.div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {state.items.map((item) => (
+              {state.items.map(item => (
                 <ItemRow
                   key={item.barcode}
                   item={item}
@@ -610,28 +580,28 @@ export const RedesignHammerPage: React.FC = () => {
       {/* Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-base/95 backdrop-blur-xl border-t border-subtle p-4">
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => setIsToolsOpen(true)}
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface rounded-xl font-medium hover:bg-elevated transition-colors"
           >
             <Settings className="w-5 h-5" />
             <span className="hidden sm:inline">Herramientas</span>
           </button>
-          <button 
+          <button
             onClick={() => setIsImportModalOpen(true)}
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface rounded-xl font-medium hover:bg-elevated transition-colors"
           >
             <Download className="w-5 h-5" />
             <span className="hidden sm:inline">Importar</span>
           </button>
-          <button 
+          <button
             onClick={handleExport}
             disabled={state.items.length === 0}
             className="flex items-center justify-center px-4 py-3 bg-surface rounded-xl hover:bg-elevated transition-colors disabled:opacity-50"
           >
             <Printer className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={handleFinalize}
             disabled={state.items.length === 0 || isMigrating}
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 text-white rounded-xl font-medium disabled:opacity-50"
@@ -681,9 +651,9 @@ export const RedesignHammerPage: React.FC = () => {
           isOpen={true}
           onClose={() => locManager.closeModal?.()}
           currentLocation={locManager.location || 'ZONA-A'}
-          onSelect={(loc) => {
-            locManager.setLocation?.(loc)
-            locManager.closeModal?.()
+          onSelect={loc => {
+            locManager.setLocation?.(loc);
+            locManager.closeModal?.();
           }}
         />
       )}
@@ -707,7 +677,7 @@ export const RedesignHammerPage: React.FC = () => {
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 Sesión Anterior Detectada
               </h3>
-              
+
               {/* Detalle de lo que hay guardado */}
               <div className="bg-surface rounded-xl p-4 mb-4 space-y-3">
                 {/* Sección de Escaneos */}
@@ -719,11 +689,13 @@ export const RedesignHammerPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-emerald-500">{sessionCounts.scans} SKUs</span>
-                      <span className="text-xs text-muted ml-2">({sessionCounts.totalScannedUnits} unidades)</span>
+                      <span className="text-xs text-muted ml-2">
+                        ({sessionCounts.totalScannedUnits} unidades)
+                      </span>
                     </div>
                   </div>
                 )}
-                
+
                 {/* Sección de Carga Teórica */}
                 {sessionCounts.manifests > 0 && (
                   <div className="flex items-center justify-between">
@@ -732,8 +704,12 @@ export const RedesignHammerPage: React.FC = () => {
                       <span className="text-sm text-secondary">Carga Teórica</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-bold text-amber-500">{sessionCounts.manifests} SKUs</span>
-                      <span className="text-xs text-muted ml-2">({sessionCounts.totalExpectedUnits} unidades)</span>
+                      <span className="font-bold text-amber-500">
+                        {sessionCounts.manifests} SKUs
+                      </span>
+                      <span className="text-xs text-muted ml-2">
+                        ({sessionCounts.totalExpectedUnits} unidades)
+                      </span>
                     </div>
                   </div>
                 )}
@@ -745,7 +721,7 @@ export const RedesignHammerPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Mensaje explicativo */}
               <p className="text-sm text-muted text-center mb-4">
                 {sessionCounts.scans > 0 && sessionCounts.manifests > 0
@@ -754,7 +730,7 @@ export const RedesignHammerPage: React.FC = () => {
                     ? 'Esta sesión tiene escaneos guardados. ¿Deseas continuar?'
                     : '¿Deseas usar esta carga teórica para el conteo?'}
               </p>
-              
+
               <div className="space-y-3">
                 {/* Opción principal: Continuar con lo que hay */}
                 <button
@@ -764,7 +740,7 @@ export const RedesignHammerPage: React.FC = () => {
                   <Check className="w-5 h-5" />
                   Continuar con esta sesión
                 </button>
-                
+
                 {/* Opción para limpiar solo la carga teórica pero mantener escaneos */}
                 {sessionCounts.manifests > 0 && sessionCounts.scans > 0 && (
                   <button
@@ -789,7 +765,7 @@ export const RedesignHammerPage: React.FC = () => {
                     Importar carga teórica
                   </button>
                 )}
-                
+
                 {/* Limpiar todo */}
                 {sessionCounts.scans > 0 && (
                   <button
@@ -800,7 +776,7 @@ export const RedesignHammerPage: React.FC = () => {
                     Limpiar todo y empezar de nuevo
                   </button>
                 )}
-                
+
                 {/* Nueva sesión con nuevo lote */}
                 <button
                   onClick={handleNewSessionWithNewId}
@@ -809,7 +785,7 @@ export const RedesignHammerPage: React.FC = () => {
                   <Hammer className="w-5 h-5" />
                   Nueva sesión (lote nuevo)
                 </button>
-                
+
                 <button
                   onClick={() => navigate('/dashboard')}
                   className="w-full py-3 px-4 text-muted font-medium rounded-xl transition-colors"
@@ -827,15 +803,15 @@ export const RedesignHammerPage: React.FC = () => {
         <TestModeExpiryModal
           barcode={state.awaitingExpiry.barcode}
           productName={state.awaitingExpiry.name}
-          onComplete={(data) => {
-            actions.handleExpiryComplete(data.mm, data.yyyy)
+          onComplete={data => {
+            actions.handleExpiryComplete(data.mm, data.yyyy);
           }}
           onCancel={() => {
-            actions.handleExpiryCancel()
+            actions.handleExpiryCancel();
           }}
           onSkip={() => {
             // Omitir - continuar sin registrar vencimiento
-            actions.handleExpiryComplete(0, 9999)
+            actions.handleExpiryComplete(0, 9999);
           }}
         />
       )}
@@ -847,5 +823,5 @@ export const RedesignHammerPage: React.FC = () => {
         onStart={handleStartFromModal}
       />
     </div>
-  )
-}
+  );
+};
