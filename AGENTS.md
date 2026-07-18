@@ -92,6 +92,57 @@ toggleFeature('FEATURE_KEY')     # Cambiar
 
 ---
 
+## Auditoría Profunda de Código - Julio 2026
+
+### Commits de Refactorización (10 commits)
+
+| Commit    | Descripción                                      | Reducción  |
+| --------- | ------------------------------------------------ | ---------- |
+| `d1e3222` | Extraer SyncConflictResolver                     | -118 LOC   |
+| `029d23e` | Eliminar código muerto expected-orders           | -1,176 LOC |
+| `400cb19` | Extraer HammerHeader de HammerPage               | -77 LOC    |
+| `eb1bb76` | Extraer componentes de ExpiryPage                | -88 LOC    |
+| `2019d38` | Extraer OrderDetailModal de TheoreticalLoadsPage | -175 LOC   |
+| `4882a9b` | Extraer HTML generator de ThermalPrinterEngine   | -241 LOC   |
+| `24c735b` | Extraer constantes de EventsModal                | -57 LOC    |
+| `99473a6` | Extraer constantes y hooks de ExpiryCaptureModal | -74 LOC    |
+| `e7150fe` | Extraer ReceptionCard de ReceptionPage           | -87 LOC    |
+| `7e3e538` | Extraer componentes de ReportsPage               | -77 LOC    |
+
+### Archivos Reducidos
+
+| Archivo                  | Antes | Después | Reducción        |
+| ------------------------ | ----- | ------- | ---------------- |
+| ExpiryPage.tsx           | 1,378 | 1,290   | -88              |
+| TheoreticalLoadsPage.tsx | 1,325 | 1,150   | -175             |
+| EventsModal.tsx          | 1,054 | 1,130   | +76 (modificado) |
+| ThermalPrinterEngine.ts  | 1,144 | 972     | -241             |
+| ExpiryCaptureModal.tsx   | 927   | 853     | -74              |
+| ReceptionPage.tsx        | 774   | 687     | -87              |
+| ReportsPage.tsx          | 724   | 647     | -77              |
+
+### Componentes Extraídos
+
+| Componente             | Archivo                      | Descripción              |
+| ---------------------- | ---------------------------- | ------------------------ |
+| HammerHeader           | HammerPage/HammerHeader.tsx  | Header con stats         |
+| ExpiryHeader           | ExpiryPage/ExpiryHeader.tsx  | Header con filtros       |
+| ExpiryFilters          | ExpiryPage/ExpiryFilters.tsx | Filtros avanzados        |
+| OrderDetailModal       | TheoreticalLoadsPage/        | Modal de detalle         |
+| reportHtmlGenerator    | thermal-print/               | Generador HTML impresión |
+| eventsConstants        | EventsModal/                 | Tipos y constantes       |
+| expiryCaptureConstants | ExpiryCaptureModal/          | Hook de teclado          |
+| ReceptionCard          | ReceptionPage/               | Tarjeta de recepción     |
+| reportComponents       | ReportsPage/                 | StatCard y MiniChart     |
+
+### Reducción Total
+
+- **Líneas eliminadas del código principal**: ~900 LOC
+- **Archivos monolíticos reducidos**: 7 archivos
+- **Componentes reutilizables creados**: 9 módulos
+
+---
+
 ## Rediseño de Interfaz - Migración de Estilos (2026-06-28)
 
 ### Sistema de Variables CSS
