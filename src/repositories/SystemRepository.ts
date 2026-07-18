@@ -17,7 +17,7 @@ export const SystemRepository = {
     const sessions = await db.sessions.toArray();
     const sessionIds = new Set(sessions.map(s => s.id));
     const scans = await db.scans.toArray();
-    
+
     const orphanScans = scans.filter(s => !sessionIds.has(s.sessionId)).length;
     return { orphanScans };
   },
@@ -28,13 +28,17 @@ export const SystemRepository = {
   },
 
   async clearDiskData(): Promise<void> {
-    await db.transaction('rw', [db.products, db.sessions, db.scans, db.logs, db.expectedOrders], async () => {
-      await db.products.clear();
-      await db.sessions.clear();
-      await db.scans.clear();
-      await db.logs.clear();
-      await db.expectedOrders.clear();
-    });
+    await db.transaction(
+      'rw',
+      [db.products, db.sessions, db.scans, db.logs, db.expectedOrders],
+      async () => {
+        await db.products.clear();
+        await db.sessions.clear();
+        await db.scans.clear();
+        await db.logs.clear();
+        await db.expectedOrders.clear();
+      }
+    );
   },
 
   async repairDatabase(): Promise<string[]> {
@@ -46,14 +50,16 @@ export const SystemRepository = {
         const scans = await ScanRepository.getBySession(session.id);
         const totalUnits = scans.reduce((acc, s) => acc + (s.quantity || 1), 0);
         const totalSKUs = new Set(scans.map(s => s.barcode)).size;
-        
+
         if (session.totalUnits !== totalUnits || session.totalSKUs !== totalSKUs) {
           await SessionRepository.save({
             ...session,
             totalUnits,
-            totalSKUs
+            totalSKUs,
           });
-          logs.push(`🔧 Reparada sesión ${session.id}: Sincronizadas unidades (${totalUnits}) y SKUs (${totalSKUs}).`);
+          logs.push(
+            `🔧 Reparada sesión ${session.id}: Sincronizadas unidades (${totalUnits}) y SKUs (${totalSKUs}).`
+          );
         }
       }
 
@@ -61,24 +67,26 @@ export const SystemRepository = {
       const sessionIds = new Set(sessions.map(s => s.id));
       const allScans = await ScanRepository.getAll();
       const orphanedScans = allScans.filter(s => !sessionIds.has(s.sessionId));
-      
+
       if (orphanedScans.length > 0) {
         await ScanRepository.deleteBySessions(orphanedScans.map(s => s.sessionId));
         logs.push(`🔧 Eliminados ${orphanedScans.length} registros de escaneo huérfanos.`);
       }
 
       return logs;
-    } catch (error: any) {
-      logs.push(`❌ Error durante reparación: ${error.message}`);
+    } catch (error: unknown) {
+      logs.push(`❌ Error durante reparación: ${(error as Error).message}`);
       return logs;
     }
   },
 
   async purgeOldData(daysThreshold: number): Promise<number> {
-    const dateLimit = Date.now() - (daysThreshold * 24 * 60 * 60 * 1000);
-    const oldSessions = (await db.sessions.toArray()).filter(s => s.createdAt < dateLimit && s.status === 'completed');
+    const dateLimit = Date.now() - daysThreshold * 24 * 60 * 60 * 1000;
+    const oldSessions = (await db.sessions.toArray()).filter(
+      s => s.createdAt < dateLimit && s.status === 'completed'
+    );
     const ids = oldSessions.map(s => s.id);
-    
+
     if (ids.length === 0) return 0;
 
     await db.transaction('rw', [db.sessions, db.scans], async () => {
@@ -93,13 +101,13 @@ export const SystemRepository = {
     const sessions = await db.sessions.toArray();
     const sessionIds = new Set(sessions.map(s => s.id));
     const scans = await db.scans.toArray();
-    
+
     const orphanIds = scans.filter(s => !sessionIds.has(s.sessionId)).map(s => s.id);
-    
+
     if (orphanIds.length > 0) {
       await db.scans.bulkDelete(orphanIds);
     }
-    
+
     return orphanIds.length;
-  }
+  },
 };

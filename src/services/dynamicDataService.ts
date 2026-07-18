@@ -7,10 +7,7 @@ type RecordData = Record<string, unknown>;
 
 export const dynamicDataService = {
   async getRecordsByTable(tableName: string) {
-    return await db.dynamic_data
-      .where('tableName')
-      .equals(tableName)
-      .toArray();
+    return await db.dynamic_data.where('tableName').equals(tableName).toArray();
   },
 
   async saveRecord(tableName: string, data: RecordData, id?: string) {
@@ -20,11 +17,11 @@ export const dynamicDataService = {
       tableName,
       data,
       timestamp: Date.now(),
-      syncStatus: 'pending'
+      syncStatus: 'pending',
     };
 
     await db.dynamic_data.put(record);
-    
+
     // Attempt background sync
     this.syncRecord(recordId).catch((err: Error) => {
       logger.error('DYNAMIC_DATA', `Error syncing record ${recordId}`, err.message);
@@ -57,16 +54,20 @@ export const dynamicDataService = {
     try {
       const settings = (await import('./settings')).getSettings();
       const config = settings.cloudConfig;
-      
+
       // Intentar identificar el ID remoto
       const remoteId = record.data['id'] || record.data['ID'] || record.id;
-      
+
       await supabaseSyncService.deleteRemote(record.tableName, String(remoteId));
-      
+
       // Si el borrado en la nube fue exitoso, borramos el registro local definitivamente
       await db.dynamic_data.delete(id);
-    } catch (error: any) {
-      logger.error('DYNAMIC_DATA', `Background deletion failed for ${id}, will retry later`, error.message);
+    } catch (error: unknown) {
+      logger.error(
+        'DYNAMIC_DATA',
+        `Background deletion failed for ${id}, will retry later`,
+        (error as Error).message
+      );
       // No borramos localmente, se queda como 'pending_delete' para el próximo ciclo de sync
     }
   },
@@ -79,12 +80,15 @@ export const dynamicDataService = {
       const rowData = { ...record.data };
       const settings = (await import('./settings')).getSettings();
       const config = settings.cloudConfig;
-      
+
       let idCol = 'ID';
       let tsCol = 'TIMESTAMP';
 
       if (config?.mappings) {
-        if (record.tableName === config.inventoryRegistryTableName || record.tableName === config.expiryTableName) {
+        if (
+          record.tableName === config.inventoryRegistryTableName ||
+          record.tableName === config.expiryTableName
+        ) {
           idCol = config.mappings.expiry?.id || 'ID';
           tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
         } else if (record.tableName === config.eventsTableName) {
@@ -106,15 +110,22 @@ export const dynamicDataService = {
       if (response.success) {
         // MULTI-USER CONCURRENCY FIX
         const current = await db.dynamic_data.get(id);
-        if (current && current.timestamp === record.timestamp && current.syncStatus !== 'pending_delete') {
-            await db.dynamic_data.update(id, { syncStatus: 'synced' });
+        if (
+          current &&
+          current.timestamp === record.timestamp &&
+          current.syncStatus !== 'pending_delete'
+        ) {
+          await db.dynamic_data.update(id, { syncStatus: 'synced' });
         }
       } else {
         await db.dynamic_data.update(id, { syncStatus: 'error', syncError: response.error });
       }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
-      await db.dynamic_data.update(id, { syncStatus: 'error', syncError: error.message });
+      await db.dynamic_data.update(id, {
+        syncStatus: 'error',
+        syncError: (error as Error).message,
+      });
       throw error;
     }
   },
@@ -122,6 +133,5 @@ export const dynamicDataService = {
   async syncAllPending() {
     const { dynamicSyncService } = await import('./dynamicSync');
     await dynamicSyncService.syncAllPending(undefined);
-  }
+  },
 };
-

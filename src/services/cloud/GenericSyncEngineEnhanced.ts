@@ -93,13 +93,13 @@ export class EnhancedSyncEngine {
         pushRes,
         metrics: this.getMetrics(registryKey) ?? undefined,
       };
-    } catch (error: any) {
-      logger.error('EnhancedSync', `Sync failed for ${registryKey}`, error.message);
-      this.trackError(registryKey, error.message);
+    } catch (error: unknown) {
+      logger.error('EnhancedSync', `Sync failed for ${registryKey}`, (error as Error).message);
+      this.trackError(registryKey, (error as Error).message);
 
       return {
         success: false,
-        error: error.message,
+        error: (error as Error).message,
         metrics: this.getMetrics(registryKey) ?? undefined,
       };
     }

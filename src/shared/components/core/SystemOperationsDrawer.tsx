@@ -453,8 +453,10 @@ export const SystemOperationsDrawer: React.FC = () => {
                         await productRepository.deleteAll();
                         toast.success('Maestras locales vaciadas.', { id: tId });
                         window.location.reload();
-                      } catch (error: any) {
-                        toast.error('Error al vaciar maestras: ' + error.message, { id: tId });
+                      } catch (error: unknown) {
+                        toast.error('Error al vaciar maestras: ' + (error as Error).message, {
+                          id: tId,
+                        });
                       }
                     }
                   }}
@@ -480,8 +482,10 @@ export const SystemOperationsDrawer: React.FC = () => {
                           id: tId,
                         });
                         window.location.reload();
-                      } catch (error: any) {
-                        toast.error('Error al vaciar vencimientos: ' + error.message, { id: tId });
+                      } catch (error: unknown) {
+                        toast.error('Error al vaciar vencimientos: ' + (error as Error).message, {
+                          id: tId,
+                        });
                       }
                     }
                   }}

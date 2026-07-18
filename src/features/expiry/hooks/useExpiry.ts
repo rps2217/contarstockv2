@@ -1,6 +1,6 @@
 /**
  * useExpiry - Hook centralizado para gestión de vencimientos
- * 
+ *
  * Arquitectura simplificada v3.0 - Un solo hook, una sola responsabilidad
  * Usa cache centralizado para evitar recargas excesivas
  * Usa validación Zod para garantizar integridad de datos
@@ -135,8 +135,12 @@ interface UseExpiryReturn {
 
 const DEFAULT_WITHDRAWAL_DAYS = 30;
 
-const normalizeText = (s: string): string => 
-  (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+const normalizeText = (s: string): string =>
+  (s || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 
 // ============================================================================
 // HOOK PRINCIPAL
@@ -157,7 +161,7 @@ export const useExpiry = (): UseExpiryReturn => {
     selectedStatuses: [],
     selectedCategories: [],
     dateRange: { start: null, end: null },
-    onlyCanje: null
+    onlyCanje: null,
   });
 
   // ============================================================================
@@ -167,11 +171,12 @@ export const useExpiry = (): UseExpiryReturn => {
   // Fetcher para cache
   const fetchExpiryRecords = useCallback(async () => {
     // Filtrar registros eliminados (soft delete)
-    const stored = await db.table('expirations')
+    const stored = await db
+      .table('expirations')
       .filter(item => item.syncStatus !== 'pending_delete')
       .toArray();
     const nowDate = new Date();
-    
+
     const processed: ExpiryRecord[] = stored.map(item => {
       const expiryDate = new Date(Number(item.yyyy), Number(item.mm) - 1, 1);
       expiryDate.setMonth(expiryDate.getMonth() + 1);
@@ -179,25 +184,28 @@ export const useExpiry = (): UseExpiryReturn => {
 
       const evaluation = evaluateExpiry(
         expiryDate,
-        { withdrawalDays: item.withdrawalDays ?? DEFAULT_WITHDRAWAL_DAYS, hasCanje: item.hasCanje ?? false },
+        {
+          withdrawalDays: item.withdrawalDays ?? DEFAULT_WITHDRAWAL_DAYS,
+          hasCanje: item.hasCanje ?? false,
+        },
         nowDate,
         item.quantity || 1
       );
 
       return {
         id: item.id as string,
-        barcode: item.barcode as string || '',
-        productName: (item.productName as string || '').toUpperCase(),
-        providerName: (item.providerName as string || 'N/A').toUpperCase(),
+        barcode: (item.barcode as string) || '',
+        productName: ((item.productName as string) || '').toUpperCase(),
+        providerName: ((item.providerName as string) || 'N/A').toUpperCase(),
         providerRut: item.providerRut as string | undefined,
         mm: Number(item.mm) || 1,
         yyyy: Number(item.yyyy) || new Date().getFullYear(),
         quantity: Number(item.quantity) || 1,
-        location: (item.location as string || 'N/A').toUpperCase(),
-        observaciones: item.observaciones as string || '',
-        claveUnica: item.claveUnica as string || item.id as string,
-        withdrawalDays: item.withdrawalDays as number ?? DEFAULT_WITHDRAWAL_DAYS,
-        hasCanje: item.hasCanje as boolean ?? false,
+        location: ((item.location as string) || 'N/A').toUpperCase(),
+        observaciones: (item.observaciones as string) || '',
+        claveUnica: (item.claveUnica as string) || (item.id as string),
+        withdrawalDays: (item.withdrawalDays as number) ?? DEFAULT_WITHDRAWAL_DAYS,
+        hasCanje: (item.hasCanje as boolean) ?? false,
         timestamp: Number(item.timestamp) || Date.now(),
         syncStatus: (item.syncStatus as 'synced' | 'pending' | 'error') || 'synced',
         status: evaluation.status,
@@ -207,7 +215,7 @@ export const useExpiry = (): UseExpiryReturn => {
         withdrawalDate: evaluation.withdrawalDate ?? new Date(),
         category: (item.category as string) || 'GENERAL',
         estado: evaluation.label,
-        type: (item.type as ExpiryType) || 'Individual'
+        type: (item.type as ExpiryType) || 'Individual',
       };
     });
 
@@ -215,7 +223,11 @@ export const useExpiry = (): UseExpiryReturn => {
   }, []);
 
   // Usar cache centralizado
-  const { data: cachedRecords, isLoading: isCacheLoading, invalidate } = useCloudCache(
+  const {
+    data: cachedRecords,
+    isLoading: isCacheLoading,
+    invalidate,
+  } = useCloudCache(
     EXPIRY_CACHE_KEY,
     fetchExpiryRecords,
     { ttl: 2 * 60 * 1000 } // 2 minutos
@@ -243,7 +255,9 @@ export const useExpiry = (): UseExpiryReturn => {
       if (filters.searchQuery) {
         const query = normalizeText(filters.searchQuery);
         const terms = query.split(/\s+/).filter(Boolean);
-        const searchIndex = normalizeText(`${record.barcode} ${record.productName} ${record.providerName} ${record.location}`);
+        const searchIndex = normalizeText(
+          `${record.barcode} ${record.productName} ${record.providerName} ${record.location}`
+        );
         if (!terms.every(term => searchIndex.includes(term))) return false;
       }
 
@@ -270,15 +284,31 @@ export const useExpiry = (): UseExpiryReturn => {
   }, [records, filters]);
 
   const stats = useMemo((): ExpiryStats => {
-    const result: ExpiryStats = { total: 0, expired: 0, critical: 0, withdrawal: 0, nextExpiry: 0, safe: 0 };
+    const result: ExpiryStats = {
+      total: 0,
+      expired: 0,
+      critical: 0,
+      withdrawal: 0,
+      nextExpiry: 0,
+      safe: 0,
+    };
     records.forEach(r => {
       result.total++;
       switch (r.status) {
-        case ExpiryStatus.EXPIRED: result.expired++; break;
-        case ExpiryStatus.CRITICAL: result.critical++; break;
-        case ExpiryStatus.WITHDRAWAL: result.withdrawal++; break;
-        case ExpiryStatus.NEXT_EXPIRY: result.nextExpiry++; break;
-        default: result.safe++;
+        case ExpiryStatus.EXPIRED:
+          result.expired++;
+          break;
+        case ExpiryStatus.CRITICAL:
+          result.critical++;
+          break;
+        case ExpiryStatus.WITHDRAWAL:
+          result.withdrawal++;
+          break;
+        case ExpiryStatus.NEXT_EXPIRY:
+          result.nextExpiry++;
+          break;
+        default:
+          result.safe++;
       }
     });
     return result;
@@ -322,7 +352,7 @@ export const useExpiry = (): UseExpiryReturn => {
       selectedStatuses: [],
       selectedCategories: [],
       dateRange: { start: null, end: null },
-      onlyCanje: null
+      onlyCanje: null,
     });
   }, []);
 
@@ -343,62 +373,70 @@ export const useExpiry = (): UseExpiryReturn => {
     setSelectedIds(new Set());
   }, []);
 
-  const deleteRecord = useCallback(async (id: string) => {
-    try {
-      // Soft delete: marcar como pending_delete
-      await db.table('expirations').update(id, { 
-        syncStatus: 'pending_delete' as any,
-        timestamp: Date.now()
-      });
-      clearCache(EXPIRY_CACHE_KEY);
-      setRecords(prev => prev.filter(r => r.id !== id));
-      toast.success('Registro eliminado', {
-        duration: 5000,
-        action: {
-          label: 'Deshacer',
-          onClick: async () => {
-            await db.table('expirations').update(id, { syncStatus: 'synced' as any });
-            refreshRecords();
-          },
-        },
-      });
-    } catch (error) {
-      logger.error('useExpiry', 'Error deleting record', String(error));
-      toast.error('Error al eliminar registro');
-      throw error;
-    }
-  }, [refreshRecords]);
-
-  const bulkDelete = useCallback(async (ids: string[]) => {
-    try {
-      // Soft delete en masa
-      await Promise.all(
-        ids.map(id => db.table('expirations').update(id, { 
+  const deleteRecord = useCallback(
+    async (id: string) => {
+      try {
+        // Soft delete: marcar como pending_delete
+        await db.table('expirations').update(id, {
           syncStatus: 'pending_delete' as any,
-          timestamp: Date.now()
-        }))
-      );
-      clearCache(EXPIRY_CACHE_KEY);
-      setRecords(prev => prev.filter(r => !ids.includes(r.id)));
-      setSelectedIds(new Set());
-      toast.success(`${ids.length} registros eliminados`, {
-        duration: 5000,
-        action: {
-          label: 'Deshacer',
-          onClick: async () => {
-            await Promise.all(
-              ids.map(id => db.table('expirations').update(id, { syncStatus: 'synced' as any }))
-            );
-            refreshRecords();
+          timestamp: Date.now(),
+        });
+        clearCache(EXPIRY_CACHE_KEY);
+        setRecords(prev => prev.filter(r => r.id !== id));
+        toast.success('Registro eliminado', {
+          duration: 5000,
+          action: {
+            label: 'Deshacer',
+            onClick: async () => {
+              await db.table('expirations').update(id, { syncStatus: 'synced' as any });
+              refreshRecords();
+            },
           },
-        },
-      });
-    } catch (error) {
-      logger.error('useExpiry', 'Error bulk deleting', String(error));
-      toast.error('Error al eliminar registros');
-      throw error;
-    }
-  }, [refreshRecords]);
+        });
+      } catch (error) {
+        logger.error('useExpiry', 'Error deleting record', String(error));
+        toast.error('Error al eliminar registro');
+        throw error;
+      }
+    },
+    [refreshRecords]
+  );
+
+  const bulkDelete = useCallback(
+    async (ids: string[]) => {
+      try {
+        // Soft delete en masa
+        await Promise.all(
+          ids.map(id =>
+            db.table('expirations').update(id, {
+              syncStatus: 'pending_delete' as any,
+              timestamp: Date.now(),
+            })
+          )
+        );
+        clearCache(EXPIRY_CACHE_KEY);
+        setRecords(prev => prev.filter(r => !ids.includes(r.id)));
+        setSelectedIds(new Set());
+        toast.success(`${ids.length} registros eliminados`, {
+          duration: 5000,
+          action: {
+            label: 'Deshacer',
+            onClick: async () => {
+              await Promise.all(
+                ids.map(id => db.table('expirations').update(id, { syncStatus: 'synced' as any }))
+              );
+              refreshRecords();
+            },
+          },
+        });
+      } catch (error) {
+        logger.error('useExpiry', 'Error bulk deleting', String(error));
+        toast.error('Error al eliminar registros');
+        throw error;
+      }
+    },
+    [refreshRecords]
+  );
 
   const createRecord = useCallback(async (data: CreateExpiryData): Promise<string | null> => {
     try {
@@ -416,31 +454,36 @@ export const useExpiry = (): UseExpiryReturn => {
         withdrawalDays: data.withdrawalDays ?? 30,
         hasCanje: data.hasCanje ?? false,
       });
-      
+
       if (!validationResult.success) {
-        const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+        const errors = validationResult.error.errors
+          .map(e => `${e.path.join('.')}: ${e.message}`)
+          .join('; ');
         logger.warn('useExpiry', 'Validation failed', errors);
         toast.error(`Datos inválidos: ${errors}`);
         return null;
       }
       // ====================================
-      
+
       // ✅ Usar ExpiryService para guardar (unificación)
-      const entry = await expiryService.save({
-        barcode: data.barcode,
-        productName: data.productName,
-        providerName: data.providerName,
-        location: data.location,
-        observaciones: data.observaciones,
-        mm: data.mm,
-        yyyy: data.yyyy,
-        quantity: data.quantity,
-        withdrawalDays: data.withdrawalDays,
-        category: 'GENERAL',
-      }, {
-        skipIfOutOfRange: false,
-        silent: true,
-      });
+      const entry = await expiryService.save(
+        {
+          barcode: data.barcode,
+          productName: data.productName,
+          providerName: data.providerName,
+          location: data.location,
+          observaciones: data.observaciones,
+          mm: data.mm,
+          yyyy: data.yyyy,
+          quantity: data.quantity,
+          withdrawalDays: data.withdrawalDays,
+          category: 'GENERAL',
+        },
+        {
+          skipIfOutOfRange: false,
+          silent: true,
+        }
+      );
 
       if (!entry) {
         toast.error('Error al crear vencimiento');
@@ -471,9 +514,9 @@ export const useExpiry = (): UseExpiryReturn => {
         withdrawalDate: entry.withdrawalDate || new Date(),
         category: entry.category || 'GENERAL',
         estado: entry.estado || getStatusLabel(ExpiryStatus.SAFE),
-        type: 'Individual'
+        type: 'Individual',
       };
-      
+
       clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => [...prev, record]);
       toast.success('Vencimiento registrado');
@@ -492,21 +535,21 @@ export const useExpiry = (): UseExpiryReturn => {
 
       // Merge data
       const merged = { ...existing, ...data };
-      
+
       // Recalcular fechas si mm o yyyy cambiaron
       const mm = Number(merged.mm) || 1;
       const yyyy = Number(merged.yyyy) || new Date().getFullYear();
       const lastDay = new Date(yyyy, mm, 0).getDate();
       const expiryDateObj = new Date(yyyy, mm - 1, lastDay);
-      const withdrawalDays = merged.withdrawalDays as number ?? DEFAULT_WITHDRAWAL_DAYS;
-      const hasCanje = merged.hasCanje as boolean ?? false;
-      
+      const withdrawalDays = (merged.withdrawalDays as number) ?? DEFAULT_WITHDRAWAL_DAYS;
+      const hasCanje = (merged.hasCanje as boolean) ?? false;
+
       // Recalcular evaluación
       const evaluation = evaluateExpiry(
         expiryDateObj,
         { withdrawalDays, hasCanje },
         new Date(),
-        merged.quantity as number || 1
+        (merged.quantity as number) || 1
       );
 
       const updated = {
@@ -525,7 +568,7 @@ export const useExpiry = (): UseExpiryReturn => {
 
       await db.table('expirations').put(updated as any);
       clearCache(EXPIRY_CACHE_KEY);
-      setRecords(prev => prev.map(r => r.id === id ? updated : r));
+      setRecords(prev => prev.map(r => (r.id === id ? updated : r)));
       toast.success('Registro actualizado');
     } catch (error) {
       logger.error('useExpiry', 'Error updating record', String(error));
@@ -540,9 +583,9 @@ export const useExpiry = (): UseExpiryReturn => {
       await genericSyncEngine.sync('expirations');
       refreshRecords(); // Refresca el cache
       toast.success('Sincronización completada');
-    } catch (error: any) {
-      logger.error('useExpiry', 'Sync error', error.message || String(error));
-      toast.error(error.message || 'Error al sincronizar');
+    } catch (error: unknown) {
+      logger.error('useExpiry', 'Sync error', (error as Error).message || String(error));
+      toast.error((error as Error).message || 'Error al sincronizar');
     } finally {
       setIsSyncing(false);
     }
@@ -575,7 +618,7 @@ export const useExpiry = (): UseExpiryReturn => {
       syncRecords,
       setIsDetailModalOpen,
       setSelectedRecord,
-      clearFilters
-    }
+      clearFilters,
+    },
   };
 };

@@ -2,34 +2,34 @@
  * =============================================================================
  * SYNC WORKER - Sincronización en Segundo Plano
  * =============================================================================
- * 
+ *
  * Este Web Worker ejecuta el ciclo de sincronización fuera del hilo principal
  * para evitar bloquear la UI.
- * 
+ *
  * BENEFICIOS:
  * - UI tetap responsif durante sincronización
  * - Procesamiento paralelo
  * - Notificaciones de progreso
- * 
+ *
  * COMUNICACIÓN:
  * ┌─────────────┐                         ┌──────────────┐
  * │  Main Thread │ ──── postMessage ────► │  Sync Worker │
  * │             │ ◄─── postMessage ────── │              │
  * └─────────────┘                         └──────────────┘
- * 
+ *
  * MENSAJES ENTRANTES:
  * - { type: 'SYNC_ALL' }              → Sincronizar todas las tablas
  * - { type: 'SYNC_TABLE', key }       → Sincronizar tabla específica
  * - { type: 'PUSH_TABLE', key }        → Solo subir cambios locales
  * - { type: 'PULL_TABLE', key }        → Solo descargar cambios remotos
  * - { type: 'ABORT' }                  → Cancelar operación actual
- * 
+ *
  * MENSAJES SALIENTES:
  * - { type: 'PROGRESS', table, percent } → Progreso de sync
  * - { type: 'LOG', level, msg }         → Log para consola
  * - { type: 'COMPLETE', results }       → Sync completado
  * - { type: 'ERROR', error }            → Error en sync
- * 
+ *
  * @module sync.worker
  */
 
@@ -56,10 +56,7 @@ let shouldAbort = false;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const retryWithBackoff = async <T>(
-  fn: () => Promise<T>,
-  retries = MAX_RETRIES
-): Promise<T> => {
+const retryWithBackoff = async <T>(fn: () => Promise<T>, retries = MAX_RETRIES): Promise<T> => {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
@@ -122,14 +119,7 @@ const handleSyncAll = async () => {
     sendMessage({ type: 'LOG', level: 'info', msg: 'Starting full sync...' });
 
     // Tables a sincronizar (las más importantes primero)
-    const tables = [
-      'products',
-      'providers',
-      'sessions',
-      'scans',
-      'expiry',
-      'events'
-    ];
+    const tables = ['products', 'providers', 'sessions', 'scans', 'expiry', 'events'];
 
     const results: SyncResponse['results'] = [];
     const totalTables = tables.length;
@@ -148,12 +138,12 @@ const handleSyncAll = async () => {
       try {
         // Simular sync (en producción usar supabase real)
         await sleep(500); // Placeholder para sync real
-        
+
         results.push({
           table,
           pushed: 0,
           pulled: 0,
-          errors: 0
+          errors: 0,
         });
 
         sendMessage({ type: 'LOG', level: 'info', msg: `Synced table: ${table}` });
@@ -163,15 +153,14 @@ const handleSyncAll = async () => {
           table,
           pushed: 0,
           pulled: 0,
-          errors: 1
+          errors: 1,
         });
       }
     }
 
     sendMessage({ type: 'COMPLETE', results });
-
-  } catch (error: any) {
-    sendMessage({ type: 'ERROR', error: error.message });
+  } catch (error: unknown) {
+    sendMessage({ type: 'ERROR', error: (error as Error).message });
   } finally {
     isProcessing = false;
     shouldAbort = false;
@@ -181,39 +170,39 @@ const handleSyncAll = async () => {
 const handleSyncTable = async (key: string) => {
   sendMessage({ type: 'LOG', level: 'info', msg: `Syncing table: ${key}` });
   sendMessage({ type: 'PROGRESS', table: key, percent: 50 });
-  
+
   // Placeholder para sync real
   await sleep(300);
-  
-  sendMessage({ 
-    type: 'COMPLETE', 
-    results: [{ table: key, pushed: 0, pulled: 0, errors: 0 }] 
+
+  sendMessage({
+    type: 'COMPLETE',
+    results: [{ table: key, pushed: 0, pulled: 0, errors: 0 }],
   });
 };
 
 const handlePushTable = async (key: string) => {
   sendMessage({ type: 'LOG', level: 'info', msg: `Pushing table: ${key}` });
   sendMessage({ type: 'PROGRESS', table: key, percent: 50 });
-  
+
   // Placeholder para push real
   await sleep(200);
-  
-  sendMessage({ 
-    type: 'COMPLETE', 
-    results: [{ table: key, pushed: 0, pulled: 0, errors: 0 }] 
+
+  sendMessage({
+    type: 'COMPLETE',
+    results: [{ table: key, pushed: 0, pulled: 0, errors: 0 }],
   });
 };
 
 const handlePullTable = async (key: string) => {
   sendMessage({ type: 'LOG', level: 'info', msg: `Pulling table: ${key}` });
   sendMessage({ type: 'PROGRESS', table: key, percent: 50 });
-  
+
   // Placeholder para pull real
   await sleep(200);
-  
-  sendMessage({ 
-    type: 'COMPLETE', 
-    results: [{ table: key, pushed: 0, pulled: 0, errors: 0 }] 
+
+  sendMessage({
+    type: 'COMPLETE',
+    results: [{ table: key, pushed: 0, pulled: 0, errors: 0 }],
   });
 };
 

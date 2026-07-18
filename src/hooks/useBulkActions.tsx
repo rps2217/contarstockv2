@@ -1,13 +1,12 @@
 /**
  * useBulkActions - Hook global para acciones masivas
- * 
+ *
  * Proporciona un sistema reutilizable de selección y acciones masivas
  * que puede ser configurado para cualquier módulo de la aplicación.
  */
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from 'react';
 import { logger } from '@/services/logger';
-;
 import { X, Trash2, Edit3, Download, Search, Printer } from 'lucide-react';
 import { useTaskStore } from '@/stores';
 import { toast } from 'sonner';
@@ -80,10 +79,13 @@ export function useBulkActions<T = any>(config: BulkActionsConfig<T>): UseBulkAc
     });
   }, []);
 
-  const selectAll = useCallback((items: T[]) => {
-    const allIds = items.map(config.getItemId);
-    setSelectedIds(new Set(allIds));
-  }, [config.getItemId]);
+  const selectAll = useCallback(
+    (items: T[]) => {
+      const allIds = items.map(config.getItemId);
+      setSelectedIds(new Set(allIds));
+    },
+    [config.getItemId]
+  );
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -91,54 +93,62 @@ export function useBulkActions<T = any>(config: BulkActionsConfig<T>): UseBulkAc
 
   const isSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
-  const getSelectedItems = useCallback((allItems: T[]) => {
-    return allItems.filter(item => selectedIds.has(config.getItemId(item)));
-  }, [selectedIds, config.getItemId]);
+  const getSelectedItems = useCallback(
+    (allItems: T[]) => {
+      return allItems.filter(item => selectedIds.has(config.getItemId(item)));
+    },
+    [selectedIds, config.getItemId]
+  );
 
   const selectedCount = selectedIds.size;
 
-  const executeBulkAction = useCallback(async (actionId: string, allItems: T[]) => {
-    const selectedItems = getSelectedItems(allItems);
-    const ids = Array.from(selectedIds);
-    
-    if (selectedItems.length === 0) {
-      toast.error('No hay elementos seleccionados');
-      return;
-    }
+  const executeBulkAction = useCallback(
+    async (actionId: string, allItems: T[]) => {
+      const selectedItems = getSelectedItems(allItems);
+      const ids = Array.from(selectedIds);
 
-    const action = config.actions.find(a => a.id === actionId);
-    if (!action) {
-      logger.error('useBulkActions', `Acción no encontrada: ${actionId}`);
-      return;
-    }
-
-    if (action.requiresConfirmation) {
-      const message = action.confirmMessage || `¿Ejecutar "${action.label}" en ${selectedItems.length} elementos?`;
-      if (!window.confirm(message)) {
+      if (selectedItems.length === 0) {
+        toast.error('No hay elementos seleccionados');
         return;
       }
-    }
 
-    const taskId = `bulk-${actionId}-${Date.now()}`;
-    addTask({
-      id: taskId,
-      name: `${action.label}: ${selectedItems.length} elementos`,
-      progress: 0,
-      status: 'running'
-    });
+      const action = config.actions.find(a => a.id === actionId);
+      if (!action) {
+        logger.error('useBulkActions', `Acción no encontrada: ${actionId}`);
+        return;
+      }
 
-    try {
-      await action.onClick(selectedItems);
-      updateTask(taskId, { status: 'completed', progress: 100 });
-      clearSelection();
-    } catch (error: any) {
-      updateTask(taskId, { 
-        status: 'error', 
-        error: error.message || 'Error en operación masiva' 
+      if (action.requiresConfirmation) {
+        const message =
+          action.confirmMessage ||
+          `¿Ejecutar "${action.label}" en ${selectedItems.length} elementos?`;
+        if (!window.confirm(message)) {
+          return;
+        }
+      }
+
+      const taskId = `bulk-${actionId}-${Date.now()}`;
+      addTask({
+        id: taskId,
+        name: `${action.label}: ${selectedItems.length} elementos`,
+        progress: 0,
+        status: 'running',
       });
-      toast.error(`Error en ${action.label}: ${error.message}`);
-    }
-  }, [selectedIds, getSelectedItems, config.actions, addTask, updateTask, clearSelection]);
+
+      try {
+        await action.onClick(selectedItems);
+        updateTask(taskId, { status: 'completed', progress: 100 });
+        clearSelection();
+      } catch (error: unknown) {
+        updateTask(taskId, {
+          status: 'error',
+          error: (error as Error).message || 'Error en operación masiva',
+        });
+        toast.error(`Error en ${action.label}: ${(error as Error).message}`);
+      }
+    },
+    [selectedIds, getSelectedItems, config.actions, addTask, updateTask, clearSelection]
+  );
 
   const openBulkEditModal = useCallback(() => {
     if (selectedCount === 0) {
@@ -186,16 +196,45 @@ export function BulkActionBar<T = any>({
   onExecute,
   onClear,
   theme = 'dark',
-  className = ''
+  className = '',
 }: BulkActionBarProps<T>) {
   if (selectedCount === 0) return null;
 
-  const bgClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-elevated' : theme === 'light' ? 'bg-white' : 'bg-black';
-  const textClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : theme === 'light' ? 'text-slate-900' : 'text-yellow-400';
-  const borderClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'border-subtle' : theme === 'light' ? 'border-slate-200' : 'border-yellow-400';
+  const bgClass =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray'
+      ? 'bg-elevated'
+      : theme === 'light'
+        ? 'bg-white'
+        : 'bg-black';
+  const textClass =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray'
+      ? 'text-white'
+      : theme === 'light'
+        ? 'text-slate-900'
+        : 'text-yellow-400';
+  const borderClass =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray'
+      ? 'border-subtle'
+      : theme === 'light'
+        ? 'border-slate-200'
+        : 'border-yellow-400';
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgClass} border-t-4 ${borderClass} ${className}`}>
+    <div
+      className={`fixed bottom-0 left-0 right-0 z-50 ${bgClass} border-t-4 ${borderClass} ${className}`}
+    >
       <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
         <div className="flex items-center gap-3">
           <button
@@ -212,11 +251,17 @@ export function BulkActionBar<T = any>({
         <div className="flex items-center gap-2">
           {actions.slice(0, 4).map(action => {
             const Icon = action.icon;
-            const variantClass = action.variant === 'danger' ? 'bg-red-600 hover:bg-red-700 text-white' :
-              action.variant === 'primary' ? 'bg-blue-600 hover:bg-blue-700 text-white' :
-              action.variant === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
-              theme === 'high-contrast' ? 'bg-yellow-500 text-black' : 'bg-blue-600 text-white';
-            
+            const variantClass =
+              action.variant === 'danger'
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : action.variant === 'primary'
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : action.variant === 'success'
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : theme === 'high-contrast'
+                      ? 'bg-yellow-500 text-black'
+                      : 'bg-blue-600 text-white';
+
             return (
               <button
                 key={action.id}
@@ -251,14 +296,14 @@ export function BulkEditModal<T = any>({
   onClose,
   config,
   selectedItems,
-  theme = 'dark'
+  theme = 'dark',
 }: BulkEditModalProps<T>) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     for (const field of config.fields) {
       if (field.required && !values[field.key]) {
         toast.error(`${field.label} es requerido`);
@@ -273,8 +318,8 @@ export function BulkEditModal<T = any>({
       toast.success(`${selectedItems.length} registros actualizados`);
       onClose();
       setValues({});
-    } catch (error: any) {
-      toast.error(error.message || 'Error al aplicar cambios');
+    } catch (error: unknown) {
+      toast.error((error as Error).message || 'Error al aplicar cambios');
     } finally {
       setIsSubmitting(false);
     }
@@ -286,32 +331,64 @@ export function BulkEditModal<T = any>({
 
   if (!isOpen) return null;
 
-  const bgClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-surface' : 'bg-white';
-  const textClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : 'text-slate-900';
-  const inputBgClass = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
+  const bgClass =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray'
+      ? 'bg-surface'
+      : 'bg-white';
+  const textClass =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray'
+      ? 'text-white'
+      : 'text-slate-900';
+  const inputBgClass =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray'
+      ? 'bg-black/40 border-white/10'
+      : 'bg-slate-50 border-slate-200';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className={`relative w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden border-4 border-black ${bgClass}`}>
+
+      <div
+        className={`relative w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden border-4 border-black ${bgClass}`}
+      >
         <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
           <div>
-            <h2 className={`text-xl font-black uppercase tracking-tighter italic leading-none ${textClass}`}>
+            <h2
+              className={`text-xl font-black uppercase tracking-tighter italic leading-none ${textClass}`}
+            >
               {config.title}
             </h2>
             <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">
               {selectedItems.length} ítems seleccionados
             </p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20"
+          >
             <X className="w-5 h-5 text-white" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          <div className={`p-4 rounded-xl border ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-blue-400' : 'text-blue-600'}`}>
+          <div
+            className={`p-4 rounded-xl border ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}
+          >
+            <p
+              className={`text-[10px] font-bold uppercase tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-blue-400' : 'text-blue-600'}`}
+            >
               {config.description}
             </p>
           </div>
@@ -323,25 +400,33 @@ export function BulkEditModal<T = any>({
 
             return (
               <div key={field.key} className="space-y-2">
-                <label className={`text-[10px] font-black uppercase tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-muted' : 'text-slate-500'}`}>
+                <label
+                  className={`text-[10px] font-black uppercase tracking-widest ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-muted' : 'text-slate-500'}`}
+                >
                   {field.label} {field.required && <span className="text-rose-500">*</span>}
                 </label>
 
                 {field.type === 'select' ? (
                   <select
                     value={values[field.key] || ''}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      handleChange(field.key, e.target.value)
+                    }
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none appearance-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   >
                     <option value="">Seleccionar...</option>
                     {field.options?.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
                     ))}
                   </select>
                 ) : field.type === 'textarea' ? (
                   <textarea
                     value={values[field.key] || ''}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      handleChange(field.key, e.target.value)
+                    }
                     rows={3}
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   />
@@ -349,7 +434,9 @@ export function BulkEditModal<T = any>({
                   <input
                     type={field.type}
                     value={values[field.key] || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(field.key, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleChange(field.key, e.target.value)
+                    }
                     className={`w-full px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all outline-none ${inputBgClass} focus:border-blue-500 ${textClass}`}
                   />
                 )}
@@ -400,7 +487,7 @@ export function createStandardBulkActions<T>(config: {
       variant: 'danger',
       requiresConfirmation: true,
       confirmMessage: '¿Eliminar los elementos seleccionados? Esta acción es irreversible.',
-      onClick: config.onDelete
+      onClick: config.onDelete,
     });
   }
 
@@ -410,7 +497,7 @@ export function createStandardBulkActions<T>(config: {
       label: 'Exportar',
       icon: Download,
       variant: 'default',
-      onClick: config.onExport
+      onClick: config.onExport,
     });
   }
 
@@ -420,7 +507,7 @@ export function createStandardBulkActions<T>(config: {
       label: 'Editar',
       icon: Edit3,
       variant: 'primary',
-      onClick: config.onEdit
+      onClick: config.onEdit,
     });
   }
 
