@@ -80,16 +80,10 @@ export {
 // =============================================================================
 // CONFLICT RESOLUTION
 // =============================================================================
-export {
-  conflictResolver,
-  conflictResolutionService,
-} from './conflictResolution';
-
-export type {
-  ConflictStrategy,
-  ConflictRecord,
-  ResolutionResult,
-} from './conflictResolution';
+// NOTA: Los tipos de ConflictResolution se definen en:
+// - store/useConflictStore.ts (ConflictRecord)
+// - unified/types.ts (ConflictResolution strategy)
+// - cloud/ConflictResolution.ts (estrategias)
 
 // =============================================================================
 // FSM PARA CONTROL DE FLUJO

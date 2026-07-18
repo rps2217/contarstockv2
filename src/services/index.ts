@@ -51,9 +51,6 @@ export {
   resetSyncLock,
   // Legacy compatibility
   unifiedSyncEngine as syncOrchestrator,
-  // Conflict Resolution
-  conflictResolver,
-  conflictResolutionService,
 } from './sync';
 
 export type {
@@ -69,10 +66,12 @@ export type {
   SyncEventType,
   SyncEventPayload,
   SyncEventListener,
-  ConflictStrategy,
-  ConflictRecord,
-  ResolutionResult,
 } from './sync';
+
+// ConflictResolution types se exportan desde:
+// - @/stores (ConflictRecord en useConflictStore)
+// - @/services/sync/unified/types (ConflictResolution strategy)
+// - @/services/cloud/ConflictResolution (estrategias)
 
 // Sync FSM (legacy)
 export { syncFSM } from './sync/fsm';
