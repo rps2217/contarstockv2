@@ -1,10 +1,10 @@
-"use client";
+'use client';
 /**
  * Workflow Engine - Motor de AutomatizacionesBasado en Eventos
- * 
+ *
  * Inspirado en AppSheet Automation (Bots).
  * Permite definir flujos automáticos: Cuando X ocurre → Hacer Y.
- * 
+ *
  * Ejemplo de uso:
  * const workflow = createWorkflow({
  *   name: 'Notificar stock bajo',
@@ -24,21 +24,27 @@ import type { BusinessRule } from './expressionEngine';
 // TIPOS
 // =============================================================================
 
-export type WorkflowTriggerType = 
-  | 'created'      // Cuando se crea un registro
-  | 'updated'      // Cuando se actualiza un registro
-  | 'deleted'      // Cuando se elimina un registro
-  | 'condition'    // Cuando una condición se cumple (scheduled)
-  | 'manual';      // Ejecución manual
+/** Tipo base para registros de workflow (puede ser cualquier entidad) */
+export type WorkflowRecord = Record<string, unknown>;
+
+/** Tipo para el valor a actualizar (puede ser cualquier tipo serializable) */
+export type WorkflowValue = string | number | boolean | null | unknown[] | Record<string, unknown>;
+
+export type WorkflowTriggerType =
+  | 'created' // Cuando se crea un registro
+  | 'updated' // Cuando se actualiza un registro
+  | 'deleted' // Cuando se elimina un registro
+  | 'condition' // Cuando una condición se cumple (scheduled)
+  | 'manual'; // Ejecución manual
 
 export type WorkflowActionType =
-  | 'notify'        // Mostrar notificación
-  | 'email'         // Enviar email (placeholder)
-  | 'create_task'   // Crear tarea
-  | 'update_field'  // Actualizar campo
-  | 'log'           // Registrar en log
-  | 'webhook'       // Llamar webhook
-  | 'audit';        // Registrar en auditoría
+  | 'notify' // Mostrar notificación
+  | 'email' // Enviar email (placeholder)
+  | 'create_task' // Crear tarea
+  | 'update_field' // Actualizar campo
+  | 'log' // Registrar en log
+  | 'webhook' // Llamar webhook
+  | 'audit'; // Registrar en auditoría
 
 export interface WorkflowTrigger {
   /** Tipo de evento */
@@ -48,7 +54,7 @@ export interface WorkflowTrigger {
   /** Campo específico (opcional) */
   field?: string;
   /** Función condition checker (para triggers condition) */
-  conditionFn?: (record: any) => boolean;
+  conditionFn?: (record: WorkflowRecord) => boolean;
 }
 
 export interface WorkflowAction {
@@ -59,7 +65,7 @@ export interface WorkflowAction {
   /** Campo a actualizar (para update_field) */
   updateField?: string;
   /** Valor a asignar (para update_field) */
-  updateValue?: any;
+  updateValue?: WorkflowValue;
   /** URL para webhooks */
   webhookUrl?: string;
   /** Prioridad (para notificaciones) */
@@ -108,7 +114,7 @@ export interface WorkflowExecution {
   workflowId: string;
   timestamp: number;
   success: boolean;
-  triggeredBy: any;
+  triggeredBy: string;
   conditionsMet: boolean;
   actionsExecuted: WorkflowAction[];
   errors?: string[];
@@ -184,7 +190,7 @@ export function setWorkflowEnabled(id: string, enabled: boolean): void {
 /**
  * Verifica si un registro cumple las condiciones del trigger
  */
-function matchesTrigger(record: any, trigger: WorkflowTrigger): boolean {
+function matchesTrigger(record: WorkflowRecord, trigger: WorkflowTrigger): boolean {
   // Trigger manual siempre coincide
   if (trigger.type === 'manual') return false; // Se ejecuta explícitamente
 
@@ -202,7 +208,7 @@ function matchesTrigger(record: any, trigger: WorkflowTrigger): boolean {
  * Evalúa las condiciones de un workflow
  */
 function evaluateConditions(
-  record: any,
+  record: WorkflowRecord,
   conditions: WorkflowCondition[] | undefined,
   context?: Record<string, any>
 ): boolean {
@@ -227,13 +233,17 @@ function evaluateConditions(
  */
 async function executeAction(
   action: WorkflowAction,
-  record: any,
+  record: WorkflowRecord,
   context?: Record<string, any>
 ): Promise<void> {
   // Template substitution para mensajes
   const template = action.message || '';
   const renderedMessage = template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-    return context?.[key] !== undefined ? String(context[key]) : record[key] !== undefined ? String(record[key]) : `{{${key}}}`;
+    return context?.[key] !== undefined
+      ? String(context[key])
+      : record[key] !== undefined
+        ? String(record[key])
+        : `{{${key}}}`;
   });
 
   switch (action.type) {
@@ -242,11 +252,12 @@ async function executeAction(
       if (typeof window !== 'undefined') {
         const toastStore = (window as any).__toastStore;
         if (toastStore) {
-          const toastFn = action.priority === 'urgent' 
-            ? toastStore.error 
-            : action.priority === 'high'
-              ? toastStore.warning
-              : toastStore.success;
+          const toastFn =
+            action.priority === 'urgent'
+              ? toastStore.error
+              : action.priority === 'high'
+                ? toastStore.warning
+                : toastStore.success;
           toastFn(renderedMessage, { duration: 5000 });
         }
       }
@@ -277,32 +288,42 @@ async function executeAction(
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-          
+
           await fetch(action.webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ record, context, message: renderedMessage }),
             signal: controller.signal,
           });
-          
+
           clearTimeout(timeoutId);
         } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') {
             logger.warn('workflowEngine', 'Webhook timed out', { url: action.webhookUrl });
           } else {
-            logger.error('workflowEngine', 'Webhook failed', err instanceof Error ? err.message : String(err));
+            logger.error(
+              'workflowEngine',
+              'Webhook failed',
+              err instanceof Error ? err.message : String(err)
+            );
           }
         }
       }
       break;
 
     case 'email':
-      logger.info('workflowEngine', 'Email action', { recipient: action.recipient, message: renderedMessage });
+      logger.info('workflowEngine', 'Email action', {
+        recipient: action.recipient,
+        message: renderedMessage,
+      });
       // Placeholder para implementación real
       break;
 
     case 'create_task':
-      logger.info('workflowEngine', 'Task created', { message: renderedMessage, assignee: action.recipient });
+      logger.info('workflowEngine', 'Task created', {
+        message: renderedMessage,
+        assignee: action.recipient,
+      });
       // Placeholder para implementación real
       break;
 
@@ -323,7 +344,7 @@ async function executeAction(
  */
 export async function executeWorkflow(
   workflow: Workflow,
-  record: any,
+  record: WorkflowRecord,
   context?: Record<string, any>
 ): Promise<WorkflowExecution> {
   const startTime = Date.now();
@@ -338,7 +359,7 @@ export async function executeWorkflow(
         workflowId: workflow.id,
         timestamp: Date.now(),
         success: false,
-        triggeredBy: record,
+        triggeredBy: JSON.stringify(record),
         conditionsMet: false,
         actionsExecuted: [],
         errors: ['Rate limited'],
@@ -349,15 +370,13 @@ export async function executeWorkflow(
 
   // Verificar max executions
   if (workflow.maxExecutions) {
-    const recentExecutions = executions.filter(
-      e => e.workflowId === workflow.id
-    ).length;
+    const recentExecutions = executions.filter(e => e.workflowId === workflow.id).length;
     if (recentExecutions >= workflow.maxExecutions) {
       return {
         workflowId: workflow.id,
         timestamp: Date.now(),
         success: false,
-        triggeredBy: record,
+        triggeredBy: JSON.stringify(record),
         conditionsMet: false,
         actionsExecuted: [],
         errors: ['Max executions reached'],
@@ -374,7 +393,7 @@ export async function executeWorkflow(
       workflowId: workflow.id,
       timestamp: Date.now(),
       success: true,
-      triggeredBy: record,
+      triggeredBy: JSON.stringify(record),
       conditionsMet: false,
       actionsExecuted: [],
       duration: Date.now() - startTime,
@@ -396,7 +415,7 @@ export async function executeWorkflow(
     workflowId: workflow.id,
     timestamp: Date.now(),
     success: errors.length === 0,
-    triggeredBy: record,
+    triggeredBy: JSON.stringify(record),
     conditionsMet: true,
     actionsExecuted,
     errors,
@@ -418,7 +437,7 @@ export async function executeWorkflow(
  */
 export async function executeWorkflows(
   table: string,
-  record: any,
+  record: WorkflowRecord,
   triggerType: WorkflowTriggerType,
   context?: Record<string, any>
 ): Promise<WorkflowExecution[]> {
@@ -499,7 +518,7 @@ export function createExpiryAlertWorkflow(): Workflow {
     },
     conditions: [
       {
-        expression: "diffDays(expiryDate, today()) <= 30 and diffDays(expiryDate, today()) >= 0",
+        expression: 'diffDays(expiryDate, today()) <= 30 and diffDays(expiryDate, today()) >= 0',
         description: 'Vence en 30 días o menos',
       },
     ],
@@ -526,8 +545,7 @@ export function initializeWorkflows(): void {
 // HOOK PARA REACT
 // =============================================================================
 
-import { useState, useEffect, useCallback } from 'react'
-;
+import { useState, useEffect, useCallback } from 'react';
 /**
  * Hook para usar el workflow engine
  */
@@ -547,16 +565,19 @@ export function useWorkflowEngine() {
   }, [executions.length]);
 
   // Ejecutar workflows manualmente
-  const trigger = useCallback(async (
-    table: string,
-    record: any,
-    triggerType: WorkflowTriggerType = 'manual',
-    context?: Record<string, any>
-  ) => {
-    const results = await executeWorkflows(table, record, triggerType, context);
-    setRecentExecutions(executions.slice(0, 20));
-    return results;
-  }, []);
+  const trigger = useCallback(
+    async (
+      table: string,
+      record: WorkflowRecord,
+      triggerType: WorkflowTriggerType = 'manual',
+      context?: Record<string, any>
+    ) => {
+      const results = await executeWorkflows(table, record, triggerType, context);
+      setRecentExecutions(executions.slice(0, 20));
+      return results;
+    },
+    []
+  );
 
   // Toggle workflow
   const toggle = useCallback((id: string, enabled: boolean) => {
