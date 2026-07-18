@@ -220,6 +220,17 @@ dangerouslySetInnerHTML={{ __html: path }}
 
 ---
 
+### 4. Memory Leak en ScanBufferService.ts ✅
+
+**Cambios realizados:**
+- Guardar referencia al handler `beforeUnloadHandler` como propiedad de clase
+- Agregar `window.removeEventListener()` en método `destroy()`
+- Eliminar función `registerBeforeUnload()` redundante
+
+**Archivo:** `src/services/ScanBufferService.ts`
+
+---
+
 ## 📊 Resumen de Métricas
 
 | Categoría | Cantidad | Severidad |
