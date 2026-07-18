@@ -10,6 +10,10 @@ import {
   generateBarcodeDataUrl,
 } from './thermal-print/reportHtmlGenerator';
 
+// ============================================================================
+// TIPOS
+// ============================================================================
+
 interface USBDevice {
   open(): Promise<void>;
   close(): Promise<void>;
@@ -35,20 +39,86 @@ interface USBDevice {
   };
 }
 
+/** Item de reporte para impresión térmica */
+interface PrintItem {
+  barcode: string;
+  productName?: string;
+  expectedQty?: number;
+  quantity?: number;
+  totalQuantity?: number;
+}
+
+/** Metadatos de orden para impresión */
+interface OrderMetadata {
+  documentType?: string;
+  date?: string;
+  [key: string]: unknown;
+}
+
+/** Orden completa para impresión */
+interface PrintOrder {
+  id: string;
+  items?: PrintItem[];
+  metadata?: OrderMetadata;
+  importedAt?: number;
+}
+
+/** Dispositivo Bluetooth */
+interface BLEDevice {
+  name?: string;
+  gatt?: {
+    connected?: boolean;
+    connect(): Promise<BLEServer>;
+    disconnect(): void;
+  };
+}
+
+/** Servicio Bluetooth GATT */
+interface BLEServer {
+  getPrimaryService(uuid: string): Promise<BLEService>;
+}
+
+/** Servicio Bluetooth */
+interface BLEService {
+  getCharacteristic(uuid: string): Promise<BLECharacteristic>;
+  getCharacteristics(): Promise<BLECharacteristic[]>;
+}
+
+/** Característica Bluetooth */
+interface BLECharacteristic {
+  writeValue(data: BufferSource): Promise<void>;
+  startNotifications(): void;
+  stopNotifications(): void;
+  value?: DataView;
+  properties?: {
+    write?: boolean;
+    writeWithoutResponse?: boolean;
+  };
+}
+
+/** Navegador con soporte WebUSB */
+interface USBNavigator extends Navigator {
+  usb: {
+    requestDevice(options: { filters: unknown[] }): Promise<USBDevice>;
+    getDevices(): Promise<USBDevice[]>;
+  };
+}
+
 export class ThermalPrinterEngine {
   private usbDevice: USBDevice | null = null;
   private endpointOut: number | null = null;
 
   // Bluetooth State
-  private bleCharacteristic: any = null;
-  private bleDevice: any = null;
+  private bleCharacteristic: BLECharacteristic | null = null;
+  private bleDevice: BLEDevice | null = null;
 
   async connectUSB(): Promise<boolean> {
     try {
       if (!navigator || !('usb' in navigator)) {
         throw new Error('WebUSB no es compatible con este navegador o entorno.');
       }
-      this.usbDevice = await (navigator as any).usb.requestDevice({ filters: [] });
+      const usbNav = navigator as USBNavigator;
+      this.usbDevice = await usbNav.usb.requestDevice({ filters: [] });
       if (!this.usbDevice) return false;
 
       await this.usbDevice.open();
@@ -63,18 +133,19 @@ export class ThermalPrinterEngine {
       if (!endpoint) throw new Error('No output channel found.');
       this.endpointOut = endpoint.endpointNumber;
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
       const isSecurity =
-        err?.name === 'SecurityError' ||
-        String(err?.message || '').includes('permissions policy') ||
-        String(err?.message || '').includes('disallowed');
+        error.name === 'SecurityError' ||
+        error.message.includes('permissions policy') ||
+        error.message.includes('disallowed');
       if (isSecurity) {
         logger.warn('ThermalPrinterEngine', 'USB blocked by security policy');
         throw new Error(
           'El acceso USB está restringido por la directiva de seguridad del navegador. Abre la aplicación en una pestaña nueva para poder vincular la impresora.'
         );
       }
-      logger.warn('ThermalPrinterEngine', 'USB connection error', err?.message || String(err));
+      logger.warn('ThermalPrinterEngine', 'USB connection error', error.message);
       throw err;
     }
   }
@@ -102,7 +173,7 @@ export class ThermalPrinterEngine {
       for (const service of services) {
         const characteristics = await service.getCharacteristics();
         const writeChar = characteristics.find(
-          (c: any) => c.properties.write || c.properties.writeWithoutResponse
+          (c: BLECharacteristic) => c.properties?.write || c.properties?.writeWithoutResponse
         );
         if (writeChar) {
           this.bleCharacteristic = writeChar;
@@ -111,22 +182,19 @@ export class ThermalPrinterEngine {
         }
       }
       return false;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
       const isSecurity =
-        err?.name === 'SecurityError' ||
-        String(err?.message || '').includes('permissions policy') ||
-        String(err?.message || '').includes('disallowed');
+        error.name === 'SecurityError' ||
+        error.message.includes('permissions policy') ||
+        error.message.includes('disallowed');
       if (isSecurity) {
         logger.warn('ThermalPrinterEngine', 'Bluetooth blocked by security policy');
         throw new Error(
           'El acceso Bluetooth está restringido por la directiva de seguridad del navegador. Abre la aplicación en una pestaña nueva para poder vincular la impresora.'
         );
       }
-      logger.warn(
-        'ThermalPrinterEngine',
-        'Bluetooth connection error',
-        err?.message || String(err)
-      );
+      logger.warn('ThermalPrinterEngine', 'Bluetooth connection error', error.message);
       throw err;
     }
   }
@@ -181,7 +249,7 @@ export class ThermalPrinterEngine {
     await this.printRaw(commands);
   }
 
-  async printSummaryReport(erp: string, label: string, items: any[]) {
+  async printSummaryReport(erp: string, label: string, items: PrintItem[]) {
     if (this.isConnected()) {
       const encoder = new TextEncoder();
       const esc = {
@@ -251,7 +319,7 @@ export class ThermalPrinterEngine {
     }
   }
 
-  private printViaIframe80mm(erp: string, label: string, items: any[]) {
+  private printViaIframe80mm(erp: string, label: string, items: PrintItem[]) {
     // 1. Quitar residuo previo
     const oldIframe = document.getElementById('thermal-print-iframe');
     if (oldIframe) {
@@ -287,7 +355,7 @@ export class ThermalPrinterEngine {
     }, 100);
   }
 
-  public printExpectedOrder(order: any) {
+  public printExpectedOrder(order: PrintOrder) {
     // 1. Quitar residuo previo
     const oldIframe = document.getElementById('thermal-print-iframe');
     if (oldIframe) {
@@ -352,7 +420,7 @@ export class ThermalPrinterEngine {
     }
 
     const itemsHtml = (order.items || [])
-      .map((item: any) => {
+      .map((item: PrintItem) => {
         // If it's a Guía de Despacho, we encode the expected quantity and 7 tabs
         const barcodeValue = isGuiaDespacho
           ? `${item.expectedQty || 0}\t\t\t\t\t\t\t`
@@ -647,7 +715,7 @@ export class ThermalPrinterEngine {
   /**
    * Imprimir ticket de conteo HAMMER con TEORICO vs REAL
    */
-  public printHammerTicket(order: any) {
+  public printHammerTicket(order: PrintOrder) {
     // 1. Quitar residuo previo
     const oldIframe = document.getElementById('thermal-print-iframe');
     if (oldIframe) {
@@ -681,18 +749,18 @@ export class ThermalPrinterEngine {
 
     // Calcular totales
     const totalTeorico = (order.items || []).reduce(
-      (acc: number, item: any) => acc + (item.expectedQty || 0),
+      (acc: number, item: PrintItem) => acc + (item.expectedQty || 0),
       0
     );
     const totalReal = (order.items || []).reduce(
-      (acc: number, item: any) => acc + (item.quantity || item.totalQuantity || 0),
+      (acc: number, item: PrintItem) => acc + (item.quantity || item.totalQuantity || 0),
       0
     );
     const diferencia = totalReal - totalTeorico;
 
     // Generar HTML de items
     const itemsHtml = (order.items || [])
-      .map((item: any, index: number) => {
+      .map((item: PrintItem, index: number) => {
         const teorico = item.expectedQty || 0;
         const real = item.quantity || item.totalQuantity || 0;
         const diff = real - teorico;
@@ -958,7 +1026,7 @@ export class ThermalPrinterEngine {
 
   isConnected(): boolean {
     const usbOk = !!this.usbDevice && this.usbDevice.opened;
-    const bleOk = !!this.bleDevice && this.bleDevice.gatt.connected;
+    const bleOk = !!this.bleDevice?.gatt?.connected;
     return usbOk || bleOk;
   }
 
