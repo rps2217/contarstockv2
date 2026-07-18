@@ -3,6 +3,17 @@ import { CountingSession, ConsolidatedItem, MatchResult } from '../types';
 // Tipo para datos de exportación
 export type ExportData = Record<string, string | number | boolean | null | undefined>;
 
+// Tipos para jsPDF autoTable
+type TableCellRaw = string | number | boolean | null | undefined;
+type TableRow = TableCellRaw[];
+type TableBody = TableRow[];
+
+interface JsPDFCellData {
+  section: 'head' | 'body' | 'foot';
+  column: { index: number };
+  cell: { raw: TableCellRaw; styles: Record<string, unknown> };
+}
+
 export interface ExcelColumn {
   header: string;
   width: number;
@@ -81,17 +92,21 @@ const HAMMER_COLUMNS: ExcelColumn[] = [
 export const exportHammerToExcel = async (batchId: string, items: HammerExportItem[]) => {
   const data: ExcelRow[] = items.map(item => ({
     'Código/SKU': item.barcode,
-    'Descripción': item.name,
-    'Ubicación': item.loc || '',
+    Descripción: item.name,
+    Ubicación: item.loc || '',
     'Cantidad Escaneada': item.totalQuantity,
     'Cantidad Esperada (Teórica)': item.expectedQty ?? '',
-    'Diferencia': item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : '',
-    'Último Escaneo': item.lastTimestamp > 0 
-      ? new Date(item.lastTimestamp).toLocaleString('es-DO', { 
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit' 
-        })
-      : ''
+    Diferencia: item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : '',
+    'Último Escaneo':
+      item.lastTimestamp > 0
+        ? new Date(item.lastTimestamp).toLocaleString('es-DO', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '',
   }));
 
   const { workbook } = await createExcelWorkbook(data, 'Auditoría', HAMMER_COLUMNS);
@@ -118,7 +133,7 @@ export const exportToExcel = async (session: CountingSession, items: Consolidate
   const data: ExcelRow[] = items.map(item => {
     const base = {
       'Código/SKU': item.barcode,
-      'Descripción': item.productName,
+      Descripción: item.productName,
       'Cantidad Total': item.totalQuantity,
       'Conteo de Escaneos': item.scans,
     };
@@ -130,7 +145,7 @@ export const exportToExcel = async (session: CountingSession, items: Consolidate
         ...base,
         'Esperado/ERP': expected,
         'Diferencia/Etiqueta': diff > 0 ? `+${diff}` : diff,
-        'Fecha': ''
+        Fecha: '',
       };
     }
 
@@ -138,7 +153,7 @@ export const exportToExcel = async (session: CountingSession, items: Consolidate
       ...base,
       'Esperado/ERP': session.erpOrder,
       'Diferencia/Etiqueta': session.logisticsLabel,
-      'Fecha': new Date(session.createdAt).toLocaleDateString('es-DO')
+      Fecha: new Date(session.createdAt).toLocaleDateString('es-DO'),
     };
   });
 
@@ -152,65 +167,65 @@ export const exportToExcel = async (session: CountingSession, items: Consolidate
  * Optimized with Dynamic Import.
  */
 export const exportToPDF = async (session: CountingSession, items: ConsolidatedItem[]) => {
- const { jsPDF } = await import('jspdf');
- const { default: autoTable } = await import('jspdf-autotable');
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
 
- const doc = new jsPDF();
- 
- // --- Header ---
- doc.setFontSize(22);
- doc.setTextColor(40, 40, 40);
- doc.text("MANIFIESTO DE INVENTARIO", 105, 20, { align: "center" });
- 
- doc.setFontSize(10);
- doc.setTextColor(100, 100, 100);
- doc.text("Generado por LogiCount Pro", 105, 26, { align: "center" });
+  const doc = new jsPDF();
 
- // --- Session Info Block ---
- doc.setDrawColor(200, 200, 200);
- doc.setFillColor(245, 247, 250);
- doc.roundedRect(14, 35, 182, 35, 3, 3, 'FD');
+  // --- Header ---
+  doc.setFontSize(22);
+  doc.setTextColor(40, 40, 40);
+  doc.text('MANIFIESTO DE INVENTARIO', 105, 20, { align: 'center' });
 
- doc.setFontSize(10);
- doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Generado por LogiCount Pro', 105, 26, { align: 'center' });
 
- // Left Column
- doc.setFont('helvetica', 'bold');
- doc.text("Orden ERP:", 20, 45);
- doc.setFont('helvetica', 'normal');
- doc.text(session.erpOrder, 50, 45);
+  // --- Session Info Block ---
+  doc.setDrawColor(200, 200, 200);
+  doc.setFillColor(245, 247, 250);
+  doc.roundedRect(14, 35, 182, 35, 3, 3, 'FD');
 
- doc.setFont('helvetica', 'bold');
- doc.text("Etiqueta Logística:", 20, 52);
- doc.setFont('helvetica', 'normal');
- doc.text(session.logisticsLabel, 50, 52);
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
 
- doc.setFont('helvetica', 'bold');
- doc.text("Fecha:", 20, 59);
- doc.setFont('helvetica', 'normal');
- doc.text(new Date(session.createdAt).toLocaleString(), 50, 59);
+  // Left Column
+  doc.setFont('helvetica', 'bold');
+  doc.text('Orden ERP:', 20, 45);
+  doc.setFont('helvetica', 'normal');
+  doc.text(session.erpOrder, 50, 45);
 
- // Right Column (Totals)
- const totalUnits = items.reduce((acc, i) => acc + i.totalQuantity, 0);
- const totalSKUs = items.length;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Etiqueta Logística:', 20, 52);
+  doc.setFont('helvetica', 'normal');
+  doc.text(session.logisticsLabel, 50, 52);
 
- doc.setFont('helvetica', 'bold');
- doc.text("Total Unidades:", 120, 45);
- doc.setFont('helvetica', 'normal');
- doc.text(totalUnits.toString(), 155, 45);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Fecha:', 20, 59);
+  doc.setFont('helvetica', 'normal');
+  doc.text(new Date(session.createdAt).toLocaleString(), 50, 59);
 
- doc.setFont('helvetica', 'bold');
- doc.text("Total SKUs:", 120, 52);
- doc.setFont('helvetica', 'normal');
- doc.text(totalSKUs.toString(), 155, 52);
+  // Right Column (Totals)
+  const totalUnits = items.reduce((acc, i) => acc + i.totalQuantity, 0);
+  const totalSKUs = items.length;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Unidades:', 120, 45);
+  doc.setFont('helvetica', 'normal');
+  doc.text(totalUnits.toString(), 155, 45);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total SKUs:', 120, 52);
+  doc.setFont('helvetica', 'normal');
+  doc.text(totalSKUs.toString(), 155, 52);
 
   // --- Table ---
   const isVerified = session.isVerifiedMode;
-  const tableColumn = isVerified 
-    ? ["Código", "Descripción", "Físico", "Esperado", "Diferencia"]
-    : ["Código", "Descripción", "Escaneos", "Cantidad"];
-    
-  const tableRows: any[] = [];
+  const tableColumn = isVerified
+    ? ['Código', 'Descripción', 'Físico', 'Esperado', 'Diferencia']
+    : ['Código', 'Descripción', 'Escaneos', 'Cantidad'];
+
+  const tableRows: TableRow[] = [];
 
   items.forEach(item => {
     if (isVerified) {
@@ -221,15 +236,10 @@ export const exportToPDF = async (session: CountingSession, items: ConsolidatedI
         item.productName,
         item.totalQuantity,
         expected,
-        diff > 0 ? `+${diff}` : diff
+        diff > 0 ? `+${diff}` : diff,
       ]);
     } else {
-      tableRows.push([
-        item.barcode,
-        item.productName,
-        item.scans,
-        item.totalQuantity,
-      ]);
+      tableRows.push([item.barcode, item.productName, item.scans, item.totalQuantity]);
     }
   });
 
@@ -238,16 +248,16 @@ export const exportToPDF = async (session: CountingSession, items: ConsolidatedI
     head: [tableColumn],
     body: tableRows,
     theme: 'grid',
-    headStyles: { 
-      fillColor: isVerified ? [220, 53, 69] : [41, 128, 185], 
-      textColor: 255, 
-      fontStyle: 'bold' 
+    headStyles: {
+      fillColor: isVerified ? [220, 53, 69] : [41, 128, 185],
+      textColor: 255,
+      fontStyle: 'bold',
     },
     styles: { fontSize: 9, cellPadding: 3 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
-    didParseCell: function (data: any) {
+    didParseCell: function (data: JsPDFCellData) {
       if (isVerified && data.section === 'body' && data.column.index === 4) {
-        const val = parseInt(data.cell.raw);
+        const val = parseInt(String(data.cell.raw ?? 0));
         if (val < 0) {
           data.cell.styles.textColor = [220, 53, 69]; // Red
           data.cell.styles.fontStyle = 'bold';
@@ -256,99 +266,99 @@ export const exportToPDF = async (session: CountingSession, items: ConsolidatedI
           data.cell.styles.fontStyle = 'bold';
         }
       }
-    }
+    },
   });
 
- // --- Footer / Signature ---
- const finalY = (doc as any).lastAutoTable.finalY + 40;
+  // --- Footer / Signature ---
+  const finalY = (doc as any).lastAutoTable.finalY + 40;
 
- doc.setLineWidth(0.5);
- doc.line(20, finalY, 80, finalY); // Line for signature 1
- doc.line(130, finalY, 190, finalY); // Line for signature 2
+  doc.setLineWidth(0.5);
+  doc.line(20, finalY, 80, finalY); // Line for signature 1
+  doc.line(130, finalY, 190, finalY); // Line for signature 2
 
- doc.setFontSize(8);
- doc.text("Firma Operador", 50, finalY + 5, { align: "center" });
- doc.text("Firma Supervisor", 160, finalY + 5, { align: "center" });
+  doc.setFontSize(8);
+  doc.text('Firma Operador', 50, finalY + 5, { align: 'center' });
+  doc.text('Firma Supervisor', 160, finalY + 5, { align: 'center' });
 
- doc.text(`ID Sesión: ${session.id}`, 14, 285);
- doc.text(`Página 1`, 190, 285, { align: "right" });
+  doc.text(`ID Sesión: ${session.id}`, 14, 285);
+  doc.text(`Página 1`, 190, 285, { align: 'right' });
 
- // Save
- doc.save(`Manifiesto_${session.erpOrder}.pdf`);
+  // Save
+  doc.save(`Manifiesto_${session.erpOrder}.pdf`);
 };
 
 /**
  * Generates a specific Discrepancy Report from the Detective/Conciliator module.
  */
 export const exportDiscrepancyPDF = async (match: MatchResult, sessionLabel: string) => {
- const { jsPDF } = await import('jspdf');
- const { default: autoTable } = await import('jspdf-autotable');
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
 
- const doc = new jsPDF();
- 
- // --- Header ---
- doc.setFontSize(18);
- doc.setTextColor(220, 53, 69); // Red color for alert
- doc.text("INFORME DE DISCREPANCIAS", 105, 20, { align: "center" });
- 
- doc.setFontSize(10);
- doc.setTextColor(100, 100, 100);
- doc.text(`Generado: ${new Date().toLocaleString()}`, 105, 26, { align: "center" });
- 
- // --- Summary Block ---
- doc.setFontSize(11);
- doc.setTextColor(0, 0, 0);
- doc.text(`Orden Esperada: ${match.expectedOrder.internalId}`, 14, 40);
- doc.text(`Bulto Físico: ${sessionLabel}`, 14, 46);
- doc.text(`Nivel de Coincidencia: ${match.matchScore.toFixed(1)}%`, 14, 52);
- 
- // --- Table ---
- const tableColumn = ["SKU", "Producto", "Físico", "Esperado", "Diferencia"];
- const tableRows: any[] = [];
- 
- // Sort to show errors first
- const sortedDetails = [...match.details].sort((a, b) => {
- const aDiff = Math.abs(a.difference);
- const bDiff = Math.abs(b.difference);
- return bDiff - aDiff;
- });
- 
- sortedDetails.forEach(row => {
- // Only include if there is a difference or it's a key item
- if (row.difference !== 0) {
- const itemData = [
- row.barcode,
- row.name,
- row.physicalQty,
- row.expectedQty,
- row.difference > 0 ? `+${row.difference}` : `${row.difference}`
- ];
- tableRows.push(itemData);
- }
- });
- 
- (autoTable as any)(doc, {
- startY: 60,
- head: [tableColumn],
- body: tableRows,
- theme: 'grid',
- headStyles: { fillColor: [220, 53, 69], textColor: 255, fontStyle: 'bold' }, // Red Header
- styles: { fontSize: 9, cellPadding: 3 },
- // Highlight rows logic
- didParseCell: function (data: any) {
- if (data.section === 'body' && data.column.index === 4) {
- const val = parseInt(data.cell.raw);
- if (val < 0) {
- data.cell.styles.textColor = [220, 53, 69]; // Red text for missing
- data.cell.styles.fontStyle = 'bold';
- } else if (val > 0) {
- data.cell.styles.textColor = [40, 167, 69]; // Green text for surplus
- data.cell.styles.fontStyle = 'bold';
- }
- }
- }
- });
- 
- // Save
- doc.save(`Discrepancias_${match.expectedOrder.internalId}.pdf`);
+  const doc = new jsPDF();
+
+  // --- Header ---
+  doc.setFontSize(18);
+  doc.setTextColor(220, 53, 69); // Red color for alert
+  doc.text('INFORME DE DISCREPANCIAS', 105, 20, { align: 'center' });
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generado: ${new Date().toLocaleString()}`, 105, 26, { align: 'center' });
+
+  // --- Summary Block ---
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Orden Esperada: ${match.expectedOrder.internalId}`, 14, 40);
+  doc.text(`Bulto Físico: ${sessionLabel}`, 14, 46);
+  doc.text(`Nivel de Coincidencia: ${match.matchScore.toFixed(1)}%`, 14, 52);
+
+  // --- Table ---
+  const tableColumn = ['SKU', 'Producto', 'Físico', 'Esperado', 'Diferencia'];
+  const tableRows: TableRow[] = [];
+
+  // Sort to show errors first
+  const sortedDetails = [...match.details].sort((a, b) => {
+    const aDiff = Math.abs(a.difference);
+    const bDiff = Math.abs(b.difference);
+    return bDiff - aDiff;
+  });
+
+  sortedDetails.forEach(row => {
+    // Only include if there is a difference or it's a key item
+    if (row.difference !== 0) {
+      const itemData = [
+        row.barcode,
+        row.name,
+        row.physicalQty,
+        row.expectedQty,
+        row.difference > 0 ? `+${row.difference}` : `${row.difference}`,
+      ];
+      tableRows.push(itemData);
+    }
+  });
+
+  (autoTable as any)(doc, {
+    startY: 60,
+    head: [tableColumn],
+    body: tableRows,
+    theme: 'grid',
+    headStyles: { fillColor: [220, 53, 69], textColor: 255, fontStyle: 'bold' }, // Red Header
+    styles: { fontSize: 9, cellPadding: 3 },
+    // Highlight rows logic
+    didParseCell: function (data: JsPDFCellData) {
+      if (data.section === 'body' && data.column.index === 4) {
+        const val = parseInt(String(data.cell.raw ?? 0));
+        if (val < 0) {
+          data.cell.styles.textColor = [220, 53, 69]; // Red text for missing
+          data.cell.styles.fontStyle = 'bold';
+        } else if (val > 0) {
+          data.cell.styles.textColor = [40, 167, 69]; // Green text for surplus
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    },
+  });
+
+  // Save
+  doc.save(`Discrepancias_${match.expectedOrder.internalId}.pdf`);
 };
