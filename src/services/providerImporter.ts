@@ -2,10 +2,7 @@ import { logger } from '@/services/logger';
 import Papa from 'papaparse';
 import { Provider } from '../types';
 import { ProviderRepository } from '../repositories/ProviderRepository';
-
-const normalizeIdentity = (val: string) => {
-  return String(val || '').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
-};
+import { normalizeIdentity } from '@/lib/normalize';
 
 export const bulkImportProviders = async (csvText: string): Promise<number> => {
   return new Promise((resolve, reject) => {
@@ -13,10 +10,10 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
       header: true,
       skipEmptyLines: true,
       dynamicTyping: false,
-      complete: async (results) => {
+      complete: async results => {
         try {
           const providers: Provider[] = [];
-          
+
           for (const row of results.data as any[]) {
             // Find appropriate fields dynamically ignoring case and spaces
             const getField = (keys: string[]) => {
@@ -29,26 +26,47 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
             };
 
             let rut = getField(['id_rut', 'rut', 'id rut', 'rut proveedor', 'id']) || '';
-            rut = rut.trim().replace(/[^0-9Kk-]/g, '').toUpperCase();
-            
+            rut = rut
+              .trim()
+              .replace(/[^0-9Kk-]/g, '')
+              .toUpperCase();
+
             let name = getField(['nombre proveedor', 'nombre', 'proveedor', 'razon social']) || '';
             name = name.toUpperCase();
 
             // Skip invalid
             if (!name) continue;
-            
+
             if (!rut) {
               rut = 'RUT_NR_' + name.replace(/[^A-Z0-9]/g, '_').substring(0, 15);
             }
 
             const estado = getField(['estado']) || '';
-            // If the provider is 'Eliminado', maybe still import but leave as no exchange or delete? 
+            // If the provider is 'Eliminado', maybe still import but leave as no exchange or delete?
             // We'll just import whatever hasExchange is.
 
-            const canjeVal = getField(['canje sólo por vencimiento', 'canje solo por vencimiento', 'canje', 'politica de canje']);
-            const retiroVal = getField(['retiro (días)', 'retiro (dias)', 'retiro dias', 'dias retiro', 'retiro', 'días de anticipación', 'dias']);
-            const bodegaVal = getField(['bodega sólo por vencimiento', 'bodega solo por vencimiento', 'bodega sólo por vencimient', 'bodega']);
-            
+            const canjeVal = getField([
+              'canje sólo por vencimiento',
+              'canje solo por vencimiento',
+              'canje',
+              'politica de canje',
+            ]);
+            const retiroVal = getField([
+              'retiro (días)',
+              'retiro (dias)',
+              'retiro dias',
+              'dias retiro',
+              'retiro',
+              'días de anticipación',
+              'dias',
+            ]);
+            const bodegaVal = getField([
+              'bodega sólo por vencimiento',
+              'bodega solo por vencimiento',
+              'bodega sólo por vencimient',
+              'bodega',
+            ]);
+
             let hasExchange = true;
             let withdrawalDays = 90; // Default
             let exchangePolicy = '';
@@ -67,7 +85,12 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
 
             if (retiroVal !== null && retiroVal !== '' && !isNaN(Number(retiroVal))) {
               withdrawalDays = parseInt(retiroVal, 10);
-            } else if (canjeVal && canjeVal !== '' && !isNaN(Number(canjeVal)) && withdrawalDays === 90) {
+            } else if (
+              canjeVal &&
+              canjeVal !== '' &&
+              !isNaN(Number(canjeVal)) &&
+              withdrawalDays === 90
+            ) {
               // Si retiro no viene pero canje sí es número, asumimos canje como días de retiro
               withdrawalDays = parseInt(canjeVal, 10);
             }
@@ -84,7 +107,7 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
               name,
               hasExchange,
               withdrawalDays,
-              exchangePolicy
+              exchangePolicy,
             });
           }
 
@@ -96,19 +119,23 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
 
           const arrayToSave = Array.from(uniqueProviders.values());
           if (arrayToSave.length > 0) {
-             const { db } = await import('../db');
-             await db.providers.bulkPut(arrayToSave);
+            const { db } = await import('../db');
+            await db.providers.bulkPut(arrayToSave);
           }
 
           resolve(arrayToSave.length);
         } catch (err: unknown) {
-          logger.error('providerImporter', 'Error bulk saving providers', err instanceof Error ? err.message : String(err));
+          logger.error(
+            'providerImporter',
+            'Error bulk saving providers',
+            err instanceof Error ? err.message : String(err)
+          );
           reject(err);
         }
       },
       error: (error: Error) => {
         reject(error);
-      }
+      },
     });
   });
 };
