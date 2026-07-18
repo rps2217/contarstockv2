@@ -47,6 +47,10 @@ import { useExport } from '@/shared/hooks';
 import { SearchInput } from '@/shared/components/ui/SearchInput';
 import { FAB } from '@/shared/components/ui/FAB';
 
+// IMPORTAR COMPONENTES EXTRAÍDOS
+import { ExpiryHeader } from './ExpiryPage/ExpiryHeader';
+import { ExpiryFilters } from './ExpiryPage/ExpiryFilters';
+
 // Tipos y constantes de UI
 type UxExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe';
 
@@ -659,109 +663,17 @@ export const RedesignExpiryPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-base">
-      {/* Header mejorado con más espacio en escritorio */}
-      <div className="px-4 sm:px-6 lg:px-8 xl:px-12 shrink-0 border-b border-subtle bg-surface/50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <CalendarClock className="w-6 h-6 text-blue-500" />
-            </div>
-            <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-primary">Vencimientos</h1>
-              <p className="text-xs lg:text-sm text-muted">
-                {totalRecords} registros • {urgentCount} urgente{urgentCount !== 1 ? 's' : ''}
-              </p>
-            </div>
-            {urgentCount > 0 && (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-rose-500 bg-rose-500/10 px-3 py-1.5 rounded-full">
-                <AlertCircle className="w-4 h-4" />
-                {urgentCount}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2 shrink-0">
-            {/* Modo selección */}
-            {isSelectionMode ? (
-              <>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={selectedIds.size === 0}
-                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Eliminar ({selectedIds.size})</span>
-                </button>
-                <button
-                  onClick={toggleSelectionMode}
-                  className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  <span className="hidden sm:inline">Cancelar</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={toggleSelectionMode}
-                  className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                >
-                  <Check className="w-4 h-4" />
-                  <span className="hidden sm:inline">Seleccionar</span>
-                </button>
-                <button
-                  onClick={actions.syncRecords}
-                  disabled={isSyncing}
-                  className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={cn('w-4 h-4', isSyncing && 'animate-spin')} />
-                  <span className="hidden sm:inline">
-                    {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-                  </span>
-                </button>
-                {/* Exportar dropdown */}
-                <div className="relative group">
-                  <button
-                    disabled={allRecords.length === 0 || isExporting}
-                    className="flex items-center gap-2 bg-surface hover:bg-elevated border border-subtle text-primary px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
-                  </button>
-                  <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
-                    <div className="bg-surface border border-subtle rounded-xl shadow-xl overflow-hidden min-w-[140px]">
-                      <button
-                        onClick={() => exportTo(allRecords, 'csv')}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-elevated transition-colors text-sm"
-                      >
-                        <Table2 className="w-4 h-4 text-emerald-500" /> CSV
-                      </button>
-                      <button
-                        onClick={() => exportTo(allRecords, 'excel')}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-elevated transition-colors text-sm"
-                      >
-                        <FileSpreadsheet className="w-4 h-4 text-blue-500" /> Excel
-                      </button>
-                      <button
-                        onClick={() => exportTo(allRecords, 'pdf')}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-elevated transition-colors text-sm"
-                      >
-                        <FileText className="w-4 h-4 text-rose-500" /> PDF
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowCaptureModal(true)}
-                  className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Registrar</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Header */}
+      <ExpiryHeader
+        totalRecords={totalRecords}
+        urgentCount={urgentCount}
+        isSyncing={isSyncing}
+        isSelectionMode={isSelectionMode}
+        selectedIds={selectedIds}
+        onToggleSelectionMode={toggleSelectionMode}
+        onBulkDelete={handleBulkDelete}
+        onSync={actions.syncRecords}
+      />
 
       {/* Contenido principal con más espacio en escritorio */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-12 pb-24 md:pb-8">
