@@ -25,8 +25,9 @@ export class ExpectedOrderRepository {
     try {
       await db.expectedOrders.put(order);
       logger.info(MODULE, 'Order saved', { orderId: order.id });
-    } catch (err: any) {
-      logger.error(MODULE, 'Error saving order', { orderId: order.id, error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error saving order', { orderId: order.id, error: error.message });
       throw err;
     }
   }
@@ -34,8 +35,9 @@ export class ExpectedOrderRepository {
   static async getById(id: string): Promise<ExpectedOrder | undefined> {
     try {
       return await db.expectedOrders.get(id);
-    } catch (err: any) {
-      logger.error(MODULE, 'Error getting order by id', { orderId: id, error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error getting order by id', { orderId: id, error: error.message });
       throw err;
     }
   }
@@ -43,8 +45,9 @@ export class ExpectedOrderRepository {
   static async getAll(): Promise<ExpectedOrder[]> {
     try {
       return await db.expectedOrders.toArray();
-    } catch (err: any) {
-      logger.error(MODULE, 'Error getting all orders', { error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error getting all orders', { error: error.message });
       throw err;
     }
   }
@@ -53,8 +56,9 @@ export class ExpectedOrderRepository {
     try {
       await db.expectedOrders.delete(id);
       logger.info(MODULE, 'Order deleted', { orderId: id });
-    } catch (err: any) {
-      logger.error(MODULE, 'Error deleting order', { orderId: id, error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error deleting order', { orderId: id, error: error.message });
       throw err;
     }
   }
@@ -88,8 +92,9 @@ export class ExpectedOrderRepository {
     try {
       await this.table().put(order);
       logger.info(MODULE, 'Order saved', { orderId: order.id });
-    } catch (err: any) {
-      logger.error(MODULE, 'Error saving order', { orderId: order.id, error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error saving order', { orderId: order.id, error: error.message });
       throw err;
     }
   }
@@ -97,8 +102,9 @@ export class ExpectedOrderRepository {
   async getById(id: string): Promise<ExpectedOrder | undefined> {
     try {
       return await this.table().get(id);
-    } catch (err: any) {
-      logger.error(MODULE, 'Error getting order by id', { orderId: id, error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error getting order by id', { orderId: id, error: error.message });
       throw err;
     }
   }
@@ -106,8 +112,9 @@ export class ExpectedOrderRepository {
   async getAll(): Promise<ExpectedOrder[]> {
     try {
       return await this.table().toArray();
-    } catch (err: any) {
-      logger.error(MODULE, 'Error getting all orders', { error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error getting all orders', { error: error.message });
       throw err;
     }
   }
@@ -116,8 +123,9 @@ export class ExpectedOrderRepository {
     try {
       await this.table().delete(id);
       logger.info(MODULE, 'Order deleted', { orderId: id });
-    } catch (err: any) {
-      logger.error(MODULE, 'Error deleting order', { orderId: id, error: err.message });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'Error deleting order', { orderId: id, error: error.message });
       throw err;
     }
   }
@@ -197,19 +205,21 @@ export class ExpectedOrderRepository {
             await this.table().put(order);
             savedCount++;
           }
-        } catch (dbErr: any) {
+        } catch (dbErr: unknown) {
+          const dbError = dbErr instanceof Error ? dbErr : new Error(String(dbErr));
           logger.error(MODULE, 'Error saving order to DB', {
             orderId: order.id,
-            error: dbErr.message,
+            error: dbError.message,
           });
         }
       }
 
       logger.info(MODULE, `downloadFromCloud: Saved ${savedCount} new orders`);
       return { success: true, orders };
-    } catch (err: any) {
-      logger.error(MODULE, 'downloadFromCloud: Unexpected error', { error: err.message });
-      return { success: false, orders: [], error: err.message || 'Unknown error' };
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'downloadFromCloud: Unexpected error', { error: error.message });
+      return { success: false, orders: [], error: error.message || 'Unknown error' };
     }
   }
 
@@ -248,9 +258,10 @@ export class ExpectedOrderRepository {
       }
 
       return { success: true };
-    } catch (err: any) {
-      logger.error(MODULE, 'uploadToCloud: Unexpected error', { error: err.message });
-      return { success: false, error: err.message || 'Unknown error' };
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'uploadToCloud: Unexpected error', { error: error.message });
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }
 
@@ -267,9 +278,10 @@ export class ExpectedOrderRepository {
       }
 
       return { success: true };
-    } catch (err: any) {
-      logger.error(MODULE, 'deleteFromCloud: Unexpected error', { error: err.message });
-      return { success: false, error: err.message || 'Unknown error' };
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error(MODULE, 'deleteFromCloud: Unexpected error', { error: error.message });
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }
 }

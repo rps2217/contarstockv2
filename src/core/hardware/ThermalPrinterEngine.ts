@@ -43,9 +43,20 @@ interface USBDevice {
 interface PrintItem {
   barcode: string;
   productName?: string;
+  name?: string;
   expectedQty?: number;
+  expectedQuantity?: number;
   quantity?: number;
   totalQuantity?: number;
+  loc?: string;
+}
+
+/** Item para reportes HTML (requerido por generateReportHtml80mm) */
+interface ReportItem {
+  barcode: string;
+  productName?: string;
+  expectedQuantity?: number;
+  totalQuantity: number;
 }
 
 /** Metadatos de orden para impresión */
@@ -286,9 +297,11 @@ export class ThermalPrinterEngine {
       items.forEach(item => {
         const sku = item.barcode.padEnd(20);
         const name = (item.productName || 'SIN_DESC').substring(0, 32);
-        const theo = String(item.expectedQuantity || 0).padStart(5);
-        const real = String(item.totalQuantity || 0).padStart(7);
-        const diff = String(item.totalQuantity - (item.expectedQuantity || 0)).padStart(7);
+        const theoVal = item.expectedQuantity || item.expectedQty || 0;
+        const realVal = item.totalQuantity || item.quantity || 0;
+        const theo = String(theoVal).padStart(5);
+        const real = String(realVal).padStart(7);
+        const diff = String(realVal - theoVal).padStart(7);
 
         const row = [
           ...encoder.encode(`${name}\\n`),
@@ -299,7 +312,7 @@ export class ThermalPrinterEngine {
         content.push(...row);
       });
 
-      const totalReal = items.reduce((acc, i) => acc + i.totalQuantity, 0);
+      const totalReal = items.reduce((acc, i) => acc + (i.totalQuantity || i.quantity || 0), 0);
       const footer = [
         ...esc.boldOn,
         ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\\n`),
@@ -343,8 +356,14 @@ export class ThermalPrinterEngine {
       return;
     }
 
-    // Generar HTML usando el helper
-    const htmlContent = generateReportHtml80mm({ erp, label, items });
+    // Generar HTML usando el helper (transformar PrintItem a ReportItem)
+    const reportItems: ReportItem[] = items.map(item => ({
+      barcode: item.barcode,
+      productName: item.productName,
+      expectedQuantity: item.expectedQuantity || item.expectedQty || 0,
+      totalQuantity: item.totalQuantity || item.quantity || 0,
+    }));
+    const htmlContent = generateReportHtml80mm({ erp, label, items: reportItems });
 
     doc.open();
     doc.write(htmlContent);
