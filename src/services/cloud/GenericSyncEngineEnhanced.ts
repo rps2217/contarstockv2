@@ -2,15 +2,15 @@
  * =============================================================================
  * GENERIC SYNC ENGINE ENHANCED - Extensión con Retry y Métricas
  * =============================================================================
- * 
+ *
  * Esta versión usa composición (delegación) sobre GenericSyncEngine:
  * - Retry automático con backoff exponencial
  * - Circuit breaker para proteger contra fallos en cascada
  * - Métricas de sync (duración, éxito, conflictos)
- * 
+ *
  * NOTA: Usa composición en lugar de herencia para evitar conflictos
  * de firma de métodos entre el engine base y el enhanced.
- * 
+ *
  * @module GenericSyncEngineEnhanced
  */
 
@@ -20,10 +20,7 @@ import { db } from '../../db';
 import { logger } from '../logger';
 import { telemetry } from '../telemetryService';
 import { useSyncStore } from '@/stores';
-import { 
-  getConfiguredStrategy, 
-  applyStrategy 
-} from './ConflictResolution';
+import { getConfiguredStrategy, applyStrategy } from './ConflictResolution';
 import { withSyncRetry, withCircuitBreaker } from '@/lib/retry';
 import { GenericSyncEngine, genericSyncEngine } from './GenericSyncEngine';
 
@@ -60,7 +57,7 @@ export class EnhancedSyncEngine {
   async sync(registryKey: string): Promise<EnhancedSyncResult> {
     const startTime = Date.now();
     const meta = syncRegistry[registryKey];
-    
+
     if (!meta) {
       return { success: false, error: `Registry key ${registryKey} not found` };
     }
@@ -72,7 +69,7 @@ export class EnhancedSyncEngine {
       // 1. Pull con retry
       const pullRes = await this.pullWithRetry(registryKey, meta);
 
-      // 2. Push con retry  
+      // 2. Push con retry
       const pushRes = await this.pushWithRetry(registryKey, meta);
 
       // Actualizar métricas
@@ -81,30 +78,29 @@ export class EnhancedSyncEngine {
         lastSyncDuration: Date.now() - startTime,
         recordsPulled: pullRes.added + pullRes.updated,
         recordsPushed: pushRes.success,
-        attempts: 1
+        attempts: 1,
       });
 
       logger.info('EnhancedSync', `Sync completed for ${registryKey}`, {
         pulled: pullRes.added + pullRes.updated,
         pushed: pushRes.success,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       });
 
       return {
         success: true,
         pullRes,
         pushRes,
-        metrics: this.getMetrics(registryKey) ?? undefined
+        metrics: this.getMetrics(registryKey) ?? undefined,
       };
-
     } catch (error: any) {
       logger.error('EnhancedSync', `Sync failed for ${registryKey}`, error.message);
       this.trackError(registryKey, error.message);
-      
+
       return {
         success: false,
         error: error.message,
-        metrics: this.getMetrics(registryKey) ?? undefined
+        metrics: this.getMetrics(registryKey) ?? undefined,
       };
     }
   }
@@ -118,11 +114,13 @@ export class EnhancedSyncEngine {
   ): Promise<{ added: number; updated: number }> {
     const lastSyncKey = `lastSync_${meta.remoteTable}`;
     let lastSyncDate: string | undefined;
-    
+
     try {
       const setting = await db.settings.get(lastSyncKey);
-      if (setting?.value) lastSyncDate = setting.value;
-    } catch { /* ignore */ }
+      if (setting && typeof setting.value === 'string') lastSyncDate = setting.value;
+    } catch {
+      /* ignore */
+    }
 
     // Retry con circuit breaker
     const result = await withCircuitBreaker(
@@ -177,8 +175,8 @@ export class EnhancedSyncEngine {
 
     for (let i = 0; i < dirtyItems.length; i += BATCH_SIZE) {
       const chunk = dirtyItems.slice(i, i + BATCH_SIZE);
-      const rows = meta.mapToRemote 
-        ? chunk.map(meta.mapToRemote) 
+      const rows = meta.mapToRemote
+        ? chunk.map(meta.mapToRemote)
         : chunk.map((item: any) => ({ ...item, id: item[meta.primaryKey] || item.id }));
 
       // Retry con backoff exponencial
@@ -198,19 +196,19 @@ export class EnhancedSyncEngine {
         await db.transaction('rw', localTable, async () => {
           for (const item of chunk) {
             const id = item[meta.primaryKey] || item.id;
-            await localTable.update(id, { 
+            await localTable.update(id, {
               syncStatus: 'synced',
-              lastSyncTimestamp: Date.now()
+              lastSyncTimestamp: Date.now(),
             });
           }
         });
         totalSuccess += chunk.length;
       } else {
         totalFailed += chunk.length;
-        telemetry.track('ERROR', 'SYNC_PUSH_FAILED', { 
-          registryKey, 
+        telemetry.track('ERROR', 'SYNC_PUSH_FAILED', {
+          registryKey,
           error: result.error?.message,
-          attempts: result.attempts
+          attempts: result.attempts,
         });
       }
     }
@@ -254,7 +252,8 @@ export class EnhancedSyncEngine {
           if (existing.syncStatus === 'pending' || existing.syncStatus === 'error') {
             // Conflicto
             const strategy = getConfiguredStrategy();
-            const resolution = applyStrategy(strategy, 
+            const resolution = applyStrategy(
+              strategy,
               { data: existing, timestamp: localTime },
               { data: mapped, timestamp: remoteTime }
             );
@@ -282,11 +281,13 @@ export class EnhancedSyncEngine {
     // Guardar timestamp de última sync
     if (maxRemoteTime > 0) {
       try {
-        await db.settings.put({ 
-          key: `lastSync_${meta.remoteTable}`, 
-          value: new Date(maxRemoteTime).toISOString() 
+        await db.settings.put({
+          key: `lastSync_${meta.remoteTable}`,
+          value: new Date(maxRemoteTime).toISOString(),
         });
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     // Actualizar métricas de conflictos
@@ -294,7 +295,7 @@ export class EnhancedSyncEngine {
       const currentMetrics = this.getMetrics(registryKey);
       if (currentMetrics) {
         this.updateMetrics(registryKey, {
-          conflictsResolved: (currentMetrics.conflictsResolved || 0) + conflictsResolved
+          conflictsResolved: (currentMetrics.conflictsResolved || 0) + conflictsResolved,
         });
       }
     }
@@ -314,7 +315,7 @@ export class EnhancedSyncEngine {
         recordsPulled: 0,
         conflictsResolved: 0,
         errors: [],
-        attempts: 0
+        attempts: 0,
       };
     }
   }
@@ -341,10 +342,7 @@ export class EnhancedSyncEngine {
    */
   private trackError(registryKey: string, error: string): void {
     this.initMetrics(registryKey);
-    this.metrics[registryKey].errors = [
-      ...this.metrics[registryKey].errors.slice(-9),
-      error
-    ];
+    this.metrics[registryKey].errors = [...this.metrics[registryKey].errors.slice(-9), error];
     telemetry.track('ERROR', 'SYNC_ERROR', { registryKey, error });
   }
 

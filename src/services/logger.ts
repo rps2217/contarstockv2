@@ -20,7 +20,12 @@ const safeStringify = (obj: unknown): string => {
   });
 };
 
-const writeLog = async (level: LogLevel, module: string, message: string, details?: LoggerDetails) => {
+const writeLog = async (
+  level: LogLevel,
+  module: string,
+  message: string,
+  details?: LoggerDetails
+) => {
   try {
     const timestamp = Date.now();
     let messageStr = String(message);
@@ -31,11 +36,14 @@ const writeLog = async (level: LogLevel, module: string, message: string, detail
         messageStr = '[Unstringifiable Object]';
       }
     }
-    
+
     // Consola formateada para desarrollo
-    const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' 
-      : level === 'success' ? 'color: #2ecc71' 
-      : 'color: #3498db';
+    const style =
+      level === 'error'
+        ? 'color: #ff4d4d; font-weight: bold'
+        : level === 'success'
+          ? 'color: #2ecc71'
+          : 'color: #3498db';
     console.debug(`%c[${module}] [${level.toUpperCase()}] ${messageStr}`, style, details || '');
 
     if (level === 'error') {
@@ -59,15 +67,18 @@ const writeLog = async (level: LogLevel, module: string, message: string, detail
       level,
       module,
       message: messageStr,
-      details: detailsStr,
-      timestamp
+      details: detailsStr ? { message: detailsStr } : undefined,
+      timestamp,
     });
 
     // Cleanup selectivo (1 de cada 20 llamadas)
     if (Math.random() < 0.05) {
       const count = await db.logs.count();
       if (count > MAX_LOGS) {
-        const keys = await db.logs.orderBy('timestamp').limit(count - MAX_LOGS).primaryKeys();
+        const keys = await db.logs
+          .orderBy('timestamp')
+          .limit(count - MAX_LOGS)
+          .primaryKeys();
         await db.logs.bulkDelete(keys);
       }
     }
@@ -92,7 +103,7 @@ export const LOG_CONTEXT = {
   API: 'API',
 } as const;
 
-export type LogContext = typeof LOG_CONTEXT[keyof typeof LOG_CONTEXT];
+export type LogContext = (typeof LOG_CONTEXT)[keyof typeof LOG_CONTEXT];
 
 /**
  * Wrapper de logger con firma flexible
@@ -137,40 +148,55 @@ const flexibleLogger = (
 };
 
 export const logger = {
-  info: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
-    flexibleLogger('info', moduleOrMessage, messageOrError, details),
-  
-  warn: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
-    flexibleLogger('warn', moduleOrMessage, messageOrError, details),
-  
-  error: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
-    flexibleLogger('error', moduleOrMessage, messageOrError, details),
-  
-  success: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
-    flexibleLogger('success', moduleOrMessage, messageOrError, details),
-  
-  debug: (moduleOrMessage: string, messageOrError?: string | Error | LoggerDetails, details?: LoggerDetails) => 
-    flexibleLogger('info', moduleOrMessage, messageOrError, details),
-  
+  info: (
+    moduleOrMessage: string,
+    messageOrError?: string | Error | LoggerDetails,
+    details?: LoggerDetails
+  ) => flexibleLogger('info', moduleOrMessage, messageOrError, details),
+
+  warn: (
+    moduleOrMessage: string,
+    messageOrError?: string | Error | LoggerDetails,
+    details?: LoggerDetails
+  ) => flexibleLogger('warn', moduleOrMessage, messageOrError, details),
+
+  error: (
+    moduleOrMessage: string,
+    messageOrError?: string | Error | LoggerDetails,
+    details?: LoggerDetails
+  ) => flexibleLogger('error', moduleOrMessage, messageOrError, details),
+
+  success: (
+    moduleOrMessage: string,
+    messageOrError?: string | Error | LoggerDetails,
+    details?: LoggerDetails
+  ) => flexibleLogger('success', moduleOrMessage, messageOrError, details),
+
+  debug: (
+    moduleOrMessage: string,
+    messageOrError?: string | Error | LoggerDetails,
+    details?: LoggerDetails
+  ) => flexibleLogger('info', moduleOrMessage, messageOrError, details),
+
   // Métodos originales con firma fija (para uso explícito)
-  infoFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+  infoFixed: (module: LogContext | string, message: string, details?: LoggerDetails) =>
     writeLog('info', module, message, details),
-  
-  warnFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+
+  warnFixed: (module: LogContext | string, message: string, details?: LoggerDetails) =>
     writeLog('warn', module, message, details),
-  
-  errorFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+
+  errorFixed: (module: LogContext | string, message: string, details?: LoggerDetails) =>
     writeLog('error', module, message, details),
-  
-  successFixed: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+
+  successFixed: (module: LogContext | string, message: string, details?: LoggerDetails) =>
     writeLog('success', module, message, details),
-  
+
   getRecent: async (limit = 200): Promise<SystemLog[]> => {
     return await db.logs.orderBy('timestamp').reverse().limit(limit).toArray();
   },
-  
+
   clear: async (): Promise<void> => {
     await db.logs.clear();
     logger.info('System', 'Log de auditoría vaciado.');
-  }
+  },
 };

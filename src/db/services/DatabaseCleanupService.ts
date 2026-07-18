@@ -147,8 +147,8 @@ class DatabaseCleanupServiceClass {
   private async loadConfig(): Promise<void> {
     try {
       const saved = await db.settings.get('cleanup_config');
-      if (saved) {
-        this.config = { ...this.config, ...saved.value };
+      if (saved && typeof saved.value === 'object' && saved.value !== null) {
+        this.config = { ...this.config, ...(saved.value as Record<string, unknown>) };
       }
     } catch (error) {
       logger.warn('DatabaseCleanupService', 'Failed to load config', { error });

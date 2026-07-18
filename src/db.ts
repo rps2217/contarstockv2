@@ -62,13 +62,13 @@ export interface SystemLog {
   level: 'info' | 'warn' | 'error' | 'success';
   module: string;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   timestamp: number;
 }
 
 export interface KVSettings {
   key: string;
-  value: any;
+  value: unknown;
 }
 
 export interface LocationEntry {
@@ -93,8 +93,8 @@ export interface SyncLog {
   timestamp: number;
   action: string;
   tableName: string;
-  payload: any;
-  response?: any;
+  payload: unknown;
+  response?: unknown;
   status: 'success' | 'error';
   errorMessage?: string;
 }
@@ -252,7 +252,7 @@ export class LogiCountDB extends Dexie {
     checksum: string;
     recordCount: number;
     sizeBytes: number;
-    data: any;
+    data: Record<string, unknown>;
   }>;
 
   constructor() {

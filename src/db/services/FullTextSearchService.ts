@@ -190,8 +190,8 @@ class FullTextSearchServiceClass {
   private async loadHistory(): Promise<void> {
     try {
       const saved = await db.settings.get('search_history');
-      if (saved?.value) {
-        this.searchHistory = saved.value;
+      if (saved?.value && Array.isArray(saved.value)) {
+        this.searchHistory = saved.value as SearchHistory[];
       }
     } catch {
       this.searchHistory = [];

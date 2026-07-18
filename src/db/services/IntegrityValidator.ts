@@ -485,7 +485,7 @@ class IntegrityValidatorClass {
       return {
         status: 'critical',
         issues: -1,
-        lastCheck: lastCheckRecord?.value || null,
+        lastCheck: typeof lastCheckRecord?.value === 'number' ? lastCheckRecord.value : null,
       };
     }
   }

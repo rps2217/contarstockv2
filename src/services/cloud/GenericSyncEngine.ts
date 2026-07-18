@@ -4,11 +4,11 @@ import { db } from '../../db';
 import { logger } from '../logger';
 import { telemetry } from '../telemetryService';
 import { useSyncStore } from '@/stores';
-import { 
-  getConfiguredStrategy, 
-  applyStrategy, 
+import {
+  getConfiguredStrategy,
+  applyStrategy,
   type ConflictStrategy,
-  type ConflictResolution 
+  type ConflictResolution,
 } from './ConflictResolution';
 
 export class GenericSyncEngine {
@@ -30,7 +30,10 @@ export class GenericSyncEngine {
     // 1. Process Deletions First
     let toDelete: any[] = [];
     if (meta.filterField === 'tableName' && meta.filterValue) {
-      toDelete = await localTable.where('[tableName+syncStatus]').equals([meta.filterValue, 'pending_delete']).toArray();
+      toDelete = await localTable
+        .where('[tableName+syncStatus]')
+        .equals([meta.filterValue, 'pending_delete'])
+        .toArray();
     } else {
       toDelete = await localTable.where('syncStatus').equals('pending_delete').toArray();
       if (meta.filterField && meta.filterValue) {
@@ -51,8 +54,14 @@ export class GenericSyncEngine {
     // 2. Process Upserts (Pushes)
     let dirtyItems: any[] = [];
     if (meta.filterField === 'tableName' && meta.filterValue) {
-      const pendingItems = await localTable.where('[tableName+syncStatus]').equals([meta.filterValue, 'pending']).toArray();
-      const errorItems = await localTable.where('[tableName+syncStatus]').equals([meta.filterValue, 'error']).toArray();
+      const pendingItems = await localTable
+        .where('[tableName+syncStatus]')
+        .equals([meta.filterValue, 'pending'])
+        .toArray();
+      const errorItems = await localTable
+        .where('[tableName+syncStatus]')
+        .equals([meta.filterValue, 'error'])
+        .toArray();
       dirtyItems = [...pendingItems, ...errorItems];
     } else {
       const pendingItems = await localTable.where('syncStatus').equals('pending').toArray();
@@ -71,8 +80,8 @@ export class GenericSyncEngine {
 
     for (let i = 0; i < dirtyItems.length; i += BATCH_SIZE) {
       const chunk = dirtyItems.slice(i, i + BATCH_SIZE);
-      const rows = meta.mapToRemote 
-        ? chunk.map(meta.mapToRemote) 
+      const rows = meta.mapToRemote
+        ? chunk.map(meta.mapToRemote)
         : chunk.map(item => ({ ...item, id: item[meta.primaryKey] || item.id }));
 
       try {
@@ -82,29 +91,37 @@ export class GenericSyncEngine {
           await db.transaction('rw', localTable, async () => {
             for (const item of chunk) {
               const id = item[meta.primaryKey] || item.id;
-              await localTable.update(id, { 
+              await localTable.update(id, {
                 syncStatus: 'synced',
-                lastSyncTimestamp: Date.now()
+                lastSyncTimestamp: Date.now(),
               });
             }
           });
           totalSuccess += chunk.length;
         } else {
           totalFailed += chunk.length;
-          logger.error('SYNC_ENGINE', `Incremental push failed for ${meta.remoteTable}`, result.error);
-          telemetry.track('ERROR', 'SYNC_FAILED', { 
-            table: meta.remoteTable, 
-            error: result.error, 
-            type: 'push' 
+          logger.error(
+            'SYNC_ENGINE',
+            `Incremental push failed for ${meta.remoteTable}`,
+            result.error
+          );
+          telemetry.track('ERROR', 'SYNC_FAILED', {
+            table: meta.remoteTable,
+            error: result.error,
+            type: 'push',
           });
         }
       } catch (e: any) {
         totalFailed += chunk.length;
-        logger.error('SYNC_ENGINE', `Incremental push exception for ${meta.remoteTable}`, e.message);
-        telemetry.track('ERROR', 'SYNC_EXCEPTION', { 
-          table: meta.remoteTable, 
-          error: e.message, 
-          type: 'push' 
+        logger.error(
+          'SYNC_ENGINE',
+          `Incremental push exception for ${meta.remoteTable}`,
+          e.message
+        );
+        telemetry.track('ERROR', 'SYNC_EXCEPTION', {
+          table: meta.remoteTable,
+          error: e.message,
+          type: 'push',
         });
       }
     }
@@ -127,17 +144,17 @@ export class GenericSyncEngine {
     const lastSyncKey = `lastSync_${meta.remoteTable}`;
     let lastSyncDate: string | undefined;
     try {
-        const setting = await db.settings.get(lastSyncKey);
-        if (setting && setting.value) lastSyncDate = setting.value;
+      const setting = await db.settings.get(lastSyncKey);
+      if (setting && typeof setting.value === 'string') lastSyncDate = setting.value;
     } catch {
-       // db.settings might not exist or be accessible, fallback
+      // db.settings might not exist or be accessible, fallback
     }
 
     const result = await supabaseSyncService.pullBatch(meta.remoteTable, lastSyncDate);
     if (!result.success) return { added: 0, updated: 0 };
 
     const remoteRows = result.rows || [];
-    
+
     // Si es una sincronización incremental y no hay registros nuevos, salimos temprano
     if (remoteRows.length === 0 && lastSyncDate) {
       return { added: 0, updated: 0 };
@@ -159,7 +176,9 @@ export class GenericSyncEngine {
         } else {
           localRecords = await localTable.toArray();
           if (meta.filterField && meta.filterValue) {
-            localRecords = localRecords.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+            localRecords = localRecords.filter(
+              (item: any) => item[meta.filterField!] === meta.filterValue
+            );
           }
         }
       }
@@ -170,7 +189,7 @@ export class GenericSyncEngine {
         const mapped = meta.mapToLocal ? meta.mapToLocal(row) : row;
         const id = mapped[meta.primaryKey] || mapped.id;
         remoteIds.add(String(id));
-        
+
         const existing = await localTable.get(id);
         const rawRemoteTime = row.updated_at || row.timestamp || 0;
         let remoteTime = 0;
@@ -192,17 +211,22 @@ export class GenericSyncEngine {
             }
           }
 
-          if (existing.syncStatus === 'pending' || existing.syncStatus === 'error' || existing.syncStatus === 'pending_delete') {
+          if (
+            existing.syncStatus === 'pending' ||
+            existing.syncStatus === 'error' ||
+            existing.syncStatus === 'pending_delete'
+          ) {
             // CONFLICT DETECTED: Local version is unsynced, remote version was updated.
             // Apply conflict resolution strategy
             const strategy = getConfiguredStrategy();
-            const resolution = applyStrategy(strategy, 
+            const resolution = applyStrategy(
+              strategy,
               { data: existing, timestamp: localTime },
               { data: mapped, timestamp: remoteTime }
             );
-            
+
             const store = useSyncStore.getState();
-            
+
             if (!resolution.resolved) {
               // Manual: Register conflict for user decision
               store.addConflict();
@@ -213,12 +237,18 @@ export class GenericSyncEngine {
               logger.warn('SYNC_CONFLICT', `Conflicto manual detectado para ${id}`);
             } else if (resolution.useLocal) {
               // Client wins: Keep local version
-              logger.info('SYNC_CONFLICT', `Conflicto resuelto (client_wins) para ${id}: ${resolution.reason}`);
+              logger.info(
+                'SYNC_CONFLICT',
+                `Conflicto resuelto (client_wins) para ${id}: ${resolution.reason}`
+              );
             } else {
               // Server wins: Apply remote version
               await localTable.update(id, { ...resolution.resolvedData, syncStatus: 'synced' });
               updated++;
-              logger.info('SYNC_CONFLICT', `Conflicto resuelto (server_wins) para ${id}: ${resolution.reason}`);
+              logger.info(
+                'SYNC_CONFLICT',
+                `Conflicto resuelto (server_wins) para ${id}: ${resolution.reason}`
+              );
             }
           } else if (remoteTime > localTime) {
             await localTable.update(id, { ...mapped, syncStatus: 'synced' });
@@ -236,8 +266,14 @@ export class GenericSyncEngine {
       if (!lastSyncDate && localRecords.length > 0) {
         for (const localRec of localRecords) {
           const localId = String(localRec[meta.primaryKey] || localRec.id || '');
-          if ((localRec.syncStatus === 'synced' || localRec.syncStatus === 'error') && !remoteIds.has(localId)) {
-            logger.info('SYNC_RECONCILE', `Eliminando registro huérfano local de ${meta.remoteTable}: ${localId}`);
+          if (
+            (localRec.syncStatus === 'synced' || localRec.syncStatus === 'error') &&
+            !remoteIds.has(localId)
+          ) {
+            logger.info(
+              'SYNC_RECONCILE',
+              `Eliminando registro huérfano local de ${meta.remoteTable}: ${localId}`
+            );
             await localTable.delete(localRec[meta.primaryKey] || localRec.id);
           }
         }
