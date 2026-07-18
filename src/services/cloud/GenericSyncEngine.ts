@@ -92,7 +92,7 @@ export class GenericSyncEngine {
         : chunk.map(item => ({ ...item, id: item[meta.primaryKey] || item.id }));
 
       try {
-        const result = await supabaseSyncService.pushBatch(meta.remoteTable, rows);
+        const result = await supabaseSyncService.pushBatch(meta.remoteTable, rows as object[]);
         if (result.success) {
           // Mark as synced locally
           await db.transaction('rw', localTable, async () => {
