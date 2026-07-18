@@ -82,6 +82,20 @@ export class OfflineSyncQueue {
   private isOnline = navigator.onLine;
   private syncInterval: ReturnType<typeof setInterval> | null = null;
   private listeners: Set<(state: QueueState) => void> = new Set();
+  
+  // Referencias a handlers para cleanup
+  private onlineHandler = () => {
+    this.isOnline = true;
+    logger.info('OfflineSyncQueue', 'Network online');
+    this.notifyListeners();
+    this.triggerSync();
+  };
+  
+  private offlineHandler = () => {
+    this.isOnline = false;
+    logger.info('OfflineSyncQueue', 'Network offline');
+    this.notifyListeners();
+  };
 
   constructor(options: OfflineQueueOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -95,18 +109,8 @@ export class OfflineSyncQueue {
   // ===========================================================================
 
   private setupNetworkListeners() {
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      logger.info('OfflineSyncQueue', 'Network online');
-      this.notifyListeners();
-      this.triggerSync();
-    });
-
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      logger.info('OfflineSyncQueue', 'Network offline');
-      this.notifyListeners();
-    });
+    window.addEventListener('online', this.onlineHandler);
+    window.addEventListener('offline', this.offlineHandler);
   }
 
   private setupAutoSync() {
@@ -298,7 +302,8 @@ export class OfflineSyncQueue {
    */
   private removeOldestLowPriority(): void {
     const sorted = this.getSortedOperations();
-    const lowPriority = sorted.findLast(op => op.priority === 'normal');
+    // Usar reverse() para compatibilidad con navegadores que no soportan findLast()
+    const lowPriority = [...sorted].reverse().find(op => op.priority === 'normal');
     if (lowPriority) {
       this.operations.delete(lowPriority.id);
     }
@@ -325,7 +330,13 @@ export class OfflineSyncQueue {
   destroy(): void {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
+      this.syncInterval = null;
     }
+    
+    // Limpiar event listeners
+    window.removeEventListener('online', this.onlineHandler);
+    window.removeEventListener('offline', this.offlineHandler);
+    
     this.listeners.clear();
   }
 }

@@ -214,9 +214,12 @@ export abstract class BaseRepository<T extends BaseEntity> {
         const aVal = a[field as keyof T];
         const bVal = b[field as keyof T];
         
+        // Manejar casos de undefined/null
         if (aVal === bVal) return 0;
+        if (aVal === undefined || aVal === null) return 1;
+        if (bVal === undefined || bVal === null) return -1;
         
-        const comparison = aVal! < bVal! ? -1 : 1;
+        const comparison = aVal < bVal ? -1 : 1;
         return order === 'asc' ? comparison : -comparison;
       });
     }

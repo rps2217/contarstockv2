@@ -126,6 +126,10 @@ class SyncQueueManager {
   private isProcessing = false;
   private isOnline = navigator.onLine;
   private processorInterval: ReturnType<typeof setInterval> | null = null;
+  
+  // Referencias a handlers para cleanup
+  private onlineHandler = () => this.handleOnline();
+  private offlineHandler = () => this.handleOffline();
 
   /**
    * Inicializa la cola de sync
@@ -153,8 +157,8 @@ class SyncQueueManager {
       });
 
       // Escuchar eventos de online/offline
-      window.addEventListener('online', () => this.handleOnline());
-      window.addEventListener('offline', () => this.handleOffline());
+      window.addEventListener('online', this.onlineHandler);
+      window.addEventListener('offline', this.offlineHandler);
 
       // Iniciar procesador
       this.startProcessor();
@@ -389,12 +393,18 @@ class SyncQueueManager {
   }
 
   /**
-   * Destruye la conexión a la DB
+   * Destruye la conexión a la DB y limpia recursos
    */
   async destroy(): Promise<void> {
     if (this.processorInterval) {
       clearInterval(this.processorInterval);
+      this.processorInterval = null;
     }
+    
+    // Limpiar event listeners
+    window.removeEventListener('online', this.onlineHandler);
+    window.removeEventListener('offline', this.offlineHandler);
+    
     if (this.db) {
       this.db.close();
       this.db = null;
