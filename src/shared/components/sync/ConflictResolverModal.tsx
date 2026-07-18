@@ -1,7 +1,7 @@
-"use client";
+'use client';
 /**
  * ConflictResolverModal - UI para resolver conflictos de sincronización
- * 
+ *
  * Muestra los datos locales y remotos en paralelo,
  * permitiendo al usuario decidir cuál preservar o hacer merge.
  */
@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useConflictStore, ConflictRecord } from '@/stores';
 import { toast } from 'sonner';
+import { formatDetailDateTime } from '@/lib/date';
 
 interface ConflictResolverModalProps {
   isOpen: boolean;
@@ -32,12 +33,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const {
-    getActiveConflict,
-    resolveConflict,
-    dismissConflict,
-    pendingCount,
-  } = useConflictStore();
+  const { getActiveConflict, resolveConflict, dismissConflict, pendingCount } = useConflictStore();
 
   const [conflict, setConflict] = useState<ConflictRecord | null>(null);
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
@@ -59,8 +55,8 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
       ...Object.keys(conflict.localData),
       ...Object.keys(conflict.remoteData),
     ]);
-    
-    return Array.from(allKeys).filter((key) => {
+
+    return Array.from(allKeys).filter(key => {
       if (key.startsWith('_') || key === 'id' || key === 'syncStatus') return false;
       const localVal = JSON.stringify(conflict.localData[key]);
       const remoteVal = JSON.stringify(conflict.remoteData[key]);
@@ -69,7 +65,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
   };
 
   const toggleField = (field: string) => {
-    setExpandedFields((prev) => {
+    setExpandedFields(prev => {
       const next = new Set(prev);
       if (next.has(field)) {
         next.delete(field);
@@ -84,13 +80,13 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
     setIsResolving(true);
     try {
       resolveConflict(conflict.id, resolution);
-      
+
       const messages = {
         local: 'Se preservaron los cambios locales',
         remote: 'Se aplicaron los cambios del servidor',
         merged: 'Se combinaron ambos cambios',
       };
-      
+
       toast.success('Conflicto resuelto', {
         description: messages[resolution],
       });
@@ -98,20 +94,13 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
       // Ir al siguiente conflicto
       const next = getActiveConflict();
       setConflict(next);
-      
+
       if (!next) {
         onClose();
       }
     } finally {
       setIsResolving(false);
     }
-  };
-
-  const formatTimestamp = (ts: number) => {
-    return new Date(ts).toLocaleString('es-CL', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
   };
 
   const differingFields = getDifferingFields();
@@ -148,7 +137,8 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                       Resolver Conflicto de Sincronización
                     </h2>
                     <p className="text-sm text-muted">
-                      {pendingCount()} conflicto{pendingCount() !== 1 ? 's' : ''} pendiente{pendingCount() !== 1 ? 's' : ''} • Tabla: {conflict.table}
+                      {pendingCount()} conflicto{pendingCount() !== 1 ? 's' : ''} pendiente
+                      {pendingCount() !== 1 ? 's' : ''} • Tabla: {conflict.table}
                     </p>
                   </div>
                 </div>
@@ -180,7 +170,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                       </div>
                       <span className="text-xs text-muted flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {formatTimestamp(conflict.localTimestamp)}
+                        {formatDetailDateTime(conflict.localTimestamp)}
                       </span>
                     </div>
                     <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
@@ -191,15 +181,21 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                             key={key}
                             className={cn(
                               'text-sm p-2 rounded-lg',
-                              isDifferent ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-elevated/50'
+                              isDifferent
+                                ? 'bg-blue-500/10 border border-blue-500/30'
+                                : 'bg-elevated/50'
                             )}
                           >
                             <p className="text-muted text-xs mb-1">{key}</p>
-                            <p className={cn(
-                              'font-medium break-all',
-                              isDifferent ? 'text-blue-400' : 'text-primary'
-                            )}>
-                              {typeof value === 'object' ? JSON.stringify(value) : String(value ?? '')}
+                            <p
+                              className={cn(
+                                'font-medium break-all',
+                                isDifferent ? 'text-blue-400' : 'text-primary'
+                              )}
+                            >
+                              {typeof value === 'object'
+                                ? JSON.stringify(value)
+                                : String(value ?? '')}
                             </p>
                           </div>
                         );
@@ -230,7 +226,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                       </div>
                       <span className="text-xs text-muted flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {formatTimestamp(conflict.remoteTimestamp)}
+                        {formatDetailDateTime(conflict.remoteTimestamp)}
                       </span>
                     </div>
                     <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
@@ -241,15 +237,21 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                             key={key}
                             className={cn(
                               'text-sm p-2 rounded-lg',
-                              isDifferent ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-elevated/50'
+                              isDifferent
+                                ? 'bg-emerald-500/10 border border-emerald-500/30'
+                                : 'bg-elevated/50'
                             )}
                           >
                             <p className="text-muted text-xs mb-1">{key}</p>
-                            <p className={cn(
-                              'font-medium break-all',
-                              isDifferent ? 'text-emerald-400' : 'text-primary'
-                            )}>
-                              {typeof value === 'object' ? JSON.stringify(value) : String(value ?? '')}
+                            <p
+                              className={cn(
+                                'font-medium break-all',
+                                isDifferent ? 'text-emerald-400' : 'text-primary'
+                              )}
+                            >
+                              {typeof value === 'object'
+                                ? JSON.stringify(value)
+                                : String(value ?? '')}
                             </p>
                           </div>
                         );
@@ -289,7 +291,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                         <ChevronRight className="w-4 h-4 text-muted" />
                       )}
                     </button>
-                    
+
                     <AnimatePresence>
                       {expandedFields.has('__all__') && (
                         <motion.div
@@ -299,23 +301,28 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                           className="overflow-hidden"
                         >
                           <div className="p-3 pt-0 space-y-2">
-                            {differingFields.map((field) => (
-                              <div key={field} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                                <p className="text-xs text-amber-500 mb-2 font-semibold">📌 {field}</p>
+                            {differingFields.map(field => (
+                              <div
+                                key={field}
+                                className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+                              >
+                                <p className="text-xs text-amber-500 mb-2 font-semibold">
+                                  📌 {field}
+                                </p>
                                 <div className="grid grid-cols-2 gap-4 text-xs">
                                   <div className="bg-blue-500/10 rounded p-2">
                                     <p className="text-muted mb-1">Local:</p>
                                     <p className="text-primary font-medium">
-                                      {typeof conflict.localData[field] === 'object' 
-                                        ? JSON.stringify(conflict.localData[field]) 
+                                      {typeof conflict.localData[field] === 'object'
+                                        ? JSON.stringify(conflict.localData[field])
                                         : String(conflict.localData[field] ?? '(vacío)')}
                                     </p>
                                   </div>
                                   <div className="bg-emerald-500/10 rounded p-2">
                                     <p className="text-muted mb-1">Remoto:</p>
                                     <p className="text-primary font-medium">
-                                      {typeof conflict.remoteData[field] === 'object' 
-                                        ? JSON.stringify(conflict.remoteData[field]) 
+                                      {typeof conflict.remoteData[field] === 'object'
+                                        ? JSON.stringify(conflict.remoteData[field])
                                         : String(conflict.remoteData[field] ?? '(vacío)')}
                                     </p>
                                   </div>
@@ -338,8 +345,8 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
                         ¿Por qué ocurre esto?
                       </p>
                       <p className="text-xs text-secondary leading-relaxed">
-                        Este registro fue modificado tanto en este dispositivo como en la nube 
-                        por otro usuario o sesión. Selecciona cuál versión deseas conservar.
+                        Este registro fue modificado tanto en este dispositivo como en la nube por
+                        otro usuario o sesión. Selecciona cuál versión deseas conservar.
                       </p>
                     </div>
                   </div>
@@ -349,7 +356,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
               {/* Footer */}
               <div className="flex items-center justify-between p-4 border-t border-subtle bg-elevated/50">
                 <p className="text-xs text-muted">
-                  Detectado: {formatTimestamp(conflict.detectedAt)}
+                  Detectado: {formatDetailDateTime(conflict.detectedAt)}
                 </p>
                 <button
                   onClick={onClose}
@@ -369,7 +376,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
 // Componente para integración en App
 export const ConflictResolverProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const pendingCount = useConflictStore((state) => state.pendingConflicts.length);
+  const pendingCount = useConflictStore(state => state.pendingConflicts.length);
 
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
@@ -381,7 +388,7 @@ export const ConflictResolverProvider: React.FC<{ children: React.ReactNode }> =
     <>
       {children}
       <ConflictResolverModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
-      
+
       {/* Notification cuando hay conflictos pendientes */}
       {pendingCount > 0 && (
         <button
@@ -389,7 +396,9 @@ export const ConflictResolverProvider: React.FC<{ children: React.ReactNode }> =
           className="fixed bottom-24 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-amber-500 text-white rounded-xl shadow-lg hover:bg-amber-400 transition-colors"
         >
           <AlertTriangle className="w-5 h-5" />
-          <span className="font-medium">{pendingCount} conflicto{pendingCount !== 1 ? 's' : ''}</span>
+          <span className="font-medium">
+            {pendingCount} conflicto{pendingCount !== 1 ? 's' : ''}
+          </span>
         </button>
       )}
     </>

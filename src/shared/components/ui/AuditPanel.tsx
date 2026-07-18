@@ -1,21 +1,18 @@
 /**
  * AuditPanel - Panel de auditoría estilo AppSheet
- * 
+ *
  * Muestra el historial de cambios de un registro o tabla.
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { logger } from '@/services/logger';
-;
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { 
-  History, 
-  ChevronDown, 
-  ChevronUp, 
-  Plus, 
-  Edit3, 
+import {
+  History,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Edit3,
   Trash2,
   Clock,
   User,
@@ -23,9 +20,10 @@ import {
   Filter,
   RefreshCw,
   Download,
-  Upload
+  Upload,
 } from 'lucide-react';
 import type { AuditLogEntry } from '@/db';
+import { formatDetailDateTime } from '@/lib/date';
 
 interface AuditPanelProps {
   /** ID del registro a auditar (opcional) */
@@ -84,8 +82,8 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
   const fetchHistory = async (offset = 0) => {
     setLoading(true);
     try {
-      const targetTable = showAll ? filterTable : (tableName || '');
-      
+      const targetTable = showAll ? filterTable : tableName || '';
+
       if (!targetTable) {
         setEntries([]);
         return;
@@ -95,7 +93,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
       const history = await loadHistory(targetTable, PAGE_SIZE + 1);
       const hasMoreResults = history.length > PAGE_SIZE;
       const items = hasMoreResults ? history.slice(0, PAGE_SIZE) : history;
-      
+
       if (offset === 0) {
         setEntries(items);
       } else {
@@ -103,7 +101,11 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
       }
       setHasMore(hasMoreResults);
     } catch (err) {
-      logger.error('AuditPanel', 'Error loading audit history', err instanceof Error ? err.message : String(err));
+      logger.error(
+        'AuditPanel',
+        'Error loading audit history',
+        err instanceof Error ? err.message : String(err)
+      );
     } finally {
       setLoading(false);
     }
@@ -120,7 +122,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
   // Sincronizar a la nube
   const handleSync = async () => {
     if (!onSyncToCloud || syncing) return;
-    
+
     setSyncing(true);
     try {
       const result = await onSyncToCloud();
@@ -130,10 +132,6 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
     } finally {
       setSyncing(false);
     }
-  };
-
-  const formatTimestamp = (ts: number) => {
-    return format(new Date(ts), "dd MMM, HH:mm:ss", { locale: es });
   };
 
   const parseValue = (value?: string) => {
@@ -164,7 +162,9 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           className="p-4 flex items-center gap-3 cursor-pointer hover:bg-surface/30 transition-colors"
         >
           {/* Action Badge */}
-          <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1.5 border ${COLOR_MAP[config.color]}`}>
+          <div
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1.5 border ${COLOR_MAP[config.color]}`}
+          >
             <Icon className="w-3 h-3" />
             {config.label}
           </div>
@@ -172,19 +172,15 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-secondary uppercase">
-                {entry.tableName}
-              </span>
+              <span className="text-xs font-bold text-secondary uppercase">{entry.tableName}</span>
               {entry.fieldName && (
-                <span className="text-[10px] text-slate-500 font-mono">
-                  • {entry.fieldName}
-                </span>
+                <span className="text-[10px] text-slate-500 font-mono">• {entry.fieldName}</span>
               )}
             </div>
             <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {formatTimestamp(entry.timestamp)}
+                {formatDetailDateTime(entry.timestamp)}
               </span>
               {entry.userId && entry.userId !== 'anonymous' && (
                 <span className="flex items-center gap-1">
@@ -261,9 +257,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
                     <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest">
                       Dispositivo
                     </span>
-                    <p className="text-[10px] font-mono text-muted mt-1">
-                      {entry.deviceInfo}
-                    </p>
+                    <p className="text-[10px] font-mono text-muted mt-1">{entry.deviceInfo}</p>
                   </div>
                 )}
               </div>
@@ -287,28 +281,30 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
             </span>
           )}
         </h3>
-        
+
         <div className="flex items-center gap-2">
           {showAll && (
             <select
               value={filterTable}
-              onChange={(e) => setFilterTable(e.target.value)}
+              onChange={e => setFilterTable(e.target.value)}
               className="text-[10px] bg-surface border border-subtle rounded-lg px-2 py-1.5 text-muted focus:border-blue-500 outline-none"
             >
               <option value="">Todas las tablas</option>
               {tables.map(t => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           )}
-          
+
           {onSyncToCloud && (
             <button
               onClick={handleSync}
               disabled={syncing || pendingCount === 0}
               className={`p-1.5 rounded-lg transition-colors ${
-                pendingCount > 0 
-                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
+                pendingCount > 0
+                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'
                   : 'bg-surface text-slate-500 cursor-not-allowed'
               }`}
               title="Sincronizar a la nube"
@@ -316,7 +312,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
               <Upload className={`w-3.5 h-3.5 ${syncing ? 'animate-pulse' : ''}`} />
             </button>
           )}
-          
+
           <button
             onClick={() => fetchHistory()}
             className="p-1.5 rounded-lg bg-surface hover:bg-elevated text-muted transition-colors"
@@ -333,9 +329,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           <button
             onClick={() => setShowAll(true)}
             className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              showAll 
-                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' 
-                : 'text-slate-500'
+              showAll ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-500'
             }`}
           >
             <Database className="w-3 h-3" />
@@ -347,9 +341,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
               setFilterTable(tableName || '');
             }}
             className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              !showAll 
-                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' 
-                : 'text-slate-500'
+              !showAll ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-500'
             }`}
           >
             <Filter className="w-3 h-3" />
@@ -367,9 +359,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
         <div className="bg-base/40 border border-slate-900 rounded-2xl p-8 text-center">
           <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
           <p className="text-sm text-muted">Sin historial de cambios</p>
-          <p className="text-[10px] text-slate-500 mt-1">
-            Los cambios aparecerán aquí
-          </p>
+          <p className="text-[10px] text-slate-500 mt-1">Los cambios aparecerán aquí</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -382,8 +372,8 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
         <div className="flex justify-between items-center text-[10px] text-slate-500 pt-2">
           <span>{entries.length} entradas</span>
           {hasMore && (
-            <button 
-              onClick={loadMore} 
+            <button
+              onClick={loadMore}
               disabled={loading}
               className="text-blue-400 hover:text-blue-300 font-bold disabled:opacity-50"
             >

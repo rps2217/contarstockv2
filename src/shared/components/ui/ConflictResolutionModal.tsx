@@ -1,26 +1,25 @@
 /**
  * ConflictResolutionModal - UI para resolver conflictos de sincronización
- * 
+ *
  * Muestra dos versiones del mismo registro y permite al usuario elegir
  * cuál mantener o fusionar los cambios.
  */
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  AlertTriangle, 
-  Check, 
-  X, 
+import {
+  AlertTriangle,
+  Check,
+  X,
   Merge,
   Monitor,
   Smartphone,
   Clock,
   RefreshCw,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatDetailDateTime } from '@/lib/date';
 
 export interface ConflictData<T = any> {
   id: string;
@@ -46,12 +45,10 @@ export function ConflictResolutionModal<T>({
   onResolve,
 }: ConflictResolutionModalProps<T>) {
   const [selectedOption, setSelectedOption] = useState<'local' | 'remote' | 'merge'>('local');
-  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set(conflict.conflictingFields));
+  const [expandedFields, setExpandedFields] = useState<Set<string>>(
+    new Set(conflict.conflictingFields)
+  );
   const [mergeValues, setMergeValues] = useState<Record<string, any>>({});
-
-  const formatDate = (timestamp: number) => {
-    return format(new Date(timestamp), 'dd MMM yyyy, HH:mm', { locale: es });
-  };
 
   const toggleField = (field: string) => {
     const newExpanded = new Set(expandedFields);
@@ -145,7 +142,7 @@ export function ConflictResolutionModal<T>({
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-slate-500">
                     <Clock className="w-3 h-3" />
-                    {formatDate(conflict.localTimestamp)}
+                    {formatDetailDateTime(conflict.localTimestamp)}
                   </div>
                 </button>
 
@@ -160,11 +157,13 @@ export function ConflictResolutionModal<T>({
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Monitor className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-emerald-400 uppercase">Versión Remota</span>
+                    <span className="text-xs font-bold text-emerald-400 uppercase">
+                      Versión Remota
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-slate-500">
                     <Clock className="w-3 h-3" />
-                    {formatDate(conflict.remoteTimestamp)}
+                    {formatDetailDateTime(conflict.remoteTimestamp)}
                   </div>
                 </button>
               </div>
@@ -174,8 +173,8 @@ export function ConflictResolutionModal<T>({
                 <h3 className="text-xs font-bold text-muted uppercase tracking-wider">
                   Campos en Conflicto ({conflict.conflictingFields.length})
                 </h3>
-                
-                {conflict.conflictingFields.map((field) => {
+
+                {conflict.conflictingFields.map(field => {
                   const isExpanded = expandedFields.has(field);
                   const localVal = (conflict.localVersion as any)[field];
                   const remoteVal = (conflict.remoteVersion as any)[field];
@@ -194,13 +193,15 @@ export function ConflictResolutionModal<T>({
                       >
                         <span className="text-sm font-medium text-white">{field}</span>
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            getDisplayValue(field) === String(localVal)
-                              ? 'bg-blue-500/20 text-blue-400'
-                              : getDisplayValue(field) === String(remoteVal)
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-purple-500/20 text-purple-400'
-                          }`}>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded ${
+                              getDisplayValue(field) === String(localVal)
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : getDisplayValue(field) === String(remoteVal)
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : 'bg-purple-500/20 text-purple-400'
+                            }`}
+                          >
                             {getDisplayValue(field)}
                           </span>
                           {isExpanded ? (
@@ -220,14 +221,17 @@ export function ConflictResolutionModal<T>({
                               selectMergeValue(field, localVal);
                             }}
                             className={`w-full p-3 rounded-lg border transition-all text-left ${
-                              selectedOption === 'local' || (selectedOption === 'merge' && mergeValues[field] === localVal)
+                              selectedOption === 'local' ||
+                              (selectedOption === 'merge' && mergeValues[field] === localVal)
                                 ? 'border-blue-500 bg-blue-500/10'
                                 : 'border-white/10 hover:border-white/20'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <Smartphone className="w-3 h-3 text-blue-400" />
-                              <span className="text-[10px] font-bold text-blue-400 uppercase">Local</span>
+                              <span className="text-[10px] font-bold text-blue-400 uppercase">
+                                Local
+                              </span>
                             </div>
                             <p className="text-sm text-secondary font-mono">{String(localVal)}</p>
                           </button>
@@ -239,14 +243,17 @@ export function ConflictResolutionModal<T>({
                               selectMergeValue(field, remoteVal);
                             }}
                             className={`w-full p-3 rounded-lg border transition-all text-left ${
-                              selectedOption === 'remote' || (selectedOption === 'merge' && mergeValues[field] === remoteVal)
+                              selectedOption === 'remote' ||
+                              (selectedOption === 'merge' && mergeValues[field] === remoteVal)
                                 ? 'border-emerald-500 bg-emerald-500/10'
                                 : 'border-white/10 hover:border-white/20'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <Monitor className="w-3 h-3 text-emerald-400" />
-                              <span className="text-[10px] font-bold text-emerald-400 uppercase">Remoto</span>
+                              <span className="text-[10px] font-bold text-emerald-400 uppercase">
+                                Remoto
+                              </span>
                             </div>
                             <p className="text-sm text-secondary font-mono">{String(remoteVal)}</p>
                           </button>
@@ -275,15 +282,20 @@ export function ConflictResolutionModal<T>({
                     selectedOption === 'local'
                       ? 'bg-blue-600 hover:bg-blue-500 text-white'
                       : selectedOption === 'remote'
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                      : 'bg-purple-600 hover:bg-purple-500 text-white'
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-purple-600 hover:bg-purple-500 text-white'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <span className="flex items-center gap-2">
                     {selectedOption === 'merge' && <Merge className="w-4 h-4" />}
                     {selectedOption === 'local' && <Smartphone className="w-4 h-4" />}
                     {selectedOption === 'remote' && <Monitor className="w-4 h-4" />}
-                    Usar {selectedOption === 'local' ? 'Local' : selectedOption === 'remote' ? 'Remota' : 'Fusión'}
+                    Usar{' '}
+                    {selectedOption === 'local'
+                      ? 'Local'
+                      : selectedOption === 'remote'
+                        ? 'Remota'
+                        : 'Fusión'}
                   </span>
                 </button>
               </div>

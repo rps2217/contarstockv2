@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { useAuditStore, AuditLog, AuditAction, AuditSeverity } from '@/stores';
 import { exportAuditLogs } from '@/lib/auditExport';
 import { toast } from 'sonner';
+import { formatDetailDateTime } from '@/lib/date';
 
 interface AuditPanelProps {
   className?: string;
@@ -115,15 +116,6 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
         next.add(id);
       }
       return next;
-    });
-  };
-
-  const formatTimestamp = (ts: number) => {
-    return new Date(ts).toLocaleString('es-CL', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -376,7 +368,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({ className, maxHeight = 6
                       <div className="flex items-center gap-3 text-xs text-muted">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatTimestamp(log.timestamp)}
+                          {formatDetailDateTime(log.timestamp)}
                         </span>
                         <span>{log.entityType}</span>
                         <span className="font-mono">{log.entityId}</span>

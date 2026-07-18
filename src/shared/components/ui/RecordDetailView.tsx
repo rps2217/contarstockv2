@@ -10,8 +10,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   ChevronLeft,
   ChevronDown,
@@ -34,6 +32,7 @@ import {
 import { AuditPanel } from './AuditPanel';
 import { useAudit } from '@/hooks/useAudit';
 import { StatusBadge as DesignStatusBadge } from './design-system/StatusBadge';
+import { formatDetailDateTime } from '@/lib/date';
 
 export interface InfoRow {
   label: string;
@@ -247,11 +246,6 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
     setActiveTab(defaultTab);
   }, [recordId, defaultTab]);
 
-  const formatTimestamp = (ts?: number) => {
-    if (!ts) return 'N/A';
-    return format(new Date(ts), 'dd MMM yyyy, HH:mm', { locale: es });
-  };
-
   const getSyncIcon = () => {
     switch (syncStatus) {
       case 'synced':
@@ -412,7 +406,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
               {syncStatus === 'synced' && 'Sincronizado'}
               {syncStatus === 'pending' && 'Pendiente de sincronizar'}
               {syncStatus === 'error' && 'Error de sincronización'}
-              {lastSyncTime && ` • ${formatTimestamp(lastSyncTime)}`}
+              {lastSyncTime && ` • ${formatDetailDateTime(lastSyncTime)}`}
             </span>
           </div>
         )}

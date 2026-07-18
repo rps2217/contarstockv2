@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui';
+import { formatDetailDateTime } from '@/lib/date';
 
 // ============================================================================
 // TIPOS
@@ -59,15 +60,6 @@ interface CountingHistoryProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-const formatDate = (timestamp: number): string => {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-};
 
 const formatDuration = (start: number, end?: number): string => {
   if (!end) return 'En curso';
@@ -180,7 +172,7 @@ const HistoryRow = memo(
             <div className="flex items-center gap-4 text-xs text-muted">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                {formatDate(item.createdAt)}
+                {formatDetailDateTime(item.createdAt)}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
