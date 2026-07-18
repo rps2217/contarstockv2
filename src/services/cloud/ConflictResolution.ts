@@ -3,13 +3,13 @@ import { logger } from '@/services/logger';
  * =============================================================================
  * CONFLICT RESOLUTION - Estrategias de Resolución de Conflictos
  * =============================================================================
- * 
+ *
  * Cuando un registro es modificado tanto localmente como en la nube de forma
  * independiente, ocurre un conflicto. Este módulo define estrategias para
  * resolverlos automáticamente o con intervención del usuario.
- * 
+ *
  * ESTRATEGIAS DISPONIBLES:
- * 
+ *
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  STRATEGY        │  DESCRIPCIÓN              │  CUÁNDO USAR           │
  * ├──────────────────┼───────────────────────────┼─────────────────────────│
@@ -18,9 +18,9 @@ import { logger } from '@/services/logger';
  * │  last_write_wins │  Timestamp más reciente    │  Uso general           │
  * │  manual          │  Usuario decide           │  Decisiones críticas   │
  * └─────────────────────────────────────────────────────────────────────────┘
- * 
+ *
  * FLUJO DE CONFLICTO:
- * 
+ *
  *   ┌──────────────┐         ┌──────────────┐
  *   │    LOCAL     │         │    REMOTE     │
  *   │  modified   │         │   modified    │
@@ -43,7 +43,7 @@ import { logger } from '@/services/logger';
  *   client    last     manual
  *   _wins     _write   _wins
  *            _wins
- * 
+ *
  * @module ConflictResolution
  */
 
@@ -54,11 +54,11 @@ import { logger } from '@/services/logger';
 /**
  * Estrategias disponibles para resolver conflictos.
  */
-export type ConflictStrategy = 
-  | 'client_wins'   // Local siempre sobreescribe remoto
-  | 'server_wins'   // Remoto siempre sobreescribe local
+export type ConflictStrategy =
+  | 'client_wins' // Local siempre sobreescribe remoto
+  | 'server_wins' // Remoto siempre sobreescribe local
   | 'last_write_wins' // Timestamp más reciente gana
-  | 'manual';        // Usuario decide en cada conflicto
+  | 'manual'; // Usuario decide en cada conflicto
 
 /**
  * Resultado de resolver un conflicto.
@@ -90,27 +90,30 @@ export interface TimestampedRecord {
 /**
  *常量 de estrategias con labels para UI.
  */
-export const CONFLICT_STRATEGIES: Record<ConflictStrategy, { label: string; description: string; icon: string }> = {
+export const CONFLICT_STRATEGIES: Record<
+  ConflictStrategy,
+  { label: string; description: string; icon: string }
+> = {
   client_wins: {
     label: 'Cliente Gana',
     description: 'Los cambios locales siempre se preservan, sobreescribiendo la nube',
-    icon: '📱'
+    icon: '📱',
   },
   server_wins: {
     label: 'Servidor Gana',
     description: 'Los cambios en la nube siempre se preservan, sobreescribiendo local',
-    icon: '☁️'
+    icon: '☁️',
   },
   last_write_wins: {
     label: 'Último Gana',
     description: 'Se aplica el registro con timestamp más reciente',
-    icon: '⏱️'
+    icon: '⏱️',
   },
   manual: {
     label: 'Manual',
     description: 'El usuario decide en cada conflicto',
-    icon: '👤'
-  }
+    icon: '👤',
+  },
 };
 
 /**
@@ -126,18 +129,13 @@ export const STRATEGY_SETTINGS_KEY = 'sync_conflict_strategy';
  * Obtiene el timestamp de un registro de forma segura.
  * Soporta diferentes formatos de fecha.
  */
-const getRecordTimestamp = (record: any): number => {
+const getRecordTimestamp = (record: unknown): number => {
   // Intentar diferentes campos de timestamp
-  const timestampFields = [
-    'updatedAt',
-    'timestamp',
-    'updated_at',
-    'lastModified',
-    'modifiedAt'
-  ];
+  const timestampFields = ['updatedAt', 'timestamp', 'updated_at', 'lastModified', 'modifiedAt'];
 
+  const rec = record as Record<string, unknown>;
   for (const field of timestampFields) {
-    const value = record[field];
+    const value = rec[field];
     if (value !== undefined && value !== null) {
       if (typeof value === 'number') {
         return value > 1000000000000 ? value : value * 1000; // Unix seconds vs milliseconds
@@ -155,17 +153,17 @@ const getRecordTimestamp = (record: any): number => {
 /**
  * Deep merge de dos objetos, donde localOverride tiene prioridad.
  */
-const mergeRecords = (remote: Record<string, any>, localOverride: Record<string, any>): Record<string, any> => {
+const mergeRecords = (
+  remote: Record<string, any>,
+  localOverride: Record<string, any>
+): Record<string, any> => {
   return {
     ...remote,
     ...localOverride,
     // Siempre preservar ciertos campos del remote
     id: remote.id || localOverride.id,
     // Preservar timestamp más reciente
-    updatedAt: Math.max(
-      getRecordTimestamp(remote),
-      getRecordTimestamp(localOverride)
-    )
+    updatedAt: Math.max(getRecordTimestamp(remote), getRecordTimestamp(localOverride)),
   };
 };
 
@@ -187,7 +185,7 @@ export const resolveClientWins = (
     useRemote: false,
     strategy: 'client_wins',
     reason: 'Estrategia "Cliente Gana": Se preservaron los cambios locales',
-    resolvedData: localRecord.data
+    resolvedData: localRecord.data,
   };
 };
 
@@ -205,7 +203,7 @@ export const resolveServerWins = (
     useRemote: true,
     strategy: 'server_wins',
     reason: 'Estrategia "Servidor Gana": Se aplicaron los cambios de la nube',
-    resolvedData: remoteRecord.data
+    resolvedData: remoteRecord.data,
   };
 };
 
@@ -227,7 +225,7 @@ export const resolveLastWriteWins = (
       useRemote: false,
       strategy: 'last_write_wins',
       reason: `Última modificación fue local (${new Date(localTime).toLocaleString()})`,
-      resolvedData: localRecord.data
+      resolvedData: localRecord.data,
     };
   } else {
     return {
@@ -236,7 +234,7 @@ export const resolveLastWriteWins = (
       useRemote: true,
       strategy: 'last_write_wins',
       reason: `Última modificación fue remota (${new Date(remoteTime).toLocaleString()})`,
-      resolvedData: remoteRecord.data
+      resolvedData: remoteRecord.data,
     };
   }
 };
@@ -255,7 +253,7 @@ export const resolveManual = (
     useRemote: false,
     strategy: 'manual',
     reason: 'Conflicto requiere decisión del usuario',
-    resolvedData: mergeRecords(remoteRecord.data, localRecord.data) // Merge como sugerencia
+    resolvedData: mergeRecords(remoteRecord.data, localRecord.data), // Merge como sugerencia
   };
 };
 
@@ -320,7 +318,7 @@ export const resolveConflictBatch = (
     useLocalIds: new Set(),
     useRemoteIds: new Set(),
     manualIds: new Set(),
-    conflicts: []
+    conflicts: [],
   };
 
   for (const conflict of conflicts) {
@@ -364,15 +362,19 @@ export const getConfiguredStrategy = (): ConflictStrategy => {
 export const setConfiguredStrategy = async (strategy: ConflictStrategy): Promise<void> => {
   try {
     const settings = getSettings();
-    const currentSyncConfig = settings?.cloudConfig as any || {};
+    const currentSyncConfig = (settings?.cloudConfig as any) || {};
     await saveSettings({
       ...settings,
       cloudConfig: {
         ...currentSyncConfig,
-        conflictStrategy: strategy
-      }
+        conflictStrategy: strategy,
+      },
     });
   } catch (err: unknown) {
-    logger.error('ConflictResolution', 'Failed to save conflict strategy', err instanceof Error ? err.message : String(err));
+    logger.error(
+      'ConflictResolution',
+      'Failed to save conflict strategy',
+      err instanceof Error ? err.message : String(err)
+    );
   }
 };
