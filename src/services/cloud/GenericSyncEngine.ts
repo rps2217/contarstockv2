@@ -11,6 +11,9 @@ import {
   type ConflictResolution,
 } from './ConflictResolution';
 
+// Tipo para registros de sync
+type SyncRecord = Record<string, unknown>;
+
 export class GenericSyncEngine {
   /**
    * Pushes only dirty (non-synced) local changes to the cloud.
@@ -28,7 +31,7 @@ export class GenericSyncEngine {
     }
 
     // 1. Process Deletions First
-    let toDelete: any[] = [];
+    let toDelete: SyncRecord[] = [];
     if (meta.filterField === 'tableName' && meta.filterValue) {
       toDelete = await localTable
         .where('[tableName+syncStatus]')
@@ -37,7 +40,7 @@ export class GenericSyncEngine {
     } else {
       toDelete = await localTable.where('syncStatus').equals('pending_delete').toArray();
       if (meta.filterField && meta.filterValue) {
-        toDelete = toDelete.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+        toDelete = toDelete.filter(item => item[meta.filterField!] === meta.filterValue);
       }
     }
 
@@ -46,13 +49,17 @@ export class GenericSyncEngine {
         const id = record[meta.primaryKey] || record.id;
         await supabaseSyncService.deleteRemote(meta.remoteTable, String(id));
         await localTable.delete(id);
-      } catch (e: any) {
-        logger.error('SYNC_ENGINE', `Deletion failed for ${meta.remoteTable}`, e.message);
+      } catch (e: unknown) {
+        logger.error(
+          'SYNC_ENGINE',
+          `Deletion failed for ${meta.remoteTable}`,
+          (e as Error).message
+        );
       }
     }
 
     // 2. Process Upserts (Pushes)
-    let dirtyItems: any[] = [];
+    let dirtyItems: SyncRecord[] = [];
     if (meta.filterField === 'tableName' && meta.filterValue) {
       const pendingItems = await localTable
         .where('[tableName+syncStatus]')
@@ -68,7 +75,7 @@ export class GenericSyncEngine {
       const errorItems = await localTable.where('syncStatus').equals('error').toArray();
       dirtyItems = [...pendingItems, ...errorItems];
       if (meta.filterField && meta.filterValue) {
-        dirtyItems = dirtyItems.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+        dirtyItems = dirtyItems.filter(item => item[meta.filterField!] === meta.filterValue);
       }
     }
 
@@ -111,16 +118,16 @@ export class GenericSyncEngine {
             type: 'push',
           });
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         totalFailed += chunk.length;
         logger.error(
           'SYNC_ENGINE',
           `Incremental push exception for ${meta.remoteTable}`,
-          e.message
+          (e as Error).message
         );
         telemetry.track('ERROR', 'SYNC_EXCEPTION', {
           table: meta.remoteTable,
-          error: e.message,
+          error: (e as Error).message,
           type: 'push',
         });
       }
@@ -169,7 +176,7 @@ export class GenericSyncEngine {
 
     await db.transaction('rw', localTable, async () => {
       // 1. Obtener todos los registros locales cargados para este registry (solo si es full pull)
-      let localRecords: any[] = [];
+      let localRecords: SyncRecord[] = [];
       if (!lastSyncDate) {
         if (meta.filterField === 'tableName' && meta.filterValue) {
           localRecords = await localTable.where('tableName').equals(meta.filterValue).toArray();
@@ -177,7 +184,7 @@ export class GenericSyncEngine {
           localRecords = await localTable.toArray();
           if (meta.filterField && meta.filterValue) {
             localRecords = localRecords.filter(
-              (item: any) => item[meta.filterField!] === meta.filterValue
+              item => item[meta.filterField!] === meta.filterValue
             );
           }
         }
@@ -301,9 +308,9 @@ export class GenericSyncEngine {
       const pullRes = await this.pullRemoteChanges(registryKey);
       const pushRes = await this.pushIncremental(registryKey);
       return { pullRes, pushRes, success: true };
-    } catch (e: any) {
-      logger.error('SYNC_ENGINE', `Full sync failed for ${registryKey}`, e.message);
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      logger.error('SYNC_ENGINE', `Full sync failed for ${registryKey}`, (e as Error).message);
+      return { success: false, error: (e as Error).message };
     }
   }
 }
