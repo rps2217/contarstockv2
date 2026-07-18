@@ -12,6 +12,7 @@
 import { db } from '../../db';
 import { logger } from '@/services/logger';
 import { EventBus, AppEvents } from '@/core/events/EventBus';
+import { ScanRecord } from '@/types';
 
 // ============================================================================
 // TIPOS
@@ -98,7 +99,7 @@ class VersionManagerClass {
       }
 
       // Obtener scans si se solicita
-      let scans: any[] = [];
+      let scans: ScanRecord[] = [];
       let metrics: SnapshotMetrics | undefined;
 
       if (includeScans) {
