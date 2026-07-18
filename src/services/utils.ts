@@ -34,7 +34,7 @@ export const generateUUID = (): string => {
   });
 };
 
-export const compressData = async (data: any): Promise<string> => {
+export const compressData = async (data: unknown): Promise<string> => {
   const zip = new JSZip();
   zip.file('payload.json', JSON.stringify(data));
   return await zip.generateAsync({
