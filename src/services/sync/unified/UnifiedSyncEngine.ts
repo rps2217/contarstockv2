@@ -2,15 +2,15 @@
  * =============================================================================
  * UNIFIED SYNC ENGINE - Motor de Sincronización Unificado
  * =============================================================================
- * 
+ *
  * Combina la funcionalidad de:
  * - GenericSyncEngine: Sync de catálogos
  * - BatchSyncService: Operaciones batch con Supabase
  * - RealtimeSyncService: Suscripciones en tiempo real
  * - SyncQueueService: Cola offline con retry
- * 
+ *
  * En una sola clase coherente con FSM integrado.
- * 
+ *
  * @module unified/UnifiedSyncEngine
  */
 
@@ -39,6 +39,7 @@ import {
 } from './types';
 import { syncRegistry } from './registry';
 import { syncMetricsService } from './SyncMetricsService';
+import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictResolver';
 
 // =============================================================================
 // HELPERS UTILITARIOS
@@ -60,8 +61,8 @@ const formatError = (e: unknown): string => {
  */
 const extractColumnNameFromError = (errMsg: string): string | null => {
   if (!errMsg) return null;
-  const match = errMsg.match(/column\s+['"](.*?)['"]/i) ||
-                errMsg.match(/column\s+([\w_]+)\s+does\s+not/i);
+  const match =
+    errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/column\s+([\w_]+)\s+does\s+not/i);
   return match ? match[1] : null;
 };
 
@@ -72,11 +73,12 @@ const sanitizeData = <T extends object>(data: T): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
   Object.entries(data as Record<string, unknown>).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
-    result[key] = value instanceof Date
-      ? value.toISOString()
-      : typeof value === 'object' && value !== null
-        ? JSON.parse(JSON.stringify(value))
-        : value;
+    result[key] =
+      value instanceof Date
+        ? value.toISOString()
+        : typeof value === 'object' && value !== null
+          ? JSON.parse(JSON.stringify(value))
+          : value;
   });
   return result;
 };
@@ -91,7 +93,8 @@ export class UnifiedSyncEngine {
   private config: Required<SyncEngineConfig>;
   private realtimeSubscription: { unsubscribe: () => void } | null = null;
   private isProcessingQueue = false;
-  
+  private conflictResolver: SyncConflictResolver;
+
   // Métricas
   private lastSyncAt: number | null = null;
   private lastSyncDuration = 0;
@@ -100,6 +103,7 @@ export class UnifiedSyncEngine {
 
   constructor(config: Partial<SyncEngineConfig> = {}) {
     this.config = { ...DEFAULT_SYNC_CONFIG, ...config };
+    this.conflictResolver = getSyncConflictResolver();
   }
 
   // ===========================================================================
@@ -119,7 +123,11 @@ export class UnifiedSyncEngine {
       try {
         listener(payload);
       } catch (e) {
-        logger.error('UnifiedSyncEngine', 'Listener error', e instanceof Error ? e.message : String(e));
+        logger.error(
+          'UnifiedSyncEngine',
+          'Listener error',
+          e instanceof Error ? e.message : String(e)
+        );
       }
     });
   }
@@ -165,7 +173,7 @@ export class UnifiedSyncEngine {
    */
   async syncAll(): Promise<SyncResult> {
     const startTime = performance.now();
-    
+
     if (!navigator.onLine) {
       this.setState('offline');
       // @ts-ignore
@@ -203,7 +211,7 @@ export class UnifiedSyncEngine {
         success: true,
         recordsAffected: conflicts.length,
       });
-      
+
       if (conflicts.length > 0) {
         this.setState('resolving_conflicts');
         await this.resolveConflicts(conflicts);
@@ -235,7 +243,7 @@ export class UnifiedSyncEngine {
       const errorMsg = formatError(error);
       this.emit({ type: 'sync_error', error: errorMsg, timestamp: Date.now() });
       telemetry.track('ERROR', 'SYNC_FAILED', { error: errorMsg });
-      
+
       // @ts-ignore
       syncMetricsService.recordMetric({
         operation: 'conflict_check',
@@ -245,7 +253,7 @@ export class UnifiedSyncEngine {
         recordsAffected: 0,
         error: errorMsg,
       });
-      
+
       return { success: false, errors: [errorMsg] };
     }
   }
@@ -264,12 +272,12 @@ export class UnifiedSyncEngine {
       const result = await this.syncTable(registryKey);
       return {
         success: result.errors.length === 0,
-        errors: result.errors
+        errors: result.errors,
       };
     } catch (error) {
-      return { 
-        success: false, 
-        errors: [error instanceof Error ? error.message : 'Unknown error'] 
+      return {
+        success: false,
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
       };
     }
   }
@@ -279,7 +287,7 @@ export class UnifiedSyncEngine {
    */
   async syncCatalogs(): Promise<SyncResult> {
     const results: TableSyncResult[] = [];
-    
+
     for (const tableName of this.config.tables) {
       const meta = syncRegistry[tableName];
       if (!meta || meta.optional) continue;
@@ -302,7 +310,7 @@ export class UnifiedSyncEngine {
    */
   async syncBatches(): Promise<SyncResult> {
     const result = await this.processQueue();
-    
+
     return {
       success: result.failed === 0,
       uploaded: result.processed,
@@ -333,16 +341,32 @@ export class UnifiedSyncEngine {
           await this.processQueueItem(item);
           processedIds.push(item.id!);
           processed++;
-          this.emit({ type: 'item_removed', tableName: item.tableName, recordId: item.recordId, timestamp: Date.now() });
+          this.emit({
+            type: 'item_removed',
+            tableName: item.tableName,
+            recordId: item.recordId,
+            timestamp: Date.now(),
+          });
         } catch (error) {
           errors[item.id!] = formatError(error);
           failed++;
-          this.emit({ type: 'item_failed', tableName: item.tableName, recordId: item.recordId, error: formatError(error), timestamp: Date.now() });
-          
+          this.emit({
+            type: 'item_failed',
+            tableName: item.tableName,
+            recordId: item.recordId,
+            error: formatError(error),
+            timestamp: Date.now(),
+          });
+
           // Retry logic
           if (item.retries < this.config.maxRetries) {
             await this.retryItem(item.id!, formatError(error));
-            this.emit({ type: 'item_retry', tableName: item.tableName, recordId: item.recordId, timestamp: Date.now() });
+            this.emit({
+              type: 'item_retry',
+              tableName: item.tableName,
+              recordId: item.recordId,
+              timestamp: Date.now(),
+            });
           }
         }
       }
@@ -385,8 +409,18 @@ export class UnifiedSyncEngine {
           lastError: undefined,
         });
       }
-      this.emit({ type: 'item_removed', tableName: item.tableName, recordId: item.recordId, timestamp: Date.now() });
-      this.emit({ type: 'item_added', tableName: item.tableName, recordId: item.recordId, timestamp: Date.now() });
+      this.emit({
+        type: 'item_removed',
+        tableName: item.tableName,
+        recordId: item.recordId,
+        timestamp: Date.now(),
+      });
+      this.emit({
+        type: 'item_added',
+        tableName: item.tableName,
+        recordId: item.recordId,
+        timestamp: Date.now(),
+      });
       return existing.id!;
     }
 
@@ -397,10 +431,15 @@ export class UnifiedSyncEngine {
       priority: item.priority ?? 'normal',
     };
 
-    const id = await db.syncQueue.add(newItem) as number;
-    this.emit({ type: 'item_added', tableName: item.tableName, recordId: item.recordId, timestamp: Date.now() });
+    const id = (await db.syncQueue.add(newItem)) as number;
+    this.emit({
+      type: 'item_added',
+      tableName: item.tableName,
+      recordId: item.recordId,
+      timestamp: Date.now(),
+    });
     logger.info('SYNC_QUEUE', `Enqueued: ${item.tableName}/${item.recordId}`);
-    
+
     return id;
   }
 
@@ -414,9 +453,9 @@ export class UnifiedSyncEngine {
     try {
       const remoteData = meta.mapToRemote ? meta.mapToRemote(data) : data;
       const sanitized = sanitizeData(remoteData);
-      
+
       const { error } = await supabase.from(meta.remoteTable).upsert(sanitized);
-      
+
       if (error) {
         return { success: false, errors: [error.message] };
       }
@@ -432,7 +471,7 @@ export class UnifiedSyncEngine {
    */
   async pushBatch(tableName: string, rows: Record<string, unknown>[]): Promise<SyncResult> {
     const startTime = performance.now();
-    
+
     if (!navigator.onLine) {
       // @ts-ignore
       syncMetricsService.recordMetric({
@@ -483,9 +522,9 @@ export class UnifiedSyncEngine {
             attempts++;
             continue;
           }
-          
+
           // @ts-ignore
-      syncMetricsService.recordMetric({
+          syncMetricsService.recordMetric({
             operation: 'batch_push',
             tableName,
             duration: performance.now() - startTime,
@@ -497,7 +536,7 @@ export class UnifiedSyncEngine {
         }
 
         // @ts-ignore
-      syncMetricsService.recordMetric({
+        syncMetricsService.recordMetric({
           operation: 'batch_push',
           tableName,
           duration: performance.now() - startTime,
@@ -507,7 +546,7 @@ export class UnifiedSyncEngine {
         return { success: true, uploaded: count || rows.length };
       } catch (error) {
         // @ts-ignore
-      syncMetricsService.recordMetric({
+        syncMetricsService.recordMetric({
           operation: 'batch_push',
           tableName,
           duration: performance.now() - startTime,
@@ -520,7 +559,7 @@ export class UnifiedSyncEngine {
     }
 
     // @ts-ignore
-      syncMetricsService.recordMetric({
+    syncMetricsService.recordMetric({
       operation: 'batch_push',
       tableName,
       duration: performance.now() - startTime,
@@ -541,7 +580,7 @@ export class UnifiedSyncEngine {
   async pullTable(tableName: string, since?: string): Promise<TableSyncResult> {
     const startTime = performance.now();
     const meta = syncRegistry[tableName];
-    
+
     if (!meta) {
       // @ts-ignore
       syncMetricsService.recordMetric({
@@ -552,7 +591,14 @@ export class UnifiedSyncEngine {
         recordsAffected: 0,
         error: 'Unknown table',
       });
-      return { tableName, added: 0, updated: 0, deleted: 0, errors: ['Unknown table'], duration: 0 };
+      return {
+        tableName,
+        added: 0,
+        updated: 0,
+        deleted: 0,
+        errors: ['Unknown table'],
+        duration: 0,
+      };
     }
 
     let query = supabase.from(meta.remoteTable).select('*');
@@ -561,7 +607,7 @@ export class UnifiedSyncEngine {
     }
 
     const { data, error } = await query;
-    
+
     if (error) {
       // @ts-ignore
       syncMetricsService.recordMetric({
@@ -572,10 +618,18 @@ export class UnifiedSyncEngine {
         recordsAffected: 0,
         error: error.message,
       });
-      return { tableName, added: 0, updated: 0, deleted: 0, errors: [error.message], duration: performance.now() - startTime };
+      return {
+        tableName,
+        added: 0,
+        updated: 0,
+        deleted: 0,
+        errors: [error.message],
+        duration: performance.now() - startTime,
+      };
     }
 
-    let added = 0, updated = 0;
+    let added = 0,
+      updated = 0;
     const localTable = (db as any)[meta.localTable];
 
     // Para eventos, necesitamos comparar timestamps y verificar eliminados
@@ -584,10 +638,10 @@ export class UnifiedSyncEngine {
         // Obtener lista de eventos eliminados localmente
         const deletedEvents = await db.deletedEvents.toArray();
         const deletedKeys = new Set(deletedEvents.map(e => e.eventKey.toLowerCase()));
-        
+
         // Obtener todos los eventos locales existentes
         const existingEvents = await localTable.toArray();
-        
+
         // Crear mapa de eventos locales: key -> { id, localTimestamp }
         const localEventsMap = new Map<string, { id: number; timestamp: number }>();
         existingEvents.forEach((e: any) => {
@@ -595,27 +649,27 @@ export class UnifiedSyncEngine {
           if (key !== '~') {
             localEventsMap.set(key, {
               id: e.id!,
-              timestamp: e.createdAt || 0
+              timestamp: e.createdAt || 0,
             });
           }
         });
 
         // Procesar cada evento remoto
-        for (const row of (data || [])) {
+        for (const row of data || []) {
           const remoteKey = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
           const remoteTimestamp = row.updated_at ? new Date(row.updated_at).getTime() : 0;
-          
+
           // Solo procesar si tiene clave válida
           if (remoteKey === '~' || (!row.frc_code && !row.barcode)) continue;
-          
+
           // SKIP: Si el evento fue eliminado localmente, no descargarlo
           if (deletedKeys.has(remoteKey)) {
             logger.info('SYNC', `Evento omitido (eliminado localmente): ${remoteKey}`);
             continue;
           }
-          
+
           const localEvent = localEventsMap.get(remoteKey);
-          
+
           if (!localEvent) {
             // No existe localmente, agregar
             const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
@@ -629,14 +683,14 @@ export class UnifiedSyncEngine {
             if (local) {
               await localTable.update(localEvent.id, {
                 ...local,
-                syncStatus: 'synced'
+                syncStatus: 'synced',
               } as any);
               updated++;
             }
           }
           // Si local es más nuevo o igual, no hacer nada
         }
-        
+
         if (added > 0 || updated > 0) {
           logger.info('SYNC', `Eventos: ${added} agregados, ${updated} actualizados desde nube`);
         }
@@ -645,7 +699,7 @@ export class UnifiedSyncEngine {
       }
     } else if (meta.isDynamic) {
       // Tablas dinámicas: usar dynamic_data
-      for (const row of (data || [])) {
+      for (const row of data || []) {
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await db.dynamic_data.put(local as any);
@@ -654,7 +708,7 @@ export class UnifiedSyncEngine {
       }
     } else if (localTable) {
       // Tablas normales (no eventos)
-      for (const row of (data || [])) {
+      for (const row of data || []) {
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await localTable.put(local as any);
@@ -664,7 +718,7 @@ export class UnifiedSyncEngine {
     }
 
     // @ts-ignore
-      syncMetricsService.recordMetric({
+    syncMetricsService.recordMetric({
       operation: 'batch_pull',
       tableName,
       duration: performance.now() - startTime,
@@ -707,7 +761,7 @@ export class UnifiedSyncEngine {
 
     // Get dirty items (pending and error)
     let dirtyItems: any[] = [];
-    
+
     if (meta.isDynamic) {
       const pending = await db.dynamic_data
         .where({ tableName: meta.filterValue, syncStatus: 'pending' })
@@ -716,12 +770,12 @@ export class UnifiedSyncEngine {
         .where({ tableName: meta.filterValue, syncStatus: 'error' })
         .toArray();
       dirtyItems = [...pending, ...errors];
-      
+
       // Get items marked for deletion
       const toDelete = await db.dynamic_data
         .where({ tableName: meta.filterValue, syncStatus: 'pending_delete' })
         .toArray();
-      
+
       // Process deletions
       if (toDelete.length > 0) {
         for (const item of toDelete) {
@@ -731,7 +785,7 @@ export class UnifiedSyncEngine {
               .from(meta.remoteTable)
               .delete()
               .eq(meta.primaryKey, remoteId);
-            
+
             if (!deleteResult.error) {
               await db.dynamic_data.delete(item.id);
               logger.info('SYNC', `Eliminado de nube: ${meta.remoteTable}/${remoteId}`);
@@ -750,13 +804,12 @@ export class UnifiedSyncEngine {
 
     if (!dirtyItems.length) return;
 
-    	
     // Para eventos, usar filtro mejorado que distingue create/update
     if (tableName === 'events' || meta.filterValue === 'EVENTOS') {
       try {
         const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
         const filterResult = await filterEventsWithoutDuplicates(dirtyItems);
-        
+
         if (filterResult.skippedCount > 0) {
           logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
         }
@@ -806,7 +859,7 @@ export class UnifiedSyncEngine {
           });
           logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
         }
-        
+
         return;
       } catch (err) {
         logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
@@ -816,10 +869,10 @@ export class UnifiedSyncEngine {
     // Default behavior for non-events tables
     for (let i = 0; i < dirtyItems.length; i += this.config.batchSize) {
       const chunk = dirtyItems.slice(i, i + this.config.batchSize);
-      const rows = chunk.map(item => meta.mapToRemote ? meta.mapToRemote(item) : item);
-      
+      const rows = chunk.map(item => (meta.mapToRemote ? meta.mapToRemote(item) : item));
+
       const result = await this.pushBatch(meta.remoteTable, rows);
-      
+
       if (result.success) {
         await db.transaction('rw', localTable, async () => {
           for (const item of chunk) {
@@ -836,7 +889,7 @@ export class UnifiedSyncEngine {
 
   private async dequeueItem(): Promise<QueuedSyncItem | null> {
     const items = await db.syncQueue.orderBy('timestamp').toArray();
-    
+
     // Apply backoff for items with recent retries
     const now = Date.now();
     for (const item of items) {
@@ -847,7 +900,7 @@ export class UnifiedSyncEngine {
       }
       return item;
     }
-    
+
     return items[0] || null;
   }
 
@@ -859,7 +912,10 @@ export class UnifiedSyncEngine {
 
     switch (item.operation) {
       case 'delete':
-        const { error } = await supabase.from(meta.remoteTable).delete().eq(meta.primaryKey, item.recordId);
+        const { error } = await supabase
+          .from(meta.remoteTable)
+          .delete()
+          .eq(meta.primaryKey, item.recordId);
         if (error) throw error;
         break;
 
@@ -884,7 +940,10 @@ export class UnifiedSyncEngine {
     const newRetries = item.retries + 1;
     if (newRetries >= this.config.maxRetries) {
       await db.syncQueue.delete(id);
-      telemetry.track('SYNC', 'MAX_RETRIES_EXCEEDED', { table: item.tableName, recordId: item.recordId });
+      telemetry.track('SYNC', 'MAX_RETRIES_EXCEEDED', {
+        table: item.tableName,
+        recordId: item.recordId,
+      });
       return;
     }
 
@@ -897,37 +956,34 @@ export class UnifiedSyncEngine {
   private async checkConflicts(): Promise<SyncConflict[]> {
     const conflicts: SyncConflict[] = [];
     const now = Date.now();
-    
+
     // Check conflicts for each registered table
     for (const [tableName, meta] of Object.entries(syncRegistry)) {
       if (meta.optional) continue;
-      
+
       try {
         const localTable = (db as any)[meta.localTable];
         if (!localTable) continue;
-        
+
         // Get items that have been modified both locally and remotely
         // A conflict exists if: local has pending changes AND remote has newer updates
-        const localItems = await localTable
-          .where('syncStatus')
-          .equals('pending')
-          .toArray();
-        
+        const localItems = await localTable.where('syncStatus').equals('pending').toArray();
+
         for (const localItem of localItems) {
           const recordId = localItem[meta.primaryKey] || localItem.id;
-          
+
           // Fetch the remote version
           const { data: remoteItem, error } = await supabase
             .from(meta.remoteTable)
             .select('*')
             .eq(meta.primaryKey, recordId)
             .single();
-          
+
           if (!error && remoteItem) {
             // Check if remote was updated after local was modified
             const remoteUpdated = new Date(remoteItem.updated_at).getTime();
             const localModified = localItem.lastSyncTimestamp || 0;
-            
+
             // Conflict if remote is newer AND local has changes
             if (remoteUpdated > localModified) {
               conflicts.push({
@@ -946,20 +1002,20 @@ export class UnifiedSyncEngine {
         logger.error('CONFLICT_CHECK', `Error checking conflicts for ${tableName}`, formatError(e));
       }
     }
-    
+
     // Emit conflict detection events
     for (const conflict of conflicts) {
-      this.emit({ 
-        type: 'conflict_detected', 
-        conflict, 
+      this.emit({
+        type: 'conflict_detected',
+        conflict,
         tableName: conflict.tableName,
         recordId: conflict.recordId,
-        timestamp: now 
+        timestamp: now,
       });
     }
-    
+
     telemetry.track('SYNC', 'CONFLICTS_DETECTED', { count: conflicts.length });
-    
+
     return conflicts;
   }
 
@@ -968,20 +1024,22 @@ export class UnifiedSyncEngine {
    */
   private async resolveConflicts(
     conflicts: SyncConflict[],
-    strategy: ConflictStrategy = { type: this.config.autoResolveConflicts ? 'local_wins' : 'manual' }
+    strategy: ConflictStrategy = {
+      type: this.config.autoResolveConflicts ? 'local_wins' : 'manual',
+    }
   ): Promise<{ resolved: number; failed: number }> {
     let resolved = 0;
     let failed = 0;
-    
+
     for (const conflict of conflicts) {
       try {
         const resolution = await this.resolveSingleConflict(conflict, strategy);
-        
+
         if (resolution) {
           conflict.resolved = true;
           conflict.resolution = strategy.type;
           resolved++;
-          
+
           this.emit({
             type: 'conflict_resolved',
             conflict,
@@ -993,113 +1051,34 @@ export class UnifiedSyncEngine {
         }
       } catch (e) {
         failed++;
-        logger.error('CONFLICT_RESOLVE', `Failed to resolve conflict for ${conflict.tableName}/${conflict.recordId}`, formatError(e));
+        logger.error(
+          'CONFLICT_RESOLVE',
+          `Failed to resolve conflict for ${conflict.tableName}/${conflict.recordId}`,
+          formatError(e)
+        );
       }
     }
-    
+
     telemetry.track('SYNC', 'CONFLICTS_RESOLVED', { resolved, failed, strategy: strategy.type });
-    
+
     return { resolved, failed };
   }
 
   /**
-   * Resuelve un conflicto individual
+   * Resuelve un conflicto individual (delegado al ConflictResolver)
    */
   private async resolveSingleConflict(
     conflict: SyncConflict,
     strategy: ConflictStrategy
   ): Promise<boolean> {
-    const meta = syncRegistry[conflict.tableName];
-    if (!meta) return false;
-    
-    const localTable = (db as any)[meta.localTable];
-    if (!localTable) return false;
-    
-    const recordId = conflict.recordId;
-    
-    switch (strategy.type) {
-      case 'local_wins':
-        // Force push local version to remote
-        const localRecord = await localTable.get(recordId);
-        if (localRecord) {
-          const remoteData = meta.mapToRemote ? meta.mapToRemote(localRecord) : localRecord;
-          const { error } = await supabase
-            .from(meta.remoteTable)
-            .upsert(sanitizeData(remoteData), { onConflict: meta.primaryKey });
-          
-          if (!error) {
-            await localTable.update(recordId, { syncStatus: 'synced' });
-            return true;
-          }
-        }
-        break;
-        
-      case 'remote_wins':
-        // Accept remote version, discard local changes
-        await this.pullTable(conflict.tableName);
-        await localTable.update(recordId, { syncStatus: 'synced' });
-        return true;
-        
-      case 'merge':
-        // Deep merge: remote fields + local fields not in remote
-        const merged = this.mergeConflictRecords(conflict.localValue, conflict.remoteValue);
-        const mergedRemote = meta.mapToRemote ? meta.mapToRemote(merged) : merged;
-        const { error: mergeError } = await supabase
-          .from(meta.remoteTable)
-          .upsert(sanitizeData(mergedRemote), { onConflict: meta.primaryKey });
-        
-        if (!mergeError) {
-          await localTable.put({ ...merged, syncStatus: 'synced' });
-          return true;
-        }
-        break;
-        
-      case 'manual':
-      default:
-        // Don't auto-resolve, emit event for UI handling
-        return false;
-    }
-    
-    return false;
+    return this.conflictResolver.resolveConflict(conflict, strategy);
   }
 
   /**
-   * Merge dos registros en conflicto (estrategia merge)
+   * Merge dos registros en conflicto (delegado al ConflictResolver)
    */
-  private mergeConflictRecords(
-    local: unknown,
-    remote: unknown
-  ): Record<string, unknown> {
-    if (!local || !remote) return (local || remote) as Record<string, unknown>;
-    
-    const localObj = local as Record<string, unknown>;
-    const remoteObj = remote as Record<string, unknown>;
-    const merged: Record<string, unknown> = {};
-    
-    // Get all unique keys from both records
-    const allKeys = new Set([...Object.keys(localObj), ...Object.keys(remoteObj)]);
-    
-    for (const key of allKeys) {
-      // Skip internal/sync fields
-      if (['syncStatus', 'syncError', 'lastSyncTimestamp', 'id'].includes(key)) continue;
-      
-      const localVal = localObj[key];
-      const remoteVal = remoteObj[key];
-      
-      if (localVal === undefined) {
-        merged[key] = remoteVal;
-      } else if (remoteVal === undefined) {
-        merged[key] = localVal;
-      } else if (typeof localVal === 'object' && typeof remoteVal === 'object') {
-        // Recursively merge nested objects
-        merged[key] = this.mergeConflictRecords(localVal, remoteVal);
-      } else {
-        // Remote wins for primitives (más reciente)
-        merged[key] = remoteVal;
-      }
-    }
-    
-    return merged;
+  private mergeConflictRecords(local: unknown, remote: unknown): Record<string, unknown> {
+    return this.conflictResolver.mergeRecords(local, remote);
   }
 
   /**
@@ -1111,48 +1090,7 @@ export class UnifiedSyncEngine {
     resolution: ConflictResolution,
     mergedData?: Record<string, unknown>
   ): Promise<boolean> {
-    const conflict: SyncConflict = {
-      tableName,
-      recordId,
-      localValue: null,
-      remoteValue: null,
-      field: 'manual',
-      detectedAt: Date.now(),
-    };
-    
-    const strategy: ConflictStrategy = { type: resolution };
-    
-    if (mergedData) {
-      // Use provided merged data
-      const meta = syncRegistry[tableName];
-      if (!meta) return false;
-      
-      const localTable = (db as any)[meta.localTable];
-      if (!localTable) return false;
-      
-      const mergedRemote = meta.mapToRemote ? meta.mapToRemote(mergedData) : mergedData;
-      const { error } = await supabase
-        .from(meta.remoteTable)
-        .upsert(sanitizeData(mergedRemote), { onConflict: meta.primaryKey });
-      
-      if (!error) {
-        await localTable.put({ ...mergedData, syncStatus: 'synced' });
-        conflict.resolved = true;
-        conflict.resolution = resolution;
-        
-        this.emit({
-          type: 'conflict_resolved',
-          conflict,
-          tableName,
-          recordId,
-          timestamp: Date.now(),
-        });
-        
-        return true;
-      }
-    }
-    
-    return this.resolveSingleConflict(conflict, strategy);
+    return this.conflictResolver.resolveManually(tableName, recordId, resolution, mergedData);
   }
 
   /**
@@ -1215,7 +1153,7 @@ export class UnifiedSyncEngine {
         .on('system', { event: 'sync' }, () => {
           this.realtimeState.lastHeartbeat = Date.now();
         })
-        .subscribe((status) => {
+        .subscribe(status => {
           this.handleRealtimeStatus(status);
         });
 
@@ -1362,7 +1300,10 @@ export class UnifiedSyncEngine {
       });
     } catch (error) {
       logger.error('REALTIME', `Error processing changes for ${tableName}`, formatError(error));
-      telemetry.track('ERROR', 'REALTIME_PROCESS_ERROR', { table: tableName, error: formatError(error) });
+      telemetry.track('ERROR', 'REALTIME_PROCESS_ERROR', {
+        table: tableName,
+        error: formatError(error),
+      });
     }
   }
 
@@ -1481,11 +1422,11 @@ export function resetSyncLock(): void {
 
 function mapGroupTypeToTable(type: string): string {
   const mapping: Record<string, string> = {
-    'INVENTARIO': 'INVENTARIO',
-    'RECEPCION': 'RECEPCION',
-    'VENCIMIENTOS': 'VENCIMIENTOS',
-    'EVENTOS': 'EVENTOS',
-    'AUDIT_LOGS': 'AUDIT_LOGS',
+    INVENTARIO: 'INVENTARIO',
+    RECEPCION: 'RECEPCION',
+    VENCIMIENTOS: 'VENCIMIENTOS',
+    EVENTOS: 'EVENTOS',
+    AUDIT_LOGS: 'AUDIT_LOGS',
   };
   return mapping[type] || type;
 }

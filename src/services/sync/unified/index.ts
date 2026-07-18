@@ -159,6 +159,16 @@ export {
 // NOTA: Los siguientes módulos están en desarrollo:
 // - SyncFSM
 // - SyncQueueProcessor
-// - ConflictResolver
 // - SyncRealtimeManager
 // Pendiente: Corregir tipos para completar la refactorización
+
+// =============================================================================
+// CONFLICT RESOLVER (Extraído Julio 2026)
+// =============================================================================
+
+export {
+  SyncConflictResolver,
+  getSyncConflictResolver,
+  type ConflictResolverOptions,
+  type ConflictResolverDeps,
+} from './SyncConflictResolver';
