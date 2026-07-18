@@ -141,12 +141,13 @@ class RFIDServiceClass {
     try {
       this.port = await (navigator as any).serial?.requestPort();
       return true;
-    } catch (error: any) {
-      if (error.name === 'NotFoundError') {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (err.name === 'NotFoundError') {
         logger.debug('RFID', 'No port selected');
       } else {
         logger.error('RFID', 'Error requesting port', { error });
-        this.updateState({ status: 'error', error: error.message });
+        this.updateState({ status: 'error', error: err.message });
       }
       return false;
     }
@@ -188,13 +189,14 @@ class RFIDServiceClass {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
       logger.error('RFID', 'Connection failed', { error });
       this.updateState({
         status: 'error',
-        error: error.message,
+        error: err.message,
       });
-      this.callbacks.onError?.(error.message);
+      this.callbacks.onError?.(err.message);
       return false;
     }
   }
@@ -228,9 +230,10 @@ class RFIDServiceClass {
 
       this.callbacks.onDisconnect?.();
       logger.info('RFID', 'Disconnected from reader');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
       logger.error('RFID', 'Disconnect error', { error });
-      this.updateState({ error: error.message });
+      this.updateState({ error: err.message });
     }
   }
 
@@ -287,10 +290,11 @@ class RFIDServiceClass {
       if (tags.length > 0) {
         this.processTags(tags);
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (err.name !== 'AbortError') {
         logger.error('RFID', 'Read error', { error });
-        this.updateState({ error: error.message });
+        this.updateState({ error: err.message });
       }
     }
   }
