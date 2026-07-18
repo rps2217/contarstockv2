@@ -1,15 +1,14 @@
-
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react';
 import { logger } from '@/services/logger';
-;
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/stores';
-import { useExpiryStore } from '@/stores';
+import { useExpiryStore, ExpiryItem } from '@/stores';
 import { useToastStore } from '@/stores';
 import { processExpiryItem } from '@/features/expiry/utils/expiryProcessor';
 import { productRepository } from '@/repositories/DexieProductRepository';
 import { normalizeSku } from '@/shared/utils/common';
 import { db } from '@/db';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 /**
  * useExpiryWatcher: Background service that monitors the expiry table in Supabase
@@ -20,20 +19,21 @@ export const useExpiryWatcher = () => {
   const setAlerts = useExpiryStore(state => state.setAlerts);
   const addToast = useToastStore(state => state.addToast);
   const lastCount = useRef<number | null>(null);
-  
+
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
 
-  const tableName = settings?.cloudConfig?.inventoryRegistryTableName || 
-                    settings?.cloudConfig?.expiryTableName || 
-                    'VENCIMIENTOS';
+  const tableName =
+    settings?.cloudConfig?.inventoryRegistryTableName ||
+    settings?.cloudConfig?.expiryTableName ||
+    'VENCIMIENTOS';
 
   useEffect(() => {
     if (!tableName) return;
 
-    let channel: any = null;
+    let channel: RealtimeChannel | null = null;
 
     const runAnalysis = async () => {
       try {
@@ -48,17 +48,21 @@ export const useExpiryWatcher = () => {
           .limit(500);
 
         if (error) {
-          if (error.message === 'Failed to fetch' || error.message?.includes('NetworkError') || error.message?.includes('net::ERR')) {
+          if (
+            error.message === 'Failed to fetch' ||
+            error.message?.includes('NetworkError') ||
+            error.message?.includes('net::ERR')
+          ) {
             return;
           }
           throw error;
-         }
+        }
         if (!remoteRows) return;
 
         // 2. Get context data from local DB
         const [allProducts, allProviders] = await Promise.all([
           productRepository.getAll(),
-          db.providers.toArray()
+          db.providers.toArray(),
         ]);
 
         const productMap = new Map();
@@ -75,24 +79,37 @@ export const useExpiryWatcher = () => {
 
         const now = new Date();
         const expiryMapping = settingsRef.current?.cloudConfig?.mappings?.expiry;
-        const alertItems: any[] = [];
+        const alertItems: ExpiryItem[] = [];
 
         // 3. Process items
-        remoteRows.forEach((exp: any) => {
+        remoteRows.forEach((exp: Record<string, unknown>) => {
           const itemData = {
             id: exp.id || exp.ID,
-            barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
+            barcode:
+              exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
             mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
             yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
             fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || ''],
-            productName: exp[expiryMapping?.name || ''] || exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.PRODUCTO || exp.ITEM || exp.productName || '',
+            productName:
+              exp[expiryMapping?.name || ''] ||
+              exp.DESCRIPTOR ||
+              exp.DESCRIPCION_PROD ||
+              exp.DESCRIPCION ||
+              exp.PRODUCTO ||
+              exp.ITEM ||
+              exp.productName ||
+              '',
             quantity: exp[expiryMapping?.quantity || ''] || exp.CANTIDAD || exp.quantity || 0,
             batch: exp[expiryMapping?.batch || ''] || exp.LOTE || exp.batch || 'N/A',
-            location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A'
+            location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A',
           };
 
           const processed = processExpiryItem(itemData, productMap, providerMap, now);
-          if (processed.status === 'critical' || processed.status === 'expired' || processed.status === 'withdrawal') {
+          if (
+            processed.status === 'critical' ||
+            processed.status === 'expired' ||
+            processed.status === 'withdrawal'
+          ) {
             alertItems.push(processed);
           }
         });
@@ -102,9 +119,12 @@ export const useExpiryWatcher = () => {
 
         // 5. Notify if count increased
         if (lastCount.current !== null && alertItems.length > lastCount.current) {
-          addToast(`Alerta de Vencimientos: Se detectaron ${alertItems.length} lotes que requieren atención.`, 'warning');
+          addToast(
+            `Alerta de Vencimientos: Se detectaron ${alertItems.length} lotes que requieren atención.`,
+            'warning'
+          );
         }
-        
+
         lastCount.current = alertItems.length;
       } catch (err) {
         logger.error('ExpiryWatcher', 'Analysis error', { error: String(err) });
@@ -129,4 +149,3 @@ export const useExpiryWatcher = () => {
     };
   }, [tableName, setAlerts, addToast]);
 };
-
