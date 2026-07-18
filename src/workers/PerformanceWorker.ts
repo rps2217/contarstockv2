@@ -14,20 +14,74 @@ import { logger } from '@/services/logger';
 // TIPOS
 // ============================================================================
 
+/** Item de metric con timestamp */
+interface MetricItem {
+  timestamp: number;
+  expectedQty?: number;
+  totalQuantity?: number;
+  [key: string]: unknown;
+}
+
+/** Payload para calcular métricas */
+interface CalculateMetricsPayload {
+  items: MetricItem[];
+  startTime: number;
+}
+
+/** Payload para procesar batch */
+interface ProcessBatchPayload {
+  items: unknown[];
+  batchSize?: number;
+}
+
+/** Payload para búsqueda */
+interface SearchItemsPayload {
+  items: Record<string, unknown>[];
+  query: string;
+  fields: string[];
+  limit?: number;
+}
+
+/** Payload para agregar estadísticas */
+interface AggregateStatsPayload {
+  items: Record<string, unknown>[];
+  groupBy: string | string[];
+  aggregations: Array<{
+    field: string;
+    operation: 'sum' | 'avg' | 'count' | 'min' | 'max';
+    type?: 'sum' | 'avg' | 'count' | 'min' | 'max';
+    alias?: string;
+  }>;
+}
+
+/** Payload para serializar datos */
+interface SerializeDataPayload {
+  data: unknown;
+  format: 'json' | 'csv';
+}
+
+/** Payload unificado para tasks */
+type WorkerTaskPayload =
+  | CalculateMetricsPayload
+  | ProcessBatchPayload
+  | SearchItemsPayload
+  | AggregateStatsPayload
+  | SerializeDataPayload;
+
 export type WorkerTaskType =
   'CALCULATE_METRICS' | 'PROCESS_BATCH' | 'SEARCH_ITEMS' | 'SERIALIZE_DATA' | 'AGGREGATE_STATS';
 
 export interface WorkerTask {
   id: string;
   type: WorkerTaskType;
-  payload: any;
+  payload: WorkerTaskPayload;
   priority?: number;
 }
 
-export interface WorkerResult {
+export interface WorkerResult<T = unknown> {
   id: string;
   success: boolean;
-  result?: any;
+  result?: T;
   error?: string;
   duration: number;
 }
@@ -36,12 +90,14 @@ export interface WorkerResult {
 // HANDLERS
 // ============================================================================
 
-const handlers: Record<string, (payload: any) => any> = {
+type HandlerResult = unknown;
+
+const handlers: Record<string, (payload: WorkerTaskPayload) => HandlerResult> = {
   /**
    * Calcular métricas de productividad
    */
   CALCULATE_METRICS: payload => {
-    const { items, startTime } = payload;
+    const { items, startTime } = payload as CalculateMetricsPayload;
 
     const now = Date.now();
     const elapsed = now - startTime;
@@ -49,7 +105,7 @@ const handlers: Record<string, (payload: any) => any> = {
     // Agrupar por timestamp (ventanas de 30 segundos)
     const buckets = new Map<number, number>();
 
-    items.forEach((item: any) => {
+    items.forEach((item: MetricItem) => {
       const bucket = Math.floor(item.timestamp / 30000) * 30000;
       buckets.set(bucket, (buckets.get(bucket) || 0) + 1);
     });
@@ -73,9 +129,11 @@ const handlers: Record<string, (payload: any) => any> = {
       recentAvg > olderAvg * 1.1 ? 'up' : recentAvg < olderAvg * 0.9 ? 'down' : 'stable';
 
     // Accuracy
-    const withExpected = items.filter((i: any) => i.expectedQty !== undefined);
+    const withExpected = items.filter((i: MetricItem) => i.expectedQty !== undefined);
     const correct = withExpected.filter(
-      (i: any) => Math.abs(i.totalQuantity - i.expectedQty) <= Math.ceil(i.expectedQty * 0.05)
+      (i: MetricItem) =>
+        i.totalQuantity !== undefined &&
+        Math.abs(i.totalQuantity - i.expectedQty!) <= Math.ceil(i.expectedQty! * 0.05)
     );
 
     return {
@@ -94,20 +152,21 @@ const handlers: Record<string, (payload: any) => any> = {
    * Procesar batch de items
    */
   PROCESS_BATCH: payload => {
-    const { items } = payload;
-    const results: Array<Record<string, any> & { processed?: boolean; error?: boolean }> = [];
+    const { items } = payload as ProcessBatchPayload;
+    const results: Array<Record<string, unknown> & { processed?: boolean; error?: boolean }> = [];
 
     for (const item of items) {
+      const recordItem = item as Record<string, unknown>;
       try {
         // Simular procesamiento
         const processed = {
-          ...item,
+          ...recordItem,
           processed: true,
           processedAt: Date.now(),
         };
         results.push(processed);
       } catch (err) {
-        results.push({ ...item, error: true });
+        results.push({ ...recordItem, error: true });
       }
     }
 
@@ -123,16 +182,17 @@ const handlers: Record<string, (payload: any) => any> = {
    * Búsqueda en grandes datasets
    */
   SEARCH_ITEMS: payload => {
-    const { items, query, fields, limit = 50 } = payload;
+    const { items, query, fields, limit = 50 } = payload as SearchItemsPayload;
     const start = Date.now();
 
     const normalizedQuery = query.toLowerCase().trim();
-    const results: Array<Record<string, any> & { score: number }> = [];
+    const results: Array<Record<string, unknown> & { score: number }> = [];
 
     for (const item of items) {
+      const recordItem = item as Record<string, unknown>;
       // Buscar en campos especificados
       const match = fields.some((field: string) => {
-        const value = item[field];
+        const value = recordItem[field];
         if (typeof value === 'string') {
           return value.toLowerCase().includes(normalizedQuery);
         }
@@ -141,9 +201,9 @@ const handlers: Record<string, (payload: any) => any> = {
 
       if (match) {
         results.push({
-          ...item,
+          ...recordItem,
           score: fields.reduce((score: number, field: string) => {
-            const value = String(item[field] || '').toLowerCase();
+            const value = String(recordItem[field] || '').toLowerCase();
             if (value === normalizedQuery) return score + 100;
             if (value.startsWith(normalizedQuery)) return score + 50;
             if (value.includes(normalizedQuery)) return score + 10;
@@ -172,7 +232,7 @@ const handlers: Record<string, (payload: any) => any> = {
    * Serializar datos grandes
    */
   SERIALIZE_DATA: payload => {
-    const { data, format } = payload;
+    const { data, format } = payload as SerializeDataPayload;
 
     switch (format) {
       case 'json':
@@ -206,15 +266,22 @@ const handlers: Record<string, (payload: any) => any> = {
    * Agregar estadísticas
    */
   AGGREGATE_STATS: payload => {
-    const { items, groupBy, aggregations } = payload;
+    const { items, groupBy, aggregations } = payload as AggregateStatsPayload;
+
+    // Normalizar groupBy a array
+    const groupByFields = Array.isArray(groupBy) ? groupBy : [groupBy];
 
     // Agrupar
-    const groups = new Map<any, any[]>();
+    type GroupKey = string | number;
+    const groups = new Map<GroupKey, Record<string, unknown>[]>();
 
     for (const item of items) {
-      const key = groupBy.reduce((obj: any, field: string) => {
-        return obj?.[field] ?? item[field];
-      }, item);
+      // Crear key compuesta de los campos de groupBy
+      const keyValues = groupByFields.map(field => item[field]);
+      const key: GroupKey =
+        keyValues.length === 1
+          ? (String(keyValues[0]) as GroupKey)
+          : (keyValues.join('_') as GroupKey);
 
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -223,13 +290,16 @@ const handlers: Record<string, (payload: any) => any> = {
     }
 
     // Agregar
-    const results: Record<string, any>[] = [];
+    interface AggregationResult extends Record<string, unknown> {
+      [key: string]: unknown;
+    }
+    const results: AggregationResult[] = [];
 
     groups.forEach((groupItems, key) => {
-      const result: Record<string, any> = { [groupBy[groupBy.length - 1]]: key };
+      const result: AggregationResult = { [groupByFields[groupByFields.length - 1]]: key };
 
       for (const agg of aggregations) {
-        const values = groupItems.map((i: any) => i[agg.field] as number);
+        const values = groupItems.map((i: Record<string, unknown>) => i[agg.field] as number);
 
         switch (agg.type) {
           case 'sum':
@@ -282,13 +352,14 @@ self.onmessage = (event: MessageEvent<WorkerTask>) => {
       result,
       duration: Date.now() - startTime,
     } as WorkerResult);
-  } catch (error: any) {
-    logger.error('PerformanceWorker', 'Task failed', { id, type, error });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('PerformanceWorker', 'Task failed', { id, type, error: message });
 
     self.postMessage({
       id,
       success: false,
-      error: error.message,
+      error: message,
       duration: Date.now() - startTime,
     } as WorkerResult);
   }
