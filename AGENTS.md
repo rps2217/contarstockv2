@@ -26,9 +26,9 @@ npm run build      # Build exitoso
 | ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
 | TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
 | ThermalPrinterEngine.ts | 1,059 | 1,044 | -15 (-1%) | ✅ |
-| UnifiedSyncEngine.ts | 1,346 | 1,254 | -92 (-7%) | 🔄 |
+| UnifiedSyncEngine.ts | 1,346 | 1,202 | -144 (-11%) | 🔄 |
 
-**Total reducido:** 637 líneas extraídas de archivos monolíticos
+**Total reducido:** 689 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
@@ -88,18 +88,17 @@ npm run build      # Build exitoso
 
 #### 3. UnifiedSyncEngine.ts (1,346 LOC) - EN PROGRESO
 
-**Estado:** ~7% refactorizado
+**Estado:** ~11% refactorizado
 **Archivos extraídos:**
 
 - `syncHelpers.ts` - Helpers utilitarios ✅
 - `syncQueueProcessor.ts` - Lógica de procesamiento de cola ✅
 - `syncTableOperations.ts` - Operaciones de sincronización por tabla ✅
 
-**Reducción:** 1346 → 1254 LOC (-92 líneas, -7%)
+**Reducción:** 1346 → 1202 LOC (-144 líneas, -11%)
 
 **Pendiente:**
 
-- Integrar funciones de syncTableOperations en pushTableChanges
 - Extraer lógica de pullTable (~130 líneas)
 - Extraer lógica de conflictos
 
