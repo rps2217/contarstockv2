@@ -506,10 +506,10 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         SoundFX.play('success');
         toast.success(`${count} SKUs enviados al modo ráfaga`);
         navigate(`/massive/${batchId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         SoundFX.play('error');
-        setError(err.message || 'Error al importar');
-        toast.error(err.message || 'Error al importar');
+        setError((err as Error).message || 'Error al importar');
+        toast.error((err as Error).message || 'Error al importar');
       } finally {
         setLoadingLocal(false);
       }
@@ -528,10 +528,10 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         SoundFX.play('success');
         toast.success(`${count} SKUs descargados desde la nube`);
         navigate(`/massive/${batchId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         SoundFX.play('error');
-        setError(err.message || `Error al importar orden ${manifestId}`);
-        toast.error(err.message || 'Error al importar');
+        setError((err as Error).message || `Error al importar orden ${manifestId}`);
+        toast.error((err as Error).message || 'Error al importar');
       } finally {
         setImportingId(null);
         setLoadingCloud(false);
@@ -549,10 +549,10 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
       SoundFX.play('success');
       toast.success(`${count} SKUs del stock general importados`);
       navigate(`/massive/${batchId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       SoundFX.play('error');
-      setError(err.message || 'Error al importar stock general');
-      toast.error(err.message || 'Error al importar stock');
+      setError((err as Error).message || 'Error al importar stock general');
+      toast.error((err as Error).message || 'Error al importar stock');
     } finally {
       setLoadingLocal(false);
     }
@@ -570,9 +570,9 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
         SoundFX.play('success');
         toast.success('Conteo iniciado');
         navigate(`/counting/${sessionId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         SoundFX.play('error');
-        toast.error(err.message || 'Error al iniciar conteo');
+        toast.error((err as Error).message || 'Error al iniciar conteo');
       } finally {
         setImportingId(null);
         setLoadingLocal(false);
@@ -606,14 +606,14 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
       } else {
         toast.info('No hay cargas teoricas disponibles en la nube');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error(
         'TheoreticalLoadsPage',
         'Error loading from cloud',
-        err instanceof Error ? err.message : String(err)
+        err instanceof Error ? (err as Error).message : String(err)
       );
       setError('No se pudieron obtener las cargas de la nube');
-      toast.error(err.message || 'Error al cargar desde la nube');
+      toast.error((err as Error).message || 'Error al cargar desde la nube');
       setCloudManifests([]);
     } finally {
       setLoadingCloud(false);
@@ -771,8 +771,8 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
       } else {
         toast.error(result.error || 'Error al descargar');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error de conexión');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Error de conexión');
     } finally {
       setIsSyncing(false);
     }
@@ -802,8 +802,8 @@ export const RedesignTheoreticalLoadsPage: React.FC = () => {
       } else {
         toast.warning(`Sincronizados: ${uploaded}, Errores: ${errors}`);
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error de sincronización');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Error de sincronización');
     } finally {
       setIsSyncing(false);
     }
