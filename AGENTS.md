@@ -25,10 +25,25 @@ npm run build      # Build exitoso
 |---------|--------|--------|-----------|--------|
 | ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
 | TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
-| UnifiedSyncEngine.ts | 1,346 | 1,253 | -93 (-7%) | 🔄 |
-| ThermalPrinterEngine.ts | 1,059 | 1,059 | 0 (0%) | 🔄 |
+| ThermalPrinterEngine.ts | 1,059 | 1,044 | -15 (-1%) | ✅ |
+| UnifiedSyncEngine.ts | 1,346 | 1,254 | -92 (-7%) | 🔄 |
 
-**Total reducido:** 623 líneas extraídas de archivos monolíticos
+**Total reducido:** 637 líneas extraídas de archivos monolíticos
+
+### Archivos Extraídos
+
+| Archivo | Descripción |
+|---------|------------|
+| `syncHelpers.ts` | Helpers utilitarios (formatError, sanitizeData) |
+| `syncQueueProcessor.ts` | Lógica de procesamiento de cola |
+| `syncTableOperations.ts` | Operaciones de sincronización por tabla |
+| `escposCommands.ts` | Comandos ESC/POS para impresoras |
+| `expiryConstants.ts` | Constantes de expiración |
+| `expiryHelpers.ts` | Helpers de fechas y colores |
+| `expiryRecordRow.tsx` | Fila de registro |
+| `expiryKanbanCard.tsx` | Tarjeta kanban |
+| `expirySection.tsx` | Sección colapsable |
+| `theoreticalLoadsCards.tsx` | Tarjetas de órdenes y manifiestos |
 
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
@@ -76,14 +91,15 @@ npm run build      # Build exitoso
 **Estado:** ~7% refactorizado
 **Archivos extraídos:**
 
-- `syncHelpers.ts` - Helpers utilitarios
-- `syncQueueProcessor.ts` - Lógica de procesamiento de cola (integrado)
+- `syncHelpers.ts` - Helpers utilitarios ✅
+- `syncQueueProcessor.ts` - Lógica de procesamiento de cola ✅
+- `syncTableOperations.ts` - Operaciones de sincronización por tabla ✅
 
-**Reducción:** 1346 → 1253 LOC (-93 líneas, -7%)
+**Reducción:** 1346 → 1254 LOC (-92 líneas, -7%)
 
 **Pendiente:**
 
-- Extraer lógica de pushTableChanges (~130 líneas)
+- Integrar funciones de syncTableOperations en pushTableChanges
 - Extraer lógica de pullTable (~130 líneas)
 - Extraer lógica de conflictos
 

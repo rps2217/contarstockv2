@@ -677,114 +677,70 @@ export class UnifiedSyncEngine {
     const localTable = (db as any)[meta.localTable];
     if (!localTable) return;
 
-    // Get dirty items (pending and error)
-    let dirtyItems: any[] = [];
-
-    if (meta.isDynamic) {
-      const pending = await db.dynamic_data
-        .where({ tableName: meta.filterValue, syncStatus: 'pending' })
-        .toArray();
-      const errors = await db.dynamic_data
-        .where({ tableName: meta.filterValue, syncStatus: 'error' })
-        .toArray();
-      dirtyItems = [...pending, ...errors];
-
-      // Get items marked for deletion
-      const toDelete = await db.dynamic_data
-        .where({ tableName: meta.filterValue, syncStatus: 'pending_delete' })
-        .toArray();
-
-      // Process deletions
-      if (toDelete.length > 0) {
-        for (const item of toDelete) {
-          const remoteId = item.data?.id || item.data?.ID || item.id;
-          try {
-            const deleteResult = await supabase
-              .from(meta.remoteTable)
-              .delete()
-              .eq(meta.primaryKey, remoteId);
-
-            if (!deleteResult.error) {
-              await db.dynamic_data.delete(item.id);
-              logger.info('SYNC', `Eliminado de nube: ${meta.remoteTable}/${remoteId}`);
-            }
-          } catch (err) {
-            logger.error('SYNC', `Error eliminando de nube: ${err}`);
-          }
-        }
-      }
-    } else {
-      // For non-dynamic tables (like events), check syncStatus
-      const pending = await localTable.where('syncStatus').equals('pending').toArray();
-      const errors = await localTable.where('syncStatus').equals('error').toArray();
-      dirtyItems = [...pending, ...errors];
-    }
+    const { dirtyItems, toDelete } = await getDirtyItems(tableName, meta);
+    await processDeletions(meta, toDelete);
 
     if (!dirtyItems.length) return;
 
     // Para eventos, usar filtro mejorado que distingue create/update
     if (tableName === 'events' || meta.filterValue === 'EVENTOS') {
-      try {
-        const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
-        const filterResult = await filterEventsWithoutDuplicates(dirtyItems);
-
-        if (filterResult.skippedCount > 0) {
-          logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
-        }
-
-        // Process creates
-        if (filterResult.toCreate.length > 0) {
-          const createRows = filterResult.toCreate.map(item => {
-            const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
-            // Eliminar id si existe para que Supabase lo genere
-            delete row.id;
-            return row;
-          });
-          await this.pushBatch(meta.remoteTable, createRows);
-          // Mark as synced
-          await db.transaction('rw', localTable, async () => {
-            for (const item of filterResult.toCreate) {
-              const id = item[meta.primaryKey] || item.id;
-              await localTable.update(id, {
-                syncStatus: 'synced',
-                lastSyncTimestamp: Date.now(),
-              });
-            }
-          });
-          logger.info('SYNC', `Eventos: ${filterResult.toCreate.length} creados en nube`);
-        }
-
-        // Process updates - usar remoteId del evento existente en la nube
-        if (filterResult.toUpdate.length > 0) {
-          const updateRows = filterResult.toUpdate.map(item => {
-            const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
-            // Reemplazar id local con id remoto
-            if (item.remoteId !== undefined) {
-              row.id = item.remoteId;
-            }
-            return row;
-          });
-          await this.pushBatch(meta.remoteTable, updateRows);
-          // Mark as synced
-          await db.transaction('rw', localTable, async () => {
-            for (const item of filterResult.toUpdate) {
-              const id = item[meta.primaryKey] || item.id;
-              await localTable.update(id, {
-                syncStatus: 'synced',
-                lastSyncTimestamp: Date.now(),
-              });
-            }
-          });
-          logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
-        }
-
-        return;
-      } catch (err) {
-        logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
-      }
+      await this.pushEventsChanges(localTable, meta, dirtyItems);
+      return;
     }
 
     // Default behavior for non-events tables
+    await this.pushGenericChanges(localTable, meta, dirtyItems);
+  }
+
+  private async pushEventsChanges(
+    localTable: any,
+    meta: TableSyncMeta,
+    dirtyItems: any[]
+  ): Promise<void> {
+    try {
+      const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
+      const filterResult = await filterEventsWithoutDuplicates(dirtyItems);
+
+      if (filterResult.skippedCount > 0) {
+        logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
+      }
+
+      // Process creates
+      if (filterResult.toCreate.length > 0) {
+        const createRows = filterResult.toCreate.map(item => {
+          const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
+          delete row.id;
+          return row;
+        });
+        await this.pushBatch(meta.remoteTable, createRows);
+        await markAsSynced('events', meta, filterResult.toCreate);
+        logger.info('SYNC', `Eventos: ${filterResult.toCreate.length} creados en nube`);
+      }
+
+      // Process updates
+      if (filterResult.toUpdate.length > 0) {
+        const updateRows = filterResult.toUpdate.map(item => {
+          const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
+          if (item.remoteId !== undefined) {
+            row.id = item.remoteId;
+          }
+          return row;
+        });
+        await this.pushBatch(meta.remoteTable, updateRows);
+        await markAsSynced('events', meta, filterResult.toUpdate);
+        logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
+      }
+    } catch (err) {
+      logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
+      await this.pushGenericChanges(localTable, meta, dirtyItems);
+    }
+  }
+
+  private async pushGenericChanges(
+    localTable: any,
+    meta: TableSyncMeta,
+    dirtyItems: any[]
+  ): Promise<void> {
     for (let i = 0; i < dirtyItems.length; i += this.config.batchSize) {
       const chunk = dirtyItems.slice(i, i + this.config.batchSize);
       const rows = chunk.map(item => (meta.mapToRemote ? meta.mapToRemote(item) : item));
@@ -792,15 +748,7 @@ export class UnifiedSyncEngine {
       const result = await this.pushBatch(meta.remoteTable, rows);
 
       if (result.success) {
-        await db.transaction('rw', localTable, async () => {
-          for (const item of chunk) {
-            const id = item[meta.primaryKey] || item.id;
-            await localTable.update(id, {
-              syncStatus: 'synced',
-              lastSyncTimestamp: Date.now(),
-            });
-          }
-        });
+        await markAsSynced(meta.localTable, meta, chunk);
       }
     }
   }
