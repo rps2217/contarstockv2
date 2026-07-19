@@ -85,7 +85,7 @@ export function useOptimisticCounting(options: UseOptimisticCountingOptions = {}
 
   // Debug log
   const log = useCallback(
-    (message: string, data?: any) => {
+    (message: string, data?: unknown) => {
       if (debug) {
         logger.debug('OptimisticUI', message, data);
       }
