@@ -44,13 +44,13 @@ npm run build      # Build exitoso
 **Archivos generados:**
 
 - `src/services/sync/unified/syncHelpers.ts` ✅
+- `src/services/sync/unified/syncQueueProcessor.ts` ✅ (integrado)
 
-**Archivos pendientes de integrar:**
+**Reducciones logradas:**
 
-- `SyncFSM.ts` - Pendiente corregir tipos
-- `SyncQueueProcessor.ts` - Pendiente corregir tipos
-- `ConflictResolver.ts` - Pendiente corregir tipos
-- `SyncRealtimeManager.ts` - Pendiente corregir tipos
+- ExpiryPage.tsx: 1292 → 928 (-364 líneas)
+- TheoreticalLoadsPage.tsx: 1150 → 984 (-166 líneas)
+- UnifiedSyncEngine.ts: 1346 → 1253 (-93 líneas)
 
 **Ver:** `docs/REFACTOR_PROGRESS.md`
 
