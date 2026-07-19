@@ -46,6 +46,7 @@ import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictRes
 // =============================================================================
 
 import { formatError, extractColumnNameFromError, sanitizeData } from './syncHelpers';
+import { processSyncQueue } from './syncQueueProcessor';
 
 // =============================================================================
 // MOTOR UNIFICADO
@@ -286,60 +287,12 @@ export class UnifiedSyncEngine {
    * Procesa la cola de sincronización
    */
   async processQueue(): Promise<QueueProcessResult> {
-    if (this.isProcessingQueue) {
-      return { processed: 0, failed: 0, remaining: 0, processedIds: [], errors: {} };
-    }
-
-    this.isProcessingQueue = true;
-    let processed = 0;
-    let failed = 0;
-    const processedIds: number[] = [];
-    const errors: Record<number, string> = {};
-
-    try {
-      while (processed + failed < this.config.batchSize) {
-        const item = await this.dequeueItem();
-        if (!item) break;
-
-        try {
-          await this.processQueueItem(item);
-          processedIds.push(item.id!);
-          processed++;
-          this.emit({
-            type: 'item_removed',
-            tableName: item.tableName,
-            recordId: item.recordId,
-            timestamp: Date.now(),
-          });
-        } catch (error) {
-          errors[item.id!] = formatError(error);
-          failed++;
-          this.emit({
-            type: 'item_failed',
-            tableName: item.tableName,
-            recordId: item.recordId,
-            error: formatError(error),
-            timestamp: Date.now(),
-          });
-
-          // Retry logic
-          if (item.retries < this.config.maxRetries) {
-            await this.retryItem(item.id!, formatError(error));
-            this.emit({
-              type: 'item_retry',
-              tableName: item.tableName,
-              recordId: item.recordId,
-              timestamp: Date.now(),
-            });
-          }
-        }
-      }
-    } finally {
-      this.isProcessingQueue = false;
-    }
-
-    const remaining = await this.getQueueSize();
-    return { processed, failed, remaining, processedIds, errors };
+    const result = await processSyncQueue(this.config, {
+      isProcessingQueue: { current: this.isProcessingQueue },
+      emit: event => this.emit(event as any),
+    });
+    this.isProcessingQueue = false;
+    return result;
   }
 
   // ===========================================================================
@@ -849,52 +802,6 @@ export class UnifiedSyncEngine {
         });
       }
     }
-  }
-
-  private async dequeueItem(): Promise<QueuedSyncItem | null> {
-    const items = await db.syncQueue.orderBy('timestamp').toArray();
-
-    // Apply backoff for items with recent retries
-    const now = Date.now();
-    for (const item of items) {
-      if (item.retries > 0) {
-        const delay = this.config.baseDelayMs * Math.pow(2, item.retries - 1);
-        const nextRetry = item.timestamp + delay;
-        if (now < nextRetry) continue;
-      }
-      return item;
-    }
-
-    return items[0] || null;
-  }
-
-  private async processQueueItem(item: QueuedSyncItem): Promise<void> {
-    const meta = syncRegistry[item.tableName];
-    if (!meta) throw new Error(`Unknown table: ${item.tableName}`);
-
-    let result: SyncResult;
-
-    switch (item.operation) {
-      case 'delete':
-        const { error } = await supabase
-          .from(meta.remoteTable)
-          .delete()
-          .eq(meta.primaryKey, item.recordId);
-        if (error) throw error;
-        break;
-
-      case 'create':
-      case 'update':
-        const remoteData = meta.mapToRemote ? meta.mapToRemote(item.data) : item.data;
-        const { error: upsertError } = await supabase
-          .from(meta.remoteTable)
-          .upsert(sanitizeData(remoteData), { onConflict: meta.primaryKey });
-        if (upsertError) throw upsertError;
-        break;
-    }
-
-    // Remove from queue on success
-    await db.syncQueue.delete(item.id!);
   }
 
   private async retryItem(id: number, error: string): Promise<void> {
