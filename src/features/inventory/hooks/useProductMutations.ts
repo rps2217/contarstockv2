@@ -2,19 +2,20 @@ import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { productRepository } from '@/repositories/DexieProductRepository';
 import { BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
+import type { Product } from '@/types';
 import { Trash2, Download } from 'lucide-react';
 
 // Configuración de acciones masivas para Inventory
 export const INVENTORY_BULK_ACTIONS = (
-  onDelete: (items: any[]) => Promise<void>,
-  onExport: (items: any[]) => Promise<void>
+  onDelete: (items: Product[]) => Promise<void>,
+  onExport: (items: Product[]) => Promise<void>
 ): BulkAction[] => [
   {
     id: 'export',
     label: 'Exportar',
     icon: Download,
     variant: 'default',
-    onClick: onExport
+    onClick: onExport,
   },
   {
     id: 'delete',
@@ -23,8 +24,8 @@ export const INVENTORY_BULK_ACTIONS = (
     variant: 'danger',
     requiresConfirmation: true,
     confirmMessage: '¿Eliminar los productos seleccionados? Esta acción es irreversible.',
-    onClick: onDelete
-  }
+    onClick: onDelete,
+  },
 ];
 
 // Configuración de edición masiva para Inventory
@@ -35,59 +36,64 @@ export const INVENTORY_BULK_EDIT_CONFIG: BulkEditConfig = {
     {
       key: 'location',
       label: 'Ubicación',
-      type: 'text'
+      type: 'text',
     },
     {
       key: 'category',
       label: 'Categoría',
-      type: 'text'
-    }
+      type: 'text',
+    },
   ],
-  onApply: async () => {}
+  onApply: async () => {},
 };
 
 // Timeout para undo (5 segundos)
 const UNDO_TIMEOUT = 5000;
 
-export const useProductMutations = (showFeedback: (type: 'success' | 'error', msg: string) => void) => {
+export const useProductMutations = (
+  showFeedback: (type: 'success' | 'error', msg: string) => void
+) => {
   const pendingDeletes = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  const handleDelete = useCallback(async (barcode: string) => {
-    // Soft delete - guardar backup
-    const backup = await productRepository.softDelete(barcode);
-    if (!backup) {
-      toast.error('Producto no encontrado');
-      return;
-    }
+  const handleDelete = useCallback(
+    async (barcode: string) => {
+      // Soft delete - guardar backup
+      const backup = await productRepository.softDelete(barcode);
+      if (!backup) {
+        toast.error('Producto no encontrado');
+        return;
+      }
 
-    // Toast con undo
-    toast.success('Producto eliminado', {
-      duration: UNDO_TIMEOUT,
-      action: {
-        label: 'Deshacer',
-        onClick: async () => {
-          // Cancelar timeout si existe
-          const timeout = pendingDeletes.current.get(barcode);
-          if (timeout) {
-            clearTimeout(timeout);
-            pendingDeletes.current.delete(barcode);
-          }
-          // Restaurar
-          await productRepository.restore(barcode);
-          toast.info('Eliminación cancelada');
+      // Toast con undo
+      toast.success('Producto eliminado', {
+        duration: UNDO_TIMEOUT,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            // Cancelar timeout si existe
+            const timeout = pendingDeletes.current.get(barcode);
+            if (timeout) {
+              clearTimeout(timeout);
+              pendingDeletes.current.delete(barcode);
+            }
+            // Restaurar
+            await productRepository.restore(barcode);
+            toast.info('Eliminación cancelada');
+          },
         },
-      },
-    });
+      });
 
-    // Programar eliminación permanente
-    const timeout = setTimeout(async () => {
-      await productRepository.permanentDelete(barcode);
-      pendingDeletes.current.delete(barcode);
-      showFeedback('success', 'Producto eliminado permanentemente');
-    }, UNDO_TIMEOUT);
+      // Programar eliminación permanente
+      const timeout = setTimeout(async () => {
+        await productRepository.permanentDelete(barcode);
+        pendingDeletes.current.delete(barcode);
+        showFeedback('success', 'Producto eliminado permanentemente');
+      }, UNDO_TIMEOUT);
 
-    pendingDeletes.current.set(barcode, timeout);
-  }, [showFeedback]);
+      pendingDeletes.current.set(barcode, timeout);
+    },
+    [showFeedback]
+  );
 
   const handleDeleteAll = useCallback(async () => {
     if (prompt('Escribe BORRAR para confirmar:') === 'BORRAR') {
@@ -102,6 +108,6 @@ export const useProductMutations = (showFeedback: (type: 'success' | 'error', ms
 
   return {
     handleDelete,
-    handleDeleteAll
+    handleDeleteAll,
   };
 };
