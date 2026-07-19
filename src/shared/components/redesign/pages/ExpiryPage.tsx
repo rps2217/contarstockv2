@@ -504,12 +504,12 @@ export const RedesignExpiryPage: React.FC = () => {
     { key: 'barcode' as const, header: 'Código' },
     { key: 'productName' as const, header: 'Producto' },
     { key: 'quantity' as const, header: 'Cantidad' },
-    { key: 'mm' as const, header: 'Mes', format: (v: any) => String(v).padStart(2, '0') },
+    { key: 'mm' as const, header: 'Mes', format: (v: unknown) => String(v).padStart(2, '0') },
     { key: 'yyyy' as const, header: 'Año' },
     {
       key: 'daysLeft' as const,
       header: 'Días Restantes',
-      format: (v: any) => (v !== undefined ? String(v) : '-'),
+      format: (v: unknown) => (v !== undefined ? String(v) : '-'),
     },
     { key: 'status' as const, header: 'Estado' },
     { key: 'location' as const, header: 'Ubicación' },
@@ -791,7 +791,9 @@ export const RedesignExpiryPage: React.FC = () => {
                   </label>
                   <select
                     value={sortBy}
-                    onChange={e => setSortBy(e.target.value as any)}
+                    onChange={e =>
+                      setSortBy(e.target.value as 'daysLeft' | 'productName' | 'provider')
+                    }
                     className="w-full bg-elevated border border-subtle rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
                   >
                     <option value="daysLeft">Días restantes</option>
