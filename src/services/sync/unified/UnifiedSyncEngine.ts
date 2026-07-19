@@ -48,6 +48,7 @@ import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictRes
 import { formatError, extractColumnNameFromError, sanitizeData } from './syncHelpers';
 import { processSyncQueue } from './syncQueueProcessor';
 import { getDirtyItems, processDeletions, markAsSynced } from './syncTableOperations';
+import { processRemoteEvents, processDynamicData, processGenericTable } from './syncEventPuller';
 
 // =============================================================================
 // MOTOR UNIFICADO
@@ -519,6 +520,7 @@ export class UnifiedSyncEngine {
       };
     }
 
+    // Fetch remote data
     let query = supabase.from(meta.remoteTable).select('*');
     if (since) {
       query = query.gt('updated_at', since);
@@ -546,93 +548,18 @@ export class UnifiedSyncEngine {
       };
     }
 
-    let added = 0,
-      updated = 0;
-    const localTable = (db as any)[meta.localTable];
+    // Process data based on table type
+    let added = 0;
+    let updated = 0;
 
-    // Para eventos, necesitamos comparar timestamps y verificar eliminados
-    if (tableName === 'events' && localTable) {
-      try {
-        // Obtener lista de eventos eliminados localmente
-        const deletedEvents = await db.deletedEvents.toArray();
-        const deletedKeys = new Set(deletedEvents.map(e => e.eventKey.toLowerCase()));
-
-        // Obtener todos los eventos locales existentes
-        const existingEvents = await localTable.toArray();
-
-        // Crear mapa de eventos locales: key -> { id, localTimestamp }
-        const localEventsMap = new Map<string, { id: number; timestamp: number }>();
-        existingEvents.forEach((e: any) => {
-          const key = `${e.frcNumber || ''}~${e.barcode || ''}`.toLowerCase();
-          if (key !== '~') {
-            localEventsMap.set(key, {
-              id: e.id!,
-              timestamp: e.createdAt || 0,
-            });
-          }
-        });
-
-        // Procesar cada evento remoto
-        for (const row of data || []) {
-          const remoteKey = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
-          const remoteTimestamp = row.updated_at ? new Date(row.updated_at).getTime() : 0;
-
-          // Solo procesar si tiene clave válida
-          if (remoteKey === '~' || (!row.frc_code && !row.barcode)) continue;
-
-          // SKIP: Si el evento fue eliminado localmente, no descargarlo
-          if (deletedKeys.has(remoteKey)) {
-            logger.info('SYNC', `Evento omitido (eliminado localmente): ${remoteKey}`);
-            continue;
-          }
-
-          const localEvent = localEventsMap.get(remoteKey);
-
-          if (!localEvent) {
-            // No existe localmente, agregar
-            const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-            if (local) {
-              await localTable.put(local as any);
-              added++;
-            }
-          } else if (remoteTimestamp > localEvent.timestamp) {
-            // Existe pero remoto es más nuevo, actualizar
-            const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-            if (local) {
-              await localTable.update(localEvent.id, {
-                ...local,
-                syncStatus: 'synced',
-              } as any);
-              updated++;
-            }
-          }
-          // Si local es más nuevo o igual, no hacer nada
-        }
-
-        if (added > 0 || updated > 0) {
-          logger.info('SYNC', `Eventos: ${added} agregados, ${updated} actualizados desde nube`);
-        }
-      } catch (err) {
-        logger.warn('SYNC', 'Error procesando eventos desde nube:', err);
-      }
+    if (tableName === 'events') {
+      const result = await processRemoteEvents(data || [], meta);
+      added = result.added;
+      updated = result.updated;
     } else if (meta.isDynamic) {
-      // Tablas dinámicas: usar dynamic_data
-      for (const row of data || []) {
-        const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-        if (local) {
-          await db.dynamic_data.put(local as any);
-          added++;
-        }
-      }
-    } else if (localTable) {
-      // Tablas normales (no eventos)
-      for (const row of data || []) {
-        const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-        if (local) {
-          await localTable.put(local as any);
-          updated++;
-        }
-      }
+      added = await processDynamicData(data || [], meta);
+    } else {
+      updated = await processGenericTable(data || [], meta);
     }
 
     // @ts-ignore
