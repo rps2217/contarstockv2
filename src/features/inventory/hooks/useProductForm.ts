@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ZodError } from 'zod';
 import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
 import { sanitizeBarcode, normalizeIdentity } from '../../../services/utils';
@@ -13,14 +14,20 @@ interface UseProductFormProps {
 }
 
 /** Tipo extendido de Product para el formulario */
-export type ProductFormData = Product & { 
-  withdrawalDays?: number; 
-  hasExchange?: boolean 
+export type ProductFormData = Product & {
+  withdrawalDays?: number;
+  hasExchange?: boolean;
 };
 
 export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProductFormProps) => {
-  const [formData, setFormData] = useState<ProductFormData>({ 
-    barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: 0, hasExchange: false
+  const [formData, setFormData] = useState<ProductFormData>({
+    barcode: '',
+    name: '',
+    category: '',
+    supplier: '',
+    supplierRut: '',
+    withdrawalDays: 0,
+    hasExchange: false,
   });
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +39,7 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
       if (initialData) {
         let withdrawalDays = 0;
         let hasExchange = false;
-        
+
         if (initialData.supplierRut) {
           const provider = await ProviderRepository.getByRut(initialData.supplierRut);
           if (provider) {
@@ -40,15 +47,23 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
             hasExchange = !!provider.hasExchange;
           }
         }
-        
-        setFormData({ 
-          ...initialData, 
+
+        setFormData({
+          ...initialData,
           withdrawalDays,
-          hasExchange
+          hasExchange,
         });
         setIsDuplicating(false);
       } else {
-        setFormData({ barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: 0, hasExchange: false });
+        setFormData({
+          barcode: '',
+          name: '',
+          category: '',
+          supplier: '',
+          supplierRut: '',
+          withdrawalDays: 0,
+          hasExchange: false,
+        });
         setIsDuplicating(false);
       }
       setError('');
@@ -57,7 +72,7 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
     loadProviderData();
   }, [initialData]);
 
-  const updateField = (key: string, value: any) => {
+  const updateField = (key: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
@@ -70,11 +85,11 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // Zod Validation
     const validation = productSchema.safeParse(formData);
-    if (validation.success === false) {
-      const firstError = (validation as any).error.errors[0].message;
+    if (!validation.success && validation.error instanceof ZodError) {
+      const firstError = validation.error.errors[0]?.message || 'Error de validación';
       setError(firstError);
       addToast(firstError, 'warning');
       return;
@@ -84,12 +99,12 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
     try {
       const cleanBarcode = sanitizeBarcode(formData.barcode);
       const productToSave = { ...formData, barcode: cleanBarcode };
-      
+
       // Separar datos de producto vs proveedor
       const { withdrawalDays, hasExchange, ...productData } = productToSave;
-      
+
       await productService.saveProduct(productData as Product);
-      
+
       // Actualizar proveedor si hay RUT
       const cleanRut = normalizeIdentity(formData.supplierRut);
       if (cleanRut) {
@@ -97,9 +112,10 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
         await ProviderRepository.save({
           rut: cleanRut,
           name: formData.supplier || 'PROVEEDOR N/A',
-          withdrawalDays: withdrawalDays != null ? withdrawalDays : existingProvider?.withdrawalDays,
+          withdrawalDays:
+            withdrawalDays != null ? withdrawalDays : existingProvider?.withdrawalDays,
           hasExchange: hasExchange !== undefined ? !!hasExchange : existingProvider?.hasExchange,
-          exchangePolicy: existingProvider?.exchangePolicy || ''
+          exchangePolicy: existingProvider?.exchangePolicy || '',
         });
       }
 
@@ -108,8 +124,8 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
       addToast(msg, 'success');
       onSaveSuccess(msg);
       onClose();
-    } catch (err: any) {
-      const errMsg = err.message || 'Error al guardar el producto';
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Error al guardar el producto';
       setError(errMsg);
       addToast(errMsg, 'error');
       if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
@@ -125,7 +141,6 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
     isDuplicating,
     updateField,
     handleDuplicate,
-    handleSave
+    handleSave,
   };
 };
-
