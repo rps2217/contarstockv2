@@ -58,6 +58,7 @@ import { useVoiceCommands, VoiceIndicator } from '@/features/counting/hooks/useV
 import { DiscrepancyAlertService } from '@/features/counting/services/DiscrepancyAlertService';
 import { useProductivityMetrics } from '@/features/counting/hooks/useProductivityMetrics';
 import type { ConsolidatedItem } from '@/types';
+import type { CountedItem } from '@/features/counting/components_v2/CountingItemRow';
 
 // ============================================================================
 // Modal de Confirmación Finalizar - Usa componente refactorizado
@@ -101,7 +102,7 @@ export const RedesignCountingPage: React.FC = () => {
 
   // Productivity stats
   const itemsForStats =
-    sessionData?.history?.map((i: any) => ({
+    sessionData?.history?.map((i: ConsolidatedItem) => ({
       barcode: i.barcode,
       totalQuantity: i.totalQuantity,
     })) || [];
@@ -112,10 +113,12 @@ export const RedesignCountingPage: React.FC = () => {
     const items = sessionData?.history || [];
     const total = items.length;
     const withVariance = items.filter(
-      (i: any) => i.expectedQty !== undefined && i.totalQuantity !== i.expectedQty
+      (i: ConsolidatedItem) =>
+        i.expectedQuantity !== undefined && i.totalQuantity !== i.expectedQuantity
     ).length;
     const complete = items.filter(
-      (i: any) => i.expectedQty !== undefined && i.totalQuantity === i.expectedQty
+      (i: ConsolidatedItem) =>
+        i.expectedQuantity !== undefined && i.totalQuantity === i.expectedQuantity
     ).length;
     const totalQty = items.reduce((acc: number, i: any) => acc + i.totalQuantity, 0);
     return { total, withVariance, complete, totalQty };
@@ -125,11 +128,11 @@ export const RedesignCountingPage: React.FC = () => {
   // MEJORAS PRIORIDAD 2: Productivity Metrics
   // ========================================================================
   const itemsForMetrics: ConsolidatedItem[] = useMemo(() => {
-    return (sessionData?.history || []).map((i: any) => ({
+    return (sessionData?.history || []).map((i: ConsolidatedItem) => ({
       barcode: i.barcode,
-      productName: i.productName || i.name || 'Unknown',
+      productName: i.productName || 'Unknown',
       totalQuantity: i.totalQuantity,
-      expectedQuantity: i.expectedQty,
+      expectedQuantity: i.expectedQuantity,
       scans: i.scans || 1,
       location: state.currentLocation,
     }));
@@ -201,7 +204,8 @@ export const RedesignCountingPage: React.FC = () => {
 
     // Verificar discrepancias en items con expectedQty
     const itemsWithVariance = sessionData.history.filter(
-      (i: any) => i.expectedQty !== undefined && i.totalQuantity !== i.expectedQty
+      (i: ConsolidatedItem) =>
+        i.expectedQuantity !== undefined && i.totalQuantity !== i.expectedQuantity
     );
 
     itemsWithVariance.forEach((item: any) => {
@@ -249,7 +253,7 @@ export const RedesignCountingPage: React.FC = () => {
     toast.success('Conteo vaciado');
   };
 
-  const handleEditExpiry = (item: any) => {
+  const handleEditExpiry = (item: CountedItem) => {
     setEditExpiryItem({
       barcode: item.barcode,
       name: item.productName || 'Producto',
@@ -259,7 +263,7 @@ export const RedesignCountingPage: React.FC = () => {
   };
 
   // Handler para editar desde la lista
-  const handleEditExpiryFromGrid = (item: any) => {
+  const handleEditExpiryFromGrid = (item: CountedItem) => {
     handleEditExpiry(item);
   };
 
