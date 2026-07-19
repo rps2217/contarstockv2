@@ -35,7 +35,7 @@ interface UseCountingActionsOptions {
 
   engine: any; // CountingEngine - tipo complejo de useScanPipeline
 
-  settings: any;
+  settings: AppSettings;
   consolidatedHistory: ConsolidatedItem[] | null;
   currentLocation: string;
   multiplier: number;
@@ -72,7 +72,7 @@ interface UseCountingActionsResult {
   toggleAutoLock: (session: CountingSession) => Promise<void>;
   setStatus: (status: 'manual' | 'idle') => void;
 
-  applyPotentialMatch: (setPotentialMatch: (val: any) => void) => Promise<void>;
+  applyPotentialMatch: (setPotentialMatch: (val: MatchResult | null) => void) => Promise<void>;
   updateMultiplier: (value: number) => void;
   updateLocation: (location: string) => void;
 }
@@ -144,7 +144,7 @@ export const useCountingActions = (
           currentQty,
           undefined,
 
-          async (cleanBarcode: string, product: any, newQty: number) => {
+          async (cleanBarcode: string, product: Product | null, newQty: number) => {
             try {
               // TODO: Usar shouldPromptForBatch cuando esté disponible
               dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
@@ -299,7 +299,7 @@ export const useCountingActions = (
   // ACCIÓN: Toggle auto-lock
   // ============================================================================
   const toggleAutoLock = useCallback(
-    async (session: any) => {
+    async (session: CountingSession) => {
       try {
         if (sessionId && session) {
           const newState = !session.isAutoLockEnabled;
@@ -333,7 +333,7 @@ export const useCountingActions = (
   // ACCIÓN: Aplicar sugerencia de matching
   // ============================================================================
   const applyPotentialMatch = useCallback(
-    async (setPotentialMatch: (val: any) => void) => {
+    async (setPotentialMatch: (val: MatchResult | null) => void) => {
       try {
         if (!potentialMatch || !sessionId) return;
         await SessionRepository.update(sessionId, {
