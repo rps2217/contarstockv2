@@ -26,9 +26,9 @@ npm run build      # Build exitoso
 | ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
 | TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
 | ThermalPrinterEngine.ts | 1,059 | 1,044 | -15 (-1%) | ✅ |
-| UnifiedSyncEngine.ts | 1,346 | 1,202 | -144 (-11%) | 🔄 |
+| UnifiedSyncEngine.ts | 1,346 | 1,133 | -213 (-16%) | 🔄 |
 
-**Total reducido:** 689 líneas extraídas de archivos monolíticos
+**Total reducido:** 758 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
@@ -88,31 +88,29 @@ npm run build      # Build exitoso
 
 #### 3. UnifiedSyncEngine.ts (1,346 LOC) - EN PROGRESO
 
-**Estado:** ~11% refactorizado
+**Estado:** ~16% refactorizado
 **Archivos extraídos:**
 
 - `syncHelpers.ts` - Helpers utilitarios ✅
 - `syncQueueProcessor.ts` - Lógica de procesamiento de cola ✅
 - `syncTableOperations.ts` - Operaciones de sincronización por tabla ✅
+- `syncEventPuller.ts` - Procesamiento de eventos desde nube ✅
 
-**Reducción:** 1346 → 1202 LOC (-144 líneas, -11%)
+**Reducción:** 1346 → 1133 LOC (-213 líneas, -16%)
 
 **Pendiente:**
 
-- Extraer lógica de pullTable (~130 líneas)
 - Extraer lógica de conflictos
+- Continuar reduciendo código restante
 
-#### 4. ThermalPrinterEngine.ts (1,059 LOC) - EN PROGRESO
+#### 4. ThermalPrinterEngine.ts (1,059 LOC) - ✅ COMPLETADO
 
-**Estado:** Comandos ESC/POS extraídos
+**Estado:** Refactorización completada
 **Archivos extraídos:**
 
-- `thermal-print/escposCommands.ts` - Constantes y generadores de tickets
+- `thermal-print/escposCommands.ts` - Constantes y generadores de tickets ✅
 
-**Pendiente:**
-
-- Integrar escposCommands en ThermalPrinterEngine
-- Extraer lógica de conexión USB/Bluetooth
+**Reducción:** 1059 → 1044 LOC (-15 líneas, -1%)
 
 ### 📁 DOCUMENTACIÓN EXISTENTE
 
