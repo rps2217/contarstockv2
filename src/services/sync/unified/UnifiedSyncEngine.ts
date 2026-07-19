@@ -47,6 +47,7 @@ import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictRes
 
 import { formatError, extractColumnNameFromError, sanitizeData } from './syncHelpers';
 import { processSyncQueue } from './syncQueueProcessor';
+import { getDirtyItems, processDeletions, markAsSynced } from './syncTableOperations';
 
 // =============================================================================
 // MOTOR UNIFICADO

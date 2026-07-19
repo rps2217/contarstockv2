@@ -9,6 +9,7 @@ import {
   generateReportHtml80mm,
   generateBarcodeDataUrl,
 } from './thermal-print/reportHtmlGenerator';
+import { ESC, SEPARATOR } from './thermal-print/escposCommands';
 
 // ============================================================================
 // TIPOS
@@ -227,34 +228,25 @@ export class ThermalPrinterEngine {
 
   async printLabel(sku: string, description: string, qty: number) {
     const encoder = new TextEncoder();
-    const esc = {
-      init: [0x1b, 0x40],
-      alignCenter: [0x1b, 0x61, 1],
-      boldOn: [0x1b, 0x45, 1],
-      boldOff: [0x1b, 0x45, 0],
-      sizeBig: [0x1d, 0x21, 0x11],
-      sizeNormal: [0x1d, 0x21, 0x00],
-      feed: [0x0a, 0x0a, 0x0a],
-      cut: [0x1d, 0x56, 0x42, 0x00],
-    };
+    const esc = ESC;
 
     const commands = new Uint8Array([
-      ...esc.init,
-      ...esc.alignCenter,
-      ...esc.boldOn,
-      ...encoder.encode('LOGICOUNT PRO\\n'),
-      ...esc.boldOff,
-      ...encoder.encode('--------------------------------\\n'),
-      ...esc.sizeBig,
-      ...encoder.encode(`${sku}\\n`),
-      ...esc.sizeNormal,
-      ...encoder.encode(`${description.substring(0, 32)}\\n`),
-      ...esc.boldOn,
-      ...encoder.encode(`CANTIDAD: ${qty} UNID.\\n`),
-      ...esc.boldOff,
-      ...encoder.encode(`${new Date().toLocaleString()}\\n`),
-      ...esc.feed,
-      ...esc.cut,
+      ...esc.INIT,
+      ...esc.ALIGN_CENTER,
+      ...esc.BOLD_ON,
+      ...encoder.encode('LOGICOUNT PRO\n'),
+      ...esc.BOLD_OFF,
+      ...encoder.encode(`${SEPARATOR}\n`),
+      ...esc.DOUBLE_SIZE,
+      ...encoder.encode(`${sku}\n`),
+      ...esc.NORMAL_SIZE,
+      ...encoder.encode(`${description.substring(0, 32)}\n`),
+      ...esc.BOLD_ON,
+      ...encoder.encode(`CANTIDAD: ${qty} UNID.\n`),
+      ...esc.BOLD_OFF,
+      ...encoder.encode(`${new Date().toLocaleString()}\n`),
+      ...esc.FEED_SHORT,
+      ...esc.CUT,
     ]);
 
     await this.printRaw(commands);
@@ -263,35 +255,28 @@ export class ThermalPrinterEngine {
   async printSummaryReport(erp: string, label: string, items: PrintItem[]) {
     if (this.isConnected()) {
       const encoder = new TextEncoder();
-      const esc = {
-        init: [0x1b, 0x40],
-        alignCenter: [0x1b, 0x61, 1],
-        alignLeft: [0x1b, 0x61, 0],
-        boldOn: [0x1b, 0x45, 1],
-        boldOff: [0x1b, 0x45, 0],
-        sizeNormal: [0x1d, 0x21, 0x00],
-        feed: [0x0a, 0x0a, 0x0a, 0x0a],
-        cut: [0x1d, 0x56, 0x42, 0x00],
-      };
+      const esc = ESC;
 
-      let content = [
-        ...esc.init,
-        ...esc.alignCenter,
-        ...esc.boldOn,
-        ...encoder.encode('MANIFIESTO DE CARGA\\n'),
-        ...encoder.encode('LOGICOUNT PRO v4.5\\n'),
-        ...esc.boldOff,
-        ...encoder.encode('--------------------------------\\n'),
-        ...esc.alignLeft,
-        ...encoder.encode(`ORDEN ERP: ${erp}\\n`),
-        ...encoder.encode(`BULTOS : ${label}\\n`),
-        ...encoder.encode(`FECHA : ${new Date().toLocaleString()}\\n`),
-        ...encoder.encode('--------------------------------\\n'),
-        ...esc.boldOn,
-        ...encoder.encode('DESC | SKU\\n'),
-        ...encoder.encode('TEO REAL DIFF\\n'),
-        ...esc.boldOff,
-        ...encoder.encode('--------------------------------\\n'),
+      let content: number[] = [
+        ...esc.INIT,
+        ...esc.ALIGN_CENTER,
+        ...esc.BOLD_ON,
+        ...esc.DOUBLE_SIZE,
+        ...encoder.encode('MANIFIESTO DE CARGA\n'),
+        ...encoder.encode('LOGICOUNT PRO v4.5\n'),
+        ...esc.NORMAL_SIZE,
+        ...esc.BOLD_OFF,
+        ...encoder.encode(`${SEPARATOR}\n`),
+        ...esc.ALIGN_LEFT,
+        ...encoder.encode(`ORDEN ERP: ${erp}\n`),
+        ...encoder.encode(`BULTOS: ${label}\n`),
+        ...encoder.encode(`FECHA: ${new Date().toLocaleString()}\n`),
+        ...encoder.encode(`${SEPARATOR}\n`),
+        ...esc.BOLD_ON,
+        ...encoder.encode('DESC | SKU\n'),
+        ...encoder.encode('TEO REAL DIFF\n'),
+        ...esc.BOLD_OFF,
+        ...encoder.encode(`${SEPARATOR}\n`),
       ];
 
       items.forEach(item => {
@@ -304,25 +289,25 @@ export class ThermalPrinterEngine {
         const diff = String(realVal - theoVal).padStart(7);
 
         const row = [
-          ...encoder.encode(`${name}\\n`),
-          ...encoder.encode(`${sku}\\n`),
-          ...encoder.encode(`${theo} ${real} ${diff}\\n`),
-          ...encoder.encode('- - - - - - - - - - - - - - - -\\n'),
+          ...encoder.encode(`${name}\n`),
+          ...encoder.encode(`${sku}\n`),
+          ...encoder.encode(`${theo} ${real} ${diff}\n`),
+          ...encoder.encode('- - - - - - - - - - - - - - - -\n'),
         ];
         content.push(...row);
       });
 
       const totalReal = items.reduce((acc, i) => acc + (i.totalQuantity || i.quantity || 0), 0);
-      const footer = [
-        ...esc.boldOn,
-        ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\\n`),
-        ...esc.boldOff,
-        ...encoder.encode('--------------------------------\\n'),
-        ...encoder.encode('\\n\\n__________________________\\n'),
-        ...esc.alignCenter,
-        ...encoder.encode('FIRMA AUDITORIA\\n'),
-        ...esc.feed,
-        ...esc.cut,
+      const footer: number[] = [
+        ...esc.BOLD_ON,
+        ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\n`),
+        ...esc.BOLD_OFF,
+        ...encoder.encode(`${SEPARATOR}\n`),
+        ...encoder.encode('\n\n__________________________\n'),
+        ...esc.ALIGN_CENTER,
+        ...encoder.encode('FIRMA AUDITORIA\n'),
+        ...esc.FEED,
+        ...esc.CUT,
       ];
 
       await this.printRaw(new Uint8Array([...content, ...footer]));

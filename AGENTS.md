@@ -19,6 +19,17 @@ npm run build      # Build exitoso
 | Tests       | 964     |
 | Cobertura   | ~7.2%   |
 
+### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
+
+| Archivo | Inicio | Actual | Reducción | Estado |
+|---------|--------|--------|-----------|--------|
+| ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
+| TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
+| UnifiedSyncEngine.ts | 1,346 | 1,253 | -93 (-7%) | 🔄 |
+| ThermalPrinterEngine.ts | 1,059 | 1,059 | 0 (0%) | 🔄 |
+
+**Total reducido:** 623 líneas extraídas de archivos monolíticos
+
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
 1. **Archivos monolíticos** (>1000 LOC):
@@ -38,25 +49,55 @@ npm run build      # Build exitoso
 
 ### 🎯 TAREAS PENDIENTES DE REFACTORIZACIÓN
 
-#### 1. UnifiedSyncEngine.ts (1,491 LOC) - EN PROGRESO
+#### 1. ExpiryPage.tsx (1,292 LOC) - ✅ COMPLETADO
 
-**Estado:** syncHelpers.ts extraído (~50 LOC)
-**Archivos generados:**
+**Estado:** Refactorización completada
+**Archivos extraídos:**
 
-- `src/services/sync/unified/syncHelpers.ts` ✅
-- `src/services/sync/unified/syncQueueProcessor.ts` ✅ (integrado)
+- `ExpiryPage/expiryConstants.ts` - STATUS_META, STATUS_ORDER, MONTHS, FILTERS
+- `ExpiryPage/expiryHelpers.ts` - formatExpiryDate, getExpiryDateColor, getWithdrawalDateColor
+- `ExpiryPage/expiryRecordRow.tsx` - RecordRow (fila de lista)
+- `ExpiryPage/expiryKanbanCard.tsx` - KanbanCard (tarjeta kanban)
+- `ExpiryPage/expirySection.tsx` - Section (sección colapsable)
 
-**Reducciones logradas:**
+**Reducción:** 1292 → 928 LOC (-364 líneas, -28%)
 
-- ExpiryPage.tsx: 1292 → 928 (-364 líneas)
-- TheoreticalLoadsPage.tsx: 1150 → 984 (-166 líneas)
-- UnifiedSyncEngine.ts: 1346 → 1253 (-93 líneas)
+#### 2. TheoreticalLoadsPage.tsx (1,150 LOC) - ✅ COMPLETADO
 
-**Ver:** `docs/REFACTOR_PROGRESS.md`
+**Estado:** Refactorización completada
+**Archivos extraídos:**
 
-#### 2. ExpiryPage.tsx (1,378 LOC) - PENDIENTE
+- `TheoreticalLoadsPage/theoreticalLoadsCards.tsx` - LocalOrderCard, CloudManifestCard
 
-#### 3. TheoreticalLoadsPage.tsx (1,325 LOC) - PENDIENTE
+**Reducción:** 1150 → 984 LOC (-166 líneas, -14%)
+
+#### 3. UnifiedSyncEngine.ts (1,346 LOC) - EN PROGRESO
+
+**Estado:** ~7% refactorizado
+**Archivos extraídos:**
+
+- `syncHelpers.ts` - Helpers utilitarios
+- `syncQueueProcessor.ts` - Lógica de procesamiento de cola (integrado)
+
+**Reducción:** 1346 → 1253 LOC (-93 líneas, -7%)
+
+**Pendiente:**
+
+- Extraer lógica de pushTableChanges (~130 líneas)
+- Extraer lógica de pullTable (~130 líneas)
+- Extraer lógica de conflictos
+
+#### 4. ThermalPrinterEngine.ts (1,059 LOC) - EN PROGRESO
+
+**Estado:** Comandos ESC/POS extraídos
+**Archivos extraídos:**
+
+- `thermal-print/escposCommands.ts` - Constantes y generadores de tickets
+
+**Pendiente:**
+
+- Integrar escposCommands en ThermalPrinterEngine
+- Extraer lógica de conexión USB/Bluetooth
 
 ### 📁 DOCUMENTACIÓN EXISTENTE
 
