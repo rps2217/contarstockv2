@@ -42,46 +42,10 @@ import { syncMetricsService } from './SyncMetricsService';
 import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictResolver';
 
 // =============================================================================
-// HELPERS UTILITARIOS
+// HELPERS UTILITARIOS (importados de syncHelpers)
 // =============================================================================
 
-/**
- * Formatea errores para salida legible
- */
-const formatError = (e: unknown): string => {
-  if (!e) return 'Error desconocido';
-  if (typeof e === 'object' && (e as Error).message) {
-    return (e as Error).message;
-  }
-  return String(e);
-};
-
-/**
- * Extrae nombre de columna de mensajes de error de Supabase
- */
-const extractColumnNameFromError = (errMsg: string): string | null => {
-  if (!errMsg) return null;
-  const match =
-    errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/column\s+([\w_]+)\s+does\s+not/i);
-  return match ? match[1] : null;
-};
-
-/**
- * Normaliza datos para Supabase (sanitización)
- */
-const sanitizeData = <T extends object>(data: T): Record<string, unknown> => {
-  const result: Record<string, unknown> = {};
-  Object.entries(data as Record<string, unknown>).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    result[key] =
-      value instanceof Date
-        ? value.toISOString()
-        : typeof value === 'object' && value !== null
-          ? JSON.parse(JSON.stringify(value))
-          : value;
-  });
-  return result;
-};
+import { formatError, extractColumnNameFromError, sanitizeData } from './syncHelpers';
 
 // =============================================================================
 // MOTOR UNIFICADO
@@ -1377,56 +1341,6 @@ export const unifiedSyncEngine = new UnifiedSyncEngine({
 });
 
 export default UnifiedSyncEngine;
-// ===========================================================================
-// LEGACY COMPATIBILITY FUNCTIONS
-// ===========================================================================
 
-/**
- * Realiza upload de un grupo de datos (compatibilidad legacy)
- */
-export async function uploadBatch(
-  group: { type: string; data: Record<string, unknown>[] },
-  onProgress?: (message: string) => void
-): Promise<{ success: boolean; uploaded: number }> {
-  const tableName = mapGroupTypeToTable(group.type);
-  onProgress?.(`Iniciando upload a ${tableName}...`);
-  const result = await unifiedSyncEngine.pushBatch(tableName, group.data);
-  if (result.success) {
-    onProgress?.(`Upload completado: ${result.uploaded} registros`);
-  } else {
-    onProgress?.(`Error: ${result.errors?.join(', ')}`);
-  }
-  return {
-    success: result.success,
-    uploaded: result.uploaded || 0,
-  };
-}
-
-/**
- * Upload un grupo legacy (UploadGroup) con datos preparados
- */
-export async function uploadGroupLegacy(
-  erpOrder: string,
-  type: string,
-  data: Record<string, unknown>[]
-): Promise<{ success: boolean; uploaded: number }> {
-  return uploadBatch({ type, data });
-}
-
-/**
- * Resetea el lock de sincronización (compatibilidad legacy)
- */
-export function resetSyncLock(): void {
-  logger.info('SYNC', 'Sync lock reset (no-op in unified engine)');
-}
-
-function mapGroupTypeToTable(type: string): string {
-  const mapping: Record<string, string> = {
-    INVENTARIO: 'INVENTARIO',
-    RECEPCION: 'RECEPCION',
-    VENCIMIENTOS: 'VENCIMIENTOS',
-    EVENTOS: 'EVENTOS',
-    AUDIT_LOGS: 'AUDIT_LOGS',
-  };
-  return mapping[type] || type;
-}
+// Re-export legacy functions for backwards compatibility
+export { uploadBatch, uploadGroupLegacy, resetSyncLock } from './syncLegacy';

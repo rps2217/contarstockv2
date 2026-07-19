@@ -47,6 +47,9 @@ import {
   type EventFormData,
 } from './EventsModal/eventsConstants';
 
+// Importar operaciones masivas
+import { bulkDeleteEvents } from './EventsModal/bulkOperations';
+
 // Re-exportar tipos para uso externo
 export type {
   EventType,
@@ -443,90 +446,14 @@ export const EventsModal: React.FC<EventsModalProps> = ({
     setSelectedIds(new Set());
   };
 
-  // Eliminar seleccionados (masivo)
+  // Eliminar seleccionados (masivo) - usa función importada
   const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-
-    const count = selectedIds.size;
-    if (
-      !confirm(
-        `¿Eliminar ${count} evento${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}?`
-      )
-    )
-      return;
-
     setIsDeletingBulk(true);
     try {
-      let deleted = 0;
-      let errors = 0;
-
-      for (const id of selectedIds) {
-        try {
-          // Obtener el evento antes de eliminar
-          const event = await db.events.get(id);
-
-          if (event) {
-            // Registrar en lista de eliminados
-            const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase();
-            await db.deletedEvents.put({
-              eventKey,
-              barcode: event.barcode || '',
-              frcNumber: event.frcNumber || '',
-              deletedAt: Date.now(),
-              synced: false,
-            });
-
-            // Intentar eliminar de la nube
-            try {
-              const { supabase } = await import('@/lib/supabase');
-              await supabase
-                .from('EVENTOS')
-                .delete()
-                .eq('barcode', event.barcode || '')
-                .eq('frc_code', event.frcNumber || '');
-
-              await db.deletedEvents.where('eventKey').equals(eventKey).modify({ synced: true });
-            } catch (cloudErr) {
-              logger.warn(
-                'EventsModal',
-                'No se pudo eliminar de la nube',
-                cloudErr instanceof Error ? cloudErr.message : String(cloudErr)
-              );
-            }
-          }
-
-          // Eliminar localmente
-          await db.events.delete(id);
-          deleted++;
-        } catch (err) {
-          logger.error(
-            'EventsModal',
-            'Error deleting event',
-            err instanceof Error ? err.message : String(err)
-          );
-          errors++;
-        }
-      }
-
-      // Limpiar selección
-      setSelectedIds(new Set());
-
-      if (errors > 0) {
-        toast.error(`${deleted} eliminados, ${errors} errores`);
-      } else {
-        toast.success(
-          `${deleted} evento${deleted !== 1 ? 's' : ''} eliminado${deleted !== 1 ? 's' : ''}`
-        );
-      }
-
-      setRefreshKey(k => k + 1);
-    } catch (error) {
-      logger.error(
-        'EventsModal',
-        'Error bulk deleting events',
-        error instanceof Error ? error.message : String(error)
-      );
-      toast.error('Error al eliminar eventos');
+      await bulkDeleteEvents(selectedIds, () => {
+        setSelectedIds(new Set());
+        setRefreshKey(k => k + 1);
+      });
     } finally {
       setIsDeletingBulk(false);
     }
