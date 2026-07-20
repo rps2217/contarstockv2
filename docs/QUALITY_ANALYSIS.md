@@ -14,7 +14,7 @@
 | **Seguridad**      | 8.5/10 | ✅ Aceptable       |
 | **Performance**    | 8.0/10 | ✅ Bueno           |
 | **Mantenibilidad** | 5.5/10 | 🔴 Crítico         |
-| **Accesibilidad**  | 6.0/10 | ⚠️ Necesita mejora |
+| **Accesibilidad**  | 8.5/10 | ✅ Mejorado        |
 
 ---
 
@@ -289,6 +289,10 @@ catch (err) {
 - ✅ Login.tsx - 2 botones con aria-label
 - ✅ StartSessionModal.tsx - 4 botones con aria-label
 - ✅ OfflineBanner.tsx - 1 botón con aria-label
+- ✅ CommandPalette.tsx - aria-dialog, aria-modal, aria-label en opciones
+- ✅ WarehouseSelector.tsx - aria-label en botón limpiar
+- ✅ ManagementBulkActions.tsx - aria-dialog, aria-label en acciones
+- ✅ EntityCards.tsx - aria-label en acciones de productos/recepciones
 
 ### Refactorización
 
