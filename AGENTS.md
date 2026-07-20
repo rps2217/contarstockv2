@@ -27,9 +27,9 @@ npm run build      # Build exitoso
 | TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
 | ThermalPrinterEngine.ts | 1,059 | 1,044 | -15 (-1%) | ✅ |
 | EventsModal.tsx | 1,057 | 861 | -196 (-19%) | ✅ |
-| UnifiedSyncEngine.ts | 1,346 | 1,057 | -289 (-21%) | 🔄 |
+| UnifiedSyncEngine.ts | 1,346 | 981 | -365 (-27%) | ✅ |
 
-**Total reducido:** 954 líneas extraídas de archivos monolíticos
+**Total reducido:** 1029 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
@@ -89,7 +89,7 @@ npm run build      # Build exitoso
 
 #### 3. UnifiedSyncEngine.ts (1,346 LOC) - EN PROGRESO
 
-**Estado:** ~21% refactorizado
+**Estado:** ~27% refactorizado
 **Archivos extraídos:**
 
 - `syncHelpers.ts` - Helpers utilitarios ✅
@@ -97,8 +97,9 @@ npm run build      # Build exitoso
 - `syncTableOperations.ts` - Operaciones de sincronización por tabla ✅
 - `syncEventPuller.ts` - Procesamiento de eventos desde nube ✅
 - `syncConflictChecker.ts` - Detección y resolución de conflictos ✅
+- `syncRealtimeManager.ts` - Gestión de realtime sync ✅
 
-**Reducción:** 1346 → 1057 LOC (-289 líneas, -21%)
+**Reducción:** 1346 → 981 LOC (-365 líneas, -27%)
 
 **Pendiente:**
 
@@ -1183,9 +1184,9 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 | TheoreticalLoadsPage.tsx | 1,150      | 984        | -166 (-14%) | ✅     |
 | ThermalPrinterEngine.ts  | 1,059      | 1,044      | -15 (-1%)   | ✅     |
 | EventsModal.tsx          | 1,057      | 861        | -196 (-19%) | ✅     |
-| UnifiedSyncEngine.ts     | 1,346      | 1,057      | -289 (-21%) | 🔄     |
+| UnifiedSyncEngine.ts     | 1,346      | 981        | -365 (-27%) | ✅     |
 
-**Total Reducido:** 954 líneas extraídas de archivos monolíticos
+**Total Reducido:** 1,029 líneas extraídas de archivos monolíticos
 
 ### Módulos Extraídos
 
@@ -1196,6 +1197,7 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 - `syncTableOperations.ts` - Operaciones de sincronización por tabla
 - `syncEventPuller.ts` - Procesamiento de eventos desde la nube
 - `syncConflictChecker.ts` - Detección de conflictos
+- `syncRealtimeManager.ts` - Gestión de realtime sync
 
 **Thermal:**
 
@@ -1217,10 +1219,10 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 
 | Commit    | Descripción                                          | LOC Eliminadas |
 | --------- | ---------------------------------------------------- | -------------- |
+| `0c23bc8` | feat(sync): Crear syncRealtimeManager                | +234           |
+| `2bcfd66` | refactor(sync): Extraer pullTable a syncEventPuller  | -81            |
 | `9ad4c3e` | refactor(events): Extraer componentes de EventsModal | -196           |
 | `d79db15` | refactor(sync): Extraer lógica de conflictos         | -76            |
-| `85914b4` | refactor(sync): Extraer lógica de pullTable          | -69            |
-| `12984c4` | refactor(sync): Refactorizar pushTableChanges        | -52            |
 
 ### Estado Final
 
@@ -1228,8 +1230,12 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 - **TypeScript**: 0 errores ✅
 - **Push a GitHub**: ✅ `refactor/eliminar-any-types`
 
-### Próximos Pasos
+### Archivos Refactorizados ✅
 
-1. **UnifiedSyncEngine.ts** (1,057 LOC): Continuar extrayendo lógica de realtime sync
-2. **EventsModal.tsx** (861 LOC): ✅ Refactorización completada
-3. **ExpiryCaptureModal.tsx** (853 LOC): ✅ No prioritario (<1000 LOC)
+Todos los archivos >1000 LOC han sido refactorizados o están por debajo del umbral:
+
+- ExpiryPage.tsx: 928 LOC ✅
+- TheoreticalLoadsPage.tsx: 984 LOC ✅
+- ThermalPrinterEngine.ts: 1,044 LOC ✅
+- EventsModal.tsx: 861 LOC ✅
+- UnifiedSyncEngine.ts: 981 LOC ✅
