@@ -8,9 +8,95 @@
  * @module sync/unified/syncEventPuller
  */
 
+import { supabase } from '@/lib/supabase';
 import { db } from '@/db';
 import { logger } from '@/services/logger';
-import type { TableSyncMeta } from './types';
+import { syncRegistry } from './registry';
+import { syncMetricsService } from './SyncMetricsService';
+import type { TableSyncMeta, TableSyncResult } from './types';
+
+/**
+ * Pull de registros desde Supabase para una tabla específica
+ */
+export async function pullTable(tableName: string): Promise<TableSyncResult> {
+  const startTime = performance.now();
+  const meta = syncRegistry[tableName];
+
+  if (!meta) {
+    syncMetricsService.recordMetric({
+      operation: 'batch_pull',
+      tableName,
+      duration: performance.now() - startTime,
+      success: false,
+      recordsAffected: 0,
+      error: 'Unknown table',
+      timestamp: Date.now(),
+    });
+    return {
+      tableName,
+      added: 0,
+      updated: 0,
+      deleted: 0,
+      errors: ['Unknown table'],
+      duration: 0,
+    };
+  }
+
+  // Fetch remote data
+  const { data, error } = await supabase.from(meta.remoteTable).select('*');
+
+  if (error) {
+    syncMetricsService.recordMetric({
+      operation: 'batch_pull',
+      tableName,
+      duration: performance.now() - startTime,
+      success: false,
+      recordsAffected: 0,
+      error: error.message,
+      timestamp: Date.now(),
+    });
+    return {
+      tableName,
+      added: 0,
+      updated: 0,
+      deleted: 0,
+      errors: [error.message],
+      duration: performance.now() - startTime,
+    };
+  }
+
+  // Process data based on table type
+  let added = 0;
+  let updated = 0;
+
+  if (tableName === 'events') {
+    const result = await processRemoteEvents(data || [], meta);
+    added = result.added;
+    updated = result.updated;
+  } else if (meta.isDynamic) {
+    added = await processDynamicData(data || [], meta);
+  } else {
+    updated = await processGenericTable(data || [], meta);
+  }
+
+  syncMetricsService.recordMetric({
+    operation: 'batch_pull',
+    tableName,
+    duration: performance.now() - startTime,
+    success: true,
+    recordsAffected: added + updated,
+    timestamp: Date.now(),
+  });
+
+  return {
+    tableName,
+    added,
+    updated,
+    deleted: 0,
+    errors: [],
+    duration: performance.now() - startTime,
+  };
+}
 
 /**
  * Procesa eventos desde la nube con manejo de eliminados localmente
