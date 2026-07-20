@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Target, Zap, Activity, X, Camera } from 'lucide-react';
 import { useOpticalEngine } from '../hooks/useOpticalEngine';
@@ -13,21 +12,21 @@ interface CameraScannerProps {
   onCapture?: (photo: string) => void;
 }
 
-export const CameraScanner: React.FC<CameraScannerProps> = ({ 
-  onScan, 
-  onClose, 
-  inline = true, 
+export const CameraScanner: React.FC<CameraScannerProps> = ({
+  onScan,
+  onClose,
+  inline = true,
   isTriggered = false,
   mode = 'scan',
-  onCapture
+  onCapture,
 }) => {
   const { settings } = useAppStore();
   const [feedbackStatus, setFeedbackStatus] = useState<'success' | null>(null);
   const [manualCode, setManualCode] = useState('');
   const isMirrored = settings.captureSettings?.cameraMirrorMode || false;
-  
+
   const effectiveTrigger = inline ? isTriggered : true;
-  const SCANNER_DOM_ID = "v8-core-optical-engine";
+  const SCANNER_DOM_ID = 'v8-core-optical-engine';
 
   const handleScan = (code: string) => {
     if (mode !== 'scan') return;
@@ -47,12 +46,12 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   const { videoRef, error, engineType } = useOpticalEngine({
     onScan: handleScan,
     isTriggered: effectiveTrigger,
-    scannerDomId: SCANNER_DOM_ID
+    scannerDomId: SCANNER_DOM_ID,
   });
 
   const handleCapture = () => {
     if (!videoRef.current || !onCapture) return;
-    
+
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
@@ -69,42 +68,71 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   };
 
   return (
-    <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}>
+    <div
+      className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}
+    >
       {mode === 'scan' && (
         <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center">
-          <div className={`w-64 h-64 border-2 transition-all duration-150 rounded-3xl flex items-center justify-center ${effectiveTrigger ? 'border-blue-500/40 scale-100' : 'border-white/10 scale-90 opacity-20'}`}>
-            <Target className={`w-12 h-12 transition-all duration-300 ${effectiveTrigger ? 'text-blue-500 opacity-30 animate-pulse' : 'text-white'}`} />
+          <div
+            className={`w-64 h-64 border-2 transition-all duration-150 rounded-3xl flex items-center justify-center ${effectiveTrigger ? 'border-blue-500/40 scale-100' : 'border-white/10 scale-90 opacity-20'}`}
+          >
+            <Target
+              className={`w-12 h-12 transition-all duration-300 ${effectiveTrigger ? 'text-blue-500 opacity-30 animate-pulse' : 'text-white'}`}
+            />
             <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl"></div>
             <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl"></div>
             <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl"></div>
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl"></div>
           </div>
-          {effectiveTrigger && !feedbackStatus && <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-red-500 shadow-[0_0_10px_red] animate-[radar-pulse_1s_infinite] opacity-50"></div>}
+          {effectiveTrigger && !feedbackStatus && (
+            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-red-500 shadow-[0_0_10px_red] animate-[radar-pulse_1s_infinite] opacity-50"></div>
+          )}
         </div>
       )}
-      
+
       <div className="absolute top-4 left-4 z-50 pointer-events-auto">
-        <button onClick={onClose} className="bg-black/60 text-white/60 p-3 rounded-2xl active:bg-white active:text-black transition-colors">
+        <button
+          onClick={onClose}
+          aria-label="Cerrar scanner"
+          className="bg-black/60 text-white/60 p-3 rounded-2xl active:bg-white active:text-black transition-colors"
+        >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       <div className="absolute top-4 right-4 z-50 pointer-events-none">
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${engineType === 'native' ? 'bg-blue-900/40 border-blue-500/30 text-blue-400' : 'bg-orange-900/40 border-orange-500/30 text-orange-400'}`}>
-          {engineType === 'native' ? <Zap className="w-3 h-3 fill-current" /> : <Activity className="w-3 h-3" />}
-          <span className="text-[9px] font-black uppercase tracking-widest">{engineType === 'native' ? 'GPU_NATIVE' : 'CPU_LEGACY'}</span>
+        <div
+          className={`flex items-center gap-2 px-3 py-1 rounded-full border ${engineType === 'native' ? 'bg-blue-900/40 border-blue-500/30 text-blue-400' : 'bg-orange-900/40 border-orange-500/30 text-orange-400'}`}
+        >
+          {engineType === 'native' ? (
+            <Zap className="w-3 h-3 fill-current" />
+          ) : (
+            <Activity className="w-3 h-3" />
+          )}
+          <span className="text-[9px] font-black uppercase tracking-widest">
+            {engineType === 'native' ? 'GPU_NATIVE' : 'CPU_LEGACY'}
+          </span>
         </div>
       </div>
 
       <div className="flex-1 relative bg-black flex flex-col justify-center h-full">
-        {feedbackStatus === 'success' && <div className="absolute inset-0 z-[60] bg-emerald-600/40 flex items-center justify-center animate-in fade-in duration-75"><CheckCircle2 className="w-20 h-20 text-white" /></div>}
+        {feedbackStatus === 'success' && (
+          <div className="absolute inset-0 z-[60] bg-emerald-600/40 flex items-center justify-center animate-in fade-in duration-75">
+            <CheckCircle2 className="w-20 h-20 text-white" />
+          </div>
+        )}
         {error && (
           <div className="absolute inset-0 z-50 bg-base flex flex-col items-center justify-center p-6 text-center">
             <AlertTriangle className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
-            <h3 className="text-white font-black uppercase text-xs tracking-widest mb-1">Cámara no disponible</h3>
+            <h3 className="text-white font-black uppercase text-xs tracking-widest mb-1">
+              Cámara no disponible
+            </h3>
             <p className="text-muted text-xs max-w-xs mb-6 px-4">{error}</p>
-            
-            <form onSubmit={handleManualSubmit} className="w-full max-w-xs mb-8 pointer-events-auto">
+
+            <form
+              onSubmit={handleManualSubmit}
+              className="w-full max-w-xs mb-8 pointer-events-auto"
+            >
               <label className="block text-slate-500 text-[9px] font-black uppercase tracking-widest mb-2 text-left">
                 Ingresar código de barra manualmente
               </label>
@@ -112,13 +140,15 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                 <input
                   type="text"
                   value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
+                  onChange={e => setManualCode(e.target.value)}
                   placeholder="Ej. 7791234567890"
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 font-mono"
                   autoFocus
                 />
+
                 <button
                   type="submit"
+                  aria-label="Confirmar código"
                   className="bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-wider px-4 rounded-xl active:scale-95 transition-transform"
                 >
                   Ok
@@ -126,20 +156,24 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               </div>
             </form>
 
-            <button onClick={onClose} className="bg-surface hover:bg-elevated border border-white/10 text-white px-8 py-3 rounded-xl font-bold uppercase text-[10px] transition-colors pointer-events-auto">
+            <button
+              onClick={onClose}
+              aria-label="Volver"
+              className="bg-surface hover:bg-elevated border border-white/10 text-white px-8 py-3 rounded-xl font-bold uppercase text-[10px] transition-colors pointer-events-auto"
+            >
               Volver
             </button>
           </div>
         )}
-        <video 
-          ref={videoRef} 
-          className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} 
+        <video
+          ref={videoRef}
+          className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}
           style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
-          playsInline 
-          muted 
+          playsInline
+          muted
         />
-        <div 
-          id={SCANNER_DOM_ID} 
+        <div
+          id={SCANNER_DOM_ID}
           className={`w-full h-full transition-all duration-150 ${engineType === 'wasm' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}
           style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
         ></div>
@@ -147,7 +181,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 
       {mode === 'photo' && (
         <div className="absolute bottom-12 left-0 right-0 z-50 flex justify-center">
-          <button 
+          <button
             onClick={handleCapture}
             className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition-transform"
           >
@@ -163,4 +197,3 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     </div>
   );
 };
-

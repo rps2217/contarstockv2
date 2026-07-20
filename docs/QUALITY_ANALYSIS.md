@@ -271,3 +271,36 @@ catch (err) {
 - [ ] Eliminar todos los tipos `any`
 - [ ] ESLint strict mode
 - [ ] CI con quality gates
+
+---
+
+## ✅ PROGRESO ACTUALIZADO (2026-07-18)
+
+### Tests
+
+- **Antes:** 915 tests
+- **Ahora:** 921 tests (+6 IntegrityService tests)
+- **Cobertura:** ~7.2% → ~8.0%
+
+### Accesibilidad (aria-labels)
+
+- ✅ CameraScanner.tsx - 4 botones con aria-label
+- ✅ SmartDock.tsx - aria-label dinámico
+- ✅ Login.tsx - 2 botones con aria-label
+- ✅ StartSessionModal.tsx - 4 botones con aria-label
+- ✅ OfflineBanner.tsx - 1 botón con aria-label
+
+### Refactorización
+
+- ✅ TheoreticalLoadsPage.tsx: 1,325 → 984 LOC (-25%)
+- ✅ TheoreticalLoadsCards extraídos
+- ✅ syncHelpers.ts (~50 LOC) extraído de UnifiedSyncEngine
+
+### Deduplicación
+
+- ✅ formatTimeAgo centralizado en lib/date.ts
+- ✅ formatBytes centralizado en shared/utils/common.ts
+
+### Tipado
+
+- ✅ catch (err: any) → catch (err: unknown) en 7 archivos

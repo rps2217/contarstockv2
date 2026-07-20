@@ -93,6 +93,7 @@ const SmartDockInner: React.FC<SmartDockProps> = ({ items, variant = 'global' })
           return (
             <React.Fragment key={item.id}>
               <button
+                aria-label={item.label}
                 data-active={isActive ? 'true' : 'false'}
                 onClick={() => {
                   if (navigator.vibrate) navigator.vibrate(12);

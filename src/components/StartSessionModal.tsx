@@ -176,6 +176,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
             </div>
 
             <button
+              aria-label="Validar y continuar"
               disabled={!erpOrder.trim() || isCloudLoading}
               onClick={handleFetchFromCloud}
               className="w-full h-14 bg-blue-600 text-white font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 active:scale-[0.98] transition-all"
@@ -201,6 +202,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
                       <button
                         key={order.id}
                         type="button"
+                        aria-label={`Cargar orden ${dispName}`}
                         onClick={() => {
                           setErpOrder(order.id);
                           setCloudOrder(order);
@@ -255,6 +257,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
 
               <div className="pt-2 border-t border-white/5">
                 <button
+                  aria-label={
+                    isAutoLockEnabled ? 'Desactivar auto-bloqueo' : 'Activar auto-bloqueo'
+                  }
                   onClick={() => setIsAutoLockEnabled(!isAutoLockEnabled)}
                   className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
                     isAutoLockEnabled
@@ -293,6 +298,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
             </div>
 
             <button
+              aria-label="Comenzar conteo"
               onClick={handleStart}
               className="w-full h-16 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
             >
@@ -300,6 +306,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
             </button>
 
             <button
+              aria-label="Cambiar orden"
               onClick={() => setStep('enter_erp')}
               className="w-full h-10 text-slate-500 font-black uppercase text-[10px] tracking-widest"
             >

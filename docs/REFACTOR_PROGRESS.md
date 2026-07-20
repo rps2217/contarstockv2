@@ -89,3 +89,35 @@ LOC extraído: ~50 LOC
 ```
 
 **Meta final:** Reducir UnifiedSyncEngine.ts de 1,491 LOC a ~800 LOC
+
+---
+
+## ✅ ACTUALIZACIÓN 2026-07-18
+
+### Progreso en Tests
+
+- **Tests IntegrityService:** 6 nuevos tests pasando
+- **Total:** 921 tests
+
+### Progreso en UI/UX
+
+- **TheoreticalLoadsPage.tsx:** 1,325 → 984 LOC (-25.7%)
+- **Componentes extraídos:** TheoreticalLoadsCards.tsx
+
+### Progreso en Deduplicación
+
+- ✅ formatTimeAgo en lib/date.ts
+- ✅ formatBytes en shared/utils/common.ts
+
+### Progreso en Tipado
+
+- ✅ catch (err: any) → catch (err: unknown) en 7 archivos
+
+### Módulos Sync Pendientes
+
+| Módulo                 | Estado                  |
+| ---------------------- | ----------------------- |
+| SyncFSM.ts             | ⚠️ Con errores de tipos |
+| SyncQueueProcessor.ts  | ⚠️ Con errores de tipos |
+| ConflictResolver.ts    | ⚠️ Con errores de tipos |
+| SyncRealtimeManager.ts | ⚠️ Con errores de tipos |
