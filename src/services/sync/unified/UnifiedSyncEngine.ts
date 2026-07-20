@@ -49,6 +49,7 @@ import { formatError, extractColumnNameFromError, sanitizeData } from './syncHel
 import { processSyncQueue } from './syncQueueProcessor';
 import { getDirtyItems, processDeletions, markAsSynced } from './syncTableOperations';
 import { processRemoteEvents, processDynamicData, processGenericTable } from './syncEventPuller';
+import { checkConflicts, resolveConflicts } from './syncConflictChecker';
 
 // =============================================================================
 // MOTOR UNIFICADO
@@ -701,69 +702,15 @@ export class UnifiedSyncEngine {
   }
 
   private async checkConflicts(): Promise<SyncConflict[]> {
-    const conflicts: SyncConflict[] = [];
-    const now = Date.now();
-
-    // Check conflicts for each registered table
-    for (const [tableName, meta] of Object.entries(syncRegistry)) {
-      if (meta.optional) continue;
-
-      try {
-        const localTable = (db as any)[meta.localTable];
-        if (!localTable) continue;
-
-        // Get items that have been modified both locally and remotely
-        // A conflict exists if: local has pending changes AND remote has newer updates
-        const localItems = await localTable.where('syncStatus').equals('pending').toArray();
-
-        for (const localItem of localItems) {
-          const recordId = localItem[meta.primaryKey] || localItem.id;
-
-          // Fetch the remote version
-          const { data: remoteItem, error } = await supabase
-            .from(meta.remoteTable)
-            .select('*')
-            .eq(meta.primaryKey, recordId)
-            .single();
-
-          if (!error && remoteItem) {
-            // Check if remote was updated after local was modified
-            const remoteUpdated = new Date(remoteItem.updated_at).getTime();
-            const localModified = localItem.lastSyncTimestamp || 0;
-
-            // Conflict if remote is newer AND local has changes
-            if (remoteUpdated > localModified) {
-              conflicts.push({
-                tableName,
-                recordId: String(recordId),
-                localValue: localItem,
-                remoteValue: remoteItem,
-                field: 'multiple',
-                detectedAt: now,
-                resolved: false,
-              });
-            }
-          }
-        }
-      } catch (e) {
-        logger.error('CONFLICT_CHECK', `Error checking conflicts for ${tableName}`, formatError(e));
-      }
-    }
-
-    // Emit conflict detection events
-    for (const conflict of conflicts) {
+    return checkConflicts(conflict => {
       this.emit({
         type: 'conflict_detected',
         conflict,
         tableName: conflict.tableName,
         recordId: conflict.recordId,
-        timestamp: now,
+        timestamp: conflict.detectedAt,
       });
-    }
-
-    telemetry.track('SYNC', 'CONFLICTS_DETECTED', { count: conflicts.length });
-
-    return conflicts;
+    });
   }
 
   /**
@@ -775,40 +722,21 @@ export class UnifiedSyncEngine {
       type: this.config.autoResolveConflicts ? 'local_wins' : 'manual',
     }
   ): Promise<{ resolved: number; failed: number }> {
-    let resolved = 0;
-    let failed = 0;
-
-    for (const conflict of conflicts) {
-      try {
-        const resolution = await this.resolveSingleConflict(conflict, strategy);
-
-        if (resolution) {
-          conflict.resolved = true;
-          conflict.resolution = strategy.type;
-          resolved++;
-
-          this.emit({
-            type: 'conflict_resolved',
-            conflict,
-            tableName: conflict.tableName,
-            recordId: conflict.recordId,
-            timestamp: Date.now(),
-            metadata: { resolution: strategy.type },
-          });
-        }
-      } catch (e) {
-        failed++;
-        logger.error(
-          'CONFLICT_RESOLVE',
-          `Failed to resolve conflict for ${conflict.tableName}/${conflict.recordId}`,
-          formatError(e)
-        );
+    return resolveConflicts(
+      conflicts,
+      strategy,
+      (conflict, s) => this.resolveSingleConflict(conflict, s),
+      (conflict, resolution) => {
+        this.emit({
+          type: 'conflict_resolved',
+          conflict,
+          tableName: conflict.tableName,
+          recordId: conflict.recordId,
+          timestamp: Date.now(),
+          metadata: { resolution },
+        });
       }
-    }
-
-    telemetry.track('SYNC', 'CONFLICTS_RESOLVED', { resolved, failed, strategy: strategy.type });
-
-    return { resolved, failed };
+    );
   }
 
   /**
