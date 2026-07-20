@@ -12,7 +12,7 @@
 import { db } from '../../db';
 import { logger } from '@/services/logger';
 import { EventBus, AppEvents } from '@/core/events/EventBus';
-import { ScanRecord } from '@/types';
+import { ScanRecord, CountingSession } from '@/types';
 
 // ============================================================================
 // TIPOS
@@ -35,8 +35,8 @@ export interface SnapshotMetadata {
 }
 
 export interface SnapshotData {
-  session?: any;
-  scans?: any[];
+  session?: CountingSession;
+  scans?: ScanRecord[];
   metrics?: SnapshotMetrics;
 }
 
@@ -50,8 +50,8 @@ export interface SnapshotMetrics {
 
 export interface VersionDiff {
   field: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
 }
 
 export interface VersionHistory {

@@ -101,7 +101,7 @@ export const closeSession = async (id: string) => {
 
   if (navigator.onLine) {
     supabaseSyncService
-      .pushBatch('SESIONES_CONTEO', [session as any])
+      .pushBatch('SESIONES_CONTEO', [session])
       .catch(err =>
         logger.error(
           'sessionService',
@@ -251,7 +251,7 @@ export const fetchExpectedItemsFromCloud = async (
         return newExpectedOrder;
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.warn('SessionService', 'Error al descargar teórico desde nube', { error: String(err) });
   }
   return (await ExpectedOrderRepository.getById(cleanId)) || null;

@@ -1,8 +1,10 @@
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppSettings, ViewState } from '../types';
 import { getSettings, saveSettings } from '../services/settings';
+
+// Tipo para la función set de Zustand
+type SetState<T> = (partial: T | Partial<T> | ((state: T) => T | Partial<T>)) => void;
 
 // --- SLICE: SETTINGS ---
 interface SettingsSlice {
@@ -11,10 +13,10 @@ interface SettingsSlice {
   loadSettings: () => void;
 }
 
-const createSettingsSlice = (set: any): SettingsSlice => ({
+const createSettingsSlice = (set: SetState<SettingsSlice & UISlice>): SettingsSlice => ({
   settings: getSettings(),
   updateSetting: (key, value) => {
-    set((state: any) => {
+    set(state => {
       const newSettings = { ...state.settings, [key]: value };
       saveSettings(newSettings);
       return { settings: newSettings };
@@ -22,7 +24,7 @@ const createSettingsSlice = (set: any): SettingsSlice => ({
   },
   loadSettings: () => {
     set({ settings: getSettings() });
-  }
+  },
 });
 
 // --- SLICE: UI STATE ---
@@ -39,30 +41,30 @@ interface UISlice {
   setSystemHubOpen: (open: boolean) => void;
 }
 
-const createUISlice = (set: any): UISlice => ({
+const createUISlice = (set: SetState<UISlice>): UISlice => ({
   isSidebarOpen: false,
   activeView: 'dashboard',
   globalSearchQuery: '',
   isStartSessionModalOpen: false,
   isSystemHubOpen: false,
-  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
-  setActiveView: (view) => set({ activeView: view }),
-  setGlobalSearch: (q) => set({ globalSearchQuery: q }),
-  setStartSessionModalOpen: (open) => set({ isStartSessionModalOpen: open }),
-  setSystemHubOpen: (open) => set({ isSystemHubOpen: open }),
+  setSidebarOpen: open => set({ isSidebarOpen: open }),
+  setActiveView: view => set({ activeView: view }),
+  setGlobalSearch: q => set({ globalSearchQuery: q }),
+  setStartSessionModalOpen: open => set({ isStartSessionModalOpen: open }),
+  setSystemHubOpen: open => set({ isSystemHubOpen: open }),
 });
 
 // --- COMBINED STORE ---
 export const useAppStore = create<SettingsSlice & UISlice>()(
   persist(
-    (set) => ({
+    set => ({
       ...createSettingsSlice(set),
       ...createUISlice(set),
     }),
     {
       name: 'logicount_app_state',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
+      partialize: state => ({
         activeView: state.activeView,
         isSidebarOpen: state.isSidebarOpen,
       }),

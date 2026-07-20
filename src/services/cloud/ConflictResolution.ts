@@ -1,4 +1,5 @@
 import { logger } from '@/services/logger';
+import { CloudStorageConfig } from '@/types';
 /**
  * =============================================================================
  * CONFLICT RESOLUTION - Estrategias de Resolución de Conflictos
@@ -75,14 +76,14 @@ export interface ConflictResolution {
   /** Razón de la decisión */
   reason: string;
   /** Datos resultantes */
-  resolvedData?: Record<string, any>;
+  resolvedData?: Record<string, unknown>;
 }
 
 /**
  * Registro con timestamps para comparar.
  */
 export interface TimestampedRecord {
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   timestamp: number;
   syncStatus?: string;
 }
@@ -154,9 +155,9 @@ const getRecordTimestamp = (record: unknown): number => {
  * Deep merge de dos objetos, donde localOverride tiene prioridad.
  */
 const mergeRecords = (
-  remote: Record<string, any>,
-  localOverride: Record<string, any>
-): Record<string, any> => {
+  remote: Record<string, unknown>,
+  localOverride: Record<string, unknown>
+): Record<string, unknown> => {
   return {
     ...remote,
     ...localOverride,
@@ -349,8 +350,9 @@ import { getSettings, saveSettings } from '../settings';
 export const getConfiguredStrategy = (): ConflictStrategy => {
   try {
     const settings = getSettings();
-    const syncConfig = settings?.cloudConfig as any;
-    return (syncConfig?.conflictStrategy as ConflictStrategy) || 'last_write_wins';
+    const syncConfig = settings?.cloudConfig as
+      Partial<CloudStorageConfig & { conflictStrategy?: ConflictStrategy }> | undefined;
+    return syncConfig?.conflictStrategy || 'last_write_wins';
   } catch {
     return 'last_write_wins';
   }
@@ -362,13 +364,15 @@ export const getConfiguredStrategy = (): ConflictStrategy => {
 export const setConfiguredStrategy = async (strategy: ConflictStrategy): Promise<void> => {
   try {
     const settings = getSettings();
-    const currentSyncConfig = (settings?.cloudConfig as any) || {};
+    const currentSyncConfig =
+      (settings?.cloudConfig as
+        Partial<CloudStorageConfig & { conflictStrategy?: ConflictStrategy }> | undefined) || {};
     await saveSettings({
       ...settings,
       cloudConfig: {
         ...currentSyncConfig,
         conflictStrategy: strategy,
-      },
+      } as CloudStorageConfig & { conflictStrategy: ConflictStrategy },
     });
   } catch (err: unknown) {
     logger.error(

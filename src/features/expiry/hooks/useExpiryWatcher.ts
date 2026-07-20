@@ -126,7 +126,7 @@ export const useExpiryWatcher = () => {
         }
 
         lastCount.current = alertItems.length;
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error('ExpiryWatcher', 'Analysis error', { error: String(err) });
       }
     };

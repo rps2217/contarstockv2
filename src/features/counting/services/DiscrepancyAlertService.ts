@@ -102,7 +102,14 @@ class SoundPlayer {
 
   private getContext(): AudioContext {
     if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioCtor =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtor) {
+        this.audioContext = new AudioCtor();
+      } else {
+        throw new Error('Web Audio API no soportada');
+      }
     }
     return this.audioContext;
   }
@@ -139,7 +146,7 @@ class SoundPlayer {
 
       oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + config.duration);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.warn('SoundPlayer', 'Audio play failed', { error });
     }
   }
@@ -163,7 +170,7 @@ const playHaptic = (severity: AlertSeverity): void => {
 
   try {
     navigator.vibrate(patterns[severity]);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.warn('Haptic', 'Vibration failed', { error });
   }
 };
@@ -384,7 +391,7 @@ class DiscrepancyAlertServiceClass {
     this.handlers.forEach(handler => {
       try {
         handler.onAlert(alert);
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('DiscrepancyAlert', 'Handler error', { error });
       }
     });
@@ -449,7 +456,7 @@ class DiscrepancyAlertServiceClass {
     this.handlers.forEach(handler => {
       try {
         handler.onAcknowledge(id);
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('DiscrepancyAlert', 'Handler error', { error });
       }
     });
@@ -473,7 +480,7 @@ class DiscrepancyAlertServiceClass {
       this.handlers.forEach(handler => {
         try {
           handler.onClear();
-        } catch (error) {
+        } catch (error: unknown) {
           logger.error('DiscrepancyAlert', 'Handler error', { error });
         }
       });
@@ -507,7 +514,7 @@ class DiscrepancyAlertServiceClass {
     this.handlers.forEach(handler => {
       try {
         handler.onClear();
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('DiscrepancyAlert', 'Handler error', { error });
       }
     });

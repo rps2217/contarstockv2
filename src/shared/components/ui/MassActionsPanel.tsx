@@ -26,7 +26,7 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
   actions,
   theme = 'dark',
   bulkActions,
-  onExecute
+  onExecute,
 }) => {
   // Si hay bulkActions, usar BulkActionBar del hook global
   if (bulkActions && onExecute) {
@@ -48,18 +48,22 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
     primary: 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20',
     danger: 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20',
     warning: 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20',
-    info: 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+    info: 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
   };
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         className={`fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-2xl shadow-2xl flex items-center gap-4 border ${
-          (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' 
-            ? 'bg-elevated border-subtle' 
+          (theme as unknown) === 'dark' ||
+          (theme as unknown) === 'night' ||
+          (theme as unknown) === 'high-contrast' ||
+          (theme as unknown) === 'appsheet-dark' ||
+          (theme as unknown) === 'gray'
+            ? 'bg-elevated border-subtle'
             : 'bg-white border-stone-200'
         }`}
       >
@@ -67,20 +71,30 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500 text-white font-black text-xs">
             {selectedCount}
           </span>
-          <span className={`font-bold text-sm uppercase tracking-wider ${
-            (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'text-white' : 'text-stone-900'
-          }`}>
+          <span
+            className={`font-bold text-sm uppercase tracking-wider ${
+              (theme as unknown) === 'dark' ||
+              (theme as unknown) === 'night' ||
+              (theme as unknown) === 'high-contrast' ||
+              (theme as unknown) === 'appsheet-dark' ||
+              (theme as unknown) === 'gray'
+                ? 'text-white'
+                : 'text-stone-900'
+            }`}
+          >
             Seleccionados
           </span>
         </div>
-        
-        <div className={`h-8 w-px ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
-        
+
+        <div
+          className={`h-8 w-px ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-slate-700' : 'bg-stone-200'}`}
+        ></div>
+
         <div className="flex items-center gap-2">
           {actions.map((action, idx) => {
             const Icon = action.icon;
             return (
-              <button 
+              <button
                 key={idx}
                 onClick={action.onClick}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors font-bold text-sm uppercase ${
@@ -93,14 +107,20 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
             );
           })}
         </div>
-        
-        <div className={`h-8 w-px ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
-        
-        <button 
-          onClick={onClear} 
+
+        <div
+          className={`h-8 w-px ${(theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' ? 'bg-slate-700' : 'bg-stone-200'}`}
+        ></div>
+
+        <button
+          onClick={onClear}
           className={`p-2 rounded-xl transition-all ${
-            (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray' 
-              ? 'text-muted hover:text-white hover:bg-white/5' 
+            (theme as unknown) === 'dark' ||
+            (theme as unknown) === 'night' ||
+            (theme as unknown) === 'high-contrast' ||
+            (theme as unknown) === 'appsheet-dark' ||
+            (theme as unknown) === 'gray'
+              ? 'text-muted hover:text-white hover:bg-white/5'
               : 'text-stone-400 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >
@@ -113,5 +133,11 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
 
 // Helper para crear acciones estándar para MassActionsPanel
 export const createMassActions = (
-  actions: { id: string; label: string; icon: any; variant?: 'primary' | 'danger' | 'warning' | 'info'; onClick: () => void }[]
+  actions: {
+    id: string;
+    label: string;
+    icon: React.ElementType;
+    variant?: 'primary' | 'danger' | 'warning' | 'info';
+    onClick: () => void;
+  }[]
 ): Action[] => actions;

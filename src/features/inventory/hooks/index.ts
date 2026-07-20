@@ -10,5 +10,4 @@ export { useProductQuery } from './useProductQuery';
 export { useProductSync } from './useProductSync';
 export { useProductsStats } from './useProductsStats';
 export { useStorageStatus } from './useStorageStatus';
-export { useProductAI } from './useProductAI';
 export { useInventory } from './useInventory';

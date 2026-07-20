@@ -1,11 +1,11 @@
-"use client";
+'use client';
 /**
  * Virtual Fields - Campos Calculados Dinámicos
- * 
+ *
  * Inspirado en AppSheet Virtual Columns.
  * Permite definir campos calculados que no se almacenan en BD
  * sino que se calculan en tiempo real.
- * 
+ *
  * Uso:
  * const computed = computeVirtualFields(product, fieldDefinitions);
  */
@@ -57,12 +57,12 @@ export interface ComputeContext {
 /**
  * Estilos para badges
  */
-export type BadgeStyle = 
-  | 'success'    // Verde - OK
-  | 'warning'    // Amarillo - Atención
-  | 'error'     // Rojo - Crítico
-  | 'info'      // Azul - Informativo
-  | 'neutral';  // Gris - Normal
+export type BadgeStyle =
+  | 'success' // Verde - OK
+  | 'warning' // Amarillo - Atención
+  | 'error' // Rojo - Crítico
+  | 'info' // Azul - Informativo
+  | 'neutral'; // Gris - Normal
 
 /**
  * Campo virtual calculado
@@ -70,7 +70,7 @@ export type BadgeStyle =
 export interface ComputedField {
   name: string;
   label: string;
-  value: any;
+  value: unknown;
   type: VirtualFieldType;
   badgeStyle?: BadgeStyle;
   formatted?: string;
@@ -91,7 +91,7 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     type: 'badge',
     priority: 1,
     badgeStyle: 'neutral',
-    compute: (product) => {
+    compute: product => {
       if (!product.stock && product.stock !== 0) return 'unknown';
       if (product.stock <= 0) return 'critical';
       if (product.minStock && product.stock < product.minStock) return 'warning';
@@ -105,7 +105,7 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     label: '% Stock',
     type: 'number',
     priority: 2,
-    compute: (product) => {
+    compute: product => {
       if (!product.minStock || product.minStock === 0) return null;
       if (!product.stock) return 0;
       return Math.round((product.stock / product.minStock) * 100);
@@ -151,7 +151,7 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     label: 'Valor Stock',
     type: 'number',
     priority: 5,
-    compute: (product) => {
+    compute: product => {
       if (!product.stock || !product.price) return 0;
       return product.stock * product.price;
     },
@@ -179,9 +179,8 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     label: 'Stock Crítico',
     type: 'boolean',
     priority: 7,
-    compute: (product) => {
-      return product.stock !== undefined && 
-             product.stock <= (product.minStock || 0) / 2;
+    compute: product => {
+      return product.stock !== undefined && product.stock <= (product.minStock || 0) / 2;
     },
   },
 
@@ -191,7 +190,7 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     label: 'Ubicación',
     type: 'badge',
     priority: 8,
-    compute: (product) => {
+    compute: product => {
       if (!product.location) return 'none';
       return 'info';
     },
@@ -203,7 +202,7 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     label: '¿Reponer?',
     type: 'boolean',
     priority: 9,
-    compute: (product) => {
+    compute: product => {
       if (product.stock === undefined || !product.minStock) return false;
       return product.stock <= product.minStock;
     },
@@ -215,7 +214,7 @@ export const PRODUCT_VIRTUAL_FIELDS: VirtualFieldDefinition<Product>[] = [
     label: 'Nombre Completo',
     type: 'string',
     priority: 10,
-    compute: (product) => {
+    compute: product => {
       if (product.category) {
         return `${product.category} - ${product.name}`;
       }
@@ -240,7 +239,7 @@ export function computeVirtualFields<T extends Record<string, any>>(
 
   for (const def of definitions) {
     const value = def.compute(record, context);
-    
+
     result[def.name] = {
       name: def.name,
       label: def.label,
@@ -257,31 +256,27 @@ export function computeVirtualFields<T extends Record<string, any>>(
 /**
  * Formatea el valor calculado según el tipo
  */
-function formatComputedValue(
-  value: any,
-  type: VirtualFieldType,
-  context?: ComputeContext
-): string {
+function formatComputedValue(value: any, type: VirtualFieldType, context?: ComputeContext): string {
   if (value === null || value === undefined) return '-';
 
   switch (type) {
     case 'number':
-      return typeof value === 'number' 
+      return typeof value === 'number'
         ? new Intl.NumberFormat('es-CL').format(value)
         : String(value);
-    
+
     case 'boolean':
       return value ? 'Sí' : 'No';
-    
+
     case 'date':
       if (value instanceof Date) {
         return value.toLocaleDateString('es-CL');
       }
       return String(value);
-    
+
     case 'badge':
       return String(value);
-    
+
     case 'string':
     default:
       return String(value);
@@ -309,24 +304,19 @@ export function computeProductMetrics(
   context?: ComputeContext
 ): ProductMetrics {
   const totalProducts = products.length;
-  const criticalStock = products.filter(p => 
-    p.stock !== undefined && 
-    p.stock <= (p.minStock || 0) / 2
+  const criticalStock = products.filter(
+    p => p.stock !== undefined && p.stock <= (p.minStock || 0) / 2
   ).length;
-  
-  const lowStock = products.filter(p =>
-    p.stock !== undefined && 
-    p.minStock && 
-    p.stock < p.minStock
+
+  const lowStock = products.filter(
+    p => p.stock !== undefined && p.minStock && p.stock < p.minStock
   ).length;
-  
-  const outOfStock = products.filter(p => 
-    p.stock !== undefined && p.stock <= 0
-  ).length;
-  
+
+  const outOfStock = products.filter(p => p.stock !== undefined && p.stock <= 0).length;
+
   const totalValue = products.reduce((sum, p) => {
     if (p.stock && p.price) {
-      return sum + (p.stock * p.price);
+      return sum + p.stock * p.price;
     }
     return sum;
   }, 0);
@@ -337,9 +327,7 @@ export function computeProductMetrics(
     lowStock,
     outOfStock,
     totalValue,
-    criticalPercentage: totalProducts > 0 
-      ? Math.round((criticalStock / totalProducts) * 100) 
-      : 0,
+    criticalPercentage: totalProducts > 0 ? Math.round((criticalStock / totalProducts) * 100) : 0,
   };
 }
 
@@ -378,10 +366,7 @@ export function useVirtualFields<T extends Record<string, any>>(
 /**
  * Hook para calcular métricas de productos
  */
-export function useProductMetrics(
-  products: Product[] | undefined,
-  context?: ComputeContext
-) {
+export function useProductMetrics(products: Product[] | undefined, context?: ComputeContext) {
   return useMemo(() => {
     if (!products || products.length === 0) {
       return {
@@ -405,25 +390,14 @@ export function useProductStatusFilter(products: Product[] | undefined) {
     if (!products) return { ok: [], warning: [], critical: [], outOfStock: [] };
 
     return {
-      ok: products.filter(p => 
-        p.stock !== undefined && 
-        p.minStock && 
-        p.stock >= p.minStock
+      ok: products.filter(p => p.stock !== undefined && p.minStock && p.stock >= p.minStock),
+      warning: products.filter(
+        p => p.stock !== undefined && p.minStock && p.stock < p.minStock && p.stock > p.minStock / 2
       ),
-      warning: products.filter(p =>
-        p.stock !== undefined &&
-        p.minStock &&
-        p.stock < p.minStock &&
-        p.stock > (p.minStock / 2)
+      critical: products.filter(
+        p => p.stock !== undefined && p.minStock && p.stock <= p.minStock / 2
       ),
-      critical: products.filter(p =>
-        p.stock !== undefined &&
-        p.minStock &&
-        p.stock <= (p.minStock / 2)
-      ),
-      outOfStock: products.filter(p =>
-        p.stock !== undefined && p.stock <= 0
-      ),
+      outOfStock: products.filter(p => p.stock !== undefined && p.stock <= 0),
     };
   }, [products]);
 }

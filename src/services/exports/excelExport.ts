@@ -1,11 +1,12 @@
 /**
  * Excel Export Handler
- * 
+ *
  * Genera archivos Excel (.xlsx) a partir de datos tabulares.
  * Usa lazy loading de xlsx para optimizar bundle.
  */
 
 import type { ExportData, ExcelColumn, ExportColumn } from './exportTypes';
+import type { WorkBook, WorkSheet } from 'xlsx';
 
 export interface ExcelExportOptions {
   sheetName?: string;
@@ -19,18 +20,18 @@ async function createWorkbook(
   data: ExportData[],
   sheetName: string,
   columns?: ExportColumn[]
-): Promise<{ workbook: any; worksheet: any }> {
+): Promise<{ workbook: WorkBook; worksheet: WorkSheet }> {
   const XLSX = await import('xlsx');
-  
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  
+
+  const worksheet = XLSX.utils.json_to_sheet(data) as WorkSheet;
+
   if (columns) {
     worksheet['!cols'] = columns.map(col => ({ wch: col.width }));
   }
-  
-  const workbook = XLSX.utils.book_new();
+
+  const workbook = XLSX.utils.book_new() as WorkBook;
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  
+
   return { workbook, worksheet };
 }
 
@@ -43,10 +44,10 @@ export async function exportToExcel(
   options: ExcelExportOptions = {}
 ): Promise<void> {
   const { sheetName = 'Sheet1', columns } = options;
-  
+
   const { workbook } = await createWorkbook(data, sheetName, columns);
   const { writeFile } = await import('xlsx');
-  
+
   writeFile(workbook, `${fileName}.xlsx`);
 }
 
@@ -66,17 +67,21 @@ export async function exportHammerToExcel(
 ): Promise<void> {
   const data: ExportData[] = items.map(item => ({
     'Código/SKU': item.barcode,
-    'Descripción': item.name,
-    'Ubicación': item.loc || '',
+    Descripción: item.name,
+    Ubicación: item.loc || '',
     'Cantidad Escaneada': item.totalQuantity,
     'Cantidad Esperada (Teórica)': item.expectedQty ?? '',
-    'Diferencia': item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : '',
-    'Último Escaneo': item.lastTimestamp > 0 
-      ? new Date(item.lastTimestamp).toLocaleString('es-DO', { 
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit' 
-        })
-      : ''
+    Diferencia: item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : '',
+    'Último Escaneo':
+      item.lastTimestamp > 0
+        ? new Date(item.lastTimestamp).toLocaleString('es-DO', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '',
   }));
 
   const columns: ExportColumn[] = [
@@ -91,7 +96,7 @@ export async function exportHammerToExcel(
 
   const { workbook } = await createWorkbook(data, 'Auditoría', columns);
   const dateStr = new Date().toISOString().substring(0, 10);
-  
+
   const { writeFile } = await import('xlsx');
   writeFile(workbook, `Hammer_Auditoria_${batchId}_${dateStr}.xlsx`);
 }
@@ -112,7 +117,7 @@ export async function exportSessionToExcel(
   const data: ExportData[] = items.map(item => {
     const base = {
       'Código/SKU': item.barcode,
-      'Descripción': item.productName,
+      Descripción: item.productName,
       'Cantidad Total': item.totalQuantity,
       'Conteo de Escaneos': item.scans,
     };
@@ -124,7 +129,7 @@ export async function exportSessionToExcel(
         ...base,
         'Esperado/ERP': expected,
         'Diferencia/Etiqueta': diff > 0 ? `+${diff}` : diff,
-        'Fecha': ''
+        Fecha: '',
       };
     }
 
@@ -132,7 +137,7 @@ export async function exportSessionToExcel(
       ...base,
       'Esperado/ERP': session.erpOrder,
       'Diferencia/Etiqueta': session.logisticsLabel,
-      'Fecha': new Date(session.createdAt).toLocaleDateString('es-DO')
+      Fecha: new Date(session.createdAt).toLocaleDateString('es-DO'),
     };
   });
 
@@ -154,15 +159,14 @@ export async function exportSessionToExcel(
 /**
  * Genera Excel como Blob (para preview o upload)
  */
-export async function generateExcelBlob(
-  data: ExportData[],
-  sheetName = 'Sheet1'
-): Promise<Blob> {
+export async function generateExcelBlob(data: ExportData[], sheetName = 'Sheet1'): Promise<Blob> {
   const { workbook } = await createWorkbook(data, sheetName);
   const { write } = await import('xlsx');
-  
+
   const buffer = write(workbook, { bookType: 'xlsx', type: 'array' });
-  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  return new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
 }
 
 export default {

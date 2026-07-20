@@ -11,7 +11,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { getSettings } from '@/services/settings';
-import type { ConsolidatedItem } from '@/types';
+import type { ConsolidatedItem, Product, MatchResult, CountingSession } from '@/types';
 
 import { useCountingSession } from './useCountingSession';
 import { useCountingScanner } from './useCountingScanner';
@@ -35,9 +35,9 @@ interface UseCountingLogicResult {
     multiplier: number;
     currentLocation: string;
     activeBarcode: string | null;
-    activeProduct: any | null;
+    activeProduct: Product | null;
     optimisticQty: number;
-    potentialMatch: any | null;
+    potentialMatch: MatchResult | null;
     autoSave: {
       hasPendingChanges: boolean;
       lastSaveTime: number | null;
@@ -45,7 +45,7 @@ interface UseCountingLogicResult {
     };
   };
   sessionData: {
-    session: any;
+    session: CountingSession | null;
     history: ConsolidatedItem[];
   };
   actions: {

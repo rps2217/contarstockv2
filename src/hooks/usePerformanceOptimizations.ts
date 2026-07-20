@@ -120,7 +120,7 @@ export function usePreloadResources() {
   const preloadModule = useCallback(async (importFn: () => Promise<any>) => {
     try {
       await importFn();
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn(
         'usePerformanceOptimizations',
         'Failed to preload module',

@@ -1,9 +1,9 @@
 /**
  * DualView - Vista Dual Reutilizable Estilo AppSheet
- * 
+ *
  * Implementación robusta basada en el patrón de VS Code, Figma, AppSheet.
  * SIN animaciones de slide - los paneles siempre están pegados a sus bordes.
- * 
+ *
  * Patrón de Layout:
  * ┌────────────────┬────────────────┐
  * │                │                │
@@ -23,15 +23,15 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
-interface DualViewProps {
+interface DualViewProps<T = unknown> {
   /** Panel izquierdo - Lista */
   listPanel: React.ReactNode;
   /** Panel derecho - Detalle */
   detailPanel?: React.ReactNode;
   /** Item seleccionado (determina si se muestra el detail panel) */
-  selectedItem?: any | null;
+  selectedItem?: T | null;
   /** Callback al seleccionar un item */
-  onSelectItem?: (item: any | null) => void;
+  onSelectItem?: (item: T | null) => void;
   /** Callback al cerrar el detalle */
   onCloseDetail?: () => void;
   /** Ancho mínimo del panel izquierdo en pixels (default: 200) */
@@ -44,7 +44,7 @@ interface DualViewProps {
   className?: string;
 }
 
-export function DualView({
+export function DualView<T>({
   listPanel,
   detailPanel,
   selectedItem,
@@ -82,38 +82,41 @@ export function DualView({
   }, [onSelectItem, onCloseDetail]);
 
   // Iniciar arrastre del splitter
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!enableSplitter) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!enableSplitter) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!containerRef.current) return;
-      
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const mouseX = moveEvent.clientX - containerRect.left;
-      
-      // Calcular nuevo ancho en pixels, limitado por min/max
-      let newWidth = Math.max(minLeftWidth, mouseX);
-      newWidth = Math.min(newWidth, containerRect.width - minLeftWidth);
-      newWidth = Math.min(newWidth, maxLeftWidth);
-      
-      setLeftWidth(newWidth);
-    };
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!containerRef.current) return;
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const mouseX = moveEvent.clientX - containerRect.left;
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [enableSplitter, minLeftWidth, maxLeftWidth]);
+        // Calcular nuevo ancho en pixels, limitado por min/max
+        let newWidth = Math.max(minLeftWidth, mouseX);
+        newWidth = Math.min(newWidth, containerRect.width - minLeftWidth);
+        newWidth = Math.min(newWidth, maxLeftWidth);
+
+        setLeftWidth(newWidth);
+      };
+
+      const handleMouseUp = () => {
+        setIsDragging(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [enableSplitter, minLeftWidth, maxLeftWidth]
+  );
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={cn(
         'dual-view h-full w-full flex overflow-hidden',
@@ -124,11 +127,11 @@ export function DualView({
       {/* Panel Izquierdo - Lista */}
       {/* SIEMPRE ocupa el espacio disponible hasta leftWidth */}
       <div
-        style={{ 
+        style={{
           width: hasDetail ? leftWidth : '100%',
           flexShrink: 0,
           minWidth: hasDetail ? leftWidth : undefined,
-          maxWidth: hasDetail ? leftWidth : '100%'
+          maxWidth: hasDetail ? leftWidth : '100%',
         }}
         className={cn(
           'dual-view-list h-full overflow-hidden bg-[var(--appsheet-bg-base)]',
@@ -167,7 +170,7 @@ export function DualView({
       <div
         style={{
           flex: 1,
-          minWidth: 0
+          minWidth: 0,
         }}
         className="dual-view-detail h-full flex-shrink-0 bg-[var(--appsheet-bg-surface)]"
       >
@@ -208,9 +211,12 @@ interface DetailPanelProps {
 }
 
 const statusBadgeClasses = {
-  success: 'bg-[var(--appsheet-success-subtle)] text-[var(--appsheet-success)] border-[var(--appsheet-success)]',
-  warning: 'bg-[var(--appsheet-warning-subtle)] text-[var(--appsheet-warning)] border-[var(--appsheet-warning)]',
-  error: 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] border-[var(--appsheet-error)]',
+  success:
+    'bg-[var(--appsheet-success-subtle)] text-[var(--appsheet-success)] border-[var(--appsheet-success)]',
+  warning:
+    'bg-[var(--appsheet-warning-subtle)] text-[var(--appsheet-warning)] border-[var(--appsheet-warning)]',
+  error:
+    'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] border-[var(--appsheet-error)]',
   info: 'bg-[var(--appsheet-info-subtle)] text-[var(--appsheet-info)] border-[var(--appsheet-info)]',
 };
 
@@ -233,10 +239,15 @@ export function DetailPanel({
           className="p-2 -ml-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)] transition-colors"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
-        
+
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold flex items-center gap-2 truncate">
             {icon && <span className="text-[var(--appsheet-primary)]">{icon}</span>}
@@ -246,21 +257,21 @@ export function DetailPanel({
             <p className="text-sm text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
           )}
         </div>
-        
+
         {status && (
-          <span className={cn(
-            'px-3 py-1 text-xs font-semibold rounded-full border shrink-0',
-            statusBadgeClasses[status.variant]
-          )}>
+          <span
+            className={cn(
+              'px-3 py-1 text-xs font-semibold rounded-full border shrink-0',
+              statusBadgeClasses[status.variant]
+            )}
+          >
             {status.label}
           </span>
         )}
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {children}
-      </div>
+      <div className="flex-1 overflow-y-auto">{children}</div>
 
       {/* Actions */}
       {actions && actions.length > 0 && (
@@ -271,9 +282,12 @@ export function DetailPanel({
               onClick={action.onClick}
               className={cn(
                 'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
-                action.variant === 'primary' && 'bg-[var(--appsheet-primary)] text-black hover:brightness-110',
-                action.variant === 'danger' && 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white',
-                (action.variant === 'default' || !action.variant) && 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
+                action.variant === 'primary' &&
+                  'bg-[var(--appsheet-primary)] text-black hover:brightness-110',
+                action.variant === 'danger' &&
+                  'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white',
+                (action.variant === 'default' || !action.variant) &&
+                  'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
               )}
             >
               {action.label}
@@ -324,9 +338,13 @@ interface RowProps {
 
 export function Row({ label, value, className }: RowProps) {
   return (
-    <div className={cn('flex items-center gap-3 px-4 py-4 transition-colors duration-150', className)}>
+    <div
+      className={cn('flex items-center gap-3 px-4 py-4 transition-colors duration-150', className)}
+    >
       <div className="flex-1">
-        <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{label}</p>
+        <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">
+          {label}
+        </p>
         <p className="text-base font-medium mt-0.5">{value}</p>
       </div>
     </div>

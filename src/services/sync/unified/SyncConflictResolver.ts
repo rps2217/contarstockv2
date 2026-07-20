@@ -23,6 +23,16 @@ import { syncRegistry } from './registry';
 import type { SyncConflict, ConflictStrategy, ConflictResolution, TableSyncMeta } from './types';
 
 // =============================================================================
+// TYPES
+// =============================================================================
+
+type DexieTable = {
+  get: (id: string) => Promise<Record<string, unknown> | undefined>;
+  put: (item: Record<string, unknown>) => Promise<string>;
+  update: (id: string, changes: Record<string, unknown>) => Promise<number>;
+};
+
+// =============================================================================
 // HELPERS
 // =============================================================================
 
@@ -86,7 +96,7 @@ export class SyncConflictResolver {
     const meta = this.deps.syncRegistry[conflict.tableName];
     if (!meta) return false;
 
-    const localTable = (this.deps.db as any)[meta.localTable];
+    const localTable = this.deps.db[meta.localTable] as DexieTable | undefined;
     if (!localTable) return false;
 
     const recordId = conflict.recordId;
@@ -107,7 +117,7 @@ export class SyncConflictResolver {
           // No auto-resolve, emit event for UI handling
           return false;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       this.deps.logger.error(
         'CONFLICT_RESOLVE',
         `Failed to resolve conflict for ${conflict.tableName}/${conflict.recordId}`,
@@ -123,7 +133,7 @@ export class SyncConflictResolver {
    */
   private async resolveLocalWins(
     meta: TableSyncMeta,
-    localTable: any,
+    localTable: DexieTable,
     recordId: string
   ): Promise<boolean> {
     const localRecord = await localTable.get(recordId);
@@ -147,9 +157,9 @@ export class SyncConflictResolver {
    */
   private async resolveRemoteWins(
     meta: TableSyncMeta,
-    localTable: any,
+    localTable: DexieTable,
     recordId: string,
-    tableName: string
+    _tableName: string
   ): Promise<boolean> {
     // Pull latest from remote (implementation depends on context)
     await localTable.update(recordId, { syncStatus: 'synced' });
@@ -162,7 +172,7 @@ export class SyncConflictResolver {
    */
   private async resolveWithMerge(
     meta: TableSyncMeta,
-    localTable: any,
+    localTable: DexieTable,
     recordId: string,
     conflict: SyncConflict
   ): Promise<boolean> {
@@ -248,13 +258,13 @@ export class SyncConflictResolver {
   async resolveManually(
     tableName: string,
     recordId: string,
-    resolution: ConflictResolution,
+    _resolution: ConflictResolution,
     mergedData?: Record<string, unknown>
   ): Promise<boolean> {
     const meta = this.deps.syncRegistry[tableName];
     if (!meta) return false;
 
-    const localTable = (this.deps.db as any)[meta.localTable];
+    const localTable = this.deps.db[meta.localTable] as DexieTable | undefined;
     if (!localTable) return false;
 
     if (mergedData) {

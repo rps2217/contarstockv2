@@ -16,6 +16,20 @@ import { logger } from '@/services/logger';
 // TIPOS
 // ============================================================================
 
+// Tipos para datos de backup
+export type BackupTableData = Record<string, unknown>[];
+export type BackupData = Record<string, BackupTableData>;
+
+// Tipo para ventana extendida
+interface LZStringWindow extends Window {
+  LZString?: {
+    compressToUTF16: (data: string) => string;
+    decompressFromUTF16: (data: string) => string;
+  };
+  __APP_VERSION__?: string;
+}
+declare const window: LZStringWindow;
+
 export interface BackupMetadata {
   version: string;
   createdAt: number;
@@ -112,7 +126,7 @@ class BackupServiceClass {
       });
 
       // Exportar datos
-      const exportData: Record<string, any[]> = {};
+      const exportData: BackupData = {};
       let totalRecords = 0;
 
       for (const tableName of filteredTables) {
@@ -274,7 +288,7 @@ class BackupServiceClass {
    */
   private async restoreReplace(
     tableNames: string[],
-    data: Record<string, any[]>,
+    data: BackupData,
     restored: Record<string, number>,
     skipped: Record<string, number>,
     errors: Array<{ table: string; error: string }>
@@ -305,7 +319,7 @@ class BackupServiceClass {
    */
   private async restoreMerge(
     tableNames: string[],
-    data: Record<string, any[]>,
+    data: BackupData,
     restored: Record<string, number>,
     skipped: Record<string, number>,
     errors: Array<{ table: string; error: string }>
@@ -348,7 +362,7 @@ class BackupServiceClass {
    */
   private async restoreSelective(
     tableNames: string[],
-    data: Record<string, any[]>,
+    data: BackupData,
     restored: Record<string, number>,
     skipped: Record<string, number>,
     errors: Array<{ table: string; error: string }>
@@ -360,7 +374,9 @@ class BackupServiceClass {
   /**
    * Validar datos de backup
    */
-  private async validateBackupData(data: any): Promise<{ valid: boolean; errors: string[] }> {
+  private async validateBackupData(
+    data: BackupData
+  ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
     if (!data || typeof data !== 'object') {
@@ -491,8 +507,8 @@ class BackupServiceClass {
    */
   private async compress(data: string): Promise<string> {
     // Intentar usar LZString si está disponible
-    if (typeof (window as any).LZString !== 'undefined') {
-      return (window as any).LZString.compressToUTF16(data);
+    if (typeof window.LZString !== 'undefined') {
+      return window.LZString.compressToUTF16(data);
     }
 
     // Fallback: simplemente codificar
@@ -504,8 +520,8 @@ class BackupServiceClass {
    */
   private async decompress(data: string): Promise<string> {
     // Intentar usar LZString
-    if (typeof (window as any).LZString !== 'undefined') {
-      return (window as any).LZString.decompressFromUTF16(data);
+    if (typeof window.LZString !== 'undefined') {
+      return window.LZString.decompressFromUTF16(data);
     }
 
     // Fallback
@@ -531,7 +547,7 @@ class BackupServiceClass {
    * Obtener versión de la app
    */
   private getAppVersion(): string {
-    return (window as any).__APP_VERSION__ || '1.0.0';
+    return window.__APP_VERSION__ || '1.0.0';
   }
 
   /**

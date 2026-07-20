@@ -2,13 +2,13 @@
  * =============================================================================
  * UnitOfWork - Patrón de transacciones para operaciones atómicas
  * =============================================================================
- * 
+ *
  * Características:
  * - Transacciones de Dexie para atomicidad
  * - Operaciones inversas para rollback manual
  * - Logging de auditoría
  * - Verificación post-save
- * 
+ *
  * @since 2026-07-07
  */
 
@@ -50,15 +50,13 @@ export class UnitOfWork {
     callback: (tx: Transaction) => Promise<T>
   ): Promise<T> {
     const tableKeys = tables.map(t => db.table(t));
-    return await db.transaction(mode as any, tableKeys, callback);
+    return await db.transaction(mode, tableKeys, callback);
   }
 
   /**
    * Transacción con todas las tablas
    */
-  static async runInTransaction<T>(
-    callback: (tx: Transaction) => Promise<T>
-  ): Promise<T> {
+  static async runInTransaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T> {
     const allTables = db.tables;
     return await db.transaction('rw', allTables, callback);
   }
@@ -111,16 +109,20 @@ export class UnitOfWork {
     for (const operation of this.operations) {
       try {
         await this.executeOperation(operation);
-        
+
         // Registrar en auditoría
         await this.logAudit(operation);
-      } catch (error) {
+      } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         errors.push({
           operation,
           error: errorMessage,
         });
-        logger.error('UnitOfWork', `Operation failed: ${operation.type} ${operation.entityType}`, errorMessage);
+        logger.error(
+          'UnitOfWork',
+          `Operation failed: ${operation.type} ${operation.entityType}`,
+          errorMessage
+        );
       }
     }
 
@@ -128,7 +130,7 @@ export class UnitOfWork {
     if (errors.length > 0) {
       await this.rollback();
       this.isRolledBack = true;
-      
+
       return {
         success: false,
         operations: this.operations,
@@ -166,8 +168,12 @@ export class UnitOfWork {
         try {
           await operation.inverseOperation();
           logger.debug('UnitOfWork', `Rollback: ${operation.type} ${operation.entityType}`);
-        } catch (error) {
-          logger.error('UnitOfWork', `Rollback failed for ${operation.type} ${operation.entityType}`, String(error));
+        } catch (error: unknown) {
+          logger.error(
+            'UnitOfWork',
+            `Rollback failed for ${operation.type} ${operation.entityType}`,
+            String(error)
+          );
         }
       }
     }
@@ -221,9 +227,12 @@ export class UnitOfWork {
     }
   }
 
-  private async executeScanOperation(type: OperationType, entity: Record<string, unknown>): Promise<void> {
+  private async executeScanOperation(
+    type: OperationType,
+    entity: Record<string, unknown>
+  ): Promise<void> {
     const id = entity.id as string;
-    
+
     switch (type) {
       case 'CREATE':
         await db.scans.add(entity as unknown as ScanRecord);
@@ -237,9 +246,12 @@ export class UnitOfWork {
     }
   }
 
-  private async executeExpiryOperation(type: OperationType, entity: Record<string, unknown>): Promise<void> {
+  private async executeExpiryOperation(
+    type: OperationType,
+    entity: Record<string, unknown>
+  ): Promise<void> {
     const id = entity.id as string;
-    
+
     switch (type) {
       case 'CREATE':
         await db.table('expirations').add(entity);
@@ -253,9 +265,12 @@ export class UnitOfWork {
     }
   }
 
-  private async executeSessionOperation(type: OperationType, entity: Record<string, unknown>): Promise<void> {
+  private async executeSessionOperation(
+    type: OperationType,
+    entity: Record<string, unknown>
+  ): Promise<void> {
     const id = entity.id as string;
-    
+
     switch (type) {
       case 'CREATE':
         await db.sessions.add(entity as unknown as CountingSession);
@@ -269,9 +284,12 @@ export class UnitOfWork {
     }
   }
 
-  private async executeEventOperation(type: OperationType, entity: Record<string, unknown>): Promise<void> {
+  private async executeEventOperation(
+    type: OperationType,
+    entity: Record<string, unknown>
+  ): Promise<void> {
     const id = entity.id as string;
-    
+
     switch (type) {
       case 'CREATE':
         await db.table('events').add(entity);
@@ -285,9 +303,12 @@ export class UnitOfWork {
     }
   }
 
-  private async executeProductOperation(type: OperationType, entity: Record<string, unknown>): Promise<void> {
+  private async executeProductOperation(
+    type: OperationType,
+    entity: Record<string, unknown>
+  ): Promise<void> {
     const id = entity.id as string;
-    
+
     switch (type) {
       case 'CREATE':
         await db.products.add(entity as unknown as Product);
@@ -311,7 +332,7 @@ export class UnitOfWork {
         synced: false,
         timestamp: operation.timestamp,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       // No fallar la operación por error de auditoría
       logger.warn('UnitOfWork', 'Failed to log audit', String(error));
     }
@@ -340,11 +361,12 @@ export async function withUnitOfWork<T>(
     return {
       result,
       success: commitResult.success,
-      error: commitResult.errors.length > 0 
-        ? commitResult.errors.map(e => e.error).join('; ')
-        : undefined,
+      error:
+        commitResult.errors.length > 0
+          ? commitResult.errors.map(e => e.error).join('; ')
+          : undefined,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     await uow.rollback();
     return {
       result: null,
@@ -361,7 +383,7 @@ export async function saveScanWithExpiry(
   scanData: Record<string, unknown>,
   expiryData?: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
-  return withUnitOfWork(async (uow) => {
+  return withUnitOfWork(async uow => {
     // Agregar scan
     uow.addOperation('CREATE', 'scan', scanData, async () => {
       await db.scans.delete(scanData.id as string);

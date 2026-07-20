@@ -50,7 +50,7 @@ class ScanBufferServiceClass {
     lastFlushTime: 0,
     flushErrors: 0,
   };
-  
+
   // Referencia al handler para cleanup
   private beforeUnloadHandler: (e: BeforeUnloadEvent) => void = () => {
     if (this.buffer.length > 0) {
@@ -163,7 +163,7 @@ class ScanBufferServiceClass {
       logger.debug('ScanBuffer', 'Flushed', { count: toFlush.length });
 
       return toFlush.length;
-    } catch (error) {
+    } catch (error: unknown) {
       // En caso de error, restaurar el buffer
       this.buffer = [...toFlush, ...this.buffer];
       this.metrics.flushErrors++;
@@ -237,7 +237,7 @@ class ScanBufferServiceClass {
         timestamp: Date.now(),
       });
       localStorage.setItem(STORAGE_KEY, data);
-    } catch (error) {
+    } catch (error: unknown) {
       // Storage lleno - intentar limpiar y reintentar
       logger.warn('ScanBuffer', 'Storage full, attempting recovery');
       this.clearStorage();
@@ -267,7 +267,7 @@ class ScanBufferServiceClass {
       } else {
         this.clearStorage();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('ScanBuffer', 'Failed to restore from storage', { error });
       this.clearStorage();
     }

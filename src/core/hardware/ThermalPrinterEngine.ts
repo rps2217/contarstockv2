@@ -5,14 +5,46 @@ import { logger } from '@/services/logger';
  */
 
 import JsBarcode from 'jsbarcode';
-import {
-  generateReportHtml80mm,
-  generateBarcodeDataUrl,
-} from './thermal-print/reportHtmlGenerator';
+import { generateReportHtml80mm } from './thermal-print/reportHtmlGenerator';
+import { ESC, SEPARATOR } from './thermal-print/escposCommands';
 
 // ============================================================================
 // TIPOS
 // ============================================================================
+
+// WebBluetooth API types
+interface WebBluetooth {
+  requestDevice(options: {
+    filters?: Array<{ namePrefix?: string; services?: string[] }>;
+    optionalServices?: string[];
+  }): Promise<BluetoothDevice>;
+}
+
+interface BluetoothDevice {
+  gatt?: {
+    connect(): Promise<BluetoothRemoteGATTServer>;
+  };
+  name?: string;
+}
+
+interface BluetoothRemoteGATTServer {
+  getPrimaryServices(): Promise<BluetoothRemoteGATTService[]>;
+}
+
+interface BluetoothRemoteGATTService {
+  getCharacteristics(): Promise<BLECharacteristic[]>;
+}
+
+interface BLECharacteristic {
+  properties?: {
+    write?: boolean;
+    writeWithoutResponse?: boolean;
+  };
+  writeValue(data: BufferSource): Promise<void>;
+  startNotifications(): void;
+  stopNotifications(): void;
+  value?: DataView;
+}
 
 interface USBDevice {
   open(): Promise<void>;
@@ -21,7 +53,7 @@ interface USBDevice {
   claimInterface(interfaceNumber: number): Promise<void>;
   transferOut(
     endpointNumber: number,
-    data: BufferSource
+    data: ArrayBuffer | DataView | ArrayBufferView
   ): Promise<{ bytesWritten: number; status: string }>;
   opened: boolean;
   productName?: string;
@@ -95,18 +127,6 @@ interface BLEService {
   getCharacteristics(): Promise<BLECharacteristic[]>;
 }
 
-/** Característica Bluetooth */
-interface BLECharacteristic {
-  writeValue(data: BufferSource): Promise<void>;
-  startNotifications(): void;
-  stopNotifications(): void;
-  value?: DataView;
-  properties?: {
-    write?: boolean;
-    writeWithoutResponse?: boolean;
-  };
-}
-
 /** Navegador con soporte WebUSB */
 interface USBNavigator extends Navigator {
   usb: {
@@ -166,7 +186,11 @@ export class ThermalPrinterEngine {
       if (!navigator || !('bluetooth' in navigator)) {
         throw new Error('WebBluetooth no es compatible con este navegador o entorno.');
       }
-      const device = await (navigator as any).bluetooth.requestDevice({
+      const bluetooth = (navigator as Navigator & { bluetooth?: WebBluetooth }).bluetooth;
+      if (!bluetooth) {
+        throw new Error('WebBluetooth no está disponible.');
+      }
+      const device = await bluetooth.requestDevice({
         filters: [
           { namePrefix: 'SLK' },
           { namePrefix: 'Sewoo' },
@@ -179,6 +203,9 @@ export class ThermalPrinterEngine {
         ],
       });
 
+      if (!device.gatt) {
+        throw new Error('El dispositivo Bluetooth no tiene soporte GATT.');
+      }
       const server = await device.gatt.connect();
       const services = await server.getPrimaryServices();
       for (const service of services) {
@@ -188,7 +215,7 @@ export class ThermalPrinterEngine {
         );
         if (writeChar) {
           this.bleCharacteristic = writeChar;
-          this.bleDevice = device;
+          this.bleDevice = device as unknown as BLEDevice;
           return true;
         }
       }
@@ -212,7 +239,7 @@ export class ThermalPrinterEngine {
 
   async printRaw(data: Uint8Array) {
     if (this.usbDevice && this.endpointOut !== null) {
-      await this.usbDevice.transferOut(this.endpointOut, data as any);
+      await this.usbDevice.transferOut(this.endpointOut, data);
       return;
     }
 
@@ -227,34 +254,25 @@ export class ThermalPrinterEngine {
 
   async printLabel(sku: string, description: string, qty: number) {
     const encoder = new TextEncoder();
-    const esc = {
-      init: [0x1b, 0x40],
-      alignCenter: [0x1b, 0x61, 1],
-      boldOn: [0x1b, 0x45, 1],
-      boldOff: [0x1b, 0x45, 0],
-      sizeBig: [0x1d, 0x21, 0x11],
-      sizeNormal: [0x1d, 0x21, 0x00],
-      feed: [0x0a, 0x0a, 0x0a],
-      cut: [0x1d, 0x56, 0x42, 0x00],
-    };
+    const esc = ESC;
 
     const commands = new Uint8Array([
-      ...esc.init,
-      ...esc.alignCenter,
-      ...esc.boldOn,
-      ...encoder.encode('LOGICOUNT PRO\\n'),
-      ...esc.boldOff,
-      ...encoder.encode('--------------------------------\\n'),
-      ...esc.sizeBig,
-      ...encoder.encode(`${sku}\\n`),
-      ...esc.sizeNormal,
-      ...encoder.encode(`${description.substring(0, 32)}\\n`),
-      ...esc.boldOn,
-      ...encoder.encode(`CANTIDAD: ${qty} UNID.\\n`),
-      ...esc.boldOff,
-      ...encoder.encode(`${new Date().toLocaleString()}\\n`),
-      ...esc.feed,
-      ...esc.cut,
+      ...esc.INIT,
+      ...esc.ALIGN_CENTER,
+      ...esc.BOLD_ON,
+      ...encoder.encode('LOGICOUNT PRO\n'),
+      ...esc.BOLD_OFF,
+      ...encoder.encode(`${SEPARATOR}\n`),
+      ...esc.DOUBLE_SIZE,
+      ...encoder.encode(`${sku}\n`),
+      ...esc.NORMAL_SIZE,
+      ...encoder.encode(`${description.substring(0, 32)}\n`),
+      ...esc.BOLD_ON,
+      ...encoder.encode(`CANTIDAD: ${qty} UNID.\n`),
+      ...esc.BOLD_OFF,
+      ...encoder.encode(`${new Date().toLocaleString()}\n`),
+      ...esc.FEED_SHORT,
+      ...esc.CUT,
     ]);
 
     await this.printRaw(commands);
@@ -263,35 +281,28 @@ export class ThermalPrinterEngine {
   async printSummaryReport(erp: string, label: string, items: PrintItem[]) {
     if (this.isConnected()) {
       const encoder = new TextEncoder();
-      const esc = {
-        init: [0x1b, 0x40],
-        alignCenter: [0x1b, 0x61, 1],
-        alignLeft: [0x1b, 0x61, 0],
-        boldOn: [0x1b, 0x45, 1],
-        boldOff: [0x1b, 0x45, 0],
-        sizeNormal: [0x1d, 0x21, 0x00],
-        feed: [0x0a, 0x0a, 0x0a, 0x0a],
-        cut: [0x1d, 0x56, 0x42, 0x00],
-      };
+      const esc = ESC;
 
-      let content = [
-        ...esc.init,
-        ...esc.alignCenter,
-        ...esc.boldOn,
-        ...encoder.encode('MANIFIESTO DE CARGA\\n'),
-        ...encoder.encode('LOGICOUNT PRO v4.5\\n'),
-        ...esc.boldOff,
-        ...encoder.encode('--------------------------------\\n'),
-        ...esc.alignLeft,
-        ...encoder.encode(`ORDEN ERP: ${erp}\\n`),
-        ...encoder.encode(`BULTOS : ${label}\\n`),
-        ...encoder.encode(`FECHA : ${new Date().toLocaleString()}\\n`),
-        ...encoder.encode('--------------------------------\\n'),
-        ...esc.boldOn,
-        ...encoder.encode('DESC | SKU\\n'),
-        ...encoder.encode('TEO REAL DIFF\\n'),
-        ...esc.boldOff,
-        ...encoder.encode('--------------------------------\\n'),
+      let content: number[] = [
+        ...esc.INIT,
+        ...esc.ALIGN_CENTER,
+        ...esc.BOLD_ON,
+        ...esc.DOUBLE_SIZE,
+        ...encoder.encode('MANIFIESTO DE CARGA\n'),
+        ...encoder.encode('LOGICOUNT PRO v4.5\n'),
+        ...esc.NORMAL_SIZE,
+        ...esc.BOLD_OFF,
+        ...encoder.encode(`${SEPARATOR}\n`),
+        ...esc.ALIGN_LEFT,
+        ...encoder.encode(`ORDEN ERP: ${erp}\n`),
+        ...encoder.encode(`BULTOS: ${label}\n`),
+        ...encoder.encode(`FECHA: ${new Date().toLocaleString()}\n`),
+        ...encoder.encode(`${SEPARATOR}\n`),
+        ...esc.BOLD_ON,
+        ...encoder.encode('DESC | SKU\n'),
+        ...encoder.encode('TEO REAL DIFF\n'),
+        ...esc.BOLD_OFF,
+        ...encoder.encode(`${SEPARATOR}\n`),
       ];
 
       items.forEach(item => {
@@ -304,25 +315,25 @@ export class ThermalPrinterEngine {
         const diff = String(realVal - theoVal).padStart(7);
 
         const row = [
-          ...encoder.encode(`${name}\\n`),
-          ...encoder.encode(`${sku}\\n`),
-          ...encoder.encode(`${theo} ${real} ${diff}\\n`),
-          ...encoder.encode('- - - - - - - - - - - - - - - -\\n'),
+          ...encoder.encode(`${name}\n`),
+          ...encoder.encode(`${sku}\n`),
+          ...encoder.encode(`${theo} ${real} ${diff}\n`),
+          ...encoder.encode('- - - - - - - - - - - - - - - -\n'),
         ];
         content.push(...row);
       });
 
       const totalReal = items.reduce((acc, i) => acc + (i.totalQuantity || i.quantity || 0), 0);
-      const footer = [
-        ...esc.boldOn,
-        ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\\n`),
-        ...esc.boldOff,
-        ...encoder.encode('--------------------------------\\n'),
-        ...encoder.encode('\\n\\n__________________________\\n'),
-        ...esc.alignCenter,
-        ...encoder.encode('FIRMA AUDITORIA\\n'),
-        ...esc.feed,
-        ...esc.cut,
+      const footer: number[] = [
+        ...esc.BOLD_ON,
+        ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\n`),
+        ...esc.BOLD_OFF,
+        ...encoder.encode(`${SEPARATOR}\n`),
+        ...encoder.encode('\n\n__________________________\n'),
+        ...esc.ALIGN_CENTER,
+        ...encoder.encode('FIRMA AUDITORIA\n'),
+        ...esc.FEED,
+        ...esc.CUT,
       ];
 
       await this.printRaw(new Uint8Array([...content, ...footer]));

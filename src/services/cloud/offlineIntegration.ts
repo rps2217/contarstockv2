@@ -1,6 +1,6 @@
 /**
  * Offline Integration - Hook para sincronización offline
- * 
+ *
  * Integra SyncQueueService con las operaciones existentes de la app.
  * Reemplaza las llamadas directas a Supabase con queue + sync automático.
  */
@@ -15,7 +15,11 @@ export class OfflineIntegration {
   /**
    * Crea un registro usando cola offline
    */
-  static async create(tableName: string, recordId: string, data: Record<string, unknown>): Promise<void> {
+  static async create(
+    tableName: string,
+    recordId: string,
+    data: Record<string, unknown>
+  ): Promise<void> {
     if (navigator.onLine) {
       // Si hay conexión, intentamos directo primero
       try {
@@ -27,25 +31,29 @@ export class OfflineIntegration {
         }
         // Si falla, usamos la cola
         logger.warn('OFFLINE_SYNC', `Fallback a cola: ${error.message}`);
-      } catch (e) {
+      } catch (e: unknown) {
         logger.warn('OFFLINE_SYNC', `Error en sync directo, usando cola`);
       }
     }
-    
+
     // Encolar para cuando haya conexión
     await syncQueueService.enqueue({
       tableName,
       operation: 'create',
       recordId,
       data,
-      priority: 'high'
+      priority: 'high',
     });
   }
 
   /**
    * Actualiza un registro usando cola offline
    */
-  static async update(tableName: string, recordId: string, data: Record<string, unknown>): Promise<void> {
+  static async update(
+    tableName: string,
+    recordId: string,
+    data: Record<string, unknown>
+  ): Promise<void> {
     if (navigator.onLine) {
       try {
         const { supabase } = await import('@/lib/supabase');
@@ -54,17 +62,17 @@ export class OfflineIntegration {
           logger.info('OFFLINE_SYNC', `Actualizado directo: ${tableName}/${recordId}`);
           return;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.warn('OFFLINE_SYNC', `Error en update directo`);
       }
     }
-    
+
     await syncQueueService.enqueue({
       tableName,
       operation: 'update',
       recordId,
       data,
-      priority: 'normal'
+      priority: 'normal',
     });
   }
 
@@ -80,17 +88,17 @@ export class OfflineIntegration {
           logger.info('OFFLINE_SYNC', `Eliminado directo: ${tableName}/${recordId}`);
           return;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.warn('OFFLINE_SYNC', `Error en delete directo`);
       }
     }
-    
+
     await syncQueueService.enqueue({
       tableName,
       operation: 'delete',
       recordId,
       data: { id: recordId },
-      priority: 'low'
+      priority: 'low',
     });
   }
 }

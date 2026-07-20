@@ -427,8 +427,8 @@ export const RedesignHammerPage: React.FC = () => {
     try {
       await importLocalExpectedOrderToHammer(batchId, orderId);
       toast.success('Carga teorica importada');
-    } catch (err: any) {
-      toast.error(err.message || 'Error al importar');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al importar');
     }
   };
 

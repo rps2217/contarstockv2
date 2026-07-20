@@ -1,10 +1,10 @@
-"use client";
+'use client';
 /**
  * Expression DSL - Motor de Expresiones Declarativas
- * 
+ *
  * Inspirado en AppSheet Expressions.
  * Permite definir reglas de negocio con expresiones legibles.
- * 
+ *
  * Ejemplo de uso:
  * const rule = createRule({
  *   name: 'Stock bajo',
@@ -23,10 +23,14 @@ import { UserRole } from '@/stores';
 export type ExpressionValue = string | number | boolean | null | undefined | Date;
 export type ExpressionContext = Record<string, ExpressionValue>;
 
+// Tipo para funciones del DSL - usa unknown para flexibilidad
+// biome-ignore: noExplicitAny
+type DSLFunction = (...args: any[]) => ExpressionValue;
+
 /**
  * Nodo AST del parser
  */
-export type ASTNode = 
+export type ASTNode =
   | { type: 'literal'; value: ExpressionValue }
   | { type: 'field'; name: string }
   | { type: 'binary'; operator: string; left: ASTNode; right: ASTNode }
@@ -37,10 +41,20 @@ export type ASTNode =
 // TOKENS Y LEXER
 // =============================================================================
 
-type TokenType = 
-  | 'NUMBER' | 'STRING' | 'BOOLEAN' | 'NULL'
-  | 'FIELD' | 'OPERATOR' | 'LPAREN' | 'RPAREN'
-  | 'AND' | 'OR' | 'NOT' | 'IN' | 'EOF';
+type TokenType =
+  | 'NUMBER'
+  | 'STRING'
+  | 'BOOLEAN'
+  | 'NULL'
+  | 'FIELD'
+  | 'OPERATOR'
+  | 'LPAREN'
+  | 'RPAREN'
+  | 'AND'
+  | 'OR'
+  | 'NOT'
+  | 'IN'
+  | 'EOF';
 
 interface Token {
   type: TokenType;
@@ -49,8 +63,13 @@ interface Token {
 
 const OPERATORS = ['+', '-', '*', '/', '=', '!=', '<>', '<', '>', '<=', '>=', '&&', '||', '!'];
 const KEYWORDS: Record<string, TokenType> = {
-  'and': 'AND', 'or': 'OR', 'not': 'NOT', 'in': 'IN',
-  'true': 'BOOLEAN', 'false': 'BOOLEAN', 'null': 'NULL',
+  and: 'AND',
+  or: 'OR',
+  not: 'NOT',
+  in: 'IN',
+  true: 'BOOLEAN',
+  false: 'BOOLEAN',
+  null: 'NULL',
 };
 
 /**
@@ -104,7 +123,10 @@ function tokenize(expression: string): Token[] {
       }
       const upper = ident.toLowerCase();
       if (KEYWORDS[upper]) {
-        tokens.push({ type: KEYWORDS[upper], value: upper === 'true' ? true : upper === 'false' ? false : null });
+        tokens.push({
+          type: KEYWORDS[upper],
+          value: upper === 'true' ? true : upper === 'false' ? false : null,
+        });
       } else {
         tokens.push({ type: 'FIELD', value: ident });
       }
@@ -124,8 +146,16 @@ function tokenize(expression: string): Token[] {
     if (found) continue;
 
     // Símbolos
-    if (char === '(') { tokens.push({ type: 'LPAREN', value: char }); pos++; continue; }
-    if (char === ')') { tokens.push({ type: 'RPAREN', value: char }); pos++; continue; }
+    if (char === '(') {
+      tokens.push({ type: 'LPAREN', value: char });
+      pos++;
+      continue;
+    }
+    if (char === ')') {
+      tokens.push({ type: 'RPAREN', value: char });
+      pos++;
+      continue;
+    }
 
     // Caracter inesperado
     throw new Error(`Token inesperado: ${char}`);
@@ -284,7 +314,7 @@ class Parser {
 // EVALUADOR
 // =============================================================================
 
-const FUNCTIONS: Record<string, (...args: any[]) => any> = {
+const FUNCTIONS: Record<string, DSLFunction> = {
   // Fecha
   now: () => new Date(),
   today: () => new Date(),
@@ -296,7 +326,7 @@ const FUNCTIONS: Record<string, (...args: any[]) => any> = {
     const dateB = typeof b === 'string' ? new Date(b) : b;
     return Math.ceil((dateA.getTime() - dateB.getTime()) / (1000 * 60 * 60 * 24));
   },
-  
+
   // Texto
   upper: (s: string) => String(s).toUpperCase(),
   lower: (s: string) => String(s).toLowerCase(),
@@ -304,7 +334,7 @@ const FUNCTIONS: Record<string, (...args: any[]) => any> = {
   contains: (s: string, sub: string) => String(s).includes(sub),
   startsWith: (s: string, prefix: string) => String(s).startsWith(prefix),
   endsWith: (s: string, suffix: string) => String(s).endsWith(suffix),
-  
+
   // Números
   abs: (n: number) => Math.abs(Number(n)),
   min: (...args: number[]) => Math.min(...args),
@@ -313,16 +343,17 @@ const FUNCTIONS: Record<string, (...args: any[]) => any> = {
     const factor = Math.pow(10, decimals);
     return Math.round(Number(n) * factor) / factor;
   },
-  
+
   // Lógicos
-  if: (cond: boolean, trueVal: any, falseVal: any) => cond ? trueVal : falseVal,
-  switch: (cond: boolean, ...cases: [boolean, any][]) => {
+  if: (cond: boolean, trueVal: unknown, falseVal: unknown) =>
+    cond ? (trueVal as ExpressionValue) : (falseVal as ExpressionValue),
+  switch: (cond: boolean, ...cases: [boolean, unknown][]) => {
     for (const [c, val] of cases) {
-      if (c) return val;
+      if (c) return val as ExpressionValue;
     }
     return null;
   },
-  coalesce: (...args: any[]) => args.find(a => a != null),
+  coalesce: (...args: unknown[]) => args.find(a => a != null) as ExpressionValue,
 };
 
 /**
@@ -332,7 +363,7 @@ function evaluate(node: ASTNode, context: ExpressionContext): ExpressionValue {
   switch (node.type) {
     case 'literal':
       return node.value;
-    
+
     case 'field': {
       const value = context[node.name];
       // Convert strings to numbers if possible
@@ -341,38 +372,59 @@ function evaluate(node: ASTNode, context: ExpressionContext): ExpressionValue {
       }
       return value;
     }
-    
+
     case 'binary': {
       const left = evaluate(node.left, context);
       const right = evaluate(node.right, context);
       const op = node.operator;
-      
+
       switch (op) {
-        case '=': case '==': return left === right;
-        case '!=': case '<>': return left !== right;
-        case '>': return Number(left) > Number(right);
-        case '<': return Number(left) < Number(right);
-        case '>=': return Number(left) >= Number(right);
-        case '<=': return Number(left) <= Number(right);
-        case '+': return Number(left) + Number(right);
-        case '-': return Number(left) - Number(right);
-        case '*': return Number(left) * Number(right);
-        case '/': return Number(left) / Number(right);
-        case '&&': case 'and': return Boolean(left) && Boolean(right);
-        case '||': case 'or': return Boolean(left) || Boolean(right);
-        default: throw new Error(`Operador desconocido: ${op}`);
+        case '=':
+        case '==':
+          return left === right;
+        case '!=':
+        case '<>':
+          return left !== right;
+        case '>':
+          return Number(left) > Number(right);
+        case '<':
+          return Number(left) < Number(right);
+        case '>=':
+          return Number(left) >= Number(right);
+        case '<=':
+          return Number(left) <= Number(right);
+        case '+':
+          return Number(left) + Number(right);
+        case '-':
+          return Number(left) - Number(right);
+        case '*':
+          return Number(left) * Number(right);
+        case '/':
+          return Number(left) / Number(right);
+        case '&&':
+        case 'and':
+          return Boolean(left) && Boolean(right);
+        case '||':
+        case 'or':
+          return Boolean(left) || Boolean(right);
+        default:
+          throw new Error(`Operador desconocido: ${op}`);
       }
     }
-    
+
     case 'unary': {
       const operand = evaluate(node.operand, context);
       switch (node.operator) {
-        case '!': case 'not': return !operand;
-        case '-': return -Number(operand);
-        default: throw new Error(`Operador unario desconocido: ${node.operator}`);
+        case '!':
+        case 'not':
+          return !operand;
+        case '-':
+          return -Number(operand);
+        default:
+          throw new Error(`Operador unario desconocido: ${node.operator}`);
       }
     }
-    
+
     case 'function': {
       const args = node.args.map(arg => evaluate(arg, context));
       const fn = FUNCTIONS[node.name.toLowerCase()];
@@ -389,18 +441,23 @@ function evaluate(node: ASTNode, context: ExpressionContext): ExpressionValue {
 /**
  * Compila una expresión a función
  */
-export function compileExpression(expression: string): (context: ExpressionContext) => ExpressionValue {
+export function compileExpression(
+  expression: string
+): (context: ExpressionContext) => ExpressionValue {
   const tokens = tokenize(expression);
   const parser = new Parser(tokens);
   const ast = parser.parse();
-  
+
   return (context: ExpressionContext) => evaluate(ast, context);
 }
 
 /**
  * Evalúa una expresión directamente
  */
-export function evaluateExpression(expression: string, context: ExpressionContext): ExpressionValue {
+export function evaluateExpression(
+  expression: string,
+  context: ExpressionContext
+): ExpressionValue {
   const fn = compileExpression(expression);
   return fn(context);
 }
@@ -513,10 +570,11 @@ export function getMaxSeverity(results: RuleResult[]): RuleSeverity {
     error: 2,
     critical: 3,
   };
-  
-  return results.reduce((max, r) => 
-    priority[r.severity] > priority[max] ? r.severity : max
-  , 'info' as RuleSeverity);
+
+  return results.reduce(
+    (max, r) => (priority[r.severity] > priority[max] ? r.severity : max),
+    'info' as RuleSeverity
+  );
 }
 
 // =============================================================================
@@ -622,10 +680,10 @@ export function useBusinessRules<T extends Record<string, any>>(
 ) {
   return useMemo(() => {
     if (!record) return { results: [], maxSeverity: 'info' as RuleSeverity };
-    
+
     const results = evaluateRules(record, rules, extraContext);
     const maxSeverity = getMaxSeverity(results);
-    
+
     return { results, maxSeverity };
   }, [record, rules, extraContext]);
 }
@@ -639,11 +697,10 @@ export function useFieldValidation<T extends Record<string, any>>(
   rules?: BusinessRule[]
 ) {
   return useMemo(() => {
-    const filteredRules = (rules || INVENTORY_RULES)
-      .filter(r => r.fields?.includes(fieldName));
-    
+    const filteredRules = (rules || INVENTORY_RULES).filter(r => r.fields?.includes(fieldName));
+
     const results = evaluateRules(record, filteredRules);
-    
+
     return {
       isValid: !results.some(r => r.severity === 'error' || r.severity === 'critical'),
       errors: results.filter(r => r.severity === 'error' || r.severity === 'critical'),

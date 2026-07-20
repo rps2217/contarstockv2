@@ -249,7 +249,7 @@ class EventBusClass {
   /**
    * Logging
    */
-  private log(action: string, data: any): void {
+  private log(action: string, data: unknown): void {
     if (this.config.debug) {
       logger.debug('EventBus', action, data);
     }

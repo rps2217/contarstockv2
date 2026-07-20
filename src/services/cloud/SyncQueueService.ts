@@ -66,7 +66,7 @@ class SyncQueueService {
       if (navigator.onLine) {
         this.processQueue();
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const errorInfo = handleError(err);
       logger.error('SYNC_QUEUE', 'Error al encolar operación', {
         message: errorInfo.message,
@@ -100,7 +100,7 @@ class SyncQueueService {
         failed: failed.length,
         byTable,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const errorInfo = handleError(err);
       logger.error('SYNC_QUEUE', 'Error al obtener stats', {
         message: errorInfo.message,
@@ -139,7 +139,7 @@ class SyncQueueService {
           await this.executeOperation(item);
           await db.syncQueue.delete(item.id!);
           logger.info('SYNC_QUEUE', `Operación completada: ${item.operation} en ${item.tableName}`);
-        } catch (err) {
+        } catch (err: unknown) {
           const errorMsg = handleError(err);
           const newRetries = item.retries + 1;
 

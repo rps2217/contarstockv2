@@ -2,10 +2,10 @@
  * =============================================================================
  * useSyncHealthAlert - Hook para alertas de salud de sincronización
  * =============================================================================
- * 
+ *
  * Monitorea la salud del sistema de sincronización y muestra alertas
  * cuando el score de salud es bajo (< 70).
- * 
+ *
  * @module useSyncHealthAlert
  */
 
@@ -36,50 +36,53 @@ export function useSyncHealthAlert(
       const healthData = syncMetrics.getHealth();
       setHealth(healthData);
       return healthData;
-    } catch (e) {
+    } catch (e: unknown) {
       logger.error('SyncHealthAlert', 'Error checking sync health', { error: String(e) });
       return {
         isHealthy: false,
         score: 0,
         issues: ['Error al verificar salud del sync'],
-        lastCheck: Date.now()
+        lastCheck: Date.now(),
       };
     }
   }, []);
 
-  const showAlert = useCallback((healthData: SyncHealth) => {
-    // Solo mostrar alerta si ha pasado al menos 5 minutos desde la última
-    const now = Date.now();
-    if (now - lastAlertTimeRef.current < 5 * 60 * 1000) {
-      return;
-    }
+  const showAlert = useCallback(
+    (healthData: SyncHealth) => {
+      // Solo mostrar alerta si ha pasado al menos 5 minutos desde la última
+      const now = Date.now();
+      if (now - lastAlertTimeRef.current < 5 * 60 * 1000) {
+        return;
+      }
 
-    lastAlertTimeRef.current = now;
+      lastAlertTimeRef.current = now;
 
-    // Determinar tipo de toast según severidad
-    if (healthData.score < 30) {
-      toast.error('⚠️ Sync en Estado Crítico', {
-        description: `Score: ${healthData.score}/100. ${healthData.issues[0] || 'Revisar logs'}`,
-        duration: 8000,
-        action: {
-          label: 'Ver',
-          onClick: () => onUnhealthy?.(healthData)
-        }
-      });
-    } else if (healthData.score < HEALTH_THRESHOLD) {
-      toast.warning('🔔 Sync con Problemas', {
-        description: `Score: ${healthData.score}/100. ${healthData.issues[0] || 'Revisar configuración'}`,
-        duration: 6000,
-        action: {
-          label: 'Ver',
-          onClick: () => onUnhealthy?.(healthData)
-        }
-      });
-    }
+      // Determinar tipo de toast según severidad
+      if (healthData.score < 30) {
+        toast.error('⚠️ Sync en Estado Crítico', {
+          description: `Score: ${healthData.score}/100. ${healthData.issues[0] || 'Revisar logs'}`,
+          duration: 8000,
+          action: {
+            label: 'Ver',
+            onClick: () => onUnhealthy?.(healthData),
+          },
+        });
+      } else if (healthData.score < HEALTH_THRESHOLD) {
+        toast.warning('🔔 Sync con Problemas', {
+          description: `Score: ${healthData.score}/100. ${healthData.issues[0] || 'Revisar configuración'}`,
+          duration: 6000,
+          action: {
+            label: 'Ver',
+            onClick: () => onUnhealthy?.(healthData),
+          },
+        });
+      }
 
-    // Notificar callback
-    onUnhealthy?.(healthData);
-  }, [onUnhealthy]);
+      // Notificar callback
+      onUnhealthy?.(healthData);
+    },
+    [onUnhealthy]
+  );
 
   useEffect(() => {
     if (!enabled) return;
@@ -121,6 +124,6 @@ export function useSyncHealthAlert(
   return {
     health,
     isHealthy: health?.isHealthy ?? true,
-    checkHealth
+    checkHealth,
   };
 }

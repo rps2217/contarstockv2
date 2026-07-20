@@ -2,10 +2,10 @@
  * DataImporter - Importación de datos iniciales desde la nube
  */
 
-import { 
-  importProductsFromCloud, 
-  importProvidersFromCloud, 
-  importCustomersAndTemplatesFromCloud 
+import {
+  importProductsFromCloud,
+  importProvidersFromCloud,
+  importCustomersAndTemplatesFromCloud,
 } from '../sync';
 import { DatabaseSanitizer } from '../../repositories/DatabaseSanitizer';
 import { logger } from '../logger';
@@ -25,7 +25,7 @@ export const importInitialData = async (
   onProgress?: InitStepCallback
 ): Promise<DataImportResult> => {
   onProgress?.('database');
-  
+
   let products = 0;
   let providers = 0;
   let customers = 0;
@@ -41,7 +41,7 @@ export const importInitialData = async (
       importProvidersFromCloud().catch(e => {
         logger.warn('INIT_DATA', 'Providers import failed', e);
         return 0;
-      })
+      }),
     ]);
 
     products = productsResult || 0;
@@ -51,14 +51,14 @@ export const importInitialData = async (
     await Promise.all([
       importCustomersAndTemplatesFromCloud().catch(e => {
         logger.warn('INIT_DATA', 'Customers import failed', e);
-      })
+      }),
     ]);
 
     // Sanitización de la base de datos
     try {
       await DatabaseSanitizer.runAuditAndSanitize();
       sanitized = true;
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn('INIT_DATA', 'Database sanitization failed', e);
     }
 
@@ -68,9 +68,9 @@ export const importInitialData = async (
       products,
       providers,
       customers,
-      sanitized
+      sanitized,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('INIT_DATA', 'Critical error during data import', error);
     throw error;
   }
@@ -83,7 +83,7 @@ export const sanitizeDatabase = async (): Promise<boolean> => {
   try {
     await DatabaseSanitizer.runAuditAndSanitize();
     return true;
-  } catch (e) {
+  } catch (e: unknown) {
     logger.warn('INIT_DATA', 'Sanitization failed', e);
     return false;
   }

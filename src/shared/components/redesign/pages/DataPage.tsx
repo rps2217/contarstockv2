@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   Database,
   Users,
@@ -13,25 +13,26 @@ import {
   Plus,
   Eye,
   X,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { ProductForm } from '../components/forms/ProductForm'
-import { CustomerForm } from '../components/forms/CustomerForm'
-import { ProviderForm } from '../components/forms/ProviderForm'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
-import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard'
-import { SearchInput } from '@/shared/components/ui/SearchInput'
-import { FAB } from '@/shared/components/ui/FAB'
-import { EmptyState } from '@/shared/components/ui/EmptyState'
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { Product } from '@/types';
+import { toast } from 'sonner';
+import { ProductForm } from '../components/forms/ProductForm';
+import { CustomerForm } from '../components/forms/CustomerForm';
+import { ProviderForm } from '../components/forms/ProviderForm';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/db';
+import { HorizontalStatCard } from '@/shared/components/ui/HorizontalStatCard';
+import { SearchInput } from '@/shared/components/ui/SearchInput';
+import { FAB } from '@/shared/components/ui/FAB';
+import { EmptyState } from '@/shared/components/ui/EmptyState';
 
 const TABS = [
   { id: 'inventario', label: 'Inventario', icon: Database },
   { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'proveedores', label: 'Proveedores', icon: Truck },
   { id: 'ordenes', label: 'Órdenes', icon: ClipboardList },
-]
+];
 
 // ============================================================================
 // Card de Producto - Estilo ReceptionPage
@@ -40,18 +41,22 @@ const ProductCard = ({
   product,
   onEdit,
   onDelete,
-  isDeleting
+  isDeleting,
 }: {
-  product: any
-  onEdit: () => void
-  onDelete: () => void
-  isDeleting: boolean
+  product: Product;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
 }) => {
-  const isOutOfStock = (product.stock || 0) === 0
-  const isLowStock = (product.stock || 0) > 0 && (product.stock || 0) <= (product.minStock || 10)
-  
-  const stockColor = isOutOfStock ? 'text-rose-500' : isLowStock ? 'text-amber-500' : 'text-emerald-500'
-  
+  const isOutOfStock = (product.stock || 0) === 0;
+  const isLowStock = (product.stock || 0) > 0 && (product.stock || 0) <= (product.minStock || 10);
+
+  const stockColor = isOutOfStock
+    ? 'text-rose-500'
+    : isLowStock
+      ? 'text-amber-500'
+      : 'text-emerald-500';
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -69,7 +74,9 @@ const ProductCard = ({
               {product.name || 'Sin nombre'}
             </h3>
             {isOutOfStock && <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />}
-            {isLowStock && !isOutOfStock && <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />}
+            {isLowStock && !isOutOfStock && (
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
             <span className="font-mono">{product.barcode || product.sku || 'Sin código'}</span>
@@ -96,18 +103,30 @@ const ProductCard = ({
           disabled={isDeleting}
           className="flex-1 flex items-center justify-center gap-2 py-3 text-xs text-muted hover:text-rose-500 hover:bg-elevated transition-colors border-l border-subtle"
         >
-          {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+          {isDeleting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
           Eliminar
         </button>
       </div>
     </motion.div>
-  )
-}
+  );
+};
 
 // ============================================================================
 // Placeholder Cards para módulos en desarrollo
 // ============================================================================
-const PlaceholderCard = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) => (
+const PlaceholderCard = ({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -119,132 +138,147 @@ const PlaceholderCard = ({ icon: Icon, title, description }: { icon: React.Eleme
     <h3 className="text-lg font-semibold text-primary mb-2">{title}</h3>
     <p className="text-sm text-muted">{description}</p>
   </motion.div>
-)
+);
 
 // ============================================================================
 // Componente principal
 // ============================================================================
 export const RedesignDataPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('inventario')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showProductForm, setShowProductForm] = useState(false)
-  const [showCustomerForm, setShowCustomerForm] = useState(false)
-  const [showProviderForm, setShowProviderForm] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<any>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('inventario');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [showProviderForm, setShowProviderForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Datos reales de productos desde IndexedDB
-  const products = useLiveQuery(async () => {
-    if (activeTab !== 'inventario') return []
+  const products = useLiveQuery(
+    async () => {
+      if (activeTab !== 'inventario') return [];
 
-    let items = await db.products.toArray()
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      items = items.filter(p =>
-        (p.name?.toLowerCase().includes(q) ?? false) ||
-        (p.barcode?.includes(q) ?? false) ||
-        (p.sku?.toLowerCase().includes(q) ?? false)
-      )
-    }
-    return items
-  }, [activeTab, searchQuery], [])
+      let items = await db.products.toArray();
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        items = items.filter(
+          p =>
+            (p.name?.toLowerCase().includes(q) ?? false) ||
+            (p.barcode?.includes(q) ?? false) ||
+            (p.sku?.toLowerCase().includes(q) ?? false)
+        );
+      }
+      return items;
+    },
+    [activeTab, searchQuery],
+    []
+  );
 
   // Conteo de productos
-  const productCount = useLiveQuery(async () => {
-    try {
-      return await db.products.count() ?? 0
-    } catch {
-      return 0
-    }
-  }, [], 0)
+  const productCount = useLiveQuery(
+    async () => {
+      try {
+        return (await db.products.count()) ?? 0;
+      } catch {
+        return 0;
+      }
+    },
+    [],
+    0
+  );
 
   // Stats de inventario
   const inventoryStats = useMemo(() => {
-    const all = products || []
+    const all = products || [];
     return {
       total: all.length,
       inStock: all.filter(p => (p.stock || 0) > (p.minStock || 10)).length,
       lowStock: all.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.minStock || 10)).length,
       outOfStock: all.filter(p => (p.stock || 0) === 0).length,
-    }
-  }, [products])
+    };
+  }, [products]);
 
   // Crear producto
   const handleCreateProduct = async (data: any) => {
-    const id = crypto.randomUUID()
+    const id = crypto.randomUUID();
     await db.products.add({
       ...data,
       id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       syncStatus: 'pending',
-    })
-    toast.success('Producto creado exitosamente')
-  }
+    });
+    toast.success('Producto creado exitosamente');
+  };
 
   // Actualizar producto
   const handleUpdateProduct = async (data: any) => {
-    if (!editingProduct?.id) return
+    if (!editingProduct?.id) return;
     await db.products.update(editingProduct.id, {
       ...data,
       updatedAt: Date.now(),
       syncStatus: 'pending',
-    })
-    setEditingProduct(null)
-    toast.success('Producto actualizado')
-  }
+    });
+    setEditingProduct(null);
+    toast.success('Producto actualizado');
+  };
 
   // Eliminar producto
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return
-    setDeletingId(id)
+    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
+    setDeletingId(id);
     try {
-      await db.products.delete(id)
-      toast.success('Producto eliminado')
+      await db.products.delete(id);
+      toast.success('Producto eliminado');
     } catch (error) {
-      toast.error('Error al eliminar producto')
+      toast.error('Error al eliminar producto');
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
   // Crear cliente
   const handleCreateCustomer = async (data: any) => {
-    const id = crypto.randomUUID()
+    const id = crypto.randomUUID();
     await db.customers.add({
       ...data,
       id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       syncStatus: 'pending',
-    })
-    toast.success('Cliente creado exitosamente')
-  }
+    });
+    toast.success('Cliente creado exitosamente');
+  };
 
   // Crear proveedor
   const handleCreateProvider = async (data: any) => {
-    const id = crypto.randomUUID()
+    const id = crypto.randomUUID();
     await db.providers.add({
       ...data,
       id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       syncStatus: 'pending',
-    })
-    toast.success('Proveedor creado exitosamente')
-  }
+    });
+    toast.success('Proveedor creado exitosamente');
+  };
 
   const handleCreate = () => {
     switch (activeTab) {
-      case 'inventario': setShowProductForm(true); break
-      case 'clientes': setShowCustomerForm(true); break
-      case 'proveedores': setShowProviderForm(true); break
+      case 'inventario':
+        setShowProductForm(true);
+        break;
+      case 'clientes':
+        setShowCustomerForm(true);
+        break;
+      case 'proveedores':
+        setShowProviderForm(true);
+        break;
     }
-  }
+  };
 
-  const handleEdit = (product: any) => {
-    setEditingProduct(product)
-  }
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+  };
 
   // Tab color
   const tabColors: Record<string, string> = {
@@ -252,7 +286,7 @@ export const RedesignDataPage: React.FC = () => {
     clientes: 'bg-emerald-600',
     proveedores: 'bg-amber-600',
     ordenes: 'bg-violet-600',
-  }
+  };
 
   return (
     <div className="h-full flex flex-col bg-base">
@@ -293,35 +327,50 @@ export const RedesignDataPage: React.FC = () => {
         {activeTab === 'inventario' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-4">
             <HorizontalStatCard icon={Package} label="Total" value={inventoryStats.total} />
-            <HorizontalStatCard icon={Database} label="Con Stock" value={inventoryStats.inStock} color="text-emerald-500" />
-            <HorizontalStatCard icon={AlertCircle} label="Bajo Stock" value={inventoryStats.lowStock} color="text-amber-500" />
-            <HorizontalStatCard icon={X} label="Sin Stock" value={inventoryStats.outOfStock} color="text-rose-500" />
+            <HorizontalStatCard
+              icon={Database}
+              label="Con Stock"
+              value={inventoryStats.inStock}
+              color="text-emerald-500"
+            />
+            <HorizontalStatCard
+              icon={AlertCircle}
+              label="Bajo Stock"
+              value={inventoryStats.lowStock}
+              color="text-amber-500"
+            />
+            <HorizontalStatCard
+              icon={X}
+              label="Sin Stock"
+              value={inventoryStats.outOfStock}
+              color="text-rose-500"
+            />
           </div>
         )}
 
         {/* Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.id
-            const Icon = tab.icon
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id)
-                  setSearchQuery('')
+                  setActiveTab(tab.id);
+                  setSearchQuery('');
                 }}
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0',
                   isActive
                     ? 'bg-surface text-primary border border-subtle'
-                    : 'text-secondary hover:bg-surface/50 hover:text-primary',
+                    : 'text-secondary hover:bg-surface/50 hover:text-primary'
                 )}
               >
                 <Icon className="w-4 h-4" />
                 <span className="hidden xs:inline">{tab.label}</span>
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -342,12 +391,22 @@ export const RedesignDataPage: React.FC = () => {
               {products.length === 0 ? (
                 <EmptyState
                   icon={Package}
-                  title={searchQuery ? 'No se encontraron productos' : 'No hay productos en el inventario'}
-                  description={!searchQuery ? 'Comienza agregando tu primer producto al inventario' : undefined}
-                  action={!searchQuery ? { label: 'Crear primer producto', onClick: handleCreate } : undefined}
+                  title={
+                    searchQuery
+                      ? 'No se encontraron productos'
+                      : 'No hay productos en el inventario'
+                  }
+                  description={
+                    !searchQuery ? 'Comienza agregando tu primer producto al inventario' : undefined
+                  }
+                  action={
+                    !searchQuery
+                      ? { label: 'Crear primer producto', onClick: handleCreate }
+                      : undefined
+                  }
                 />
               ) : (
-                products.map((product) => (
+                products.map(product => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -387,18 +446,11 @@ export const RedesignDataPage: React.FC = () => {
       </div>
 
       {/* FAB para móvil */}
-      <FAB 
-        onClick={handleCreate} 
-        visible={true}
-        color={tabColors[activeTab]}
-      />
+      <FAB onClick={handleCreate} visible={true} color={tabColors[activeTab]} />
 
       {/* Modales de formularios */}
       {showProductForm && (
-        <ProductForm
-          onSave={handleCreateProduct}
-          onClose={() => setShowProductForm(false)}
-        />
+        <ProductForm onSave={handleCreateProduct} onClose={() => setShowProductForm(false)} />
       )}
       {editingProduct && (
         <ProductForm
@@ -408,17 +460,11 @@ export const RedesignDataPage: React.FC = () => {
         />
       )}
       {showCustomerForm && (
-        <CustomerForm
-          onSave={handleCreateCustomer}
-          onClose={() => setShowCustomerForm(false)}
-        />
+        <CustomerForm onSave={handleCreateCustomer} onClose={() => setShowCustomerForm(false)} />
       )}
       {showProviderForm && (
-        <ProviderForm
-          onSave={handleCreateProvider}
-          onClose={() => setShowProviderForm(false)}
-        />
+        <ProviderForm onSave={handleCreateProvider} onClose={() => setShowProviderForm(false)} />
       )}
     </div>
-  )
-}
+  );
+};

@@ -1,7 +1,7 @@
 import { logger } from '@/services/logger';
 /**
  * ThemeService - Servicio para gestión de temas
- * 
+ *
  * Proporciona una API simplificada para trabajar con temas.
  */
 
@@ -231,12 +231,12 @@ export function isHighContrast(theme: ThemeName): boolean {
 
 export function injectThemeCSS(colors: Record<string, string>): void {
   const root = document.documentElement;
-  
+
   // Limpiar variables existentes
   Object.keys(colors).forEach(key => {
     root.style.removeProperty(`--color-${key}`);
   });
-  
+
   // Aplicar nuevas variables
   Object.entries(colors).forEach(([key, value]) => {
     root.style.setProperty(`--color-${key}`, value);
@@ -258,16 +258,24 @@ export const CUSTOM_THEMES_KEY = 'contarstock-custom-themes';
 export function saveThemeToStorage(theme: ThemeName): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch (e) {
-    logger.warn('ThemeService', 'Failed to save theme to storage', e instanceof Error ? e.message : String(e));
+  } catch (e: unknown) {
+    logger.warn(
+      'ThemeService',
+      'Failed to save theme to storage',
+      e instanceof Error ? e.message : String(e)
+    );
   }
 }
 
 export function loadThemeFromStorage(): ThemeName | null {
   try {
     return localStorage.getItem(THEME_STORAGE_KEY) as ThemeName | null;
-  } catch (e) {
-    logger.warn('ThemeService', 'Failed to load theme from storage', e instanceof Error ? e.message : String(e));
+  } catch (e: unknown) {
+    logger.warn(
+      'ThemeService',
+      'Failed to load theme from storage',
+      e instanceof Error ? e.message : String(e)
+    );
     return null;
   }
 }
@@ -275,8 +283,12 @@ export function loadThemeFromStorage(): ThemeName | null {
 export function saveCustomThemesToStorage(themes: CustomTheme[]): void {
   try {
     localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(themes));
-  } catch (e) {
-    logger.warn('ThemeService', 'Failed to save custom themes to storage', e instanceof Error ? e.message : String(e));
+  } catch (e: unknown) {
+    logger.warn(
+      'ThemeService',
+      'Failed to save custom themes to storage',
+      e instanceof Error ? e.message : String(e)
+    );
   }
 }
 
@@ -284,8 +296,12 @@ export function loadCustomThemesFromStorage(): CustomTheme[] {
   try {
     const stored = localStorage.getItem(CUSTOM_THEMES_KEY);
     return stored ? JSON.parse(stored) : [];
-  } catch (e) {
-    logger.warn('ThemeService', 'Failed to load custom themes from storage', e instanceof Error ? e.message : String(e));
+  } catch (e: unknown) {
+    logger.warn(
+      'ThemeService',
+      'Failed to load custom themes from storage',
+      e instanceof Error ? e.message : String(e)
+    );
     return [];
   }
 }

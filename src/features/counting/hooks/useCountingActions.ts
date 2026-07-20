@@ -35,7 +35,7 @@ interface UseCountingActionsOptions {
 
   engine: any; // CountingEngine - tipo complejo de useScanPipeline
 
-  settings: any;
+  settings: AppSettings;
   consolidatedHistory: ConsolidatedItem[] | null;
   currentLocation: string;
   multiplier: number;
@@ -72,7 +72,7 @@ interface UseCountingActionsResult {
   toggleAutoLock: (session: CountingSession) => Promise<void>;
   setStatus: (status: 'manual' | 'idle') => void;
 
-  applyPotentialMatch: (setPotentialMatch: (val: any) => void) => Promise<void>;
+  applyPotentialMatch: (setPotentialMatch: (val: MatchResult | null) => void) => Promise<void>;
   updateMultiplier: (value: number) => void;
   updateLocation: (location: string) => void;
 }
@@ -144,7 +144,7 @@ export const useCountingActions = (
           currentQty,
           undefined,
 
-          async (cleanBarcode: string, product: any, newQty: number) => {
+          async (cleanBarcode: string, product: Product | null, newQty: number) => {
             try {
               // TODO: Usar shouldPromptForBatch cuando esté disponible
               dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
@@ -158,7 +158,7 @@ export const useCountingActions = (
                 batch
               );
               dispatch({ type: 'COMMIT_COMPLETE' });
-            } catch (err) {
+            } catch (err: unknown) {
               logger.error(
                 'useCountingActions',
                 'Error in scan commit',
@@ -169,7 +169,7 @@ export const useCountingActions = (
           },
           () => dispatch({ type: 'ERROR_OCCURRED' })
         );
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error(
           'useCountingActions',
           'Error in finalizeScanPipeline',
@@ -191,7 +191,7 @@ export const useCountingActions = (
       await sessionService.updateSessionMetadata(sessionId);
       engine.actions.resetActive();
       engine.actions.triggerFeedback('undo');
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(
         'useCountingActions',
         'Error resetting session',
@@ -248,7 +248,7 @@ export const useCountingActions = (
 
           finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error(
           'useCountingActions',
           'Error in handlePharmaComplete',
@@ -285,7 +285,7 @@ export const useCountingActions = (
         const undone = await sessionService.undoLastAction(sessionId);
         if (undone) engine.actions.triggerFeedback('undo');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(
         'useCountingActions',
         'Error in undoLastScan',
@@ -299,14 +299,14 @@ export const useCountingActions = (
   // ACCIÓN: Toggle auto-lock
   // ============================================================================
   const toggleAutoLock = useCallback(
-    async (session: any) => {
+    async (session: CountingSession) => {
       try {
         if (sessionId && session) {
           const newState = !session.isAutoLockEnabled;
           await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
           engine.actions.triggerFeedback(newState ? 'success' : 'undo');
         }
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error(
           'useCountingActions',
           'Error in toggleAutoLock',
@@ -333,7 +333,7 @@ export const useCountingActions = (
   // ACCIÓN: Aplicar sugerencia de matching
   // ============================================================================
   const applyPotentialMatch = useCallback(
-    async (setPotentialMatch: (val: any) => void) => {
+    async (setPotentialMatch: (val: MatchResult | null) => void) => {
       try {
         if (!potentialMatch || !sessionId) return;
         await SessionRepository.update(sessionId, {
@@ -342,7 +342,7 @@ export const useCountingActions = (
         });
         engine.actions.triggerFeedback('success');
         setPotentialMatch(null);
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error(
           'useCountingActions',
           'Error in applyPotentialMatch',

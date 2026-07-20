@@ -1,7 +1,7 @@
-"use client";
+'use client';
 /**
  * Audit Export - Exportar logs de auditoría a Excel/CSV
- * 
+ *
  * Funcionalidad inspirada en AppSheet Audit History export.
  * Permite exportar logs con filtros avanzados.
  */
@@ -126,9 +126,9 @@ function getSeverityLabel(severity: AuditSeverity): string {
 /**
  * Formatea datos cambiantes para exportación
  */
-function formatChanges(changes?: Record<string, { old: any; new: any }>): string {
+function formatChanges(changes?: Record<string, { old: unknown; new: unknown }>): string {
   if (!changes) return '';
-  
+
   return Object.entries(changes)
     .map(([field, { old: oldVal, new: newVal }]) => {
       const oldStr = oldVal === undefined || oldVal === null ? '(vacío)' : String(oldVal);
@@ -141,13 +141,11 @@ function formatChanges(changes?: Record<string, { old: any; new: any }>): string
 /**
  * Formatea detalles adicionales
  */
-function formatDetails(
-  details?: string | Record<string, any>
-): string {
+function formatDetails(details?: string | Record<string, any>): string {
   if (!details) return '';
-  
+
   if (typeof details === 'string') return details;
-  
+
   return JSON.stringify(details, null, 2);
 }
 
@@ -159,10 +157,9 @@ function formatDetails(
  * Transforma un log de auditoría a fila de exportación
  */
 function transformToExportRow(log: AuditLog, options: AuditExportOptions): ExportRow {
-  const timestamp = typeof log.timestamp === 'number' 
-    ? log.timestamp 
-    : new Date(log.timestamp).getTime();
-  
+  const timestamp =
+    typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
+
   const baseRow: ExportRow = {
     ID: log.id || 0,
     Timestamp: formatTimestampForExcel(timestamp),
@@ -178,7 +175,9 @@ function transformToExportRow(log: AuditLog, options: AuditExportOptions): Expor
 
   // Incluir cambios si está habilitado
   if (options.includeChanges && log.changes) {
-    baseRow.OldValue = formatChanges(log.changes as Record<string, { old: any; new: any }> | undefined);
+    baseRow.OldValue = formatChanges(
+      log.changes as Record<string, { old: unknown; new: unknown }> | undefined
+    );
     baseRow.NewValue = '';
   }
 
@@ -201,7 +200,7 @@ function generateCSV(rows: ExportRow[], headers: string[]): string {
   };
 
   const headerRow = headers.map(escape).join(',');
-  const dataRows = rows.map(row => 
+  const dataRows = rows.map(row =>
     headers.map(h => escape(String(row[h as keyof ExportRow] || ''))).join(',')
   );
 
@@ -233,23 +232,23 @@ async function downloadCSV(content: string, filename: string): Promise<void> {
 async function downloadXLSX(rows: ExportRow[], filename: string): Promise<void> {
   // Dynamic import para no cargar xlsx si no es necesario
   const XLSX = await import('xlsx');
-  
+
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Auditoría');
-  
+
   // Ajustar anchos de columna
   const colWidths = [
-    { wch: 8 },   // ID
-    { wch: 20 },  // Timestamp
-    { wch: 12 },  // Date
-    { wch: 10 },  // Time
-    { wch: 15 },  // User
-    { wch: 12 },  // Action
-    { wch: 15 },  // Table
-    { wch: 25 },  // Record
-    { wch: 10 },  // Severity
-    { wch: 40 },  // Details
+    { wch: 8 }, // ID
+    { wch: 20 }, // Timestamp
+    { wch: 12 }, // Date
+    { wch: 10 }, // Time
+    { wch: 15 }, // User
+    { wch: 12 }, // Action
+    { wch: 15 }, // Table
+    { wch: 25 }, // Record
+    { wch: 10 }, // Severity
+    { wch: 40 }, // Details
   ];
   ws['!cols'] = colWidths;
 
@@ -279,25 +278,27 @@ export async function exportAuditLogs(
 
   // Filtrar por fechas si se especificaron
   let filteredLogs = logs;
-  
+
   if (startDate) {
     const start = startDate.getTime();
     filteredLogs = filteredLogs.filter(log => {
-      const ts = typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
+      const ts =
+        typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
       return ts >= start;
     });
   }
-  
+
   if (endDate) {
     const end = endDate.getTime();
     filteredLogs = filteredLogs.filter(log => {
-      const ts = typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
+      const ts =
+        typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
       return ts <= end;
     });
   }
 
   // Transformar a filas de exportación
-  const rows: ExportRow[] = filteredLogs.map(log => 
+  const rows: ExportRow[] = filteredLogs.map(log =>
     transformToExportRow(log, { ...options, includeChanges })
   );
 
@@ -308,9 +309,32 @@ export async function exportAuditLogs(
   // Exportar según formato
   if (format === 'csv') {
     const headers = includeChanges
-      ? ['ID', 'Timestamp', 'Date', 'Time', 'User', 'Action', 'Table', 'Record', 'Severity', 'Details', 'OldValue']
-      : ['ID', 'Timestamp', 'Date', 'Time', 'User', 'Action', 'Table', 'Record', 'Severity', 'Details'];
-    
+      ? [
+          'ID',
+          'Timestamp',
+          'Date',
+          'Time',
+          'User',
+          'Action',
+          'Table',
+          'Record',
+          'Severity',
+          'Details',
+          'OldValue',
+        ]
+      : [
+          'ID',
+          'Timestamp',
+          'Date',
+          'Time',
+          'User',
+          'Action',
+          'Table',
+          'Record',
+          'Severity',
+          'Details',
+        ];
+
     const csvContent = generateCSV(rows, headers);
     await downloadCSV(csvContent, filename);
   } else {
@@ -321,47 +345,56 @@ export async function exportAuditLogs(
 /**
  * Genera un resumen de auditoría
  */
-export function generateAuditSummary(
-  logs: AuditLog[]
-): AuditSummary {
+export function generateAuditSummary(logs: AuditLog[]): AuditSummary {
   const now = Date.now();
   const oneDay = 24 * 60 * 60 * 1000;
   const oneWeek = 7 * oneDay;
 
   const today = logs.filter(log => {
-    const ts = typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
+    const ts =
+      typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
     return ts >= now - oneDay;
   });
 
   const thisWeek = logs.filter(log => {
-    const ts = typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
+    const ts =
+      typeof log.timestamp === 'number' ? log.timestamp : new Date(log.timestamp).getTime();
     return ts >= now - oneWeek;
   });
 
   // Contar por acción
-  const byAction = logs.reduce((acc, log) => {
-    acc[log.action] = (acc[log.action] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const byAction = logs.reduce(
+    (acc, log) => {
+      acc[log.action] = (acc[log.action] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   // Contar por severidad
-  const bySeverity = logs.reduce((acc, log) => {
-    const sev = log.severity || 'info';
-    acc[sev] = (acc[sev] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const bySeverity = logs.reduce(
+    (acc, log) => {
+      const sev = log.severity || 'info';
+      acc[sev] = (acc[sev] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   // Contar por tabla
-  const byTable = logs.reduce((acc, log) => {
-    const table = log.entityType || 'unknown';
-    acc[table] = (acc[table] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const byTable = logs.reduce(
+    (acc, log) => {
+      const table = log.entityType || 'unknown';
+      acc[table] = (acc[table] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   // Errores recientes
-  const recentErrors = logs.filter(log => 
-    log.severity === 'error' || log.severity === 'critical'
-  ).slice(0, 10);
+  const recentErrors = logs
+    .filter(log => log.severity === 'error' || log.severity === 'critical')
+    .slice(0, 10);
 
   return {
     totalLogs: logs.length,
@@ -401,32 +434,29 @@ export function useAuditExport() {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const exportLogs = useCallback(async (
-    logs: AuditLog[],
-    options?: Partial<AuditExportOptions>
-  ) => {
-    setIsExporting(true);
-    setError(null);
+  const exportLogs = useCallback(
+    async (logs: AuditLog[], options?: Partial<AuditExportOptions>) => {
+      setIsExporting(true);
+      setError(null);
 
-    try {
-      await exportAuditLogs(logs, {
-        format: 'xlsx',
-        includeDetails: true,
-        includeChanges: false,
-        ...options,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al exportar');
-      throw err;
-    } finally {
-      setIsExporting(false);
-    }
-  }, []);
+      try {
+        await exportAuditLogs(logs, {
+          format: 'xlsx',
+          includeDetails: true,
+          includeChanges: false,
+          ...options,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al exportar');
+        throw err;
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    []
+  );
 
-  const exportCSV = useCallback(async (
-    logs: AuditLog[],
-    options?: Partial<AuditExportOptions>
-  ) => {
+  const exportCSV = useCallback(async (logs: AuditLog[], options?: Partial<AuditExportOptions>) => {
     setIsExporting(true);
     setError(null);
 

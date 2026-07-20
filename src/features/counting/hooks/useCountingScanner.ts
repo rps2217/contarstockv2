@@ -15,6 +15,7 @@
 import { useReducer } from 'react';
 import { scannerReducer, type ScannerState } from '@/services/scannerMachine';
 import { useScanPipeline } from '@/shared/hooks/useScanPipeline';
+import type { Product } from '@/types';
 
 // ============================================================================
 // TIPOS
@@ -43,7 +44,7 @@ export interface UseCountingScannerResult {
 
   // Producto activo
   activeBarcode: string | null;
-  activeProduct: any | null;
+  activeProduct: Product | null;
   optimisticQty: number;
 
   // Multiplicador

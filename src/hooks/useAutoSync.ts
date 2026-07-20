@@ -86,7 +86,7 @@ export const useAutoSync = () => {
           addToast(`Sync con errores: ${visibleErrors[0]}`, 'error');
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMsg = handleSyncError(error);
 
       if (errorMsg) {

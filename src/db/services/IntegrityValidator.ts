@@ -381,7 +381,7 @@ class IntegrityValidatorClass {
         switch (issue.type) {
           case 'orphaned':
             if (issue.table === 'scans') {
-              await db.scans.bulkDelete(issue.recordIds as any[]);
+              await db.scans.bulkDelete(issue.recordIds);
               logger.info('IntegrityValidator', `Deleted orphaned scans`, {
                 count: issue.recordIds.length,
               });
@@ -392,15 +392,15 @@ class IntegrityValidatorClass {
             if (issue.table === 'scans') {
               // Eliminar scans con barcode inválido
               if (issue.description.includes('barcode')) {
-                await db.scans.bulkDelete(issue.recordIds as any[]);
+                await db.scans.bulkDelete(issue.recordIds);
               }
               // Eliminar scans con cantidad inválida
               if (issue.description.includes('cantidad')) {
-                await db.scans.bulkDelete(issue.recordIds as any[]);
+                await db.scans.bulkDelete(issue.recordIds);
               }
             }
             if (issue.table === 'syncQueue' && issue.description.includes('inválidos')) {
-              await db.syncQueue.bulkDelete(issue.recordIds as any[]);
+              await db.syncQueue.bulkDelete(issue.recordIds);
             }
             break;
         }

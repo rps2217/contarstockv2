@@ -2,14 +2,14 @@
  * =============================================================================
  * HealthService - Sistema de monitoreo y métricas de salud
  * =============================================================================
- * 
+ *
  * Características:
  * - Health checks de componentes
  * - Métricas de uso
  * - Alertas proactivas
  * - Estadísticas de sincronización
  * - Monitoreo de rendimiento
- * 
+ *
  * @since 2026-07-07
  */
 
@@ -45,24 +45,24 @@ export interface SystemMetrics {
   totalScans: number;
   totalExpirations: number;
   pendingSyncs: number;
-  
+
   // Métricas de rendimiento
   dbSize?: number;
   indexedDBSize?: number;
-  
+
   // Métricas de uso
   scansToday: number;
   sessionsActive: number;
   expiringThisWeek: number;
   expiringThisMonth: number;
   expiredCount: number;
-  
+
   // Métricas de sincronización
   syncSuccessRate: number;
   lastSyncAt?: number;
   pendingOperations: number;
   failedOperations: number;
-  
+
   // ✅ Timestamp para historial
   timestamp: number;
 }
@@ -92,10 +92,10 @@ export class HealthService {
 
   private constructor() {
     this.startTime = Date.now();
-    
+
     // Cargar alertas guardadas
     this.loadAlerts();
-    
+
     // Guardar métricas periódicamente
     this.startMetricsCollection();
   }
@@ -126,19 +126,19 @@ export class HealthService {
    */
   async getHealthReport(): Promise<HealthReport> {
     const checks: HealthCheck[] = [];
-    
+
     // 1. Verificar IndexedDB
     checks.push(await this.checkIndexedDB());
-    
+
     // 2. Verificar sincronización
     checks.push(await this.checkSyncStatus());
-    
+
     // 3. Verificar vencimientos críticos
     checks.push(await this.checkExpiryHealth());
-    
+
     // 4. Verificar espacio de almacenamiento
     checks.push(await this.checkStorage());
-    
+
     // 5. Verificar cola de sincronización
     checks.push(await this.checkSyncQueue());
 
@@ -155,11 +155,11 @@ export class HealthService {
 
   private async checkIndexedDB(): Promise<HealthCheck> {
     const start = Date.now();
-    
+
     try {
       await db.products.count();
       await db.sessions.count();
-      
+
       return {
         name: 'IndexedDB',
         status: 'healthy',
@@ -167,7 +167,7 @@ export class HealthService {
         duration: Date.now() - start,
         timestamp: Date.now(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         name: 'IndexedDB',
         status: 'unhealthy',
@@ -182,7 +182,7 @@ export class HealthService {
     try {
       const queue = await db.syncQueue.toArray();
       const failedOps = queue.filter(q => q.retries >= 3).length;
-      
+
       if (failedOps > 10) {
         return {
           name: 'Sincronización',
@@ -198,14 +198,14 @@ export class HealthService {
           timestamp: Date.now(),
         };
       }
-      
+
       return {
         name: 'Sincronización',
         status: 'healthy',
         message: 'Sin errores de sincronización',
         timestamp: Date.now(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         name: 'Sincronización',
         status: 'degraded',
@@ -221,18 +221,18 @@ export class HealthService {
       const now = new Date();
       const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       const monthFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       let criticalCount = 0;
       let expiredCount = 0;
-      
+
       for (const exp of expirations) {
         const expiryDate = new Date(exp.yyyy, exp.mm - 1, 1);
         const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         if (daysLeft < 0) expiredCount++;
         else if (daysLeft <= 7) criticalCount++;
       }
-      
+
       if (expiredCount > 0 || criticalCount > 0) {
         return {
           name: 'Vencimientos',
@@ -241,14 +241,14 @@ export class HealthService {
           timestamp: Date.now(),
         };
       }
-      
+
       return {
         name: 'Vencimientos',
         status: 'healthy',
         message: 'Sin vencimientos críticos',
         timestamp: Date.now(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         name: 'Vencimientos',
         status: 'degraded',
@@ -265,8 +265,10 @@ export class HealthService {
         const estimate = await navigator.storage.estimate();
         const usedMB = ((estimate.usage || 0) / (1024 * 1024)).toFixed(2);
         const quotaMB = ((estimate.quota || 0) / (1024 * 1024)).toFixed(2);
-        const usagePercent = estimate.quota ? Math.round((estimate.usage! / estimate.quota) * 100) : 0;
-        
+        const usagePercent = estimate.quota
+          ? Math.round((estimate.usage! / estimate.quota) * 100)
+          : 0;
+
         if (usagePercent > 90) {
           return {
             name: 'Almacenamiento',
@@ -282,7 +284,7 @@ export class HealthService {
             timestamp: Date.now(),
           };
         }
-        
+
         return {
           name: 'Almacenamiento',
           status: 'healthy',
@@ -290,7 +292,7 @@ export class HealthService {
           timestamp: Date.now(),
         };
       }
-      
+
       return {
         name: 'Almacenamiento',
         status: 'healthy',
@@ -311,7 +313,7 @@ export class HealthService {
     try {
       const queue = await db.syncQueue.toArray();
       const pendingOps = queue.filter(q => q.retries < 3);
-      
+
       if (pendingOps.length > 100) {
         return {
           name: 'Cola de Sync',
@@ -320,7 +322,7 @@ export class HealthService {
           timestamp: Date.now(),
         };
       }
-      
+
       return {
         name: 'Cola de Sync',
         status: 'healthy',
@@ -357,7 +359,7 @@ export class HealthService {
   async getMetrics(): Promise<SystemMetrics> {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    
+
     try {
       const [
         totalProducts,
@@ -381,46 +383,41 @@ export class HealthService {
 
       // Scans de hoy
       const scansToday = scans.filter(s => s.timestamp >= todayStart).length;
-      
+
       // Sesiones activas
       const sessionsActive = sessions.filter(s => s.status === 'active').length;
-      
+
       // Vencimientos
       const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       const monthFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       let expiringThisWeek = 0;
       let expiringThisMonth = 0;
       let expiredCount = 0;
-      
+
       for (const exp of expirations) {
         const expiryDate = new Date(exp.yyyy, exp.mm - 1, 1);
         const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         if (daysLeft < 0) expiredCount++;
         else if (daysLeft <= 7) expiringThisWeek++;
         if (daysLeft <= 30) expiringThisMonth++;
       }
-      
+
       // Métricas de sincronización
       const pendingOps = syncQueue.filter(q => q.retries < 3);
       const failedOps = syncQueue.filter(q => q.retries >= 3);
-      
+
       // Calcular tasa de éxito
       const totalOps = syncQueue.length;
-      const successRate = totalOps > 0 
-        ? Math.round(((totalOps - failedOps.length) / totalOps) * 100) 
-        : 100;
+      const successRate =
+        totalOps > 0 ? Math.round(((totalOps - failedOps.length) / totalOps) * 100) : 100;
 
       // Obtener última sync exitosa
-      const syncLogs = await db.sync_logs
-        .orderBy('timestamp')
-        .reverse()
-        .limit(100)
-        .toArray();
-      
+      const syncLogs = await db.sync_logs.orderBy('timestamp').reverse().limit(100).toArray();
+
       const lastSuccess = syncLogs.find(l => l.status === 'success');
-      
+
       return {
         totalProducts,
         totalSessions,
@@ -460,25 +457,28 @@ export class HealthService {
     try {
       const metrics = await this.getMetrics();
       this.metricsHistory.push(metrics);
-      
+
       // Limitar tamaño del historial
       if (this.metricsHistory.length > this.METRICS_HISTORY_SIZE) {
         this.metricsHistory.shift();
       }
-      
+
       // Generar alertas basadas en métricas
       this.generateAlerts(metrics);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('HealthService', 'Failed to record metrics', String(error));
     }
   }
 
   private startMetricsCollection(): void {
     // Registrar métricas cada 5 minutos
-    this.metricsIntervalId = setInterval(() => {
-      this.recordMetrics();
-    }, 5 * 60 * 1000);
-    
+    this.metricsIntervalId = setInterval(
+      () => {
+        this.recordMetrics();
+      },
+      5 * 60 * 1000
+    );
+
     // Registro inicial
     this.recordMetrics();
   }
@@ -500,7 +500,7 @@ export class HealthService {
         source: 'HealthService',
       });
     }
-    
+
     // Alerta por vencimientos críticos
     if (metrics.expiredCount > 0) {
       this.addAlert({
@@ -510,7 +510,7 @@ export class HealthService {
         source: 'HealthService',
       });
     }
-    
+
     // Alerta por sync fallido
     if (metrics.failedOperations > 5) {
       this.addAlert({
@@ -520,7 +520,7 @@ export class HealthService {
         source: 'HealthService',
       });
     }
-    
+
     // Alerta por baja tasa de éxito
     if (metrics.syncSuccessRate < 80) {
       this.addAlert({
@@ -542,17 +542,17 @@ export class HealthService {
       timestamp: Date.now(),
       acknowledged: false,
     };
-    
+
     this.alerts.unshift(newAlert);
-    
+
     // Limitar número de alertas
     if (this.alerts.length > this.MAX_ALERTS) {
       this.alerts.pop();
     }
-    
+
     // Guardar en localStorage
     this.saveAlerts();
-    
+
     logger.info('HealthService', `Alert added: ${alert.title}`);
   }
 
@@ -585,7 +585,7 @@ export class HealthService {
    * Confirma todas las alertas
    */
   acknowledgeAllAlerts(): void {
-    this.alerts.forEach(a => a.acknowledged = true);
+    this.alerts.forEach(a => (a.acknowledged = true));
     this.saveAlerts();
   }
 
@@ -630,7 +630,7 @@ export class HealthService {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) {
       return `${days}d ${hours % 24}h`;
     }
@@ -644,10 +644,9 @@ export class HealthService {
    * Formatea el reporte de salud
    */
   formatHealthReport(report: HealthReport): string {
-    const statusIcon = report.overall === 'healthy' ? '✅' 
-      : report.overall === 'degraded' ? '⚠️' 
-      : '❌';
-    
+    const statusIcon =
+      report.overall === 'healthy' ? '✅' : report.overall === 'degraded' ? '⚠️' : '❌';
+
     const lines: string[] = [];
     lines.push('═══════════════════════════════════════════════════════════════');
     lines.push('                    SALUD DEL SISTEMA');
@@ -660,16 +659,14 @@ export class HealthService {
     lines.push('───────────────────────────────────────────────────────────────');
     lines.push('COMPONENTES');
     lines.push('───────────────────────────────────────────────────────────────');
-    
+
     for (const check of report.checks) {
-      const icon = check.status === 'healthy' ? '✅' 
-        : check.status === 'degraded' ? '⚠️' 
-        : '❌';
+      const icon = check.status === 'healthy' ? '✅' : check.status === 'degraded' ? '⚠️' : '❌';
       lines.push(`${icon} ${check.name}: ${check.message}`);
     }
-    
+
     lines.push('');
-    
+
     return lines.join('\n');
   }
 }

@@ -1,6 +1,6 @@
 /**
  * ProductProviderRepository - Acceso a la relación producto-proveedor
- * 
+ *
  * Tabla: PRODUCTO_PROVEEDOR
  * Esta tabla relaciona productos con proveedores y define políticas específicas.
  */
@@ -9,6 +9,20 @@ import { db, ProductProvider as DBProductProvider } from '../db';
 
 // Re-export the interface from db.ts
 export interface ProductProvider extends DBProductProvider {}
+
+// Tipo para registros de Supabase
+interface SupabaseProductProviderRecord {
+  product_barcode: string;
+  provider_rut: string;
+  is_primary: boolean | null;
+  has_exchange: boolean | null;
+  withdrawal_days: number | null;
+  exchange_policy: string | null;
+  mundo: string | null;
+  marca: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 // Singleton para el repositorio
 export const productProviderRepository = {
@@ -49,7 +63,8 @@ export const productProviderRepository = {
    * Obtener el proveedor principal de un producto
    */
   async getPrimaryProvider(barcode: string): Promise<ProductProvider | undefined> {
-    const providers = await db.table(this.table)
+    const providers = await db
+      .table(this.table)
       .where('productBarcode')
       .equals(barcode)
       .filter(p => p.isPrimary === true)
@@ -81,7 +96,7 @@ export const productProviderRepository = {
     defaultHasExchange: boolean = true
   ): Promise<{ withdrawalDays: number; hasExchange: boolean }> {
     const primaryProvider = await this.getPrimaryProvider(barcode);
-    
+
     if (primaryProvider) {
       return {
         withdrawalDays: primaryProvider.withdrawalDays ?? defaultWithdrawalDays,
@@ -118,7 +133,7 @@ export const productProviderRepository = {
    */
   async setPrimary(productBarcode: string, providerRut: string): Promise<void> {
     const relations = await this.getByProduct(productBarcode);
-    
+
     // Primero desmarcar todos
     for (const r of relations) {
       if (r.id) {
@@ -136,21 +151,21 @@ export const productProviderRepository = {
   async getProviderStats(): Promise<Map<string, { total: number; primary: number }>> {
     const all = await this.getAll();
     const stats = new Map<string, { total: number; primary: number }>();
-    
+
     for (const r of all) {
       const current = stats.get(r.providerRut) || { total: 0, primary: 0 };
       current.total++;
       if (r.isPrimary) current.primary++;
       stats.set(r.providerRut, current);
     }
-    
+
     return stats;
   },
 
   /**
    * Importar datos desde Supabase (array de registros remotos)
    */
-  async importFromSupabase(records: any[]): Promise<number> {
+  async importFromSupabase(records: SupabaseProductProviderRecord[]): Promise<number> {
     const mapped = records.map(r => ({
       productBarcode: r.product_barcode,
       providerRut: String(r.provider_rut),
@@ -166,5 +181,5 @@ export const productProviderRepository = {
 
     await this.saveMany(mapped);
     return mapped.length;
-  }
+  },
 };

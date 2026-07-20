@@ -204,7 +204,7 @@ export class EventsSyncService {
       await db.events.bulkPut(pendingEvents.map(e => ({ ...e, syncStatus: 'synced' as const })));
 
       logger.info('EventsSync', `Éxito: ${result.created}, Skipped: ${result.skipped}`);
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
       logger.error('EventsSync', `Error en pushToCloud: ${msg}`);
       result.success = false;
@@ -274,7 +274,7 @@ export class EventsSyncService {
       }
 
       logger.info('EventsSync', `Agregados: ${added}, Actualizados: ${updated}`);
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error('EventsSync', 'Error en pullFromCloud', err);
     }
 

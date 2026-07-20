@@ -143,10 +143,10 @@ export const useSyncManager = () => {
           const existing = await ExpectedOrderRepository.getById(manifest.id);
           if (!existing) {
             const items =
-              manifest.items?.map((p: any) => ({
-                barcode: p.barcode,
-                name: p.name,
-                expectedQty: p.qty,
+              manifest.items?.map((p: { barcode?: string; name?: string; qty?: number }) => ({
+                barcode: p.barcode || '',
+                name: p.name || '',
+                expectedQty: p.qty || 0,
               })) || [];
 
             await ExpectedOrderRepository.save({
@@ -206,11 +206,14 @@ export const useSyncManager = () => {
           prev.map((g, idx) => (idx === i ? { ...g, uiStatus: 'success', progress: undefined } : g))
         );
         addLog(`✓ Completado: ${group.erpOrder}`, 'success');
-      } catch (e: any) {
+      } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err));
         setUiGroups(prev =>
-          prev.map((g, idx) => (idx === i ? { ...g, uiStatus: 'error', progress: e.message } : g))
+          prev.map((g, idx) =>
+            idx === i ? { ...g, uiStatus: 'error', progress: error.message } : g
+          )
         );
-        addLog(`✗ Error en ${group.erpOrder}: ${e.message}`, 'error');
+        addLog(`✗ Error en ${group.erpOrder}: ${error.message}`, 'error');
       }
     }
 
@@ -249,9 +252,10 @@ export const useSyncManager = () => {
 
         const summaryResponse = await supabaseSyncService.query(tableName, 'ERP', erp as string);
 
-        if (summaryResponse.success) {
-          const cloudTotal = (summaryResponse.rows as any[]).reduce(
-            (acc: number, row: any) => acc + Number(row.quantity || row.CANTIDAD || 0),
+        if (summaryResponse.success && summaryResponse.rows) {
+          const cloudTotal = summaryResponse.rows.reduce(
+            (acc: number, row: Record<string, unknown>) =>
+              acc + Number(row.quantity || row.CANTIDAD || 0),
             0
           );
           const diff = localTotal - cloudTotal;

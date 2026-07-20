@@ -47,6 +47,14 @@ import {
   type EventFormData,
 } from './EventsModal/eventsConstants';
 
+// Importar operaciones masivas
+import { bulkDeleteEvents } from './EventsModal/bulkOperations';
+
+// Importar componentes extraídos
+import { EventsFilters } from './EventsModal/EventsFilters';
+import { EventsBulkActions } from './EventsModal/EventsBulkActions';
+import { EventsTableRow } from './EventsModal/EventsTableRow';
+
 // Re-exportar tipos para uso externo
 export type {
   EventType,
@@ -443,90 +451,14 @@ export const EventsModal: React.FC<EventsModalProps> = ({
     setSelectedIds(new Set());
   };
 
-  // Eliminar seleccionados (masivo)
+  // Eliminar seleccionados (masivo) - usa función importada
   const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-
-    const count = selectedIds.size;
-    if (
-      !confirm(
-        `¿Eliminar ${count} evento${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}?`
-      )
-    )
-      return;
-
     setIsDeletingBulk(true);
     try {
-      let deleted = 0;
-      let errors = 0;
-
-      for (const id of selectedIds) {
-        try {
-          // Obtener el evento antes de eliminar
-          const event = await db.events.get(id);
-
-          if (event) {
-            // Registrar en lista de eliminados
-            const eventKey = `${event.barcode || ''}~${event.frcNumber || ''}`.toLowerCase();
-            await db.deletedEvents.put({
-              eventKey,
-              barcode: event.barcode || '',
-              frcNumber: event.frcNumber || '',
-              deletedAt: Date.now(),
-              synced: false,
-            });
-
-            // Intentar eliminar de la nube
-            try {
-              const { supabase } = await import('@/lib/supabase');
-              await supabase
-                .from('EVENTOS')
-                .delete()
-                .eq('barcode', event.barcode || '')
-                .eq('frc_code', event.frcNumber || '');
-
-              await db.deletedEvents.where('eventKey').equals(eventKey).modify({ synced: true });
-            } catch (cloudErr) {
-              logger.warn(
-                'EventsModal',
-                'No se pudo eliminar de la nube',
-                cloudErr instanceof Error ? cloudErr.message : String(cloudErr)
-              );
-            }
-          }
-
-          // Eliminar localmente
-          await db.events.delete(id);
-          deleted++;
-        } catch (err) {
-          logger.error(
-            'EventsModal',
-            'Error deleting event',
-            err instanceof Error ? err.message : String(err)
-          );
-          errors++;
-        }
-      }
-
-      // Limpiar selección
-      setSelectedIds(new Set());
-
-      if (errors > 0) {
-        toast.error(`${deleted} eliminados, ${errors} errores`);
-      } else {
-        toast.success(
-          `${deleted} evento${deleted !== 1 ? 's' : ''} eliminado${deleted !== 1 ? 's' : ''}`
-        );
-      }
-
-      setRefreshKey(k => k + 1);
-    } catch (error) {
-      logger.error(
-        'EventsModal',
-        'Error bulk deleting events',
-        error instanceof Error ? error.message : String(error)
-      );
-      toast.error('Error al eliminar eventos');
+      await bulkDeleteEvents(selectedIds, () => {
+        setSelectedIds(new Set());
+        setRefreshKey(k => k + 1);
+      });
     } finally {
       setIsDeletingBulk(false);
     }
@@ -621,69 +553,15 @@ export const EventsModal: React.FC<EventsModalProps> = ({
         </div>
 
         {/* Barra de acciones masivas */}
-        <AnimatePresence>
-          {viewMode === 'table' && selectedCount > 0 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-blue-600/10 border-b border-blue-500/30 px-6 py-3 shrink-0 overflow-hidden"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="w-5 h-5 text-blue-400" />
-                    <span className="text-sm font-medium text-blue-300">
-                      {selectedCount} seleccionado{selectedCount !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <button
-                    onClick={clearSelection}
-                    className="text-xs text-blue-400 hover:text-blue-300 underline"
-                  >
-                    Limpiar selección
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="flex items-center gap-2 bg-surface hover:bg-elevated text-secondary px-3 py-1.5 rounded-lg text-sm transition-colors border border-subtle"
-                  >
-                    {isAllSelected ? (
-                      <>
-                        <Square className="w-4 h-4" />
-                        Deseleccionar todo
-                      </>
-                    ) : (
-                      <>
-                        <CheckSquare className="w-4 h-4" />
-                        Seleccionar todo ({filteredEvents.length})
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    disabled={isDeletingBulk}
-                    className="flex items-center gap-2 bg-rose-600/80 hover:bg-rose-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                  >
-                    {isDeletingBulk ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Eliminando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4" />
-                        Eliminar {selectedCount}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <EventsBulkActions
+          selectedCount={selectedCount}
+          isAllSelected={isAllSelected}
+          isDeleting={isDeletingBulk}
+          onToggleSelectAll={toggleSelectAll}
+          onClearSelection={clearSelection}
+          onBulkDelete={handleBulkDelete}
+          totalCount={filteredEvents.length}
+        />
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -697,46 +575,14 @@ export const EventsModal: React.FC<EventsModalProps> = ({
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* Filtros */}
-                <div className="px-4 sm:px-6 py-2 sm:py-3 border-b border-subtle shrink-0">
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Buscar..."
-                        className="w-full bg-base border border-subtle rounded-xl pl-9 pr-4 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <select
-                      value={typeFilter}
-                      onChange={e => setTypeFilter(e.target.value as EventType | 'all')}
-                      className="bg-base border border-subtle rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm text-primary focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="all">Tipo</option>
-                      {TYPE_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={statusFilter}
-                      onChange={e => setStatusFilter(e.target.value as EventStatus | 'all')}
-                      className="bg-base border border-subtle rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm text-primary focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="all">Estado</option>
-                      {STATUS_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <EventsFilters
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  typeFilter={typeFilter}
+                  onTypeFilterChange={setTypeFilter}
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
+                />
 
                 {/* Tabla */}
                 <div className="flex-1 overflow-auto min-w-0">
@@ -820,131 +666,16 @@ export const EventsModal: React.FC<EventsModalProps> = ({
                           </td>
                         </tr>
                       ) : (
-                        filteredEvents.map(event => {
-                          const statusInfo = STATUS_OPTIONS.find(s => s.value === event.status);
-                          const isSelected = event.id !== undefined && selectedIds.has(event.id);
-
-                          return (
-                            <tr
-                              key={event.id}
-                              className={cn(
-                                'transition-colors',
-                                isSelected ? 'bg-blue-500/10' : 'hover:bg-base/50'
-                              )}
-                            >
-                              {/* Checkbox de selección */}
-                              <td className="w-10 sm:w-12 px-2 sm:px-4 py-2 sm:py-3">
-                                <button
-                                  onClick={() => event.id !== undefined && toggleSelect(event.id)}
-                                  className="flex items-center justify-center w-5 h-5 rounded transition-colors hover:bg-elevated"
-                                >
-                                  {isSelected ? (
-                                    <CheckSquare className="w-4 h-4 text-blue-400" />
-                                  ) : (
-                                    <Square className="w-4 h-4 text-muted" />
-                                  )}
-                                </button>
-                              </td>
-                              {/* FRC */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                <span className="text-xs sm:text-sm font-mono text-primary truncate block max-w-[60px] sm:max-w-none">
-                                  {event.frcNumber || '-'}
-                                </span>
-                              </td>
-
-                              {/* Producto */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                <span className="text-xs sm:text-sm text-primary line-clamp-1 block max-w-[80px] sm:max-w-[200px]">
-                                  {event.productName || '-'}
-                                </span>
-                              </td>
-
-                              {/* Barras */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
-                                <span className="text-xs sm:text-sm font-mono text-secondary truncate block max-w-[80px]">
-                                  {event.barcode || '-'}
-                                </span>
-                              </td>
-
-                              {/* Lote */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
-                                <span className="text-xs sm:text-sm text-secondary truncate block max-w-[60px]">
-                                  {event.batch || '-'}
-                                </span>
-                              </td>
-
-                              {/* Vencimiento */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden lg:table-cell">
-                                <span className="text-xs sm:text-sm text-secondary">
-                                  {event.expiryDate || '-'}
-                                </span>
-                              </td>
-
-                              {/* Estado */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                <span
-                                  className={cn(
-                                    'text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap',
-                                    event.status === 'pending' && 'bg-amber-500/20 text-amber-500',
-                                    event.status === 'destined' && 'bg-blue-500/20 text-blue-500',
-                                    event.status === 'adjusted' &&
-                                      'bg-emerald-500/20 text-emerald-500'
-                                  )}
-                                >
-                                  {statusInfo?.label}
-                                </span>
-                              </td>
-
-                              {/* Indicador de sincronización */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                <div className="flex items-center justify-center">
-                                  {event.syncStatus === 'pending' && (
-                                    <div title="Esperando respaldo">
-                                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 animate-spin" />
-                                    </div>
-                                  )}
-                                  {event.syncStatus === 'synced' && (
-                                    <div title="Respaldado">
-                                      <Cloud className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
-                                    </div>
-                                  )}
-                                  {event.syncStatus === 'error' && (
-                                    <div title="Error">
-                                      <CloudOff className="w-3 h-3 sm:w-4 sm:h-4 text-rose-400" />
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-
-                              {/* Fecha */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
-                                <span className="text-[10px] sm:text-sm text-muted">
-                                  {event.createdAt ? formatEventDate(event.createdAt) : '-'}
-                                </span>
-                              </td>
-
-                              {/* Acciones */}
-                              <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                <div className="flex items-center gap-0.5 sm:gap-1">
-                                  <button
-                                    onClick={() => handleEdit(event)}
-                                    className="p-1 rounded-lg hover:bg-blue-500/20 transition-colors"
-                                    title="Editar"
-                                  >
-                                    <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
-                                  </button>
-                                  <button
-                                    onClick={() => event.id && handleDelete(event.id)}
-                                    className="p-1 rounded-lg hover:bg-rose-500/20 transition-colors"
-                                    title="Eliminar"
-                                  >
-                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-rose-500" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
+                        filteredEvents.map(event => (
+                          <EventsTableRow
+                            key={event.id}
+                            event={event}
+                            isSelected={event.id !== undefined && selectedIds.has(event.id)}
+                            onToggleSelect={toggleSelect}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                          />
+                        ))
                       )}
                     </tbody>
                   </table>

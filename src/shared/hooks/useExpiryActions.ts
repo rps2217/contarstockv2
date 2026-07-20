@@ -15,6 +15,7 @@
 
 import { useCallback } from 'react';
 import { logger } from '@/services/logger';
+import type { ExpiryEntry, SaveExpiryParams, SaveExpiryOptions } from '@/services/ExpiryService';
 import { isNoDateRecord } from '@/lib/expiryConfig';
 
 interface ExpiryData {
@@ -31,14 +32,19 @@ interface UseExpiryActionsOptions {
   sessionId: string;
   currentLocation: string;
 
-  engine?: any; // CountingEngine o similar
-  onExpirySaved?: (entry: any) => void;
+  engine?: {
+    activeProduct?: { name?: string };
+    multiplier?: number;
+    activeBarcode?: string;
+    actions?: { triggerFeedback?: (type: string) => void };
+  }; // CountingEngine o similar
+  onExpirySaved?: (entry: ExpiryEntry) => void;
 
-  saveExpiry?: (data: ExpiryData, options?: any) => Promise<any>;
+  saveExpiry?: (data: ExpiryData, options?: SaveExpiryOptions) => Promise<ExpiryEntry | null>;
 
-  getExpiryForBarcode?: (barcode: string) => Promise<any>;
+  getExpiryForBarcode?: (barcode: string) => Promise<ExpiryEntry | null>;
 
-  syncExpiry?: (entry: any) => Promise<any>;
+  syncExpiry?: (entry: ExpiryEntry) => Promise<ExpiryEntry | null>;
 }
 
 interface UseExpiryActionsReturn {

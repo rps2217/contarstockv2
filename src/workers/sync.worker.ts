@@ -147,8 +147,12 @@ const handleSyncAll = async () => {
         });
 
         sendMessage({ type: 'LOG', level: 'info', msg: `Synced table: ${table}` });
-      } catch (err: any) {
-        sendMessage({ type: 'LOG', level: 'error', msg: `Error syncing ${table}: ${err.message}` });
+      } catch (err: unknown) {
+        sendMessage({
+          type: 'LOG',
+          level: 'error',
+          msg: `Error syncing ${table}: ${err instanceof Error ? err.message : String(err)}`,
+        });
         results.push({
           table,
           pushed: 0,

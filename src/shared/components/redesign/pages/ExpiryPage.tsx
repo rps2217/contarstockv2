@@ -50,82 +50,22 @@ import { FAB } from '@/shared/components/ui/FAB';
 // IMPORTAR COMPONENTES EXTRAÍDOS
 import { ExpiryHeader } from './ExpiryPage/ExpiryHeader';
 import { ExpiryFilters } from './ExpiryPage/ExpiryFilters';
+import { RecordRow } from './ExpiryPage/expiryRecordRow';
+import { KanbanCard } from './ExpiryPage/expiryKanbanCard';
+import { Section } from './ExpiryPage/expirySection';
 
-// Tipos y constantes de UI
-type UxExpiryStatus = 'expired' | 'critical' | 'withdrawal' | 'next' | 'safe';
+// Re-exportar constantes para uso interno
+import {
+  type UxExpiryStatus,
+  mapStatus,
+  STATUS_META,
+  STATUS_ORDER,
+  MONTHS,
+  FILTERS,
+} from './ExpiryPage/expiryConstants';
 
-const mapStatus = (status: ExpiryStatus): UxExpiryStatus => {
-  switch (status) {
-    case ExpiryStatus.EXPIRED:
-      return 'expired';
-    case ExpiryStatus.CRITICAL:
-      return 'critical';
-    case ExpiryStatus.WITHDRAWAL:
-      return 'withdrawal';
-    case ExpiryStatus.NEXT_EXPIRY:
-      return 'next';
-    default:
-      return 'safe';
-  }
-};
-
-const STATUS_META: Record<
-  UxExpiryStatus,
-  { label: string; icon: React.ElementType; text: string; bg: string; border: string; dot: string }
-> = {
-  expired: {
-    label: 'Vencido',
-    icon: Skull,
-    text: 'text-rose-500',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-500/30',
-    dot: 'bg-rose-500',
-  },
-  critical: {
-    label: 'Crítico',
-    icon: AlertTriangle,
-    text: 'text-amber-500',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    dot: 'bg-amber-500',
-  },
-  withdrawal: {
-    label: 'A retirar',
-    icon: PackageX,
-    text: 'text-orange-500',
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/30',
-    dot: 'bg-orange-500',
-  },
-  next: {
-    label: 'Próximo',
-    icon: Clock,
-    text: 'text-yellow-500',
-    bg: 'bg-yellow-500/10',
-    border: 'border-yellow-500/30',
-    dot: 'bg-yellow-500',
-  },
-  safe: {
-    label: 'Vigente',
-    icon: ShieldCheck,
-    text: 'text-emerald-500',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    dot: 'bg-emerald-500',
-  },
-};
-
-const STATUS_ORDER: UxExpiryStatus[] = ['expired', 'critical', 'withdrawal', 'next', 'safe'];
-const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-const FILTERS = [
-  { value: 'all' as const, label: 'Todos' },
-  { value: 'expired' as const, label: 'Vencidos' },
-  { value: 'critical' as const, label: 'Críticos' },
-  { value: 'withdrawal' as const, label: 'A retirar' },
-  { value: 'next' as const, label: 'Próximos' },
-  { value: 'safe' as const, label: 'Vigentes' },
-];
+// Funciones helper necesarias para componentes internos
+import { getExpiryDateColor, getWithdrawalDateColor } from './ExpiryPage/expiryHelpers';
 
 // Componentes de UI - Estilo igual a HammerPage
 const SummaryCard = ({
@@ -159,310 +99,6 @@ const SummaryCard = ({
         <p className="text-xs text-muted">{meta.label}</p>
       </div>
     </motion.div>
-  );
-};
-
-// Helper para formatear fecha completa
-const formatExpiryDate = (record: ExpiryRecord) => {
-  const day = record.expiryDateObj ? record.expiryDateObj.getDate() : 1;
-  const month = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm;
-  const year = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy;
-  return { day, month, year };
-};
-
-// Helper para obtener color de fecha de vencimiento basado en urgencia
-const getExpiryDateColor = (daysLeft: number) => {
-  if (daysLeft < 0)
-    return { text: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/40' };
-  if (daysLeft === 0)
-    return { text: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/40' };
-  if (daysLeft <= 7)
-    return { text: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/40' };
-  if (daysLeft <= 30)
-    return { text: 'text-yellow-400', bg: 'bg-yellow-500/15', border: 'border-yellow-500/40' };
-  return { text: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/40' };
-};
-
-// Helper para color de fecha de retiro
-const getWithdrawalDateColor = (daysUntilWithdrawal: number, withdrawalDays: number) => {
-  if (daysUntilWithdrawal < 0)
-    return { text: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/40' };
-  if (daysUntilWithdrawal <= 7)
-    return { text: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/40' };
-  if (daysUntilWithdrawal <= withdrawalDays)
-    return { text: 'text-orange-400', bg: 'bg-orange-500/15', border: 'border-orange-500/40' };
-  return { text: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/40' };
-};
-
-const RecordRow = ({ record, onClick }: { record: ExpiryRecord; onClick?: () => void }) => {
-  const status = mapStatus(record.status);
-  const meta = STATUS_META[status];
-  const daysText =
-    record.daysLeft < 0
-      ? `${Math.abs(record.daysLeft)}d venc`
-      : record.daysLeft === 0
-        ? 'Vence hoy'
-        : `${record.daysLeft}d`;
-
-  // Fecha de vencimiento
-  const { day: expiryDay, month: expiryMonthNum, year: expiryYear } = formatExpiryDate(record);
-  const expiryDateColor = getExpiryDateColor(record.daysLeft);
-
-  // Calcular fecha de retiro
-  const withdrawalDate =
-    record.withdrawalDate instanceof Date ? record.withdrawalDate : new Date(record.withdrawalDate);
-  const daysUntilWithdrawal = Math.ceil(
-    (withdrawalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
-  const withdrawalMonth = MONTHS[withdrawalDate.getMonth()];
-  const withdrawalDaysText =
-    daysUntilWithdrawal < 0
-      ? `${Math.abs(daysUntilWithdrawal)}d`
-      : daysUntilWithdrawal === 0
-        ? 'Hoy'
-        : `${daysUntilWithdrawal}d`;
-  const withdrawalDateColor = getWithdrawalDateColor(daysUntilWithdrawal, record.withdrawalDays);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-3 p-3 hover:bg-elevated transition-colors group rounded-xl cursor-pointer"
-      onClick={onClick}
-    >
-      <div className={cn('w-1.5 h-12 rounded-full shrink-0', meta.dot)} />
-      <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center shrink-0">
-        <Package className="w-5 h-5 text-muted" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-primary truncate">
-            {record.productName || 'Producto sin nombre'}
-          </p>
-          {record.hasCanje && (
-            <span className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded">
-              🏭 CANJE
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-          <span className="text-xs text-muted font-mono">{record.barcode || 'Sin código'}</span>
-          {record.location && (
-            <span className="text-xs text-secondary flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              {record.location}
-            </span>
-          )}
-          {record.providerName && record.providerName !== 'N/A' && (
-            <span className="text-xs text-secondary flex items-center gap-1">
-              🏭 {record.providerName}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Fecha de vencimiento - MEJORADA */}
-      <div
-        className={cn(
-          'shrink-0 px-3 py-2 rounded-xl border text-center min-w-[90px]',
-          expiryDateColor.bg,
-          expiryDateColor.border
-        )}
-      >
-        <div className="flex items-center justify-center gap-1">
-          <CalendarClock className={cn('w-3.5 h-3.5 shrink-0', expiryDateColor.text)} />
-          <p className={cn('text-sm font-bold', expiryDateColor.text)}>
-            {expiryDay} {MONTHS[expiryMonthNum - 1]}
-          </p>
-        </div>
-        <p className="text-[10px] text-muted mt-0.5">{expiryYear}</p>
-      </div>
-
-      {/* Fecha de retiro - MEJORADA */}
-      <div
-        className={cn(
-          'shrink-0 px-3 py-2 rounded-xl border text-center min-w-[90px]',
-          withdrawalDateColor.bg,
-          withdrawalDateColor.border
-        )}
-      >
-        <div className="flex items-center justify-center gap-1">
-          <PackageX className={cn('w-3.5 h-3.5 shrink-0', withdrawalDateColor.text)} />
-          <p className={cn('text-sm font-bold', withdrawalDateColor.text)}>
-            {withdrawalDate.getDate()} {withdrawalMonth}
-          </p>
-        </div>
-        <p className="text-[10px] text-muted mt-0.5">{withdrawalDaysText} retir</p>
-      </div>
-
-      {/* Días restantes y estado */}
-      <div className="shrink-0 flex flex-col items-center gap-1 min-w-[60px]">
-        <span
-          className={cn(
-            'text-xs font-bold px-2 py-1 rounded-lg border',
-            record.daysLeft < 0
-              ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-              : record.daysLeft === 0
-                ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-                : record.daysLeft <= 7
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                  : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-          )}
-        >
-          {daysText}
-        </span>
-      </div>
-    </motion.div>
-  );
-};
-
-// Componente Card para Vista Kanban
-const KanbanCard: React.FC<{ record: ExpiryRecord; onClick: () => void }> = ({
-  record,
-  onClick,
-}) => {
-  const dateColors = getExpiryDateColor(record.daysLeft);
-  const day = record.expiryDateObj ? record.expiryDateObj.getDate() : 1;
-  const month = record.expiryDateObj ? record.expiryDateObj.getMonth() + 1 : record.mm;
-  const year = record.expiryDateObj ? record.expiryDateObj.getFullYear() : record.yyyy;
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="w-full bg-surface border border-subtle rounded-xl p-3 text-left hover:bg-elevated hover:border-blue-500/30 transition-all"
-    >
-      {/* Producto */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-primary truncate">{record.productName}</p>
-          <p className="text-xs text-muted font-mono">{record.barcode}</p>
-        </div>
-        {record.quantity > 1 && (
-          <span className="shrink-0 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
-            {record.quantity}
-          </span>
-        )}
-      </div>
-
-      {/* Fecha de vencimiento */}
-      <div
-        className={cn(
-          'flex items-center gap-2 rounded-lg p-2 mb-2',
-          dateColors.bg,
-          dateColors.border
-        )}
-      >
-        <CalendarClock className={cn('w-4 h-4 shrink-0', dateColors.text)} />
-        <div>
-          <p className={cn('text-sm font-bold', dateColors.text)}>
-            {String(day).padStart(2, '0')}/{String(month).padStart(2, '0')}/{year}
-          </p>
-          <p className="text-xs text-muted">
-            {record.daysLeft < 0
-              ? `Venció hace ${Math.abs(record.daysLeft)} días`
-              : record.daysLeft === 0
-                ? 'Vence hoy'
-                : `${record.daysLeft} días`}
-          </p>
-        </div>
-      </div>
-
-      {/* Info adicional */}
-      <div className="flex items-center justify-between text-xs text-muted">
-        {record.location && (
-          <span className="flex items-center gap-1 truncate">
-            <MapPin className="w-3 h-3 shrink-0" />
-            {record.location}
-          </span>
-        )}
-        {record.hasCanje && (
-          <span className="flex items-center gap-1 text-emerald-500">
-            <RefreshCw className="w-3 h-3" />
-            Canje
-          </span>
-        )}
-      </div>
-    </motion.button>
-  );
-};
-
-const Section = ({
-  status,
-  records,
-  isOpen,
-  onToggle,
-  onRecordClick,
-}: {
-  status: UxExpiryStatus;
-  records: ExpiryRecord[];
-  isOpen: boolean;
-  onToggle: () => void;
-  onRecordClick: (record: ExpiryRecord) => void;
-}) => {
-  const meta = STATUS_META[status];
-  const Icon = meta.icon;
-  return (
-    <div
-      className={cn(
-        'bg-surface border border-subtle rounded-2xl overflow-hidden',
-        records.length === 0 && 'opacity-60'
-      )}
-    >
-      <button
-        onClick={onToggle}
-        disabled={records.length === 0}
-        className={cn(
-          'w-full px-4 py-3 flex items-center justify-between hover:bg-elevated transition-colors',
-          records.length === 0 && 'cursor-not-allowed'
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'w-9 h-9 rounded-xl flex items-center justify-center border',
-              meta.bg,
-              meta.border
-            )}
-          >
-            <Icon className={cn('w-4 h-4', meta.text)} />
-          </div>
-          <div className="text-left">
-            <span className="text-sm font-semibold text-primary">{meta.label}</span>
-            <span className="text-xs text-muted ml-2 font-mono">{records.length} registros</span>
-          </div>
-        </div>
-        {records.length > 0 && (
-          <motion.div animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronRight className="w-4 h-4 text-muted" />
-          </motion.div>
-        )}
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && records.length > 0 && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="divide-y divide-subtle border-t border-subtle px-2 py-2">
-              {records.slice(0, 20).map(r => (
-                <RecordRow key={r.id} record={r} onClick={() => onRecordClick(r)} />
-              ))}
-              {records.length > 20 && (
-                <p className="text-center py-3 text-xs text-muted">
-                  Mostrando 20 de {records.length}
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 };
 
@@ -504,12 +140,12 @@ export const RedesignExpiryPage: React.FC = () => {
     { key: 'barcode' as const, header: 'Código' },
     { key: 'productName' as const, header: 'Producto' },
     { key: 'quantity' as const, header: 'Cantidad' },
-    { key: 'mm' as const, header: 'Mes', format: (v: any) => String(v).padStart(2, '0') },
+    { key: 'mm' as const, header: 'Mes', format: (v: unknown) => String(v).padStart(2, '0') },
     { key: 'yyyy' as const, header: 'Año' },
     {
       key: 'daysLeft' as const,
       header: 'Días Restantes',
-      format: (v: any) => (v !== undefined ? String(v) : '-'),
+      format: (v: unknown) => (v !== undefined ? String(v) : '-'),
     },
     { key: 'status' as const, header: 'Estado' },
     { key: 'location' as const, header: 'Ubicación' },
@@ -791,7 +427,9 @@ export const RedesignExpiryPage: React.FC = () => {
                   </label>
                   <select
                     value={sortBy}
-                    onChange={e => setSortBy(e.target.value as any)}
+                    onChange={e =>
+                      setSortBy(e.target.value as 'daysLeft' | 'productName' | 'provider')
+                    }
                     className="w-full bg-elevated border border-subtle rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-blue-500"
                   >
                     <option value="daysLeft">Días restantes</option>

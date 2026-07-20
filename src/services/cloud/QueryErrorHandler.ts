@@ -20,7 +20,7 @@ const IGNORED_ERROR_CODES = new Set([
   'PGRST205', // Table 'xxx' doesn't exist
   'PGRST206', // Authorization error
   'PGRST301', // JWT expired
-  '22P02',    // Invalid input syntax (UUID malformado)
+  '22P02', // Invalid input syntax (UUID malformado)
 ]);
 
 /**
@@ -63,12 +63,12 @@ export interface QueryErrorResult {
 function shouldLogError(errorKey: string): boolean {
   const now = Date.now();
   const entry = recentErrors.get(errorKey);
-  
+
   if (!entry || now - entry.lastTime > ERROR_LOG_COOLDOWN_MS) {
     recentErrors.set(errorKey, { count: 1, lastTime: now });
     return true;
   }
-  
+
   entry.count++;
   entry.lastTime = now;
   return entry.count === 1 || entry.count % 10 === 0;
@@ -138,7 +138,10 @@ export function analyzeSupabaseError(
   for (const pattern of IGNORED_ERROR_PATTERNS) {
     if (pattern.test(fullErrorText)) {
       if (shouldLogError(errorKey)) {
-        logger.debug('QUERY_ERROR', `Ignored error pattern in ${queryDescription}: ${errorMessage}`);
+        logger.debug(
+          'QUERY_ERROR',
+          `Ignored error pattern in ${queryDescription}: ${errorMessage}`
+        );
       }
       return {
         shouldRetry: false,
@@ -170,9 +173,12 @@ export function analyzeSupabaseError(
 
   // Error desconocido pero no es crítico
   if (shouldLogError(errorKey)) {
-    logger.warn('QUERY_ERROR', `Unhandled error in ${queryDescription}: [${errorCode}] ${errorMessage}`);
+    logger.warn(
+      'QUERY_ERROR',
+      `Unhandled error in ${queryDescription}: [${errorCode}] ${errorMessage}`
+    );
   }
-  
+
   return {
     shouldRetry: true,
     shouldIgnore: false,
@@ -212,18 +218,15 @@ export async function safeSupabaseQuery<T>(
         onError?.(errorAnalysis);
         return {
           data: defaultValue,
-          error: errorAnalysis
+          error: errorAnalysis,
         };
       }
     }
 
     return { data: result.data, error: null };
-  } catch (err) {
+  } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorAnalysis = analyzeSupabaseError(
-      { message: errorMessage } as any,
-      queryDescription
-    );
+    const errorAnalysis = analyzeSupabaseError({ message: errorMessage } as any, queryDescription);
 
     if (errorAnalysis.shouldIgnore) {
       logger.debug('SUPABASE_QUERY', `Caught and ignored error in ${queryDescription}`);
@@ -264,7 +267,7 @@ export async function safeSupabaseMutation(
     }
 
     return { success: true, error: null };
-  } catch (err) {
+  } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     const errorAnalysis = analyzeSupabaseError(
       { message: errorMessage } as any,

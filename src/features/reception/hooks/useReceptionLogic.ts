@@ -96,7 +96,7 @@ export const useReceptionLogic = () => {
         setPendingPhotoCode(cleanCode);
         SoundFX.play('success');
         if (navigator.vibrate) navigator.vibrate(40);
-      } catch (err) {
+      } catch (err: unknown) {
         SoundFX.play('error');
       }
     },
@@ -123,7 +123,7 @@ export const useReceptionLogic = () => {
 
         setTimeout(() => setFlashActive(false), 150);
         setTimeout(() => setLastAction(null), 1500);
-      } catch (err) {
+      } catch (err: unknown) {
         SoundFX.play('error');
         addToast('Error al guardar la fotografía', 'error');
       }

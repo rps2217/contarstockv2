@@ -16,9 +16,22 @@ import { logger } from '@/services/logger';
 // TIPOS
 // ============================================================================
 
-// Web Serial API types (simplified for compilation)
-type _SerialPort = any;
-type _Serial = any;
+// Web Serial API types
+interface SerialPort {
+  open(options: { baudRate: number }): Promise<void>;
+  close(): Promise<void>;
+  readable?: ReadableStream<Uint8Array>;
+  writable?: WritableStream<Uint8Array>;
+}
+
+interface Serial {
+  getPorts(): Promise<SerialPort[]>;
+  requestPort(): Promise<SerialPort>;
+}
+
+interface NavigatorWithSerial extends Navigator {
+  serial?: Serial;
+}
 
 export type RFIDReaderStatus = 'disconnected' | 'connecting' | 'connected' | 'reading' | 'error';
 
@@ -29,7 +42,7 @@ export interface RFIDTag {
   rssi?: number; // Signal strength
   frequency?: number; // MHz
   timestamp: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RFIDReaderConfig {
@@ -85,9 +98,9 @@ const DEFAULT_CONFIG: RFIDReaderConfig = {
 
 class RFIDServiceClass {
   private config: RFIDReaderConfig;
-  private port: any = null;
-  private reader: any = null;
-  private writer: any = null;
+  private port: SerialPort | null = null;
+  private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
   private isReading = false;
   private readTimer: ReturnType<typeof setInterval> | null = null;
   private callbacks: RFIDReaderCallbacks = {};
@@ -114,16 +127,17 @@ class RFIDServiceClass {
   /**
    * Obtener puertos disponibles
    */
-  async getPorts(): Promise<any[]> {
+  async getPorts(): Promise<SerialPort[]> {
     if (!this.isSupported()) {
       logger.warn('RFID', 'Web Serial API not supported');
       return [];
     }
 
     try {
-      const ports = await (navigator as any).serial?.getPorts();
+      const nav = navigator as NavigatorWithSerial;
+      const ports = await nav.serial?.getPorts();
       return ports || [];
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('RFID', 'Error getting ports', { error });
       return [];
     }
@@ -139,7 +153,8 @@ class RFIDServiceClass {
     }
 
     try {
-      this.port = await (navigator as any).serial?.requestPort();
+      const nav = navigator as NavigatorWithSerial;
+      this.port = (await nav.serial?.requestPort()) ?? null;
       return true;
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -156,7 +171,7 @@ class RFIDServiceClass {
   /**
    * Conectar al lector
    */
-  async connect(port?: any): Promise<boolean> {
+  async connect(port?: SerialPort): Promise<boolean> {
     const targetPort = port || this.port;
 
     if (!targetPort) {
@@ -168,11 +183,12 @@ class RFIDServiceClass {
 
     try {
       const selectedPort = port || this.port;
+      if (!selectedPort) return false;
       await selectedPort.open({ baudRate: this.config.baudRate });
 
       this.port = selectedPort;
-      this.reader = selectedPort.readable?.getReader();
-      this.writer = selectedPort.writable?.getWriter();
+      this.reader = selectedPort.readable?.getReader() || null;
+      this.writer = selectedPort.writable?.getWriter() || null;
 
       this.updateState({
         status: 'connected',

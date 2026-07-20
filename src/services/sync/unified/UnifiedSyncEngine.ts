@@ -33,6 +33,7 @@ import {
   type SyncConflict,
   type SyncEventPayload,
   type SyncEventListener,
+  type SyncEventType,
   type ConflictStrategy,
   DEFAULT_SYNC_CONFIG,
   type ConflictResolution,
@@ -42,46 +43,57 @@ import { syncMetricsService } from './SyncMetricsService';
 import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictResolver';
 
 // =============================================================================
-// HELPERS UTILITARIOS
+// HELPERS UTILITARIOS (importados de syncHelpers)
 // =============================================================================
 
-/**
- * Formatea errores para salida legible
- */
-const formatError = (e: unknown): string => {
-  if (!e) return 'Error desconocido';
-  if (typeof e === 'object' && (e as Error).message) {
-    return (e as Error).message;
-  }
-  return String(e);
+import { formatError, extractColumnNameFromError, sanitizeData } from './syncHelpers';
+import { processSyncQueue } from './syncQueueProcessor';
+import { getDirtyItems, processDeletions, markAsSynced } from './syncTableOperations';
+
+// Tipo para acceso dinámico a tablas Dexie
+type DexieTable = {
+  get: (id: unknown) => Promise<unknown>;
+  put: (item: unknown) => Promise<unknown>;
+  add: (item: unknown) => Promise<unknown>;
+  update: (id: unknown, changes: unknown) => Promise<number>;
+  delete: (id: unknown) => Promise<void>;
+  toArray: () => Promise<Record<string, unknown>[]>;
+  where: (field: string) => {
+    equals: (value: unknown) => { toArray: () => Promise<Record<string, unknown>[]> };
+    anyOf: (values: unknown[]) => { toArray: () => Promise<Record<string, unknown>[]> };
+  };
 };
 
-/**
- * Extrae nombre de columna de mensajes de error de Supabase
- */
-const extractColumnNameFromError = (errMsg: string): string | null => {
-  if (!errMsg) return null;
-  const match =
-    errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/column\s+([\w_]+)\s+does\s+not/i);
-  return match ? match[1] : null;
-};
+// Tipo para dirty items de sync
+interface SyncableRecord {
+  id?: number | string;
+  syncStatus?: string;
+  created_at?: string | number;
+  updated_at?: string | number;
+  [key: string]: unknown;
+}
 
-/**
- * Normaliza datos para Supabase (sanitización)
- */
-const sanitizeData = <T extends object>(data: T): Record<string, unknown> => {
-  const result: Record<string, unknown> = {};
-  Object.entries(data as Record<string, unknown>).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    result[key] =
-      value instanceof Date
-        ? value.toISOString()
-        : typeof value === 'object' && value !== null
-          ? JSON.parse(JSON.stringify(value))
-          : value;
-  });
-  return result;
-};
+// Tipo para payload de realtime de Supabase
+interface RealtimePayload {
+  table?: string;
+  eventType?: string;
+  new?: Record<string, unknown>;
+  old?: Record<string, unknown>;
+}
+
+// Tipo para cambio de realtime
+interface RealtimeChange {
+  eventType: string;
+  newRecord?: SyncableRecord;
+  oldRecord?: SyncableRecord;
+}
+import {
+  processRemoteEvents,
+  processDynamicData,
+  processGenericTable,
+  pullTable,
+} from './syncEventPuller';
+import { checkConflicts, resolveConflicts } from './syncConflictChecker';
 
 // =============================================================================
 // MOTOR UNIFICADO
@@ -122,7 +134,7 @@ export class UnifiedSyncEngine {
     this.listeners.forEach(listener => {
       try {
         listener(payload);
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error(
           'UnifiedSyncEngine',
           'Listener error',
@@ -237,7 +249,7 @@ export class UnifiedSyncEngine {
         downloaded: catalogResult.downloaded,
         lastSyncAt: this.lastSyncAt,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       this.setState('error');
       this.totalErrors++;
       const errorMsg = formatError(error);
@@ -274,7 +286,7 @@ export class UnifiedSyncEngine {
         success: result.errors.length === 0,
         errors: result.errors,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         errors: [error instanceof Error ? error.message : 'Unknown error'],
@@ -322,60 +334,24 @@ export class UnifiedSyncEngine {
    * Procesa la cola de sincronización
    */
   async processQueue(): Promise<QueueProcessResult> {
-    if (this.isProcessingQueue) {
-      return { processed: 0, failed: 0, remaining: 0, processedIds: [], errors: {} };
-    }
-
-    this.isProcessingQueue = true;
-    let processed = 0;
-    let failed = 0;
-    const processedIds: number[] = [];
-    const errors: Record<number, string> = {};
-
-    try {
-      while (processed + failed < this.config.batchSize) {
-        const item = await this.dequeueItem();
-        if (!item) break;
-
-        try {
-          await this.processQueueItem(item);
-          processedIds.push(item.id!);
-          processed++;
-          this.emit({
-            type: 'item_removed',
-            tableName: item.tableName,
-            recordId: item.recordId,
-            timestamp: Date.now(),
-          });
-        } catch (error) {
-          errors[item.id!] = formatError(error);
-          failed++;
-          this.emit({
-            type: 'item_failed',
-            tableName: item.tableName,
-            recordId: item.recordId,
-            error: formatError(error),
-            timestamp: Date.now(),
-          });
-
-          // Retry logic
-          if (item.retries < this.config.maxRetries) {
-            await this.retryItem(item.id!, formatError(error));
-            this.emit({
-              type: 'item_retry',
-              tableName: item.tableName,
-              recordId: item.recordId,
-              timestamp: Date.now(),
-            });
-          }
-        }
-      }
-    } finally {
-      this.isProcessingQueue = false;
-    }
-
-    const remaining = await this.getQueueSize();
-    return { processed, failed, remaining, processedIds, errors };
+    const result = await processSyncQueue(this.config, {
+      isProcessingQueue: { current: this.isProcessingQueue },
+      emit: (event: {
+        type: string;
+        tableName?: string;
+        recordId?: string;
+        error?: string;
+        timestamp: number;
+      }) => {
+        // Re-emit as full SyncEventPayload
+        this.emit({
+          ...event,
+          type: event.type as SyncEventType,
+        });
+      },
+    });
+    this.isProcessingQueue = false;
+    return result;
   }
 
   // ===========================================================================
@@ -461,7 +437,7 @@ export class UnifiedSyncEngine {
       }
 
       return { success: true, uploaded: 1 };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, errors: [formatError(error)] };
     }
   }
@@ -544,7 +520,7 @@ export class UnifiedSyncEngine {
           recordsAffected: count || rows.length,
         });
         return { success: true, uploaded: count || rows.length };
-      } catch (error) {
+      } catch (error: unknown) {
         // @ts-ignore
         syncMetricsService.recordMetric({
           operation: 'batch_push',
@@ -577,163 +553,8 @@ export class UnifiedSyncEngine {
   /**
    * Pull de registros desde Supabase
    */
-  async pullTable(tableName: string, since?: string): Promise<TableSyncResult> {
-    const startTime = performance.now();
-    const meta = syncRegistry[tableName];
-
-    if (!meta) {
-      // @ts-ignore
-      syncMetricsService.recordMetric({
-        operation: 'batch_pull',
-        tableName,
-        duration: performance.now() - startTime,
-        success: false,
-        recordsAffected: 0,
-        error: 'Unknown table',
-      });
-      return {
-        tableName,
-        added: 0,
-        updated: 0,
-        deleted: 0,
-        errors: ['Unknown table'],
-        duration: 0,
-      };
-    }
-
-    let query = supabase.from(meta.remoteTable).select('*');
-    if (since) {
-      query = query.gt('updated_at', since);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      // @ts-ignore
-      syncMetricsService.recordMetric({
-        operation: 'batch_pull',
-        tableName,
-        duration: performance.now() - startTime,
-        success: false,
-        recordsAffected: 0,
-        error: error.message,
-      });
-      return {
-        tableName,
-        added: 0,
-        updated: 0,
-        deleted: 0,
-        errors: [error.message],
-        duration: performance.now() - startTime,
-      };
-    }
-
-    let added = 0,
-      updated = 0;
-    const localTable = (db as any)[meta.localTable];
-
-    // Para eventos, necesitamos comparar timestamps y verificar eliminados
-    if (tableName === 'events' && localTable) {
-      try {
-        // Obtener lista de eventos eliminados localmente
-        const deletedEvents = await db.deletedEvents.toArray();
-        const deletedKeys = new Set(deletedEvents.map(e => e.eventKey.toLowerCase()));
-
-        // Obtener todos los eventos locales existentes
-        const existingEvents = await localTable.toArray();
-
-        // Crear mapa de eventos locales: key -> { id, localTimestamp }
-        const localEventsMap = new Map<string, { id: number; timestamp: number }>();
-        existingEvents.forEach((e: any) => {
-          const key = `${e.frcNumber || ''}~${e.barcode || ''}`.toLowerCase();
-          if (key !== '~') {
-            localEventsMap.set(key, {
-              id: e.id!,
-              timestamp: e.createdAt || 0,
-            });
-          }
-        });
-
-        // Procesar cada evento remoto
-        for (const row of data || []) {
-          const remoteKey = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
-          const remoteTimestamp = row.updated_at ? new Date(row.updated_at).getTime() : 0;
-
-          // Solo procesar si tiene clave válida
-          if (remoteKey === '~' || (!row.frc_code && !row.barcode)) continue;
-
-          // SKIP: Si el evento fue eliminado localmente, no descargarlo
-          if (deletedKeys.has(remoteKey)) {
-            logger.info('SYNC', `Evento omitido (eliminado localmente): ${remoteKey}`);
-            continue;
-          }
-
-          const localEvent = localEventsMap.get(remoteKey);
-
-          if (!localEvent) {
-            // No existe localmente, agregar
-            const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-            if (local) {
-              await localTable.put(local as any);
-              added++;
-            }
-          } else if (remoteTimestamp > localEvent.timestamp) {
-            // Existe pero remoto es más nuevo, actualizar
-            const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-            if (local) {
-              await localTable.update(localEvent.id, {
-                ...local,
-                syncStatus: 'synced',
-              } as any);
-              updated++;
-            }
-          }
-          // Si local es más nuevo o igual, no hacer nada
-        }
-
-        if (added > 0 || updated > 0) {
-          logger.info('SYNC', `Eventos: ${added} agregados, ${updated} actualizados desde nube`);
-        }
-      } catch (err) {
-        logger.warn('SYNC', 'Error procesando eventos desde nube:', err);
-      }
-    } else if (meta.isDynamic) {
-      // Tablas dinámicas: usar dynamic_data
-      for (const row of data || []) {
-        const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-        if (local) {
-          await db.dynamic_data.put(local as any);
-          added++;
-        }
-      }
-    } else if (localTable) {
-      // Tablas normales (no eventos)
-      for (const row of data || []) {
-        const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
-        if (local) {
-          await localTable.put(local as any);
-          updated++;
-        }
-      }
-    }
-
-    // @ts-ignore
-    syncMetricsService.recordMetric({
-      operation: 'batch_pull',
-      tableName,
-      duration: performance.now() - startTime,
-      success: true,
-      recordsAffected: added + updated,
-    });
-
-    return {
-      tableName,
-      added,
-      updated,
-      deleted: 0,
-      errors: [],
-      duration: performance.now() - startTime,
-    };
+  async pullTable(tableName: string, _since?: string): Promise<TableSyncResult> {
+    return pullTable(tableName);
   }
 
   // ===========================================================================
@@ -756,117 +577,79 @@ export class UnifiedSyncEngine {
   }
 
   private async pushTableChanges(tableName: string, meta: TableSyncMeta): Promise<void> {
-    const localTable = (db as any)[meta.localTable];
+    const localTable = db[meta.localTable] as DexieTable;
     if (!localTable) return;
 
-    // Get dirty items (pending and error)
-    let dirtyItems: any[] = [];
-
-    if (meta.isDynamic) {
-      const pending = await db.dynamic_data
-        .where({ tableName: meta.filterValue, syncStatus: 'pending' })
-        .toArray();
-      const errors = await db.dynamic_data
-        .where({ tableName: meta.filterValue, syncStatus: 'error' })
-        .toArray();
-      dirtyItems = [...pending, ...errors];
-
-      // Get items marked for deletion
-      const toDelete = await db.dynamic_data
-        .where({ tableName: meta.filterValue, syncStatus: 'pending_delete' })
-        .toArray();
-
-      // Process deletions
-      if (toDelete.length > 0) {
-        for (const item of toDelete) {
-          const remoteId = item.data?.id || item.data?.ID || item.id;
-          try {
-            const deleteResult = await supabase
-              .from(meta.remoteTable)
-              .delete()
-              .eq(meta.primaryKey, remoteId);
-
-            if (!deleteResult.error) {
-              await db.dynamic_data.delete(item.id);
-              logger.info('SYNC', `Eliminado de nube: ${meta.remoteTable}/${remoteId}`);
-            }
-          } catch (err) {
-            logger.error('SYNC', `Error eliminando de nube: ${err}`);
-          }
-        }
-      }
-    } else {
-      // For non-dynamic tables (like events), check syncStatus
-      const pending = await localTable.where('syncStatus').equals('pending').toArray();
-      const errors = await localTable.where('syncStatus').equals('error').toArray();
-      dirtyItems = [...pending, ...errors];
-    }
+    const { dirtyItems, toDelete } = await getDirtyItems(tableName, meta);
+    await processDeletions(meta, toDelete);
 
     if (!dirtyItems.length) return;
 
     // Para eventos, usar filtro mejorado que distingue create/update
     if (tableName === 'events' || meta.filterValue === 'EVENTOS') {
-      try {
-        const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
-        const filterResult = await filterEventsWithoutDuplicates(dirtyItems);
-
-        if (filterResult.skippedCount > 0) {
-          logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
-        }
-
-        // Process creates
-        if (filterResult.toCreate.length > 0) {
-          const createRows = filterResult.toCreate.map(item => {
-            const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
-            // Eliminar id si existe para que Supabase lo genere
-            delete row.id;
-            return row;
-          });
-          await this.pushBatch(meta.remoteTable, createRows);
-          // Mark as synced
-          await db.transaction('rw', localTable, async () => {
-            for (const item of filterResult.toCreate) {
-              const id = item[meta.primaryKey] || item.id;
-              await localTable.update(id, {
-                syncStatus: 'synced',
-                lastSyncTimestamp: Date.now(),
-              });
-            }
-          });
-          logger.info('SYNC', `Eventos: ${filterResult.toCreate.length} creados en nube`);
-        }
-
-        // Process updates - usar remoteId del evento existente en la nube
-        if (filterResult.toUpdate.length > 0) {
-          const updateRows = filterResult.toUpdate.map(item => {
-            const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
-            // Reemplazar id local con id remoto
-            if (item.remoteId !== undefined) {
-              row.id = item.remoteId;
-            }
-            return row;
-          });
-          await this.pushBatch(meta.remoteTable, updateRows);
-          // Mark as synced
-          await db.transaction('rw', localTable, async () => {
-            for (const item of filterResult.toUpdate) {
-              const id = item[meta.primaryKey] || item.id;
-              await localTable.update(id, {
-                syncStatus: 'synced',
-                lastSyncTimestamp: Date.now(),
-              });
-            }
-          });
-          logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
-        }
-
-        return;
-      } catch (err) {
-        logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
-      }
+      await this.pushEventsChanges(localTable, meta, dirtyItems);
+      return;
     }
 
     // Default behavior for non-events tables
+    await this.pushGenericChanges(localTable, meta, dirtyItems);
+  }
+
+  private async pushEventsChanges(
+    localTable: DexieTable,
+    meta: TableSyncMeta,
+    dirtyItems: SyncableRecord[]
+  ): Promise<void> {
+    try {
+      const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
+      // Cast to expected type for filterEventsWithoutDuplicates
+      const eventsToFilter = dirtyItems.map(item => ({
+        data: item as Record<string, unknown>,
+        id: String(item.id || ''),
+        timestamp: typeof item.created_at === 'number' ? item.created_at : Date.now(),
+      }));
+      const filterResult = await filterEventsWithoutDuplicates(eventsToFilter);
+
+      if (filterResult.skippedCount > 0) {
+        logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
+      }
+
+      // Process creates
+      if (filterResult.toCreate.length > 0) {
+        const createRows = filterResult.toCreate.map(item => {
+          const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
+          delete row.id;
+          return row;
+        });
+        await this.pushBatch(meta.remoteTable, createRows);
+        await markAsSynced('events', meta, filterResult.toCreate);
+        logger.info('SYNC', `Eventos: ${filterResult.toCreate.length} creados en nube`);
+      }
+
+      // Process updates
+      if (filterResult.toUpdate.length > 0) {
+        const updateRows = filterResult.toUpdate.map(item => {
+          const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
+          if (item.remoteId !== undefined) {
+            row.id = item.remoteId;
+          }
+          return row;
+        });
+        await this.pushBatch(meta.remoteTable, updateRows);
+        await markAsSynced('events', meta, filterResult.toUpdate);
+        logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
+      }
+    } catch (err: unknown) {
+      logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
+      await this.pushGenericChanges(localTable, meta, dirtyItems);
+    }
+  }
+
+  private async pushGenericChanges(
+    localTable: DexieTable,
+    meta: TableSyncMeta,
+    dirtyItems: SyncableRecord[]
+  ): Promise<void> {
     for (let i = 0; i < dirtyItems.length; i += this.config.batchSize) {
       const chunk = dirtyItems.slice(i, i + this.config.batchSize);
       const rows = chunk.map(item => (meta.mapToRemote ? meta.mapToRemote(item) : item));
@@ -874,63 +657,9 @@ export class UnifiedSyncEngine {
       const result = await this.pushBatch(meta.remoteTable, rows);
 
       if (result.success) {
-        await db.transaction('rw', localTable, async () => {
-          for (const item of chunk) {
-            const id = item[meta.primaryKey] || item.id;
-            await localTable.update(id, {
-              syncStatus: 'synced',
-              lastSyncTimestamp: Date.now(),
-            });
-          }
-        });
+        await markAsSynced(meta.localTable, meta, chunk);
       }
     }
-  }
-
-  private async dequeueItem(): Promise<QueuedSyncItem | null> {
-    const items = await db.syncQueue.orderBy('timestamp').toArray();
-
-    // Apply backoff for items with recent retries
-    const now = Date.now();
-    for (const item of items) {
-      if (item.retries > 0) {
-        const delay = this.config.baseDelayMs * Math.pow(2, item.retries - 1);
-        const nextRetry = item.timestamp + delay;
-        if (now < nextRetry) continue;
-      }
-      return item;
-    }
-
-    return items[0] || null;
-  }
-
-  private async processQueueItem(item: QueuedSyncItem): Promise<void> {
-    const meta = syncRegistry[item.tableName];
-    if (!meta) throw new Error(`Unknown table: ${item.tableName}`);
-
-    let result: SyncResult;
-
-    switch (item.operation) {
-      case 'delete':
-        const { error } = await supabase
-          .from(meta.remoteTable)
-          .delete()
-          .eq(meta.primaryKey, item.recordId);
-        if (error) throw error;
-        break;
-
-      case 'create':
-      case 'update':
-        const remoteData = meta.mapToRemote ? meta.mapToRemote(item.data) : item.data;
-        const { error: upsertError } = await supabase
-          .from(meta.remoteTable)
-          .upsert(sanitizeData(remoteData), { onConflict: meta.primaryKey });
-        if (upsertError) throw upsertError;
-        break;
-    }
-
-    // Remove from queue on success
-    await db.syncQueue.delete(item.id!);
   }
 
   private async retryItem(id: number, error: string): Promise<void> {
@@ -954,69 +683,15 @@ export class UnifiedSyncEngine {
   }
 
   private async checkConflicts(): Promise<SyncConflict[]> {
-    const conflicts: SyncConflict[] = [];
-    const now = Date.now();
-
-    // Check conflicts for each registered table
-    for (const [tableName, meta] of Object.entries(syncRegistry)) {
-      if (meta.optional) continue;
-
-      try {
-        const localTable = (db as any)[meta.localTable];
-        if (!localTable) continue;
-
-        // Get items that have been modified both locally and remotely
-        // A conflict exists if: local has pending changes AND remote has newer updates
-        const localItems = await localTable.where('syncStatus').equals('pending').toArray();
-
-        for (const localItem of localItems) {
-          const recordId = localItem[meta.primaryKey] || localItem.id;
-
-          // Fetch the remote version
-          const { data: remoteItem, error } = await supabase
-            .from(meta.remoteTable)
-            .select('*')
-            .eq(meta.primaryKey, recordId)
-            .single();
-
-          if (!error && remoteItem) {
-            // Check if remote was updated after local was modified
-            const remoteUpdated = new Date(remoteItem.updated_at).getTime();
-            const localModified = localItem.lastSyncTimestamp || 0;
-
-            // Conflict if remote is newer AND local has changes
-            if (remoteUpdated > localModified) {
-              conflicts.push({
-                tableName,
-                recordId: String(recordId),
-                localValue: localItem,
-                remoteValue: remoteItem,
-                field: 'multiple',
-                detectedAt: now,
-                resolved: false,
-              });
-            }
-          }
-        }
-      } catch (e) {
-        logger.error('CONFLICT_CHECK', `Error checking conflicts for ${tableName}`, formatError(e));
-      }
-    }
-
-    // Emit conflict detection events
-    for (const conflict of conflicts) {
+    return checkConflicts(conflict => {
       this.emit({
         type: 'conflict_detected',
         conflict,
         tableName: conflict.tableName,
         recordId: conflict.recordId,
-        timestamp: now,
+        timestamp: conflict.detectedAt,
       });
-    }
-
-    telemetry.track('SYNC', 'CONFLICTS_DETECTED', { count: conflicts.length });
-
-    return conflicts;
+    });
   }
 
   /**
@@ -1028,40 +703,21 @@ export class UnifiedSyncEngine {
       type: this.config.autoResolveConflicts ? 'local_wins' : 'manual',
     }
   ): Promise<{ resolved: number; failed: number }> {
-    let resolved = 0;
-    let failed = 0;
-
-    for (const conflict of conflicts) {
-      try {
-        const resolution = await this.resolveSingleConflict(conflict, strategy);
-
-        if (resolution) {
-          conflict.resolved = true;
-          conflict.resolution = strategy.type;
-          resolved++;
-
-          this.emit({
-            type: 'conflict_resolved',
-            conflict,
-            tableName: conflict.tableName,
-            recordId: conflict.recordId,
-            timestamp: Date.now(),
-            metadata: { resolution: strategy.type },
-          });
-        }
-      } catch (e) {
-        failed++;
-        logger.error(
-          'CONFLICT_RESOLVE',
-          `Failed to resolve conflict for ${conflict.tableName}/${conflict.recordId}`,
-          formatError(e)
-        );
+    return resolveConflicts(
+      conflicts,
+      strategy,
+      (conflict, s) => this.resolveSingleConflict(conflict, s),
+      (conflict, resolution) => {
+        this.emit({
+          type: 'conflict_resolved',
+          conflict,
+          tableName: conflict.tableName,
+          recordId: conflict.recordId,
+          timestamp: Date.now(),
+          metadata: { resolution },
+        });
       }
-    }
-
-    telemetry.track('SYNC', 'CONFLICTS_RESOLVED', { resolved, failed, strategy: strategy.type });
-
-    return { resolved, failed };
+    );
   }
 
   /**
@@ -1108,7 +764,7 @@ export class UnifiedSyncEngine {
     isConnected: boolean;
     lastHeartbeat: number;
     reconnectAttempts: number;
-    pendingChanges: Map<string, any[]>;
+    pendingChanges: Map<string, SyncableRecord[]>;
     debounceTimers: Map<string, NodeJS.Timeout>;
   } = {
     isConnected: false,
@@ -1158,7 +814,7 @@ export class UnifiedSyncEngine {
         });
 
       logger.info('REALTIME', `Connecting to channel: ${channelName}`);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('REALTIME', 'Failed to connect', formatError(error));
       this.scheduleReconnect();
     }
@@ -1231,11 +887,11 @@ export class UnifiedSyncEngine {
     telemetry.track('SYNC', 'REALTIME_DISCONNECTED');
   }
 
-  private handleRealtimeChange = async (payload: any): Promise<void> => {
+  private handleRealtimeChange = async (payload: RealtimePayload): Promise<void> => {
     const tableName = payload.table;
-    const eventType = payload.eventType;
-    const newRecord = payload.new;
-    const oldRecord = payload.old;
+    const eventType = payload.eventType || 'UNKNOWN';
+    const newRecord = payload.new as SyncableRecord | undefined;
+    const oldRecord = payload.old as SyncableRecord | undefined;
 
     if (!tableName) return;
 
@@ -1247,7 +903,7 @@ export class UnifiedSyncEngine {
 
   private debounceRealtimeChange(
     tableName: string,
-    change: { eventType: string; newRecord?: any; oldRecord?: any }
+    change: { eventType: string; newRecord?: SyncableRecord; oldRecord?: SyncableRecord }
   ): void {
     // Clear existing timer for this table
     const existingTimer = this.realtimeState.debounceTimers.get(tableName);
@@ -1280,14 +936,15 @@ export class UnifiedSyncEngine {
     const eventType = lastChange.eventType;
 
     try {
-      if (['INSERT', 'UPDATE'].includes(eventType) && lastChange.newRecord) {
+      if (['INSERT', 'UPDATE'].includes(eventType as 'INSERT' | 'UPDATE') && lastChange.newRecord) {
         await this.pullTable(tableName);
         telemetry.track('SYNC', 'REALTIME_PULL', { table: tableName, changes: changes.length });
       } else if (eventType === 'DELETE' && lastChange.oldRecord) {
         const meta = syncRegistry[tableName];
         if (meta) {
-          const localTable = (db as any)[meta.localTable];
-          await localTable?.delete(lastChange.oldRecord[meta.primaryKey]);
+          const localTable = db[meta.localTable] as DexieTable;
+          const recordId = lastChange.oldRecord[meta.primaryKey];
+          await localTable?.delete(recordId);
           telemetry.track('SYNC', 'REALTIME_DELETE', { table: tableName });
         }
       }
@@ -1298,7 +955,7 @@ export class UnifiedSyncEngine {
         timestamp: Date.now(),
         metadata: { eventType, changesCount: changes.length },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('REALTIME', `Error processing changes for ${tableName}`, formatError(error));
       telemetry.track('ERROR', 'REALTIME_PROCESS_ERROR', {
         table: tableName,
@@ -1332,7 +989,7 @@ export class UnifiedSyncEngine {
       await this.pullTable(tableName);
       logger.info('REALTIME', `Subscribed to table: ${tableName}`);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('REALTIME', `Failed to subscribe to ${tableName}`, formatError(error));
       return false;
     }
@@ -1377,56 +1034,6 @@ export const unifiedSyncEngine = new UnifiedSyncEngine({
 });
 
 export default UnifiedSyncEngine;
-// ===========================================================================
-// LEGACY COMPATIBILITY FUNCTIONS
-// ===========================================================================
 
-/**
- * Realiza upload de un grupo de datos (compatibilidad legacy)
- */
-export async function uploadBatch(
-  group: { type: string; data: Record<string, unknown>[] },
-  onProgress?: (message: string) => void
-): Promise<{ success: boolean; uploaded: number }> {
-  const tableName = mapGroupTypeToTable(group.type);
-  onProgress?.(`Iniciando upload a ${tableName}...`);
-  const result = await unifiedSyncEngine.pushBatch(tableName, group.data);
-  if (result.success) {
-    onProgress?.(`Upload completado: ${result.uploaded} registros`);
-  } else {
-    onProgress?.(`Error: ${result.errors?.join(', ')}`);
-  }
-  return {
-    success: result.success,
-    uploaded: result.uploaded || 0,
-  };
-}
-
-/**
- * Upload un grupo legacy (UploadGroup) con datos preparados
- */
-export async function uploadGroupLegacy(
-  erpOrder: string,
-  type: string,
-  data: Record<string, unknown>[]
-): Promise<{ success: boolean; uploaded: number }> {
-  return uploadBatch({ type, data });
-}
-
-/**
- * Resetea el lock de sincronización (compatibilidad legacy)
- */
-export function resetSyncLock(): void {
-  logger.info('SYNC', 'Sync lock reset (no-op in unified engine)');
-}
-
-function mapGroupTypeToTable(type: string): string {
-  const mapping: Record<string, string> = {
-    INVENTARIO: 'INVENTARIO',
-    RECEPCION: 'RECEPCION',
-    VENCIMIENTOS: 'VENCIMIENTOS',
-    EVENTOS: 'EVENTOS',
-    AUDIT_LOGS: 'AUDIT_LOGS',
-  };
-  return mapping[type] || type;
-}
+// Re-export legacy functions for backwards compatibility
+export { uploadBatch, uploadGroupLegacy, resetSyncLock } from './syncLegacy';

@@ -1,4 +1,18 @@
 import { logger } from '@/services/logger';
+// Tipo mínimo para funciones de impresión
+// Tipo mínimo para funciones de impresión
+type PrintLabelItem = {
+  barcode: string;
+  productName?: string;
+  providerName?: string;
+  expiryDateObj?: Date;
+  withdrawalDate?: string;
+  frc?: string;
+  destino?: string;
+  hasCanje?: boolean;
+  status?: string;
+  [key: string]: unknown;
+};
 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -7,18 +21,21 @@ import { PrintService } from '../../../services/printService';
 /**
  * Genera un reporte tipo ticket de los productos seleccionados
  */
-export const handlePrintExpirations = (processedScans: any[]) => {
+export const handlePrintExpirations = (processedScans: PrintLabelItem[]) => {
   const now = new Date();
-  const nombreMesTitulo = format(now, "MMMM yyyy", { locale: es }).toUpperCase();
+  const nombreMesTitulo = format(now, 'MMMM yyyy', { locale: es }).toUpperCase();
 
-  const listaItems = processedScans.length === 0 
-    ? `<div style='text-align:center; padding:20px; border:2px solid #000'>NO HAY REGISTROS</div>`
-    : processedScans.map((r, index) => `
+  const listaItems =
+    processedScans.length === 0
+      ? `<div style='text-align:center; padding:20px; border:2px solid #000'>NO HAY REGISTROS</div>`
+      : processedScans
+          .map(
+            (r, index) => `
         <div class="item">
-          <div class="item-desc">${(r.productName || '').substring(0,60).toUpperCase()}</div>
+          <div class="item-desc">${(r.productName || '').substring(0, 60).toUpperCase()}</div>
           <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; margin-top: 2px;">
             <div style="display: flex; flex-direction: column; gap: 1px; width: 58%;">
-              <span style="font-weight: bold; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${(r.providerName || '').substring(0,30).toUpperCase()}</span>
+              <span style="font-weight: bold; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${(r.providerName || '').substring(0, 30).toUpperCase()}</span>
               <span style="font-weight: 900; font-size: 10px; background-color: #eee; padding: 0px 4px; border: 1px solid #000; width: fit-content;">ID: ${r.barcode}</span>
             </div>
             <div style="display: flex; flex-direction: column; align-items: flex-end; width: 42%;">
@@ -29,13 +46,15 @@ export const handlePrintExpirations = (processedScans: any[]) => {
           <div style="width: 100%; margin-top: 2px; display: flex; justify-content: center;">
             <svg style="height: 30px; width: 100%;" id="barcode_${index}"></svg>
           </div>
-        </div>`).join('');
+        </div>`
+          )
+          .join('');
 
   PrintService.printTicket({
-    title: "REPORTE VENCIMIENTOS",
+    title: 'REPORTE VENCIMIENTOS',
     subtitle: nombreMesTitulo,
     content: listaItems,
-    footer: `TOTAL PRODUCTOS: ${processedScans.length}<br>${format(new Date(), "dd/MM/yyyy HH:mm")}`,
+    footer: `TOTAL PRODUCTOS: ${processedScans.length}<br>${format(new Date(), 'dd/MM/yyyy HH:mm')}`,
     scripts: `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
       <script>
@@ -51,30 +70,34 @@ export const handlePrintExpirations = (processedScans: any[]) => {
                 displayValue: false,
                 margin: 0
               });
-            } catch (e) {
+            } catch (e: unknown) {
               logger.error('ExpiryUtils', 'Error barcode', { error: String(e) });
             }
           });
           setTimeout(() => { window.print(); }, 500);
         };
       </script>
-    `
+    `,
   });
 };
 
 /**
  * Genera etiquetas de código de barras para los productos seleccionados
  */
-export const handlePrintLabels = (processedScans: any[]) => {
+export const handlePrintLabels = (processedScans: PrintLabelItem[]) => {
   const printWindow = window.open('', '_blank', 'width=400,height=600');
   if (!printWindow) return;
 
-  const labelsHtml = processedScans.map((item, index) => `
+  const labelsHtml = processedScans
+    .map(
+      (item, index) => `
     <div class="etiqueta-container">
         <div class="descripcion">${item.productName || 'Sin Descripción'}</div>
         <svg id="barcode_${index}"></svg>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 
   const html = `
     <!DOCTYPE html>
@@ -161,7 +184,7 @@ export const handlePrintLabels = (processedScans: any[]) => {
                             fontSize: 14,
                             margin: 5
                         });
-                    } catch (e) {
+                    } catch (e: unknown) {
                         logger.error('ExpiryUtils', 'Error generating barcode', { barcode: item.barcode, error: String(e) });
                     }
                 });
@@ -183,12 +206,14 @@ export const handlePrintLabels = (processedScans: any[]) => {
 /**
  * Genera un reporte de impresión para eventos seleccionados optimizado para ticket térmico
  */
-export const handlePrintSelectedEvents = (items: any[]) => {
+export const handlePrintSelectedEvents = (items: PrintLabelItem[]) => {
   const now = new Date();
-  const fechaGeneracion = format(now, "dd/MM/yyyy HH:mm");
+  const fechaGeneracion = format(now, 'dd/MM/yyyy HH:mm');
   const firstFrc = items[0]?.frc || 'N/A';
 
-  const itemsHtml = items.map(item => `
+  const itemsHtml = items
+    .map(
+      item => `
     <div class="ticket-item" style="border-bottom: 1px dashed #bbb; padding: 4px 0; page-break-inside: avoid;">
       <div style="line-height: 1.1;">
         <span style="font-size: 11px; font-weight: 700; word-break: break-word; display: block; width: 100%; margin-bottom: 2px;">${(item.productName || 'N/A').toUpperCase()}</span>
@@ -202,10 +227,12 @@ export const handlePrintSelectedEvents = (items: any[]) => {
         <span>DST: ${item.destino || 'N/A'}</span>
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 
   PrintService.printTicket({
-    title: "", 
+    title: '',
     hideHeader: true,
     content: itemsHtml,
     footer: `
@@ -230,18 +257,27 @@ export const handlePrintSelectedEvents = (items: any[]) => {
                 margin: 0
               });
             }
-          } catch (e) {
+          } catch (e: unknown) {
             logger.error('ExpiryUtils', 'Error generating FRC barcode', { error: String(e) });
           }
           setTimeout(() => { window.print(); }, 500);
         };
       </script>
-    `
+    `,
   });
 };
 
-export const handleExportExpirationsCSV = (processedScans: any[]) => {
-  const headers = ["SKU", "Producto", "Proveedor", "Vencimiento", "Retiro", "Política", "Estado", "Ubicacion"];
+export const handleExportExpirationsCSV = (processedScans: PrintLabelItem[]) => {
+  const headers = [
+    'SKU',
+    'Producto',
+    'Proveedor',
+    'Vencimiento',
+    'Retiro',
+    'Política',
+    'Estado',
+    'Ubicacion',
+  ];
   const rows = processedScans.map(item => [
     item.barcode,
     item.productName,
@@ -249,16 +285,16 @@ export const handleExportExpirationsCSV = (processedScans: any[]) => {
     item.expiryDateObj ? format(item.expiryDateObj, 'yyyy-MM-dd') : '',
     item.withdrawalDate ? format(item.withdrawalDate, 'yyyy-MM-dd') : '',
     item.hasCanje ? 'CANJE' : 'MERMA',
-    item.status.toUpperCase(),
-    item.location || ''
+    (item.status || '').toUpperCase(),
+    item.location || '',
   ]);
 
-  const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+  const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement("a");
+  const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute("download", `vencimientos_${format(new Date(), 'yyyyMMdd')}.csv`);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `vencimientos_${format(new Date(), 'yyyyMMdd')}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
@@ -269,19 +305,21 @@ export const handleExportExpirationsCSV = (processedScans: any[]) => {
  * Genera una tabla HTML con los productos seleccionados y la abre en una nueva pestaña
  * para que el usuario pueda copiarla y pegarla en su correo.
  */
-export const handleSendEmail = (items: any[]) => {
+export const handleSendEmail = (items: PrintLabelItem[]) => {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
   const now = new Date();
-  const fechaGeneracion = format(now, "dd/MM/yyyy HH:mm");
+  const fechaGeneracion = format(now, 'dd/MM/yyyy HH:mm');
 
-  const filasHtml = items.map(item => {
-    const expiry = item.mm && item.yyyy ? `${String(item.mm).padStart(2, '0')}/${item.yyyy}` : 'N/A';
-    const withdrawal = item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : 'N/A';
-    const politica = item.hasCanje ? 'Canje' : 'Merma';
-    
-    return `
+  const filasHtml = items
+    .map(item => {
+      const expiry =
+        item.mm && item.yyyy ? `${String(item.mm).padStart(2, '0')}/${item.yyyy}` : 'N/A';
+      const withdrawal = item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : 'N/A';
+      const politica = item.hasCanje ? 'Canje' : 'Merma';
+
+      return `
       <tr>
         <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;">${item.barcode || 'N/A'}</td>
         <td style="padding: 8px; border: 1px solid #ddd;">${item.productName || 'N/A'}</td>
@@ -292,7 +330,8 @@ export const handleSendEmail = (items: any[]) => {
         <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${item.quantity || 1}</td>
       </tr>
     `;
-  }).join('');
+    })
+    .join('');
 
   const html = `
     <!DOCTYPE html>
@@ -445,7 +484,7 @@ export const handleSendEmail = (items: any[]) => {
             setTimeout(() => {
               mensaje.style.display = 'none';
             }, 3000);
-          } catch (err) {
+          } catch (err: unknown) {
             alert('No se pudo copiar automáticamente. Por favor, selecciona la tabla y presiona Ctrl+C.');
           }
           
@@ -459,4 +498,3 @@ export const handleSendEmail = (items: any[]) => {
   printWindow.document.write(html);
   printWindow.document.close();
 };
-

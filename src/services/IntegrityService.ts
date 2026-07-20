@@ -2,14 +2,14 @@
  * =============================================================================
  * IntegrityService - Verificación de integridad de datos
  * =============================================================================
- * 
+ *
  * Características:
  * - Detección de registros duplicados
  * - Identificación de registros huérfanos
  * - Verificación de consistencia referencial
  * - Validación de rangos de fechas
  * - Reporte de problemas encontrados
- * 
+ *
  * @since 2026-07-07
  */
 
@@ -67,7 +67,7 @@ export interface IntegrityCheckConfig {
 
 export class IntegrityService {
   private static instance: IntegrityService;
-  
+
   private constructor() {}
 
   static getInstance(): IntegrityService {
@@ -89,15 +89,23 @@ export class IntegrityService {
     try {
       // Ejecutar checks en paralelo
       const checks = [
-        config.checkExpirations !== false ? this.checkExpirations(config.maxSamples) : Promise.resolve([]),
+        config.checkExpirations !== false
+          ? this.checkExpirations(config.maxSamples)
+          : Promise.resolve([]),
         config.checkScans !== false ? this.checkScans(config.maxSamples) : Promise.resolve([]),
-        config.checkProducts !== false ? this.checkProducts(config.maxSamples) : Promise.resolve([]),
-        config.checkSessions !== false ? this.checkSessions(config.maxSamples) : Promise.resolve([]),
-        config.checkSyncQueue !== false ? this.checkSyncQueue(config.maxSamples) : Promise.resolve([]),
+        config.checkProducts !== false
+          ? this.checkProducts(config.maxSamples)
+          : Promise.resolve([]),
+        config.checkSessions !== false
+          ? this.checkSessions(config.maxSamples)
+          : Promise.resolve([]),
+        config.checkSyncQueue !== false
+          ? this.checkSyncQueue(config.maxSamples)
+          : Promise.resolve([]),
       ];
 
       const results = await Promise.all(checks);
-      
+
       for (const result of results) {
         issues.push(...result);
       }
@@ -166,9 +174,7 @@ export class IntegrityService {
       }
 
       // 2. Verificar registros sin barcode
-      const orphanExpirations = expirations.filter(
-        e => !e.barcode || e.barcode.length < 4
-      );
+      const orphanExpirations = expirations.filter(e => !e.barcode || e.barcode.length < 4);
 
       if (orphanExpirations.length > 0) {
         issues.push({
@@ -177,7 +183,10 @@ export class IntegrityService {
           table: 'expirations',
           description: `${orphanExpirations.length} vencimientos sin barcode válido`,
           count: orphanExpirations.length,
-          sampleRecords: orphanExpirations.slice(0, maxSamples) as unknown as Record<string, unknown>[],
+          sampleRecords: orphanExpirations.slice(0, maxSamples) as unknown as Record<
+            string,
+            unknown
+          >[],
           suggestion: 'Revisar y eliminar o corregir registros sin barcode',
           timestamp: Date.now(),
         });
@@ -206,7 +215,7 @@ export class IntegrityService {
       for (const exp of expirations) {
         const expiryDate = new Date(exp.yyyy, exp.mm - 1, 1);
         const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         let expectedStatus: string;
         if (daysLeft < 0) expectedStatus = 'expired';
         else if (daysLeft <= 30) expectedStatus = 'critical';
@@ -225,7 +234,7 @@ export class IntegrityService {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('IntegrityService', 'checkExpirations failed', String(error));
     }
 
@@ -258,9 +267,7 @@ export class IntegrityService {
       }
 
       // 2. Verificar scans con barcode inválido
-      const invalidBarcodeScans = scans.filter(
-        s => !s.barcode || s.barcode.length < 4
-      );
+      const invalidBarcodeScans = scans.filter(s => !s.barcode || s.barcode.length < 4);
 
       if (invalidBarcodeScans.length > 0) {
         issues.push({
@@ -269,7 +276,10 @@ export class IntegrityService {
           table: 'scans',
           description: `${invalidBarcodeScans.length} scans con barcode inválido`,
           count: invalidBarcodeScans.length,
-          sampleRecords: invalidBarcodeScans.slice(0, maxSamples) as unknown as Record<string, unknown>[],
+          sampleRecords: invalidBarcodeScans.slice(0, maxSamples) as unknown as Record<
+            string,
+            unknown
+          >[],
           suggestion: 'Revisar y corregir barcodes',
           timestamp: Date.now(),
         });
@@ -287,12 +297,15 @@ export class IntegrityService {
           table: 'scans',
           description: `${invalidQuantity.length} scans con cantidad inválida`,
           count: invalidQuantity.length,
-          sampleRecords: invalidQuantity.slice(0, maxSamples) as unknown as Record<string, unknown>[],
+          sampleRecords: invalidQuantity.slice(0, maxSamples) as unknown as Record<
+            string,
+            unknown
+          >[],
           suggestion: 'Corregir cantidades a valores válidos (1-99999)',
           timestamp: Date.now(),
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('IntegrityService', 'checkScans failed', String(error));
     }
 
@@ -318,7 +331,10 @@ export class IntegrityService {
           table: 'products',
           description: `${unnamedProducts.length} productos sin nombre válido`,
           count: unnamedProducts.length,
-          sampleRecords: unnamedProducts.slice(0, maxSamples) as unknown as Record<string, unknown>[],
+          sampleRecords: unnamedProducts.slice(0, maxSamples) as unknown as Record<
+            string,
+            unknown
+          >[],
           suggestion: 'Revisar y corregir nombres de productos',
           timestamp: Date.now(),
         });
@@ -352,9 +368,7 @@ export class IntegrityService {
       }
 
       // 3. Verificar precios inválidos
-      const invalidPrices = products.filter(
-        p => typeof p.price === 'number' && p.price < 0
-      );
+      const invalidPrices = products.filter(p => typeof p.price === 'number' && p.price < 0);
 
       if (invalidPrices.length > 0) {
         issues.push({
@@ -368,7 +382,7 @@ export class IntegrityService {
           timestamp: Date.now(),
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('IntegrityService', 'checkProducts failed', String(error));
     }
 
@@ -394,7 +408,10 @@ export class IntegrityService {
           table: 'sessions',
           description: `${noOrderSessions.length} sesiones sin orden ERP`,
           count: noOrderSessions.length,
-          sampleRecords: noOrderSessions.slice(0, maxSamples) as unknown as Record<string, unknown>[],
+          sampleRecords: noOrderSessions.slice(0, maxSamples) as unknown as Record<
+            string,
+            unknown
+          >[],
           suggestion: 'Considerar asignar orden ERP a estas sesiones',
           timestamp: Date.now(),
         });
@@ -402,11 +419,8 @@ export class IntegrityService {
 
       // 2. Verificar sesiones huérfanas (sin scans)
       for (const session of sessions) {
-        const scans = await db.scans
-          .where('sessionId')
-          .equals(session.id)
-          .count();
-        
+        const scans = await db.scans.where('sessionId').equals(session.id).count();
+
         if (scans === 0 && session.status === 'active') {
           issues.push({
             id: crypto.randomUUID(),
@@ -419,7 +433,7 @@ export class IntegrityService {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('IntegrityService', 'checkSessions failed', String(error));
     }
 
@@ -445,7 +459,10 @@ export class IntegrityService {
           table: 'syncQueue',
           description: `${failedOperations.length} operaciones con 3+ reintentos fallidos`,
           count: failedOperations.length,
-          sampleRecords: failedOperations.slice(0, maxSamples) as unknown as Record<string, unknown>[],
+          sampleRecords: failedOperations.slice(0, maxSamples) as unknown as Record<
+            string,
+            unknown
+          >[],
           suggestion: 'Revisar errores y решить si reintentar o eliminar',
           timestamp: Date.now(),
         });
@@ -469,7 +486,7 @@ export class IntegrityService {
           timestamp: Date.now(),
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('IntegrityService', 'checkSyncQueue failed', String(error));
     }
 
@@ -490,7 +507,7 @@ export class IntegrityService {
       for (const exp of expirations) {
         const expiryDate = new Date(exp.yyyy, exp.mm - 1, 1);
         const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         let newStatus: string;
         if (daysLeft < 0) newStatus = 'expired';
         else if (daysLeft <= 30) newStatus = 'critical';
@@ -504,7 +521,7 @@ export class IntegrityService {
       }
 
       logger.info('IntegrityService', `Auto-fix completed: ${result.fixed} issues fixed`);
-    } catch (error) {
+    } catch (error: unknown) {
       result.errors.push(String(error));
       logger.error('IntegrityService', 'Auto-fix failed', String(error));
     }
@@ -517,7 +534,7 @@ export class IntegrityService {
    */
   formatReport(result: IntegrityCheckResult): string {
     const lines: string[] = [];
-    
+
     lines.push('═══════════════════════════════════════════════════════════════');
     lines.push('                    REPORTE DE INTEGRIDAD');
     lines.push('═══════════════════════════════════════════════════════════════');
@@ -525,29 +542,29 @@ export class IntegrityService {
     lines.push(`Fecha: ${new Date(result.checkedAt).toLocaleString()}`);
     lines.push(`Duración: ${result.duration}ms`);
     lines.push('');
-    
+
     if (result.passed) {
       lines.push('✅ TODAS LAS VERIFICACIONES PASARON');
     } else {
       lines.push('❌ SE ENCONTRARON PROBLEMAS');
     }
-    
+
     lines.push('');
     lines.push(`Total de problemas: ${result.totalIssues}`);
     lines.push(`  🔴 Críticos: ${result.criticalIssues}`);
     lines.push(`  🟡 Advertencias: ${result.warningIssues}`);
     lines.push(`  🔵 Informativos: ${result.infoIssues}`);
     lines.push('');
-    
+
     if (result.issues.length > 0) {
       lines.push('───────────────────────────────────────────────────────────────');
       lines.push('DETALLE DE PROBLEMAS');
       lines.push('───────────────────────────────────────────────────────────────');
-      
+
       for (const issue of result.issues) {
-        const icon = issue.severity === 'critical' ? '🔴' 
-          : issue.severity === 'warning' ? '🟡' : '🔵';
-        
+        const icon =
+          issue.severity === 'critical' ? '🔴' : issue.severity === 'warning' ? '🟡' : '🔵';
+
         lines.push('');
         lines.push(`${icon} [${issue.severity.toUpperCase()}] ${issue.table}`);
         lines.push(`   ${issue.description}`);
@@ -559,10 +576,10 @@ export class IntegrityService {
         }
       }
     }
-    
+
     lines.push('');
     lines.push('═══════════════════════════════════════════════════════════════');
-    
+
     return lines.join('\n');
   }
 }

@@ -1,11 +1,14 @@
 /**
  * useProductProviderLink - Hook para gestionar la relación producto-proveedor
- * 
+ *
  * Permite ver los productos asociados a un proveedor desde PRODUCTO_PROVEEDOR
  */
 
 import { useState, useCallback } from 'react';
-import { productProviderRepository, ProductProvider } from '../../../repositories/ProductProviderRepository';
+import {
+  productProviderRepository,
+  ProductProvider,
+} from '../../../repositories/ProductProviderRepository';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 
 export interface ProductWithDetails extends ProductProvider {
@@ -29,10 +32,10 @@ export const useProductProviderLink = () => {
 
     try {
       const relations = await productProviderRepository.getByProvider(providerRut);
-      
+
       // Obtener nombres de productos
       const productsWithNames: ProductWithDetails[] = await Promise.all(
-        relations.map(async (relation) => {
+        relations.map(async relation => {
           try {
             const product = await productRepository.getById(relation.productBarcode);
             return {
@@ -50,7 +53,7 @@ export const useProductProviderLink = () => {
 
       setProducts(productsWithNames);
       setIsModalOpen(true);
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al cargar productos');
     } finally {
       setIsLoading(false);
@@ -73,7 +76,7 @@ export const useProductProviderLink = () => {
   const getProviderStats = useCallback(async (providerRut: string) => {
     const relations = await productProviderRepository.getByProvider(providerRut);
     const primaryCount = relations.filter(r => r.isPrimary).length;
-    
+
     return {
       totalProducts: relations.length,
       primaryProducts: primaryCount,
@@ -87,7 +90,7 @@ export const useProductProviderLink = () => {
     selectedProvider,
     isModalOpen,
     error,
-    
+
     // Actions
     loadProviderProducts,
     closeModal,

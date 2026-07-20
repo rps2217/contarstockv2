@@ -1,6 +1,6 @@
 /**
  * BaseRepository - Repositorio base genérico para operaciones CRUD
- * 
+ *
  * Proporciona una implementación reutilizable para todas las entidades
  * de la base de datos Dexie.
  */
@@ -15,6 +15,15 @@ export interface BaseEntity {
   id?: string | number;
   createdAt?: number;
   updatedAt?: number;
+}
+
+// Tipos para mixins
+export interface SyncableEntity extends BaseEntity {
+  syncStatus?: 'pending' | 'synced' | 'error';
+}
+
+export interface SoftDeletableEntity extends BaseEntity {
+  deletedAt?: number;
 }
 
 export interface PaginationOptions {
@@ -117,11 +126,14 @@ export abstract class BaseRepository<T extends BaseEntity> {
    * Actualizar múltiples registros
    */
   async updateMany(ids: (string | number)[], data: Partial<T>): Promise<number> {
-    const updates = ids.map(id => ({
-      ...data,
-      id,
-      updatedAt: Date.now(),
-    } as T));
+    const updates = ids.map(
+      id =>
+        ({
+          ...data,
+          id,
+          updatedAt: Date.now(),
+        }) as T
+    );
 
     await Promise.all(updates.map(u => this.table.put(u)));
     return ids.length;
@@ -160,7 +172,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
       }
 
       return { success: true, affectedCount };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         affectedCount: 0,
@@ -176,7 +188,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
     if (filter) {
       const key = Object.keys(filter)[0] as string;
       const value = filter[key as keyof T];
-      return this.table.where(key).equals(value as string).toArray().then(arr => arr.length);
+      return this.table
+        .where(key)
+        .equals(value as string)
+        .toArray()
+        .then(arr => arr.length);
     }
     return this.table.count();
   }
@@ -190,9 +206,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
     // Aplicar filtros
     if (options.filters) {
       results = results.filter(item =>
-        Object.entries(options.filters!).every(([key, value]) =>
-          item[key as keyof T] === value
-        )
+        Object.entries(options.filters!).every(([key, value]) => item[key as keyof T] === value)
       );
     }
 
@@ -213,12 +227,12 @@ export abstract class BaseRepository<T extends BaseEntity> {
       results.sort((a, b) => {
         const aVal = a[field as keyof T];
         const bVal = b[field as keyof T];
-        
+
         // Manejar casos de undefined/null
         if (aVal === bVal) return 0;
         if (aVal === undefined || aVal === null) return 1;
         if (bVal === undefined || bVal === null) return -1;
-        
+
         const comparison = aVal < bVal ? -1 : 1;
         return order === 'asc' ? comparison : -comparison;
       });
@@ -266,11 +280,8 @@ export abstract class BaseRepository<T extends BaseEntity> {
   ): Promise<T[]> {
     const start = startDate.getTime();
     const end = endDate.getTime();
-    
-    return this.table
-      .where(dateField)
-      .between(start, end)
-      .toArray();
+
+    return this.table.where(dateField).between(start, end).toArray();
   }
 
   /**
@@ -304,14 +315,14 @@ export abstract class BaseRepository<T extends BaseEntity> {
 /**
  * Mixin para repositorios con sync
  */
-export function withSync<T extends BaseEntity>(Base: new () => BaseRepository<T>) {
+export function withSync<T extends SyncableEntity>(Base: new () => BaseRepository<T>) {
   return class extends Base {
     async getUnsynced(): Promise<T[]> {
       return this.table.where('syncStatus').equals('pending').toArray();
     }
 
     async markAsSynced(ids: (string | number)[]): Promise<void> {
-      await this.updateMany(ids, { syncStatus: 'synced' } as any);
+      await this.updateMany(ids, { syncStatus: 'synced' } as Partial<T>);
     }
 
     async markAsSyncedByFilter(filter: Partial<T>): Promise<number> {
@@ -326,18 +337,18 @@ export function withSync<T extends BaseEntity>(Base: new () => BaseRepository<T>
 /**
  * Mixin para repositorios con soft delete
  */
-export function withSoftDelete<T extends BaseEntity>(Base: new () => BaseRepository<T>) {
+export function withSoftDelete<T extends SoftDeletableEntity>(Base: new () => BaseRepository<T>) {
   return class extends Base {
     async softDelete(id: string | number): Promise<void> {
-      await this.update(id, { deletedAt: Date.now() } as any);
+      await this.update(id, { deletedAt: Date.now() } as Partial<T>);
     }
 
     async restore(id: string | number): Promise<void> {
-      await this.table.update(id, { deletedAt: undefined } as any);
+      await this.table.update(id, { deletedAt: undefined } as Partial<T>);
     }
 
     async getDeleted(): Promise<T[]> {
-      return this.table.filter(item => !!(item as any).deletedAt).toArray();
+      return this.table.filter(item => item.deletedAt !== undefined).toArray();
     }
   };
 }

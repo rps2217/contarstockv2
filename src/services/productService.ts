@@ -1,6 +1,5 @@
 import { logger } from '@/services/logger';
 
-
 import { Product } from '../types';
 import { productRepository } from '../repositories/DexieProductRepository';
 import Papa from 'papaparse';
@@ -8,11 +7,24 @@ import { sanitizeBarcode, normalizeIdentity } from './utils';
 import { validateProduct } from './validator';
 import { supabaseSyncService } from './supabaseSyncService';
 
+// Configuración para resolveUnknownProducts
+interface ResolveConfig {
+  productsTableName?: string;
+  mappings?: {
+    products?: {
+      barcode?: string;
+      name?: string;
+      supplier?: string;
+      supplierRut?: string;
+    };
+  };
+}
+
 export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
   return await productRepository.getById(sanitizeBarcode(barcode));
 };
 
-export const resolveUnknownProducts = async (skus: string[], config: any) => {
+export const resolveUnknownProducts = async (skus: string[], config?: ResolveConfig) => {
   if (!skus || skus.length === 0) return;
 
   const productsTable = config?.productsTableName || 'PRODUCTOS';
@@ -25,25 +37,40 @@ export const resolveUnknownProducts = async (skus: string[], config: any) => {
     try {
       console.debug(`[Detective] Buscando identidad de SKU: ${sku} en Supabase: ${productsTable}`);
       const response = await supabaseSyncService.query(productsTable, barcodeCol, sku);
-      
+
       if (response.success && response.rows && response.rows.length > 0) {
-        const p = response.rows[0] as any;
-        const sanitizedSku = sanitizeBarcode(sku); 
-        
+        const p = response.rows[0] as Record<string, unknown>;
+        const sanitizedSku = sanitizeBarcode(sku);
+
         await saveProduct({
           barcode: sanitizedSku,
-          name: p[nameCol] || p.name || p.DESCRIPTOR || p.DESCRIPCION || p.NOMBRE || 'PRODUCTO IDENTIFICADO',
-          category: p.category || p.CATEGORIA || 'GENERAL',
-          supplier: p[supplierCol] || p.supplier || p.PROVEEDOR || 'N/A',
-          supplierRut: sanitizeBarcode(p[supplierRutCol] || p.supplierRut || p.PROVEEDOR_RUT || ''),
-          price: typeof p.price === 'number' ? p.price : parseFloat(String(p.price || p.PRICE || 0).replace(/[^0-9.]/g, '')),
-          syncStatus: 'synced'
+          name: String(
+            p[nameCol] ||
+              p.name ||
+              p.DESCRIPTOR ||
+              p.DESCRIPCION ||
+              p.NOMBRE ||
+              'PRODUCTO IDENTIFICADO'
+          ),
+          category: String(p.category || p.CATEGORIA || 'GENERAL'),
+          supplier: String(p[supplierCol] || p.supplier || p.PROVEEDOR || 'N/A'),
+          supplierRut: sanitizeBarcode(
+            String(p[supplierRutCol] || p.supplierRut || p.PROVEEDOR_RUT || '')
+          ),
+          price:
+            typeof p.price === 'number'
+              ? p.price
+              : parseFloat(String(p.price || p.PRICE || 0).replace(/[^0-9.]/g, '')),
+          syncStatus: 'synced',
         });
       } else {
         logger.warn('productService', 'SKU no encontrado en Supabase', { sku });
       }
-    } catch (e) {
-      logger.warn('productService', 'Error al resolver SKU', { sku, error: e instanceof Error ? e.message : String(e) });
+    } catch (e: unknown) {
+      logger.warn('productService', 'Error al resolver SKU', {
+        sku,
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 };
@@ -53,16 +80,16 @@ export const saveProduct = async (product: Product) => {
   if (!validation.valid) {
     throw new Error(`Error de Integridad: ${validation.error}`);
   }
-  
+
   const validatedData = validation.data!;
   // UNIFICACIÓN DE IDENTIDAD: Sanitizar el SKU antes de guardar
   const sanitizedBarcode = sanitizeBarcode(validatedData.barcode);
-  
+
   const existing = await productRepository.getById(sanitizedBarcode);
-  
+
   // Preservar embedding si el nuevo no trae nada (aprendizaje local)
   const embedding = validatedData.embedding || existing?.embedding;
-  
+
   let syncStatus: 'pending' | 'synced' = 'pending';
   // If it was already synced, we move it back to pending for the next cloud update
   // UNLESS it's explicitly set to synced (e.g. during an initial fetch from cloud)
@@ -70,11 +97,11 @@ export const saveProduct = async (product: Product) => {
     syncStatus = 'synced';
   }
 
-  await productRepository.save({ 
+  await productRepository.save({
     ...validatedData,
     barcode: sanitizedBarcode,
     embedding,
-    syncStatus
+    syncStatus,
   });
 };
 
@@ -84,7 +111,7 @@ export const saveProductBatch = async (products: Product[]) => {
     .filter(v => v.valid)
     .map(v => ({
       ...v.data!,
-      barcode: sanitizeBarcode(v.data!.barcode) // NORMALIZACIÓN MASIVA
+      barcode: sanitizeBarcode(v.data!.barcode), // NORMALIZACIÓN MASIVA
     }));
 
   if (validInbound.length === 0) return;
@@ -92,16 +119,16 @@ export const saveProductBatch = async (products: Product[]) => {
   // Lógica Anti-Sobrescritura de Aprendizaje IA
   const barcodes = validInbound.map(p => p.barcode);
   // Nota: getAll() podría ser lento con muchos productos, pero es necesario para la fusión local
-  const existingProducts = await productRepository.getAll(); 
+  const existingProducts = await productRepository.getAll();
   const filteredExisting = existingProducts.filter(p => barcodes.includes(p.barcode));
-  
+
   const existingMap = new Map<string, Product>(filteredExisting.map(p => [p.barcode, p]));
 
   const mergedBatch = validInbound.map(inbound => {
     const local = existingMap.get(inbound.barcode);
     return {
       ...inbound,
-      embedding: inbound.embedding || local?.embedding
+      embedding: inbound.embedding || local?.embedding,
     };
   });
 
@@ -120,7 +147,11 @@ export const markProductsAsSynced = async (barcodes: string[]) => {
   await productRepository.markAsSynced(barcodes);
 };
 
-export const createProductAlias = async (newBarcode: string, originalBarcode: string, fallbackName: string) => {
+export const createProductAlias = async (
+  newBarcode: string,
+  originalBarcode: string,
+  fallbackName: string
+) => {
   const masterProduct = await getProductByBarcode(originalBarcode);
   const newProduct: Product = {
     barcode: newBarcode,
@@ -129,42 +160,55 @@ export const createProductAlias = async (newBarcode: string, originalBarcode: st
     supplier: masterProduct?.supplier || '',
     supplierRut: masterProduct?.supplierRut || '',
     syncStatus: 'pending',
-    embedding: masterProduct?.embedding
+    embedding: masterProduct?.embedding,
   };
   await saveProduct(newProduct);
 };
 
 export const bulkImportProducts = async (csvText: string): Promise<number> => {
- return new Promise((resolve, reject) => {
- Papa.parse(csvText, {
- header: true,
- skipEmptyLines: true,
- dynamicTyping: true,
- delimiter: "", 
- transformHeader: (h) => h.trim().toUpperCase(),
- complete: async (results) => {
- try {
- const products: Product[] = [];
- for (const row of results.data as any[]) {
- const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'] || row['EAN'];
- const name = row['DESCRIPCION'] || row['PRODUCTO'] || row['NOMBRE'] || row['DESCRIPTOR'];
- 
- if (rawBarcode && name) {
- products.push({
- barcode: String(rawBarcode),
- name: String(name),
- category: String(row['MUNDO'] || row['CATEGORIA'] || row['FAMILIA'] || 'GENERAL'),
- supplier: String(row['PROVEEDOR'] || row['LABORATORIO'] || row['MARCA'] || row['LAB'] || ''),
- supplierRut: normalizeIdentity(String(row['RUT PROVEEDOR'] || row['RUT'] || row['PROVEEDOR_RUT'] || row['RUT_PROVEEDOR'] || '')),
- syncStatus: 'synced'
- });
- }
- }
- await saveProductBatch(products);
- resolve(products.length);
- } catch (err) { reject(err); }
- },
- error: (err: any) => reject(err)
- });
- });
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, unknown>>(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      delimiter: '',
+      transformHeader: h => h.trim().toUpperCase(),
+      complete: async results => {
+        try {
+          const products: Product[] = [];
+          for (const row of results.data) {
+            const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'] || row['EAN'];
+            const name =
+              row['DESCRIPCION'] || row['PRODUCTO'] || row['NOMBRE'] || row['DESCRIPTOR'];
+
+            if (rawBarcode && name) {
+              products.push({
+                barcode: String(rawBarcode),
+                name: String(name),
+                category: String(row['MUNDO'] || row['CATEGORIA'] || row['FAMILIA'] || 'GENERAL'),
+                supplier: String(
+                  row['PROVEEDOR'] || row['LABORATORIO'] || row['MARCA'] || row['LAB'] || ''
+                ),
+                supplierRut: normalizeIdentity(
+                  String(
+                    row['RUT PROVEEDOR'] ||
+                      row['RUT'] ||
+                      row['PROVEEDOR_RUT'] ||
+                      row['RUT_PROVEEDOR'] ||
+                      ''
+                  )
+                ),
+                syncStatus: 'synced',
+              });
+            }
+          }
+          await saveProductBatch(products);
+          resolve(products.length);
+        } catch (err: unknown) {
+          reject(err);
+        }
+      },
+      error: (err: Error) => reject(err),
+    });
+  });
 };

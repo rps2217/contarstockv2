@@ -42,9 +42,9 @@ export const SystemOperationsDrawer: React.FC = () => {
 
   const { latencyMs, isSupabaseConnected } = useSyncStore();
 
-  const isModelDownloading = state.brainStatus?.status === 'downloading';
-  const isModelReady = state.brainStatus?.status === 'ready';
-  const isModelDisabled = state.brainStatus?.status === 'disabled';
+  const isModelDownloading = false; // AI disabled
+  const isModelReady = false; // AI disabled
+  const isModelDisabled = state.brainStatus === 'disabled';
 
   const usedMb = state.storageUsage ? (state.storageUsage.used / 1024 / 1024).toFixed(1) : '0';
   const quotaMb = state.storageUsage ? (state.storageUsage.quota / 1024 / 1024).toFixed(0) : '0';
@@ -312,23 +312,17 @@ export const SystemOperationsDrawer: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted">
                     <span>Estado del Modelo IA</span>
-                    <span>
-                      {isModelReady
-                        ? '100%'
-                        : isModelDownloading
-                          ? `${state.brainStatus?.progress || 0}%`
-                          : '0%'}
-                    </span>
+                    <span>{isModelReady ? '100%' : isModelDownloading ? '0%' : '0%'}</span>
                   </div>
                   <div className="h-1.5 w-full bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 bg-blue-500 ${isModelDownloading ? 'animate-pulse' : ''}`}
-                      style={{ width: `${isModelReady ? 100 : state.brainStatus?.progress || 0}%` }}
+                      style={{ width: `${isModelReady ? 100 : 0}%` }}
                     />
                   </div>
                   {isModelDownloading && (
                     <div className="text-[9px] font-black text-blue-500 uppercase tracking-wider block">
-                      Detalle: {state.brainStatus?.details}
+                      Detalle: AI deshabilitado
                     </div>
                   )}
                 </div>
@@ -407,8 +401,8 @@ export const SystemOperationsDrawer: React.FC = () => {
                       complete: async results => {
                         try {
                           const { db } = await import('@/db');
-                          const products = (results.data as any[])
-                            .map((row: any) => ({
+                          const products = (results.data as Record<string, string>[])
+                            .map(row => ({
                               barcode: String(row.barcode || row.BARCODE || '').trim(),
                               name: String(
                                 row.name || row.NAME || row.description || row.DESCRIPTION || ''
@@ -421,8 +415,11 @@ export const SystemOperationsDrawer: React.FC = () => {
                           await db.products.bulkPut(products);
                           toast.success(`${products.length} productos importados.`, { id: tId });
                           window.location.reload();
-                        } catch (err: any) {
-                          toast.error('Error: ' + err.message, { id: tId });
+                        } catch (err: unknown) {
+                          toast.error(
+                            'Error: ' + (err instanceof Error ? err.message : String(err)),
+                            { id: tId }
+                          );
                         }
                       },
                     });

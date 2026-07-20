@@ -1,19 +1,27 @@
-import { Table } from 'dexie';
+import { Table, IndexableType } from 'dexie';
 
-export interface IBaseRepository<T> {
-  getById(id: any): Promise<T | undefined>;
+// Tipo base para entidades con id
+export interface WithId {
+  id?: number | string;
+}
+
+// Tipo para el key de Dexie (puede ser string o number)
+export type DexieKey = IndexableType;
+
+export interface IBaseRepository<T extends WithId> {
+  getById(id: DexieKey): Promise<T | undefined>;
   getAll(): Promise<T[]>;
   save(entity: T): Promise<void>;
   saveBatch(entities: T[]): Promise<void>;
-  delete(id: any): Promise<void>;
+  delete(id: DexieKey): Promise<void>;
   deleteAll(): Promise<void>;
   count(): Promise<number>;
 }
 
-export abstract class BaseDexieRepository<T> implements IBaseRepository<T> {
-  protected constructor(protected table: Table<T, any>) {}
+export abstract class BaseDexieRepository<T extends WithId> implements IBaseRepository<T> {
+  protected constructor(protected table: Table<T, IndexableType>) {}
 
-  async getById(id: any): Promise<T | undefined> {
+  async getById(id: DexieKey): Promise<T | undefined> {
     return await this.table.get(id);
   }
 
@@ -22,7 +30,6 @@ export abstract class BaseDexieRepository<T> implements IBaseRepository<T> {
   }
 
   async save(entity: T): Promise<void> {
-    // Override in subclasses for schema validation if necessary
     await this.table.put(entity);
   }
 
@@ -30,7 +37,7 @@ export abstract class BaseDexieRepository<T> implements IBaseRepository<T> {
     await this.table.bulkPut(entities);
   }
 
-  async delete(id: any): Promise<void> {
+  async delete(id: DexieKey): Promise<void> {
     await this.table.delete(id);
   }
 

@@ -44,9 +44,6 @@ export default defineConfig(({ mode }) => {
             // date-fns con tree-shaking - importar solo lo necesario
             'vendor-date': ['date-fns'],
             'vendor-scanner': ['html5-qrcode', 'qrcode.react'],
-            // AI chunks - cargados lazily
-            'vendor-gemini': ['@google/genai'],
-            'vendor-transformers': ['@xenova/transformers'],
           },
         },
       },

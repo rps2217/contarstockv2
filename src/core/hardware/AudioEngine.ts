@@ -1,6 +1,15 @@
 import { getSettings } from '../../services/settings';
 
-export type SoundType = 'success' | 'success_new' | 'error' | 'error_critical' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning';
+export type SoundType =
+  | 'success'
+  | 'success_new'
+  | 'error'
+  | 'error_critical'
+  | 'delete'
+  | 'increment'
+  | 'scan'
+  | 'not_found'
+  | 'warning';
 
 export interface IAudioEngine {
   speak(text: string): void;
@@ -19,13 +28,17 @@ export class AudioEngine implements IAudioEngine {
 
   private getContext(): AudioContext | null {
     if (!this.ctx) {
-      const AudioCtor = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtor =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtor) {
         this.ctx = new AudioCtor();
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {/* Audio resume failed silently */});
+      this.ctx.resume().catch(() => {
+        /* Audio resume failed silently */
+      });
     }
     return this.ctx;
   }
@@ -58,7 +71,7 @@ export class AudioEngine implements IAudioEngine {
 
       switch (type) {
         case 'scan':
-        case 'success': 
+        case 'success':
           osc.type = 'square';
           osc.frequency.setValueAtTime(1400, now);
           gain.gain.setValueAtTime(0.15, now);
@@ -135,7 +148,7 @@ export class AudioEngine implements IAudioEngine {
           osc.stop(now + 0.2);
           break;
       }
-    } catch (e) {
+    } catch (_e) {
       // Audio playback error - silently fail (device may not support audio)
     }
   }

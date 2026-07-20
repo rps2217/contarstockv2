@@ -18,6 +18,16 @@ export interface ExpiryRecord {
   origin?: string;
 }
 
+/** Datos de entrada para put() - puede venir de Supabase o sockets */
+interface ExpiryInput {
+  id?: string;
+  ID?: string;
+  claveUnica?: string;
+  CLAVE_UNICA?: string;
+  timestamp?: number;
+  [key: string]: unknown;
+}
+
 export class ExpiryRepository {
   private tableName = 'VENCIMIENTOS';
 
@@ -30,32 +40,26 @@ export class ExpiryRepository {
 
   async getAll(tableName: string): Promise<ExpiryRecord[]> {
     const targetTable = tableName || this.tableName;
-    const records = await db.dynamic_data
-      .where('tableName')
-      .equals(targetTable)
-      .toArray();
-    
-    return records
-      .filter(r => r.syncStatus !== 'pending_delete')
-      .map(r => this.mapToExpiry(r));
+    const records = await db.dynamic_data.where('tableName').equals(targetTable).toArray();
+
+    return records.filter(r => r.syncStatus !== 'pending_delete').map(r => this.mapToExpiry(r));
   }
 
   liveAll(tableName: string) {
     const targetTable = tableName || this.tableName;
-    return liveQuery(() => 
+    return liveQuery(() =>
       db.dynamic_data
         .where('tableName')
         .equals(targetTable)
         .reverse()
         .sortBy('timestamp')
-        .then(records => records
-          .filter(r => r.syncStatus !== 'pending_delete')
-          .map(r => this.mapToExpiry(r))
+        .then(records =>
+          records.filter(r => r.syncStatus !== 'pending_delete').map(r => this.mapToExpiry(r))
         )
     );
   }
 
-  async put(data: any, tableName?: string) {
+  async put(data: ExpiryInput, tableName?: string) {
     // Método requerido por supabaseSyncService.startSync
     const id = data.id || data.ID || data.claveUnica || data.CLAVE_UNICA;
     if (!id) return;
@@ -63,9 +67,9 @@ export class ExpiryRepository {
     // MULTI-USER CONCURRENCY FIX: Avoid overwriting locally pending edits with real-time pushes
     const existing = await db.dynamic_data.get(String(id));
     if (existing && existing.syncStatus === 'pending') {
-       // Si hay un cambio local pendiente, ignoramos la llegada del socket porque
-       // la próxima vez que sincronicemos todo enviaremos el verdadero 'último' valor
-       return;
+      // Si hay un cambio local pendiente, ignoramos la llegada del socket porque
+      // la próxima vez que sincronicemos todo enviaremos el verdadero 'último' valor
+      return;
     }
 
     await db.dynamic_data.put({
@@ -73,7 +77,7 @@ export class ExpiryRepository {
       tableName: tableName || this.tableName,
       data: data,
       timestamp: data.timestamp || Date.now(),
-      syncStatus: 'synced'
+      syncStatus: 'synced',
     });
   }
 
@@ -87,7 +91,7 @@ export class ExpiryRepository {
       tableName: tableName || this.tableName,
       data: e as unknown as Record<string, unknown>,
       timestamp: e.timestamp || Date.now(),
-      syncStatus: e.syncStatus || 'synced'
+      syncStatus: e.syncStatus || 'synced',
     }));
     await db.dynamic_data.bulkPut(records);
   }
@@ -108,7 +112,7 @@ export class ExpiryRepository {
       ...record.data,
       id: record.id,
       syncStatus: record.syncStatus,
-      timestamp: record.timestamp
+      timestamp: record.timestamp,
     } as ExpiryRecord;
   }
 }

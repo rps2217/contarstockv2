@@ -29,9 +29,9 @@ export interface RetryConfig {
 export interface RecoveryConfig {
   strategy: RecoveryStrategy;
   retry?: RetryConfig;
-  fallbackValue?: any;
+  fallbackValue?: unknown;
   onRetry?: (attempt: number, error: Error) => void;
-  onFallback?: (error: Error, fallback: any) => void;
+  onFallback?: (error: Error, fallback: unknown) => void;
   onDegrade?: (error: Error) => void;
 }
 
@@ -111,7 +111,7 @@ class ErrorRecoveryServiceClass {
       if (fullConfig.strategy === 'fallback' && fullConfig.fallbackValue !== undefined) {
         return {
           success: true,
-          value: fullConfig.fallbackValue,
+          value: fullConfig.fallbackValue as T,
           attempts: 0,
           strategy: 'fallback',
           recovered: true,
@@ -210,7 +210,7 @@ class ErrorRecoveryServiceClass {
       onRetry?.(-1, lastError);
       return {
         success: true,
-        value: fallbackValue,
+        value: fallbackValue as T,
         attempts: retryConfig.maxAttempts,
         strategy: 'fallback',
         recovered: true,
@@ -232,7 +232,7 @@ class ErrorRecoveryServiceClass {
   private async executeWithFallback<T>(
     fn: () => Promise<T>,
     config: RecoveryConfig,
-    id: string
+    _id: string
   ): Promise<RecoveryResult<T>> {
     try {
       const value = await fn();
@@ -251,7 +251,7 @@ class ErrorRecoveryServiceClass {
 
         return {
           success: true,
-          value: config.fallbackValue,
+          value: config.fallbackValue as T,
           attempts: 1,
           strategy: 'fallback',
           recovered: true,
@@ -291,7 +291,7 @@ class ErrorRecoveryServiceClass {
       // Retornar valor degradado
       return {
         success: true,
-        value: config.fallbackValue,
+        value: config.fallbackValue as T,
         attempts: 1,
         strategy: 'degrade',
         recovered: true,
@@ -304,8 +304,8 @@ class ErrorRecoveryServiceClass {
    */
   private async executeWithSkip<T>(
     fn: () => Promise<T>,
-    config: RecoveryConfig,
-    id: string
+    _config: RecoveryConfig,
+    _id: string
   ): Promise<RecoveryResult<T>> {
     try {
       const value = await fn();
@@ -332,8 +332,8 @@ class ErrorRecoveryServiceClass {
    */
   private async executeWithAbort<T>(
     fn: () => Promise<T>,
-    config: RecoveryConfig,
-    id: string
+    _config: RecoveryConfig,
+    _id: string
   ): Promise<RecoveryResult<T>> {
     try {
       const value = await fn();

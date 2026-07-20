@@ -2,13 +2,13 @@
  * =============================================================================
  * SYNC BRIDGE - Conecta EnhancedSyncEngine con Zustand Store
  * =============================================================================
- * 
+ *
  * Proporciona una interfaz unificada para sync que:
  * - Usa EnhancedSyncEngine con retry y métricas
  * - Usa EventsSyncService para eventos (con deduplicación)
  * - Actualiza el SyncStore de Zustand
  * - Proporciona callbacks para UI
- * 
+ *
  * @module SyncBridge
  */
 
@@ -27,7 +27,7 @@ export const SYNC_ORDER = [
   'events',
 ] as const;
 
-export type SyncTable = typeof SYNC_ORDER[number];
+export type SyncTable = (typeof SYNC_ORDER)[number];
 
 export interface SyncOptions {
   /** Tablas a sincronizar (todas por defecto) */
@@ -60,14 +60,20 @@ export class SyncBridge {
   async syncAll(options: SyncOptions = {}): Promise<SyncResult> {
     if (this.isRunning) {
       logger.warn('SyncBridge', 'Sync already in progress');
-      return { success: false, results: {} as Record<string, EnhancedSyncResult>, totalDuration: 0, totalSuccess: 0, totalFailed: 0 };
+      return {
+        success: false,
+        results: {} as Record<string, EnhancedSyncResult>,
+        totalDuration: 0,
+        totalSuccess: 0,
+        totalFailed: 0,
+      };
     }
 
     this.isRunning = true;
     const startTime = Date.now();
     const tables = options.tables || [...SYNC_ORDER];
     const results: Record<string, EnhancedSyncResult> = {};
-    
+
     // Marcar como sincronizando
     useSyncStore.getState().setSyncing(true);
     useSyncStore.getState().setSyncError(null);
@@ -76,14 +82,14 @@ export class SyncBridge {
       for (const table of tables) {
         try {
           logger.info('SyncBridge', `Starting sync for ${table}`);
-          
+
           // Ejecutar sync
           const result = await enhancedSyncEngine.sync(table);
           results[table] = result;
 
           // Actualizar store
           this.updateStore(table, result);
-          
+
           // Callback por tabla
           options.onTableSync?.(table, result);
 
@@ -92,8 +98,7 @@ export class SyncBridge {
             logger.error('SyncBridge', `Sync failed for ${table}`, result.error);
             options.onError?.(new Error(result.error), table);
           }
-
-        } catch (error) {
+        } catch (error: unknown) {
           const err = error instanceof Error ? error : new Error(String(error));
           logger.error('SyncBridge', `Exception syncing ${table}`, err.message);
           results[table] = { success: false, error: err.message };
@@ -115,15 +120,14 @@ export class SyncBridge {
       };
 
       options.onComplete?.(finalResult.results);
-      
+
       logger.info('SyncBridge', 'Sync completed', {
         success: totalSuccess,
         failed: totalFailed,
-        duration: totalDuration
+        duration: totalDuration,
       });
 
       return finalResult;
-
     } finally {
       this.isRunning = false;
       useSyncStore.getState().setSyncing(false);
@@ -136,15 +140,15 @@ export class SyncBridge {
   async syncTable(table: SyncTable): Promise<EnhancedSyncResult> {
     try {
       useSyncStore.getState().setSyncing(true);
-      
+
       // Usar EventsSyncService para eventos (con deduplicación)
       if (table === 'events') {
         return await this.syncEventsTable();
       }
-      
+
       const result = await enhancedSyncEngine.sync(table);
       this.updateStore(table, result);
-      
+
       return result;
     } finally {
       useSyncStore.getState().setSyncing(false);
@@ -158,49 +162,49 @@ export class SyncBridge {
     try {
       // 1. Push: Subir eventos pendientes con deduplicación
       const pushResult = await eventsSyncService.syncPendingEvents();
-      
+
       // 2. Pull: Descargar eventos desde la nube
       const lastSync = localStorage.getItem('lastSync_EVENTOS');
       const lastSyncTimestamp = lastSync ? parseInt(lastSync, 10) : undefined;
       const pullStats = await eventsSyncService.pullFromCloud(lastSyncTimestamp);
-      
+
       // Actualizar timestamp
       localStorage.setItem('lastSync_EVENTOS', Date.now().toString());
-      
+
       // Actualizar store
       this.updateStore('events', {
         success: pushResult.success,
         error: pushResult.errors.length > 0 ? pushResult.errors.join('; ') : undefined,
         pushRes: {
           success: pushResult.created + pushResult.updated,
-          failed: pushResult.failed
+          failed: pushResult.failed,
         },
         pullRes: {
           added: pullStats.added,
-          updated: pullStats.updated
-        }
+          updated: pullStats.updated,
+        },
       });
-      
+
       return {
         success: pushResult.success,
         error: pushResult.errors.length > 0 ? pushResult.errors.join('; ') : undefined,
         pushRes: {
           success: pushResult.created + pushResult.updated,
-          failed: pushResult.failed
+          failed: pushResult.failed,
         },
         pullRes: {
           added: pullStats.added,
-          updated: pullStats.updated
-        }
+          updated: pullStats.updated,
+        },
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
       logger.error('SyncBridge', 'Error syncing events', errorMsg);
       return {
         success: false,
         error: errorMsg,
         pushRes: { success: 0, failed: 0 },
-        pullRes: { added: 0, updated: 0 }
+        pullRes: { added: 0, updated: 0 },
       };
     }
   }
@@ -224,7 +228,7 @@ export class SyncBridge {
    */
   private updateStore(table: string, result: EnhancedSyncResult): void {
     const store = useSyncStore.getState();
-    
+
     // Actualizar timestamp de última sync
     store.setTableSyncTime(table, Date.now());
     store.setLastSyncTime(Date.now());
@@ -274,35 +278,38 @@ import { useState, useCallback, useEffect } from 'react';
 export function useSync() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const store = useSyncStore();
   const { syncAll, isSyncing, syncTable } = syncBridge;
 
-  const sync = useCallback(async (tables?: SyncTable[]) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const result = await syncAll({
-        tables,
-        onError: (err, table) => {
-          setError(err.message);
-        },
-      });
-      
-      if (!result.success) {
-        setError(`${result.totalFailed} tabla(s) fallaron`);
+  const sync = useCallback(
+    async (tables?: SyncTable[]) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await syncAll({
+          tables,
+          onError: (err, table) => {
+            setError(err.message);
+          },
+        });
+
+        if (!result.success) {
+          setError(`${result.totalFailed} tabla(s) fallaron`);
+        }
+
+        return result;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Sync failed';
+        setError(message);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-      
-      return result;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sync failed';
-      setError(message);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [syncAll]);
+    },
+    [syncAll]
+  );
 
   return {
     sync,
@@ -322,7 +329,7 @@ export function useSync() {
 export function useTableSync(table: SyncTable) {
   const metrics = enhancedSyncEngine.getMetrics(table);
   const store = useSyncStore();
-  
+
   return {
     lastSyncAt: store.lastSyncPerTable[table] || null,
     metrics,

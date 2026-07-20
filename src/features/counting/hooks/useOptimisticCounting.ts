@@ -85,7 +85,7 @@ export function useOptimisticCounting(options: UseOptimisticCountingOptions = {}
 
   // Debug log
   const log = useCallback(
-    (message: string, data?: any) => {
+    (message: string, data?: unknown) => {
       if (debug) {
         logger.debug('OptimisticUI', message, data);
       }
@@ -190,7 +190,7 @@ export function useOptimisticCounting(options: UseOptimisticCountingOptions = {}
 
           callbacksRef.current.onConfirm?.(update);
           log('addItem - confirmed', { optimisticId });
-        } catch (error) {
+        } catch (error: unknown) {
           // Falló - hacer rollback
           log('addItem - error, rolling back', { optimisticId, error });
 
