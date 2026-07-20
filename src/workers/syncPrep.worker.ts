@@ -1,5 +1,14 @@
 import { CLOUD_COLUMNS } from '../services/constants';
 
+interface ConsolidatedItem {
+  barcode: string;
+  productName: string;
+  totalQuantity: number;
+  mm?: number;
+  yyyy?: number;
+  isIncident?: boolean;
+}
+
 /**
  * Procesa la transformación de registros locales a formato de nube (Supabase)
  * de forma paralela.
@@ -8,7 +17,7 @@ self.onmessage = (e: MessageEvent) => {
   const { consolidated, session, timestamp, uuidPrefix } = e.data;
 
   try {
-    const rows = consolidated.map((item: any, index: number) => {
+    const rows = consolidated.map((item: ConsolidatedItem, index: number) => {
       // Generamos una clave única robusta
       const uniqueKey =
         `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`.replace(
