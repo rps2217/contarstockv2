@@ -1,7 +1,7 @@
-"use client";
+'use client';
 /**
  * WarehouseSelector - Selector de almacén/ubicación para RLS
- * 
+ *
  * Componente UI para cambiar entre almacenes y aplicar filtros RLS.
  */
 
@@ -44,12 +44,14 @@ export const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <div className={cn(
-        'flex items-center gap-2 bg-surface border border-subtle rounded-xl',
-        sizeClasses[size]
-      )}>
+      <div
+        className={cn(
+          'flex items-center gap-2 bg-surface border border-subtle rounded-xl',
+          sizeClasses[size]
+        )}
+      >
         <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
-        
+
         <select
           value={activeWarehouse || '__all__'}
           onChange={handleChange}
@@ -57,7 +59,7 @@ export const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
           className="bg-transparent text-primary outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
         >
           <option value="__all__">Todos</option>
-          {warehouses.map((wh) => (
+          {warehouses.map(wh => (
             <option key={wh} value={wh}>
               {wh}
             </option>
@@ -69,8 +71,9 @@ export const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
             onClick={clear}
             className="ml-1 p-0.5 hover:bg-elevated rounded-lg transition-colors"
             title="Ver todos"
+            aria-label="Limpiar filtro de almacén"
           >
-            <X className="w-3 h-3 text-muted" />
+            <X className="w-3 h-3 text-muted" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -95,10 +98,12 @@ export const WarehouseBadge: React.FC<{ className?: string }> = ({ className }) 
   if (!isFiltering || !activeWarehouse) return null;
 
   return (
-    <div className={cn(
-      'inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-500 text-xs font-medium rounded-full',
-      className
-    )}>
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-500 text-xs font-medium rounded-full',
+        className
+      )}
+    >
       <MapPin className="w-3 h-3" />
       {activeWarehouse}
     </div>
@@ -117,7 +122,7 @@ export const SimpleWarehouseDropdown: React.FC<{
   return (
     <select
       value={value || '__none__'}
-      onChange={(e) => onChange(e.target.value === '__none__' ? null : e.target.value)}
+      onChange={e => onChange(e.target.value === '__none__' ? null : e.target.value)}
       className={cn(
         'bg-surface border border-subtle text-primary px-3 py-2 rounded-xl',
         'focus:outline-none focus:ring-2 focus:ring-blue-500/50',
@@ -126,7 +131,7 @@ export const SimpleWarehouseDropdown: React.FC<{
       )}
     >
       <option value="__none__">Sin ubicación</option>
-      {warehouses.map((wh) => (
+      {warehouses.map(wh => (
         <option key={wh} value={wh}>
           {wh}
         </option>
