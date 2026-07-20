@@ -26,9 +26,10 @@ npm run build      # Build exitoso
 | ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
 | TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
 | ThermalPrinterEngine.ts | 1,059 | 1,044 | -15 (-1%) | ✅ |
-| UnifiedSyncEngine.ts | 1,346 | 1,133 | -213 (-16%) | 🔄 |
+| EventsModal.tsx | 1,057 | 861 | -196 (-19%) | ✅ |
+| UnifiedSyncEngine.ts | 1,346 | 1,057 | -289 (-21%) | 🔄 |
 
-**Total reducido:** 758 líneas extraídas de archivos monolíticos
+**Total reducido:** 954 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
@@ -88,20 +89,21 @@ npm run build      # Build exitoso
 
 #### 3. UnifiedSyncEngine.ts (1,346 LOC) - EN PROGRESO
 
-**Estado:** ~16% refactorizado
+**Estado:** ~21% refactorizado
 **Archivos extraídos:**
 
 - `syncHelpers.ts` - Helpers utilitarios ✅
 - `syncQueueProcessor.ts` - Lógica de procesamiento de cola ✅
 - `syncTableOperations.ts` - Operaciones de sincronización por tabla ✅
 - `syncEventPuller.ts` - Procesamiento de eventos desde nube ✅
+- `syncConflictChecker.ts` - Detección y resolución de conflictos ✅
 
-**Reducción:** 1346 → 1133 LOC (-213 líneas, -16%)
+**Reducción:** 1346 → 1057 LOC (-289 líneas, -21%)
 
 **Pendiente:**
 
-- Extraer lógica de conflictos
 - Continuar reduciendo código restante
+- Evaluar extracción de realtime sync
 
 #### 4. ThermalPrinterEngine.ts (1,059 LOC) - ✅ COMPLETADO
 
@@ -111,6 +113,17 @@ npm run build      # Build exitoso
 - `thermal-print/escposCommands.ts` - Constantes y generadores de tickets ✅
 
 **Reducción:** 1059 → 1044 LOC (-15 líneas, -1%)
+
+#### 5. EventsModal.tsx (1,057 LOC) - ✅ COMPLETADO
+
+**Estado:** Refactorización completada
+**Archivos extraídos:**
+
+- `EventsModal/EventsFilters.tsx` - Filtros de búsqueda ✅
+- `EventsModal/EventsBulkActions.tsx` - Barra de acciones masivas ✅
+- `EventsModal/EventsTableRow.tsx` - Fila de tabla ✅
+
+**Reducción:** 1057 → 861 LOC (-196 líneas, -19%)
 
 ### 📁 DOCUMENTACIÓN EXISTENTE
 
@@ -1169,9 +1182,10 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 | ExpiryPage.tsx           | 1,292      | 928        | -364 (-28%) | ✅     |
 | TheoreticalLoadsPage.tsx | 1,150      | 984        | -166 (-14%) | ✅     |
 | ThermalPrinterEngine.ts  | 1,059      | 1,044      | -15 (-1%)   | ✅     |
-| UnifiedSyncEngine.ts     | 1,346      | 1,133      | -213 (-16%) | 🔄     |
+| EventsModal.tsx          | 1,057      | 861        | -196 (-19%) | ✅     |
+| UnifiedSyncEngine.ts     | 1,346      | 1,057      | -289 (-21%) | 🔄     |
 
-**Total Reducido:** 758 líneas extraídas de archivos monolíticos
+**Total Reducido:** 954 líneas extraídas de archivos monolíticos
 
 ### Módulos Extraídos
 
@@ -1181,6 +1195,7 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 - `syncQueueProcessor.ts` - Procesamiento de cola de sincronización
 - `syncTableOperations.ts` - Operaciones de sincronización por tabla
 - `syncEventPuller.ts` - Procesamiento de eventos desde la nube
+- `syncConflictChecker.ts` - Detección de conflictos
 
 **Thermal:**
 
@@ -1194,20 +1209,18 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 - `expiryKanbanCard.tsx` - Tarjeta kanban de expiración
 - `expirySection.tsx` - Sección colapsable
 - `theoreticalLoadsCards.tsx` - Tarjetas de órdenes y manifiestos
+- `EventsFilters.tsx` - Filtros de eventos
+- `EventsBulkActions.tsx` - Acciones masivas
+- `EventsTableRow.tsx` - Fila de tabla de eventos
 
 ### Commits Realizados
 
-| Commit    | Descripción                                            | LOC Eliminadas |
-| --------- | ------------------------------------------------------ | -------------- |
-| `44f8bb7` | docs: Actualizar progreso                              | -              |
-| `85914b4` | refactor(sync): Extraer lógica de pullTable            | -69            |
-| `12984c4` | refactor(sync): Refactorizar pushTableChanges          | -52            |
-| `0edf3b5` | refactor(thermal): Integrar comandos ESC/POS           | -15            |
-| `b863de1` | feat(thermal): Extraer comandos ESC/POS                | -              |
-| `641e2a4` | refactor(Fase 3): Extraer tarjetas de TheoreticalLoads | -166           |
-| `6104252` | refactor(sync): Integrar syncQueueProcessor            | -93            |
-| `0cfd8aa` | feat(sync): Extraer syncQueueProcessor                 | -              |
-| `82429fd` | refactor(Fase 3): Extraer componentes de ExpiryPage    | -364           |
+| Commit    | Descripción                                          | LOC Eliminadas |
+| --------- | ---------------------------------------------------- | -------------- |
+| `9ad4c3e` | refactor(events): Extraer componentes de EventsModal | -196           |
+| `d79db15` | refactor(sync): Extraer lógica de conflictos         | -76            |
+| `85914b4` | refactor(sync): Extraer lógica de pullTable          | -69            |
+| `12984c4` | refactor(sync): Refactorizar pushTableChanges        | -52            |
 
 ### Estado Final
 
@@ -1217,6 +1230,6 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 
 ### Próximos Pasos
 
-1. **UnifiedSyncEngine.ts** (1,133 LOC): Continuar extrayendo lógica
-2. **EventsModal.tsx** (1,057 LOC): Pendiente de refactorización
-3. **ExpiryCaptureModal.tsx** (853 LOC): Pendiente revisión
+1. **UnifiedSyncEngine.ts** (1,057 LOC): Continuar extrayendo lógica de realtime sync
+2. **EventsModal.tsx** (861 LOC): ✅ Refactorización completada
+3. **ExpiryCaptureModal.tsx** (853 LOC): ✅ No prioritario (<1000 LOC)
