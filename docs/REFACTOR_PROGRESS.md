@@ -121,3 +121,8 @@ LOC extraído: ~50 LOC
 | SyncQueueProcessor.ts  | ⚠️ Con errores de tipos |
 | ConflictResolver.ts    | ⚠️ Con errores de tipos |
 | SyncRealtimeManager.ts | ⚠️ Con errores de tipos |
+
+### Tests Sync Agregados (2026-07-18)
+
+- syncHelpers.test.ts: 12 tests
+- syncQueueProcessor.test.ts: 3 tests (validación de tipos)
