@@ -1,6 +1,6 @@
 ---
 
-## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-17)
+## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-18)
 
 ### ✅ VALIDACIÓN ACTUAL
 
@@ -1160,41 +1160,63 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 
 ---
 
-## Auditoría de Código - Sesión 2026-07-18
+## Auditoría de Código - Sesión 2026-07-18 (Completa)
+
+### Refactorización de Archivos Monolíticos
+
+| Archivo                  | LOC Inicio | LOC Actual | Reducción   | Estado |
+| ------------------------ | ---------- | ---------- | ----------- | ------ |
+| ExpiryPage.tsx           | 1,292      | 928        | -364 (-28%) | ✅     |
+| TheoreticalLoadsPage.tsx | 1,150      | 984        | -166 (-14%) | ✅     |
+| ThermalPrinterEngine.ts  | 1,059      | 1,044      | -15 (-1%)   | ✅     |
+| UnifiedSyncEngine.ts     | 1,346      | 1,133      | -213 (-16%) | 🔄     |
+
+**Total Reducido:** 758 líneas extraídas de archivos monolíticos
+
+### Módulos Extraídos
+
+**Sync:**
+
+- `syncHelpers.ts` - Helpers utilitarios
+- `syncQueueProcessor.ts` - Procesamiento de cola de sincronización
+- `syncTableOperations.ts` - Operaciones de sincronización por tabla
+- `syncEventPuller.ts` - Procesamiento de eventos desde la nube
+
+**Thermal:**
+
+- `escposCommands.ts` - Comandos ESC/POS para impresoras térmicas
+
+**UI:**
+
+- `expiryConstants.ts` - Constantes de expiración
+- `expiryHelpers.ts` - Helpers de fechas y colores
+- `expiryRecordRow.tsx` - Fila de registro de expiración
+- `expiryKanbanCard.tsx` - Tarjeta kanban de expiración
+- `expirySection.tsx` - Sección colapsable
+- `theoreticalLoadsCards.tsx` - Tarjetas de órdenes y manifiestos
 
 ### Commits Realizados
 
-| Commit    | Descripción                                             | LOC Eliminadas |
-| --------- | ------------------------------------------------------- | -------------- |
-| `1fca789` | Unificar funciones de formateo de fecha                 | ~15            |
-| `5d30d0e` | Usar generateUUID centralizado en EventsSyncService     | ~11            |
-| `64a380a` | Usar normalizeIdentity centralizado en providerImporter | ~5             |
-
-### Funciones Centralizadas
-
-| Archivo Original            | Función Duplicada          | Función Centralizada                |
-| --------------------------- | -------------------------- | ----------------------------------- |
-| CountingHistory.tsx         | formatDate                 | formatDetailDateTime                |
-| ConflictResolverModal.tsx   | formatTimestamp            | formatDetailDateTime                |
-| ConflictResolutionModal.tsx | formatDate                 | formatDetailDateTime                |
-| AuditPanel.tsx (ui)         | formatTimestamp            | formatDetailDateTime                |
-| AuditPanel.tsx (audit)      | formatTimestamp            | formatDetailDateTime                |
-| RecordDetailView.tsx        | formatTimestamp            | formatDetailDateTime                |
-| EventsSyncPanel.tsx         | formatTime, formatFullDate | formatTimeAgo, formatDetailDateTime |
-| EventsSyncService.ts        | generateUUID               | generateUUID                        |
-| providerImporter.ts         | normalizeIdentity          | normalizeIdentity                   |
-
-### Verificación de Memory Leaks
-
-Se verificó que todos los servicios con `addEventListener` tienen métodos `destroy()` con `removeEventListener`:
-
-- ✅ SyncQueue.ts - método destroy() presente
-- ✅ OfflineSyncQueue.ts - método destroy() presente
-- ✅ ScanBufferService.ts - método destroy() presente
-- ✅ SyncQueueService.ts - método destroy() presente
+| Commit    | Descripción                                            | LOC Eliminadas |
+| --------- | ------------------------------------------------------ | -------------- |
+| `44f8bb7` | docs: Actualizar progreso                              | -              |
+| `85914b4` | refactor(sync): Extraer lógica de pullTable            | -69            |
+| `12984c4` | refactor(sync): Refactorizar pushTableChanges          | -52            |
+| `0edf3b5` | refactor(thermal): Integrar comandos ESC/POS           | -15            |
+| `b863de1` | feat(thermal): Extraer comandos ESC/POS                | -              |
+| `641e2a4` | refactor(Fase 3): Extraer tarjetas de TheoreticalLoads | -166           |
+| `6104252` | refactor(sync): Integrar syncQueueProcessor            | -93            |
+| `0cfd8aa` | feat(sync): Extraer syncQueueProcessor                 | -              |
+| `82429fd` | refactor(Fase 3): Extraer componentes de ExpiryPage    | -364           |
 
 ### Estado Final
 
 - **Tests**: 915/915 ✅
 - **TypeScript**: 0 errores ✅
-- **Commits sesión**: 3 refactorizaciones menores
+- **Push a GitHub**: ✅ `refactor/eliminar-any-types`
+
+### Próximos Pasos
+
+1. **UnifiedSyncEngine.ts** (1,133 LOC): Continuar extrayendo lógica
+2. **EventsModal.tsx** (1,057 LOC): Pendiente de refactorización
+3. **ExpiryCaptureModal.tsx** (853 LOC): Pendiente revisión
