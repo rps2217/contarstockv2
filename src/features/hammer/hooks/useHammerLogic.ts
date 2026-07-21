@@ -26,7 +26,12 @@ export interface AwaitingExpiryState {
   quantity: number;
 }
 
-export const useHammerLogic = (batchId: string) => {
+export interface UseHammerLogicOptions {
+  /** Override para el registro de vencimiento. Si se proporciona, tiene prioridad sobre el feature flag. */
+  registerExpiryOverride?: boolean;
+}
+
+export const useHammerLogic = (batchId: string, options?: UseHammerLogicOptions) => {
   const { engine, processScan } = useScanPipeline(1);
   const [currentLocation, setCurrentLocation] = useState(
     () => localStorage.getItem('hammer_loc') || 'ZONA-A'
@@ -44,7 +49,18 @@ export const useHammerLogic = (batchId: string) => {
   const MAX_RETRIES = 3;
 
   // Feature flag para registrar fecha de vencimiento
-  const registerExpiry = isFeatureEnabled('HAMMER_EXPIRY');
+  // Si se proporciona registerExpiryOverride, usarlo; si no, usar el feature flag
+  const featureFlagEnabled = isFeatureEnabled('HAMMER_EXPIRY');
+  // Estado local para permitir toggle sin modificar el feature flag global
+  const [localRegisterExpiry, setLocalRegisterExpiry] = useState<boolean | undefined>(undefined);
+
+  // registerExpiry: usa override (de URL) > local > feature flag
+  const registerExpiry =
+    options?.registerExpiryOverride !== undefined
+      ? options.registerExpiryOverride
+      : localRegisterExpiry !== undefined
+        ? localRegisterExpiry
+        : featureFlagEnabled;
   const registerExpiryRef = useRef(registerExpiry);
 
   // Estado para el modal de vencimiento
@@ -55,17 +71,25 @@ export const useHammerLogic = (batchId: string) => {
     localStorage.setItem('hammer_auto_sync', autoSyncEnabled ? 'true' : 'false');
   }, [autoSyncEnabled]);
 
+  // Sincronizar localRegisterExpiry cuando cambia el override de la URL
+  // Si viene un override, usarlos; si no, mantener el valor local
+  useEffect(() => {
+    if (options?.registerExpiryOverride !== undefined) {
+      setLocalRegisterExpiry(options.registerExpiryOverride);
+    }
+  }, [options?.registerExpiryOverride]);
+
+  // Actualizar ref de registerExpiry cuando cambia
+  useEffect(() => {
+    registerExpiryRef.current = registerExpiry;
+  }, [registerExpiry]);
+
   const [optimisticItems, setOptimisticItems] = useState<HammerItem[]>([]);
   const writeQueue = useRef<{ barcode: string; qty: number; loc: string; ts: number }[]>([]);
 
   const multiplierRef = useRef(1);
   const locationRef = useRef(currentLocation);
   const instantaneousQtyRef = useRef(new Map<string, number>());
-
-  // Mantener ref actualizado
-  useEffect(() => {
-    registerExpiryRef.current = isFeatureEnabled('HAMMER_EXPIRY');
-  });
 
   useEffect(() => {
     multiplierRef.current = engine.multiplier;
@@ -456,7 +480,7 @@ export const useHammerLogic = (batchId: string) => {
       registerScan,
       syncToCloud,
       toggleAutoSync: () => setAutoSyncEnabled(p => !p),
-      toggleRegisterExpiry: () => toggleFeature('HAMMER_EXPIRY'),
+      toggleRegisterExpiry: () => setLocalRegisterExpiry(p => !p),
       removeItem: async (barcode: string) => {
         if (barcode === 'ALL') {
           await HammerDbRepository.deleteBlindScansByBatch(batchId);

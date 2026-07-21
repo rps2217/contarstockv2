@@ -1,13 +1,44 @@
 ---
 
-## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-18)
+## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-21)
 
 ### ✅ VALIDACIÓN ACTUAL
 
 ```bash
-npm run test:run   # 915 tests passing (actualizado 2026-07-18)
+npm run test:run   # 978 tests passing (actualizado 2026-07-21)
 npx tsc --noEmit   # 0 errores TypeScript
 npm run build      # Build exitoso
+```
+
+### 🔧 CORRECCIÓN: Modo Conteo con Registro de Vencimiento (2026-07-21)
+
+**Problema identificado:** El registro de vencimiento no se activaba cuando el usuario lo seleccionaba en el modal de inicio.
+
+**Causa raíz:** El parámetro `expiry` pasado en la URL desde `StartCountingModal` no se leía en `HammerPage`.
+
+**Solución implementada:**
+
+1. **HammerPage.tsx:**
+   - Lee el parámetro `expiry` de la URL al cargar
+   - Lo pasa a `useHammerLogic` mediante el nuevo parámetro `registerExpiryOverride`
+
+2. **useHammerLogic.ts:**
+   - Nuevo parámetro opcional `options.registerExpiryOverride`
+   - Estado local `localRegisterExpiry` para permitir toggles
+   - Lógica de precedencia: override (URL) > local > feature flag global
+   - Toggle en ToolsSheet ahora cambia el estado local, no el feature flag global
+
+**Flujo corregido:**
+```
+StartCountingModal (registerExpiry=true)
+    ↓
+useCountingEngine.navigate(`/massive/${batchId}?expiry=1&skipModal=true`)
+    ↓
+HammerPage lee expiry=1 de la URL
+    ↓
+useHammerLogic(..., { registerExpiryOverride: true })
+    ↓
+registerExpiry=true → TestModeExpiryModal se muestra al escanear
 ```
 
 ### 📊 MÉTRICAS DE CÓDIGO

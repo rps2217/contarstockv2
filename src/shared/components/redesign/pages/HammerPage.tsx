@@ -127,20 +127,30 @@ export const RedesignHammerPage: React.FC = () => {
   // Ref para rastrear si el usuario ya interactuó con el modal
   const userInteractedWithModalRef = useRef(false);
 
-  // Mostrar modal de inicio cuando no hay batchId o es nuevo (y no viene de navegación previa)
+  // Extraer parámetros de la URL
+  const [urlExpiry, setUrlExpiry] = useState<boolean | undefined>(undefined);
+
+  // Leer parámetros de la URL al cargar
   useEffect(() => {
-    // Verificar si skipModal está en la URL (viene de StartCountingModal)
     const urlParams = new URLSearchParams(window.location.search);
+    const expiryParam = urlParams.get('expiry');
     const shouldSkipModal = urlParams.get('skipModal') === 'true';
 
-    if (shouldSkipModal) {
-      // Marcar que debemos omitir el modal
-      setSkipModal(true);
-      // Limpiar el parámetro de la URL
+    // Si viene de StartCountingModal con expiry=1, guardar el valor y limpiar la URL
+    if (expiryParam !== null) {
+      setUrlExpiry(expiryParam === '1');
+      // Limpiar parámetros de la URL
       window.history.replaceState(null, '', window.location.pathname);
-      return; // No mostrar el modal
     }
 
+    if (shouldSkipModal) {
+      setSkipModal(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  // Mostrar modal de inicio cuando no hay batchId o es nuevo (y no viene de navegación previa)
+  useEffect(() => {
     // No mostrar modal si el usuario ya interactuó con él (eligió una opción)
     if (userInteractedWithModalRef.current) {
       return;
@@ -172,6 +182,8 @@ export const RedesignHammerPage: React.FC = () => {
     try {
       if (config.mode === 'blind') {
         // Modo ciego - ya estamos aquí, simplemente continuar
+        // Actualizar el estado de registerExpiry desde la config
+        setUrlExpiry(config.registerExpiry);
         setShowStartModal(false);
       } else {
         // Modo teórico - redirigir a counting
@@ -188,7 +200,10 @@ export const RedesignHammerPage: React.FC = () => {
 
   const { settings, updateSetting } = useAppStore();
 
-  const { state, actions } = useHammerLogic(effectiveBatchId);
+  // Pasar el parámetro expiry a useHammerLogic
+  const { state, actions } = useHammerLogic(effectiveBatchId, {
+    registerExpiryOverride: urlExpiry,
+  });
   const locManager = useLocationManager(`hammer_loc_${effectiveBatchId}`);
 
   const [isManualMode, setIsManualMode] = useState(false);
