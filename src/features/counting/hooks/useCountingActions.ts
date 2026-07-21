@@ -29,6 +29,7 @@ import { SessionRepository } from '@/repositories/SessionRepository';
 import { ScanRepository } from '@/repositories/ScanRepository';
 import type { ConsolidatedItem, Product, MatchResult, AppSettings, CountingSession } from '@/types';
 import type { ExpiryEntry } from '@/services/ExpiryService';
+import { isPharmaBarcode } from '../domain/countingDomain';
 
 interface UseCountingActionsOptions {
   sessionId: string | undefined;
@@ -54,6 +55,9 @@ interface UseCountingActionsOptions {
   getExpiryForBarcode?: (barcode: string) => Promise<any>;
 
   syncExpiry?: (entry: any) => Promise<any>;
+
+  /** Si true, solicita fecha de vencimiento al escanear productos pharma */
+  registerExpiry?: boolean;
 }
 
 interface UseCountingActionsResult {
@@ -103,7 +107,17 @@ export const useCountingActions = (
     saveExpiry,
     getExpiryForBarcode,
     syncExpiry,
+    registerExpiry = false,
   } = options;
+
+  // Determinar si debe solicitar vencimiento según configuración y tipo de producto
+  const shouldRequestExpiry = useCallback(
+    (barcode: string): boolean => {
+      if (!registerExpiry) return false;
+      return isPharmaBarcode(barcode);
+    },
+    [registerExpiry]
+  );
 
   // ============================================================================
   // ACCIÓN: Escanear producto
@@ -146,18 +160,23 @@ export const useCountingActions = (
 
           async (cleanBarcode: string, product: Product | null, newQty: number) => {
             try {
-              // TODO: Usar shouldPromptForBatch cuando esté disponible
-              dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
-              await sessionService.addScanEvent(
-                sessionId,
-                cleanBarcode,
-                qty,
-                mm,
-                yyyy,
-                currentLocation,
-                batch
-              );
-              dispatch({ type: 'COMMIT_COMPLETE' });
+              // Determinar si debe solicitar vencimiento (pharma + registerExpiry)
+              const needsPharma = shouldRequestExpiry(cleanBarcode);
+              dispatch({ type: 'PRODUCT_RESOLVED', needsPharma });
+
+              // Solo guardar si NO necesita pharma (el modal se encargará)
+              if (!needsPharma) {
+                await sessionService.addScanEvent(
+                  sessionId,
+                  cleanBarcode,
+                  qty,
+                  mm,
+                  yyyy,
+                  currentLocation,
+                  batch
+                );
+                dispatch({ type: 'COMMIT_COMPLETE' });
+              }
             } catch (err: unknown) {
               logger.error(
                 'useCountingActions',
@@ -178,7 +197,15 @@ export const useCountingActions = (
         dispatch({ type: 'ERROR_OCCURRED' });
       }
     },
-    [sessionId, currentLocation, consolidatedHistory, machineState, engine, dispatch]
+    [
+      sessionId,
+      currentLocation,
+      consolidatedHistory,
+      machineState,
+      engine,
+      dispatch,
+      shouldRequestExpiry,
+    ]
   );
 
   // ============================================================================

@@ -73,9 +73,15 @@ interface UseCountingLogicResult {
 // HOOK PRINCIPAL (~150 LOC)
 // =============================================================================
 
+export interface UseCountingLogicOptions {
+  /** Si true, solicita fecha de vencimiento al escanear productos */
+  registerExpiry?: boolean;
+}
+
 export const useCountingLogic = (
   sessionId: string | undefined,
-  onExit: () => void
+  onExit: () => void,
+  options?: UseCountingLogicOptions
 ): UseCountingLogicResult => {
   const settings = getSettings();
   const itemsRef = useRef<ConsolidatedItem[]>([]);
@@ -139,6 +145,7 @@ export const useCountingLogic = (
     saveExpiry,
     getExpiryForBarcode,
     syncExpiry,
+    registerExpiry: options?.registerExpiry ?? false,
   });
 
   // ============================================================================

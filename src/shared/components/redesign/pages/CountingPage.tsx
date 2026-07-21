@@ -94,7 +94,10 @@ export const RedesignCountingPage: React.FC = () => {
 
   // useCountingLogic requiere un ID válido
   const handleExit = () => navigate('/dashboard');
-  const { state, sessionData, actions } = useCountingLogic(id, handleExit);
+  // El conteo teórico siempre requiere registro de vencimiento
+  const { state, sessionData, actions } = useCountingLogic(id, handleExit, {
+    registerExpiry: true,
+  });
   const { saveExpiry, syncExpiry, getExpiryForBarcode } = useExpiryTracker();
 
   // ✅ Extraer estado de auto-save
