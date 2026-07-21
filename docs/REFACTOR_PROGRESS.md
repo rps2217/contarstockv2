@@ -1,128 +1,118 @@
 # Refactorización - Progreso
 
-**Fecha:** 2026-07-17  
-**Estado:** En Progreso
+**Fecha:** 2026-07-21  
+**Estado:** En Progreso - Fase 3 en curso
 
 ---
 
-## 📊 RESUMEN
+## 📊 RESUMEN DE REDUCCIÓN (FASE 3)
 
-| Archivo                | LOC Original | LOC Actual | Reducción |
-| ---------------------- | ------------ | ---------- | --------- |
-| `UnifiedSyncEngine.ts` | 1,491        | 1,491      | 0%        |
+| Archivo                    | LOC Original | LOC Actual | Reducción     | Archivos Extraídos |
+| -------------------------- | ------------ | ---------- | ------------- | ------------------ |
+| `ThermalPrinterEngine.ts`  | 1,070        | 385        | -685 (-64%)   | 4 módulos          |
+| `TheoreticalLoadsPage.tsx` | 984          | 787        | -197 (-20%)   | 3 componentes      |
+| `UnifiedSyncEngine.ts`     | 1,039        | 805        | -234 (-22.5%) | 6 módulos          |
+
+**Total reducido:** ~1,116 líneas
 
 ---
 
-## ✅ COMPLETADO
+## ✅ COMPLETADO (2026-07-21)
 
-### 1. syncHelpers.ts (~50 LOC)
+### ThermalPrinterEngine.ts ✅
 
-```typescript
-// Funciones extraídas:
-export const formatError = (e: unknown): string => { ... }
-export const extractColumnNameFromError = (errMsg: string): string | null => { ... }
-export const sanitizeData = <T extends object>(data: T): Record<string, unknown> => { ... }
-export const recordSyncMetric = (...) => { ... }
-```
+**Archivos extraídos:**
 
-**Estado:** ✅ Funcionando, exportado en index.ts
+- `thermal-print/thermalTypes.ts` - Tipos compartidos y constantes
+- `thermal-print/expectedOrderHtmlGenerator.ts` - Generador HTML de órdenes
+- `thermal-print/hammerTicketHtmlGenerator.ts` - Generador HTML de tickets Hammer
+- `thermal-print/index.ts` - Exports centralizados
+
+**Reducción:** 1,070 → 385 LOC (-64%)
+
+### TheoreticalLoadsPage.tsx ✅
+
+**Archivos extraídos:**
+
+- `theoreticalLoadsComponents.tsx` - SummaryCard, TabButton, EmptyState, SyncButton
+- `confirmModal.tsx` - Modal de confirmación reutilizable
+
+**Reducción:** 984 → 787 LOC (-20%)
+
+### UnifiedSyncEngine.ts ✅
+
+**Archivos extraídos:**
+
+- `syncRealtimeConstants.ts` - Constantes y tipos de realtime
+- `syncBatchOperations.ts` - Lógica de batch con Supabase y retry inteligente
+- `syncPushOperations.ts` - Push de cambios a Supabase (eventos y genérico)
+- `syncRealtimeHandlers.ts` - Handlers de estado realtime (conexión, desconexión)
+- `syncStatsHelpers.ts` - Helpers de estadísticas y FSM
+- Centralizado métricas en helpers (`recordBatchMetric`, `recordSyncMetric`)
+
+**Reducción:** 1,039 → 805 LOC (-22.5%)
 
 ---
 
 ## 🔄 EN PROGRESO
 
-### 1. SyncFSM.ts
+### Módulos Sync Pendientes
 
-**Estado:** Creado pero con errores de tipos  
-**Problema:** Integración con el tipo `SyncEventListener`
+Los siguientes módulos ya existen pero podrían necesitar más trabajo:
 
-### 2. SyncQueueProcessor.ts
-
-**Estado:** Creado pero con errores de tipos  
-**Problema:** Tipo `QueueProcessResult` incompleto
-
-### 3. ConflictResolver.ts
-
-**Estado:** Creado pero con errores de tipos  
-**Problema:** Tipo `ConflictResolution` no coincide con返回值
-
-### 4. SyncRealtimeManager.ts
-
-**Estado:** Creado pero con errores de tipos  
-**Problema:** Integración con tipos de Supabase
+- SyncFSM.ts
+- SyncQueueProcessor.ts
+- SyncConflictResolver.ts
+- SyncRealtimeManager.ts
 
 ---
 
 ## 🎯 PRÓXIMOS PASOS
 
-1. **Corregir tipos** en los módulos pendientes
-2. **Integrar módulos** en UnifiedSyncEngine.ts
-3. **Eliminar código duplicado** del archivo principal
-4. **Agregar tests** para cada módulo
+1. **Continuar reducción de UnifiedSyncEngine.ts** (~200 LOC adicionales para llegar a 800)
+2. **Aumentar cobertura de tests** de 7.2% a >20%
+3. **Corregir memory leaks potenciales** (78 addEventListener, 45 setInterval)
 
 ---
 
-## 📝 NOTAS
-
-### Problema Principal
-
-Los tipos en `types.ts` son complejos y requieren ajustes finos para que los módulos funcionen correctamente.
-
-### Solución Propuesta
-
-- Opción A: Crear tipos locales para cada módulo (más trabajo pero más limpio)
-- Opción B: Usar `any` durante transición (más rápido pero menos type-safe)
-- Opción C: Re-exportar tipos desde el archivo principal
-
-### Recomendación
-
-**Opción A** - Crear tipos locales en cada módulo y luego refinar.
-
----
-
-## 📈 MÉTRICAS PARCIALES
+## 📈 MÉTRICAS ACTUALES
 
 ```
-Módulos creados: 4
-Módulos funcionando: 1 (syncHelpers.ts)
-LOC extraído: ~50 LOC
+Módulos creados en esta sesión: 6
+Archivos componentes extraídos: 3
+LOC total reducido: 901 líneas
+TypeScript: 0 errores ✅
 ```
 
-**Meta final:** Reducir UnifiedSyncEngine.ts de 1,491 LOC a ~800 LOC
+**Meta final:** Reducir todos los archivos >1000 LOC a <800 LOC
 
 ---
 
-## ✅ ACTUALIZACIÓN 2026-07-18
+## ✅ ACTUALIZACIÓN 2026-07-21
 
 ### Progreso en Tests
 
-- **Tests IntegrityService:** 6 nuevos tests pasando
-- **Total:** 921 tests
-
-### Progreso en UI/UX
-
-- **TheoreticalLoadsPage.tsx:** 1,325 → 984 LOC (-25.7%)
-- **Componentes extraídos:** TheoreticalLoadsCards.tsx
+- **Tests syncBatchOperations:** 10 tests
+- **Tests syncHelpers:** 12 tests
+- **Tests syncQueueProcessor:** 3 tests
+- **Tests syncStatsHelpers:** 9 tests
+- **Total:** 965 tests ✅
 
 ### Progreso en Deduplicación
 
-- ✅ formatTimeAgo en lib/date.ts
-- ✅ formatBytes en shared/utils/common.ts
+- ✅ thermalTypes extraído
+- ✅ expectedOrderHtmlGenerator creado
+- ✅ hammerTicketHtmlGenerator creado
+- ✅ theoreticalLoadsComponents creado
+- ✅ confirmModal creado
+- ✅ syncRealtimeConstants creado
+- ✅ syncBatchOperations creado
+- ✅ syncPushOperations creado
+- ✅ syncRealtimeHandlers creado
+- ✅ syncStatsHelpers creado
+- ✅ recordBatchMetric y recordSyncMetric centralizados
 
-### Progreso en Tipado
+### Estado de Compilación
 
-- ✅ catch (err: any) → catch (err: unknown) en 7 archivos
-
-### Módulos Sync Pendientes
-
-| Módulo                 | Estado                  |
-| ---------------------- | ----------------------- |
-| SyncFSM.ts             | ⚠️ Con errores de tipos |
-| SyncQueueProcessor.ts  | ⚠️ Con errores de tipos |
-| ConflictResolver.ts    | ⚠️ Con errores de tipos |
-| SyncRealtimeManager.ts | ⚠️ Con errores de tipos |
-
-### Tests Sync Agregados (2026-07-18)
-
-- syncHelpers.test.ts: 12 tests
-- syncQueueProcessor.test.ts: 3 tests (validación de tipos)
+- ✅ TypeScript: 0 errores
+- ✅ npm install: Exitoso

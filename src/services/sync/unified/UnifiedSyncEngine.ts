@@ -64,29 +64,7 @@ type DexieTable = {
   };
 };
 
-// Tipo para dirty items de sync
-interface SyncableRecord {
-  id?: number | string;
-  syncStatus?: string;
-  created_at?: string | number;
-  updated_at?: string | number;
-  [key: string]: unknown;
-}
-
-// Tipo para payload de realtime de Supabase
-interface RealtimePayload {
-  table?: string;
-  eventType?: string;
-  new?: Record<string, unknown>;
-  old?: Record<string, unknown>;
-}
-
-// Tipo para cambio de realtime
-interface RealtimeChange {
-  eventType: string;
-  newRecord?: SyncableRecord;
-  oldRecord?: SyncableRecord;
-}
+// Los tipos SyncableRecord, RealtimePayload y RealtimeChange se importan de syncRealtimeConstants
 import {
   processRemoteEvents,
   processDynamicData,
@@ -94,6 +72,25 @@ import {
   pullTable,
 } from './syncEventPuller';
 import { checkConflicts, resolveConflicts } from './syncConflictChecker';
+import {
+  createRealtimeState,
+  calculateReconnectDelay,
+  type RealtimeState,
+  type RealtimePayload,
+  type SyncableRecord,
+  RECONNECT_BASE_DELAY,
+  RECONNECT_MAX_DELAY,
+  DEBOUNCE_DELAY,
+} from './syncRealtimeConstants';
+import { executeBatchUpsert, executeSingleUpsert, recordSyncMetric } from './syncBatchOperations';
+import { pushEventsChanges, pushGenericChanges, retryQueueItem } from './syncPushOperations';
+import { handleRealtimeStatusChange, scheduleReconnect } from './syncRealtimeHandlers';
+import {
+  getQueueSize,
+  clearSyncQueue,
+  canFSMTransition,
+  getRealtimeStats,
+} from './syncStatsHelpers';
 
 // =============================================================================
 // MOTOR UNIFICADO
@@ -112,6 +109,13 @@ export class UnifiedSyncEngine {
   private lastSyncDuration = 0;
   private totalSynced = 0;
   private totalErrors = 0;
+
+  // Telemetry wrapper for compatibility
+  private telemetryTracker = {
+    track: (category: string, event: string, data?: Record<string, unknown>) => {
+      telemetry.track(category as 'SYNC' | 'ERROR', event, data);
+    },
+  };
 
   constructor(config: Partial<SyncEngineConfig> = {}) {
     this.config = { ...DEFAULT_SYNC_CONFIG, ...config };
@@ -164,16 +168,7 @@ export class UnifiedSyncEngine {
   }
 
   private canTransition(event: SyncEvent): boolean {
-    const transitions: Record<SyncState, SyncEvent[]> = {
-      idle: ['SYNC_CATALOGS', 'SYNC_BATCHES', 'SYNC_ALL', 'OFFLINE'],
-      syncing_catalogs: ['ERROR', 'RESET'],
-      syncing_batches: ['ERROR', 'RESET'],
-      checking_conflicts: ['ERROR', 'RESET', 'RESOLVE_CONFLICTS'],
-      resolving_conflicts: ['ERROR', 'RESET'],
-      error: ['SYNC_ALL', 'RESET'],
-      offline: ['SYNC_ALL', 'RESET'],
-    };
-    return transitions[this.state]?.includes(event) ?? false;
+    return canFSMTransition(this.state, event);
   }
 
   // ===========================================================================
@@ -188,9 +183,8 @@ export class UnifiedSyncEngine {
 
     if (!navigator.onLine) {
       this.setState('offline');
-      // @ts-ignore
-      syncMetricsService.recordMetric({
-        operation: 'conflict_check',
+      recordSyncMetric({
+        operation: 'sync_all',
         tableName: '_system',
         duration: 0,
         success: false,
@@ -215,8 +209,7 @@ export class UnifiedSyncEngine {
       this.setState('checking_conflicts');
       const conflictStart = performance.now();
       const conflicts = await this.checkConflicts();
-      // @ts-ignore
-      syncMetricsService.recordMetric({
+      recordSyncMetric({
         operation: 'conflict_check',
         tableName: '_all',
         duration: performance.now() - conflictStart,
@@ -256,9 +249,8 @@ export class UnifiedSyncEngine {
       this.emit({ type: 'sync_error', error: errorMsg, timestamp: Date.now() });
       telemetry.track('ERROR', 'SYNC_FAILED', { error: errorMsg });
 
-      // @ts-ignore
-      syncMetricsService.recordMetric({
-        operation: 'conflict_check',
+      recordSyncMetric({
+        operation: 'sync_all',
         tableName: '_system',
         duration: performance.now() - startTime,
         success: false,
@@ -423,34 +415,18 @@ export class UnifiedSyncEngine {
    * Push de un registro individual
    */
   async pushSingle(tableName: string, data: Record<string, unknown>): Promise<SyncResult> {
-    const meta = syncRegistry[tableName];
-    if (!meta) return { success: false, errors: ['Unknown table'] };
-
-    try {
-      const remoteData = meta.mapToRemote ? meta.mapToRemote(data) : data;
-      const sanitized = sanitizeData(remoteData);
-
-      const { error } = await supabase.from(meta.remoteTable).upsert(sanitized);
-
-      if (error) {
-        return { success: false, errors: [error.message] };
-      }
-
-      return { success: true, uploaded: 1 };
-    } catch (error: unknown) {
-      return { success: false, errors: [formatError(error)] };
+    if (!navigator.onLine) {
+      return { success: false, errors: ['Offline'] };
     }
+    return executeSingleUpsert(tableName, data);
   }
 
   /**
    * Push de un lote de registros
    */
   async pushBatch(tableName: string, rows: Record<string, unknown>[]): Promise<SyncResult> {
-    const startTime = performance.now();
-
     if (!navigator.onLine) {
-      // @ts-ignore
-      syncMetricsService.recordMetric({
+      recordSyncMetric({
         operation: 'batch_push',
         tableName,
         duration: 0,
@@ -462,88 +438,10 @@ export class UnifiedSyncEngine {
     }
 
     const meta = syncRegistry[tableName];
-    if (!meta) return { success: false, errors: ['Unknown table'] };
-
-    const sanitizedRows = rows.map(row => {
-      const remote = meta.mapToRemote ? meta.mapToRemote(row) : row;
-      const clean: Record<string, unknown> = {};
-      Object.entries(sanitizeData(remote)).forEach(([k, v]) => {
-        if (!['syncStatus', 'syncError', 'nextRetry', 'retryCount'].includes(k)) {
-          clean[k] = v;
-        }
-      });
-      return clean;
+    return executeBatchUpsert(tableName, rows, {
+      mapToRemote: meta?.mapToRemote,
+      primaryKey: meta?.primaryKey,
     });
-
-    let attempts = 0;
-    let currentRows = sanitizedRows;
-
-    while (attempts < 12) {
-      try {
-        const { error, count } = await supabase
-          .from(meta.remoteTable)
-          .upsert(currentRows, { onConflict: meta.primaryKey });
-
-        if (error) {
-          const errMsg = error.message || '';
-          const missingCol = extractColumnNameFromError(errMsg);
-
-          if (missingCol && errMsg.includes('column')) {
-            logger.info('SYNC_RESILIENCE', `Removing missing column '${missingCol}'`);
-            currentRows = currentRows.map(row => {
-              const r = { ...row };
-              delete r[missingCol];
-              return r;
-            });
-            attempts++;
-            continue;
-          }
-
-          // @ts-ignore
-          syncMetricsService.recordMetric({
-            operation: 'batch_push',
-            tableName,
-            duration: performance.now() - startTime,
-            success: false,
-            recordsAffected: rows.length,
-            error: errMsg,
-          });
-          return { success: false, errors: [errMsg] };
-        }
-
-        // @ts-ignore
-        syncMetricsService.recordMetric({
-          operation: 'batch_push',
-          tableName,
-          duration: performance.now() - startTime,
-          success: true,
-          recordsAffected: count || rows.length,
-        });
-        return { success: true, uploaded: count || rows.length };
-      } catch (error: unknown) {
-        // @ts-ignore
-        syncMetricsService.recordMetric({
-          operation: 'batch_push',
-          tableName,
-          duration: performance.now() - startTime,
-          success: false,
-          recordsAffected: rows.length,
-          error: formatError(error),
-        });
-        return { success: false, errors: [formatError(error)] };
-      }
-    }
-
-    // @ts-ignore
-    syncMetricsService.recordMetric({
-      operation: 'batch_push',
-      tableName,
-      duration: performance.now() - startTime,
-      success: false,
-      recordsAffected: rows.length,
-      error: 'Max retries exceeded',
-    });
-    return { success: false, errors: ['Max retries exceeded'] };
   }
 
   // ===========================================================================
@@ -585,101 +483,18 @@ export class UnifiedSyncEngine {
 
     if (!dirtyItems.length) return;
 
-    // Para eventos, usar filtro mejorado que distingue create/update
+    // Push changes using helper functions
     if (tableName === 'events' || meta.filterValue === 'EVENTOS') {
-      await this.pushEventsChanges(localTable, meta, dirtyItems);
-      return;
-    }
-
-    // Default behavior for non-events tables
-    await this.pushGenericChanges(localTable, meta, dirtyItems);
-  }
-
-  private async pushEventsChanges(
-    localTable: DexieTable,
-    meta: TableSyncMeta,
-    dirtyItems: SyncableRecord[]
-  ): Promise<void> {
-    try {
-      const { filterEventsWithoutDuplicates } = await import('@/services/cloud/syncRegistry');
-      // Cast to expected type for filterEventsWithoutDuplicates
-      const eventsToFilter = dirtyItems.map(item => ({
-        data: item as Record<string, unknown>,
-        id: String(item.id || ''),
-        timestamp: typeof item.created_at === 'number' ? item.created_at : Date.now(),
-      }));
-      const filterResult = await filterEventsWithoutDuplicates(eventsToFilter);
-
-      if (filterResult.skippedCount > 0) {
-        logger.info('SYNC', `Eventos: ${filterResult.skippedCount} ya sincronizados, omitidos`);
-      }
-
-      // Process creates
-      if (filterResult.toCreate.length > 0) {
-        const createRows = filterResult.toCreate.map(item => {
-          const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
-          delete row.id;
-          return row;
-        });
-        await this.pushBatch(meta.remoteTable, createRows);
-        await markAsSynced('events', meta, filterResult.toCreate);
-        logger.info('SYNC', `Eventos: ${filterResult.toCreate.length} creados en nube`);
-      }
-
-      // Process updates
-      if (filterResult.toUpdate.length > 0) {
-        const updateRows = filterResult.toUpdate.map(item => {
-          const row = meta.mapToRemote ? meta.mapToRemote(item) : item;
-          if (item.remoteId !== undefined) {
-            row.id = item.remoteId;
-          }
-          return row;
-        });
-        await this.pushBatch(meta.remoteTable, updateRows);
-        await markAsSynced('events', meta, filterResult.toUpdate);
-        logger.info('SYNC', `Eventos: ${filterResult.toUpdate.length} actualizados en nube`);
-      }
-    } catch (err: unknown) {
-      logger.warn('SYNC', 'No se pudo verificar duplicados de eventos, sincronizando todos');
-      await this.pushGenericChanges(localTable, meta, dirtyItems);
-    }
-  }
-
-  private async pushGenericChanges(
-    localTable: DexieTable,
-    meta: TableSyncMeta,
-    dirtyItems: SyncableRecord[]
-  ): Promise<void> {
-    for (let i = 0; i < dirtyItems.length; i += this.config.batchSize) {
-      const chunk = dirtyItems.slice(i, i + this.config.batchSize);
-      const rows = chunk.map(item => (meta.mapToRemote ? meta.mapToRemote(item) : item));
-
-      const result = await this.pushBatch(meta.remoteTable, rows);
-
-      if (result.success) {
-        await markAsSynced(meta.localTable, meta, chunk);
-      }
+      await pushEventsChanges(localTable, meta, dirtyItems, (t, r) => this.pushBatch(t, r));
+    } else {
+      await pushGenericChanges(localTable, meta, dirtyItems, this.config.batchSize, (t, r) =>
+        this.pushBatch(t, r)
+      );
     }
   }
 
   private async retryItem(id: number, error: string): Promise<void> {
-    const item = await db.syncQueue.get(id);
-    if (!item) return;
-
-    const newRetries = item.retries + 1;
-    if (newRetries >= this.config.maxRetries) {
-      await db.syncQueue.delete(id);
-      telemetry.track('SYNC', 'MAX_RETRIES_EXCEEDED', {
-        table: item.tableName,
-        recordId: item.recordId,
-      });
-      return;
-    }
-
-    await db.syncQueue.update(id, {
-      retries: newRetries,
-      lastError: error,
-    });
+    await retryQueueItem(id, this.config.maxRetries, this.telemetryTracker);
   }
 
   private async checkConflicts(): Promise<SyncConflict[]> {
@@ -774,10 +589,6 @@ export class UnifiedSyncEngine {
     debounceTimers: new Map(),
   };
 
-  private readonly RECONNECT_BASE_DELAY = 1000;
-  private readonly RECONNECT_MAX_DELAY = 30000;
-  private readonly DEBOUNCE_DELAY = 500;
-
   /**
    * Inicia sincronización en tiempo real con reconexión automática
    */
@@ -816,56 +627,27 @@ export class UnifiedSyncEngine {
       logger.info('REALTIME', `Connecting to channel: ${channelName}`);
     } catch (error: unknown) {
       logger.error('REALTIME', 'Failed to connect', formatError(error));
-      this.scheduleReconnect();
+      scheduleReconnect(
+        this.config.enableRealtime,
+        this.realtimeState,
+        () => this.stopRealtimeSync(),
+        () => this.connectRealtime()
+      );
     }
   }
 
   private handleRealtimeStatus(status: string): void {
-    switch (status) {
-      case 'SUBSCRIBED':
-        this.realtimeState.isConnected = true;
-        this.realtimeState.reconnectAttempts = 0;
-        this.realtimeState.lastHeartbeat = Date.now();
-        logger.success('REALTIME', 'Connected successfully');
-        telemetry.track('SYNC', 'REALTIME_CONNECTED');
-        this.emit({
-          type: 'sync_complete',
-          timestamp: Date.now(),
-          metadata: { eventType: 'realtime_connected' },
-        });
-        break;
-
-      case 'CLOSED':
-      case 'CHANNEL_ERROR':
-        this.realtimeState.isConnected = false;
-        logger.warn('REALTIME', `Connection status: ${status}`);
-        this.scheduleReconnect();
-        break;
-
-      case 'TIMED_OUT':
-        this.realtimeState.isConnected = false;
-        logger.warn('REALTIME', 'Connection timed out');
-        this.scheduleReconnect();
-        break;
-    }
-  }
-
-  private scheduleReconnect(): void {
-    if (!this.config.enableRealtime) return;
-
-    const attempts = this.realtimeState.reconnectAttempts;
-    const delay = Math.min(
-      this.RECONNECT_BASE_DELAY * Math.pow(2, attempts),
-      this.RECONNECT_MAX_DELAY
+    const result = handleRealtimeStatusChange(status, this.realtimeState, payload =>
+      this.emit(payload)
     );
-
-    logger.info('REALTIME', `Scheduling reconnect in ${delay}ms (attempt ${attempts + 1})`);
-
-    setTimeout(() => {
-      this.realtimeState.reconnectAttempts++;
-      this.stopRealtimeSync();
-      this.connectRealtime();
-    }, delay);
+    if (result.shouldReconnect) {
+      scheduleReconnect(
+        this.config.enableRealtime,
+        this.realtimeState,
+        () => this.stopRealtimeSync(),
+        () => this.connectRealtime()
+      );
+    }
   }
 
   /**
@@ -920,7 +702,7 @@ export class UnifiedSyncEngine {
     // Set new debounce timer
     const timer = setTimeout(() => {
       this.processPendingChanges(tableName);
-    }, this.DEBOUNCE_DELAY);
+    }, DEBOUNCE_DELAY);
 
     this.realtimeState.debounceTimers.set(tableName, timer);
   }
@@ -967,15 +749,8 @@ export class UnifiedSyncEngine {
   /**
    * Obtiene el estado de la conexión realtime
    */
-  getRealtimeStatus(): { isConnected: boolean; lastHeartbeat: number; pendingChanges: number } {
-    return {
-      isConnected: this.realtimeState.isConnected,
-      lastHeartbeat: this.realtimeState.lastHeartbeat,
-      pendingChanges: Array.from(this.realtimeState.pendingChanges.values()).reduce(
-        (sum, arr) => sum + arr.length,
-        0
-      ),
-    };
+  getRealtimeStatus() {
+    return getRealtimeStats(this.realtimeState);
   }
 
   /**
@@ -1012,11 +787,11 @@ export class UnifiedSyncEngine {
   }
 
   async getQueueSize(): Promise<number> {
-    return db.syncQueue.count();
+    return getQueueSize();
   }
 
   async clearQueue(): Promise<void> {
-    await db.syncQueue.clear();
+    await clearSyncQueue();
   }
 }
 
