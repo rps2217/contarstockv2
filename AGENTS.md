@@ -16,8 +16,8 @@ npm run build      # Build exitoso
 | ----------- | ------- |
 | LOC Totales | 133,953 |
 | Archivos TS | 705     |
-| Tests       | 965     |
-| Cobertura   | ~7.8%   |
+| Tests       | 978     |
+| Cobertura   | ~8.0%   |
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
@@ -28,8 +28,9 @@ npm run build      # Build exitoso
 | ThermalPrinterEngine.ts | 1,070 | 385 | -685 (-64%) | ✅ |
 | EventsModal.tsx | 1,057 | 861 | -196 (-19%) | ✅ |
 | UnifiedSyncEngine.ts | 1,039 | 805 | -234 (-22.5%) | ✅ |
+| syncRegistry.ts | 839 | 429 | -410 (-49%) | ✅ |
 
-**Total reducido:** ~2,300 líneas extraídas de archivos monolíticos
+**Total reducido:** ~2,700 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
@@ -51,13 +52,15 @@ npm run build      # Build exitoso
 | `theoreticalLoadsComponents.tsx` | SummaryCard, TabButton, EmptyState |
 | `confirmModal.tsx` | Modal de confirmación reutilizable |
 | `syncRealtimeConstants.ts` | Constantes de realtime sync |
+| `syncMappingHelpers.ts` | Funciones de mapeo local↔remote |
+| `syncEventFilters.ts` | Filtros para prevención de duplicados |
 
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
 1. **Archivos monolíticos** (>1000 LOC):
    - `UnifiedSyncEngine.ts` (805 LOC) - ✅ Completado
    - `ThermalPrinterEngine.ts` (385 LOC) - ✅ Modularizado
-   - `syncRegistry.ts` (839 LOC) - Reducir complejidad
+   - `syncRegistry.ts` (429 LOC) - ✅ Modularizado
 
 2. **Tipos `any`**: ~104 ocurrencias (mejora de 795)
    - Genéricos con default `any`: aceptables
