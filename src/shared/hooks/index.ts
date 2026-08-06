@@ -35,9 +35,6 @@ export * from './usePaginatedQuery';
 export { useProductivity } from './useProductivity';
 export type { ProductivityStats } from './useProductivity';
 
-export { useTurboMode } from './useTurboMode';
-export type { TurboState, UseTurboModeReturn } from './useTurboMode';
-
 // ============================================================================
 // Sincronización unificada
 // ============================================================================
@@ -104,11 +101,5 @@ export { useKeyboardAware, KeyboardAwareContainer } from './useKeyboardAware';
 export { usePermissions, RequirePermission } from './usePermissions';
 
 // ============================================================================
-// Undo/Redo
+// Undo/Redo (eliminado - código no utilizado)
 // ============================================================================
-export {
-  showUndoToast,
-  useUndoToast,
-  UndoIndicator,
-  useUndoRedoShortcuts,
-} from '@/shared/components/ui/UndoRedoToast';

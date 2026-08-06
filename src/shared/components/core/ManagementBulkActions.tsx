@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CheckSquare, X, LucideIcon } from 'lucide-react';
 
 export interface BulkAction {

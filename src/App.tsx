@@ -20,7 +20,6 @@ import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useExpiryNotifications } from '@/hooks/useExpiryNotifications';
 import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
-import { initializeWorkflows } from '@/lib/workflowEngine';
 import { useRowLevelSecurityStore, usePermissionStore } from '@/stores';
 import { db } from './db';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
@@ -30,7 +29,7 @@ import { SkipLinksProvider } from '@/shared/components/ui/SkipLinks';
 import { useAppInit } from '@/hooks/useAppInit';
 import { MotionProvider, useMotionContext } from '@/hooks/useMotionContext';
 import { useSimpleUI } from '@/hooks/useDeviceCapability';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSimple } from '@/shared/components/redesign/DashboardSimple';
 
 // ============================================================================
@@ -161,11 +160,6 @@ const AppContent = () => {
   useExpiryWatcher();
   useExpiryNotifications();
   useAppShortcuts();
-
-  // Inicializar workflows al cargar la app
-  useEffect(() => {
-    initializeWorkflows();
-  }, []);
 
   // Sincronizar rol de usuario con RLS
   useEffect(() => {

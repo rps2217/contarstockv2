@@ -1,11 +1,11 @@
 /**
  * ActionFAB - Botón flotante de acción principal
- * 
+ *
  * Diseño minimalista con sombra sutil.
  */
 
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 
 interface ActionFABProps {
@@ -34,9 +34,10 @@ export const ActionFAB: React.FC<ActionFABProps> = ({
         transition-all duration-200
         ${position === 'bottom-right' ? 'right-6' : 'left-1/2 -translate-x-1/2'}
         bottom-24 md:bottom-6
-        ${isDark 
-          ? 'bg-neutral-100 text-neutral-900 shadow-black/20 hover:bg-neutral-200' 
-          : 'bg-neutral-900 text-white shadow-black/30 hover:bg-neutral-800'
+        ${
+          isDark
+            ? 'bg-neutral-100 text-neutral-900 shadow-black/20 hover:bg-neutral-200'
+            : 'bg-neutral-900 text-white shadow-black/30 hover:bg-neutral-800'
         }
       `}
       aria-label={label || 'Acción principal'}

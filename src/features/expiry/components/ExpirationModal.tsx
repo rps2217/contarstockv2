@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, Barcode, Calendar, Zap, AlertCircle, RefreshCcw } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeSku } from '../../../services/utils';
 
 // ✅ NUEVO: Imports de constantes
 import { EXPIRY_YEARS } from '../constants';
 
 interface ExpirationModalProps {
-  onComplete: (data: { barcode: string; productName: string; mm: number; yyyy: number; observaciones?: string }) => void;
+  onComplete: (data: {
+    barcode: string;
+    productName: string;
+    mm: number;
+    yyyy: number;
+    observaciones?: string;
+  }) => void;
   onCancel?: () => void;
   productMap: Record<string, any>;
   initialBarcode?: string;
@@ -15,13 +21,13 @@ interface ExpirationModalProps {
   title?: string;
 }
 
-export const ExpirationModal: React.FC<ExpirationModalProps> = ({ 
-  onComplete, 
+export const ExpirationModal: React.FC<ExpirationModalProps> = ({
+  onComplete,
   onCancel,
   productMap,
   initialBarcode = '',
   initialData,
-  title = 'REGISTRO DESKTOP'
+  title = 'REGISTRO DESKTOP',
 }) => {
   const [barcode, setBarcode] = useState<string>(initialBarcode);
   const [productName, setProductName] = useState<string>(initialData?.productName || '');
@@ -31,7 +37,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingCloud, setIsSearchingCloud] = useState(false);
   const [continuousMode, setContinuousMode] = useState(true);
-  
+
   const barcodeRef = useRef<HTMLInputElement>(null);
   const monthRef = useRef<HTMLDivElement>(null);
   const yearRef = useRef<HTMLDivElement>(null);
@@ -47,7 +53,12 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
     // 1. INTENTO LOCAL (Instante)
     const localProduct = productMap instanceof Map ? productMap.get(sku) : productMap[sku];
     if (localProduct) {
-      setProductName(localProduct.name || localProduct.DESCRIPTOR || localProduct.DESCRIPCION || 'PRODUCTO IDENTIFICADO');
+      setProductName(
+        localProduct.name ||
+          localProduct.DESCRIPTOR ||
+          localProduct.DESCRIPCION ||
+          'PRODUCTO IDENTIFICADO'
+      );
       setIsSearchingCloud(false);
       return;
     }
@@ -58,7 +69,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
       try {
         setIsSearchingCloud(true);
         setProductName('BUSCANDO EN LA NUBE...');
-        
+
         const settings = (await import('../../../services/settings')).getSettings();
         const config = settings.cloudConfig;
         const productsTable = config?.productsTableName || 'PRODUCTOS';
@@ -68,19 +79,23 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         // LÓGICA MIGRADA A SUPABASE
         const { supabaseSyncService } = await import('../../../services/supabaseSyncService');
         const response = await supabaseSyncService.query(productsTable, barcodeCol, sku);
-        
+
         if (!isMounted) return;
 
         if (response.success && response.rows && response.rows.length > 0) {
           const product = response.rows[0] as Record<string, unknown>;
-          const name = product[nameCol] || product.name || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO';
+          const name =
+            product[nameCol] || product.name || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO';
           setProductName(String(name));
 
           // ESTRATEGIA LOCAL-FIRST: Guardar en DB local para que el siguiente escaneo sea instantáneo
-          const { productRepository } = await import('../../../repositories/DexieProductRepository');
+          const { productRepository } =
+            await import('../../../repositories/DexieProductRepository');
           const { ProviderRepository } = await import('../../../repositories/ProviderRepository');
-          const supplierRut = normalizeSku(String(product.supplier_rut || product.supplierRut || product.PROVEEDOR_RUT || ''));
-          
+          const supplierRut = normalizeSku(
+            String(product.supplier_rut || product.supplierRut || product.PROVEEDOR_RUT || '')
+          );
+
           const newProduct = {
             barcode: sku,
             name: String(name),
@@ -88,9 +103,9 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
             supplier: String(product.supplier || product.PROVEEDOR || 'N/A'),
             supplierRut: supplierRut,
             price: parseFloat(String(product.price || product.PRECIO || 0)),
-            syncStatus: 'synced' as const
+            syncStatus: 'synced' as const,
           };
-          
+
           await productRepository.save(newProduct);
 
           // Si el proveedor no existe localmente, también lo traemos en caliente desde Supabase
@@ -99,8 +114,12 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
             if (!localProvider) {
               const providersTable = config?.providersTableName || 'PROVEEDORES';
               const rutCol = 'rut'; // Supabase usa 'rut'
-              const provResponse = await supabaseSyncService.query(providersTable, rutCol, supplierRut);
-              
+              const provResponse = await supabaseSyncService.query(
+                providersTable,
+                rutCol,
+                supplierRut
+              );
+
               if (provResponse.success && provResponse.rows && provResponse.rows.length > 0) {
                 const p = provResponse.rows[0] as Record<string, unknown>;
                 const withdrawalDays = Number(p.withdrawal_days || p.withdrawalDays || 0);
@@ -110,7 +129,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                   name: String(p.name || p.NOMBRE || 'N/A'),
                   withdrawalDays: Number(withdrawalDays),
                   hasExchange: withdrawalDays > 0,
-                  syncStatus: 'synced'
+                  syncStatus: 'synced',
                 });
               }
             }
@@ -136,7 +155,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onCancel) onCancel();
-      
+
       // Auto-submit on Enter if all fields are ready
       if (e.key === 'Enter' && barcode && selectedMm && selectedYyyy && !isSubmitting) {
         handleSave();
@@ -150,14 +169,14 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   const handleSave = async () => {
     if (barcode && selectedMm && selectedYyyy && !isSubmitting) {
       setIsSubmitting(true);
-      
+
       try {
         await onComplete({
           barcode,
           productName: productName || 'Producto Manual',
           mm: selectedMm,
           yyyy: selectedYyyy,
-          observaciones
+          observaciones,
         });
 
         if (continuousMode) {
@@ -174,7 +193,6 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         setIsSubmitting(false);
       }
     } else if (!isSubmitting) {
-      
     }
   };
 
@@ -184,7 +202,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         className="w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)]"
@@ -196,16 +214,20 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               <Zap className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">{title}</h3>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Optimizado para Teclado + Scanner</p>
+              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">
+                {title}
+              </h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                Optimizado para Teclado + Scanner
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setContinuousMode(!continuousMode)}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
-                continuousMode 
-                  ? 'bg-blue-600/20 border-blue-500/40 text-blue-400' 
+                continuousMode
+                  ? 'bg-blue-600/20 border-blue-500/40 text-blue-400'
                   : 'bg-white/5 border-white/10 text-slate-500'
               }`}
               title="Modo Continuo: No cierra el modal tras registrar"
@@ -214,8 +236,8 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               <span className="text-[9px] font-black uppercase tracking-widest">Modo Continuo</span>
             </button>
             {onCancel && (
-              <button 
-                onClick={onCancel} 
+              <button
+                onClick={onCancel}
                 className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors group"
               >
                 <X className="w-6 h-6 text-slate-500 group-hover:text-white transition-colors" />
@@ -226,18 +248,21 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
 
         {/* CONTENT */}
         <div className="p-8 space-y-8">
-          
           {/* BARCODE SECTION */}
           <div className="space-y-3">
             <div className="flex justify-between items-center px-2">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">1. ESCANEAR PRODUCTO</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                1. ESCANEAR PRODUCTO
+              </label>
               <AnimatePresence>
                 {productName && (
-                  <motion.span 
-                    initial={{ opacity: 0, x: 10 }} 
-                    animate={{ opacity: 1, x: 0 }} 
+                  <motion.span
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
                     className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                      productName.includes('NO ENCONTRADO') ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'
+                      productName.includes('NO ENCONTRADO')
+                        ? 'bg-red-500/10 text-red-500'
+                        : 'bg-emerald-500/10 text-emerald-500'
                     }`}
                   >
                     {productName.includes('NO ENCONTRADO') ? 'Desconocido' : 'Identificado'}
@@ -247,15 +272,17 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
             </div>
             <div className="relative group">
               <div className="absolute left-5 top-1/2 -translate-y-1/2">
-                <Barcode className={`w-8 h-8 transition-colors ${barcode ? 'text-blue-500' : 'text-slate-700'}`} />
+                <Barcode
+                  className={`w-8 h-8 transition-colors ${barcode ? 'text-blue-500' : 'text-slate-700'}`}
+                />
               </div>
-              <input 
+              <input
                 autoFocus
                 ref={barcodeRef}
                 type="text"
                 value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setBarcode(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter' && barcode) {
                     // Focus month buttons or handle auto-flow
                   }
@@ -265,7 +292,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               />
             </div>
             {productName && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="px-6 py-3 bg-blue-500/5 border border-blue-500/10 rounded-2xl"
@@ -279,11 +306,13 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
 
           {/* OBSERVATIONS SECTION */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">DESCRIPCIÓN ADICIONAL / OBSERVACIONES</label>
-            <input 
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">
+              DESCRIPCIÓN ADICIONAL / OBSERVACIONES
+            </label>
+            <input
               type="text"
               value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
+              onChange={e => setObservaciones(e.target.value)}
               className="w-full bg-black border-2 border-white/10 hover:border-white/20 rounded-2xl py-4 px-6 text-xl font-bold focus:outline-none focus:border-amber-500 text-white transition-all placeholder:text-white/5 uppercase"
               placeholder="OPCIONAL (EJ: CAJA DAÑADA, RELLENO, ETC)"
             />
@@ -292,18 +321,19 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* MONTH SELECTOR */}
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">2. MES DE VENCIMIENTO</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">
+                2. MES DE VENCIMIENTO
+              </label>
               <div className="grid grid-cols-4 gap-2">
                 {months.map(m => (
                   <button
                     key={m}
                     onClick={() => {
                       setSelectedMm(m);
-                      
                     }}
                     className={`h-14 rounded-xl font-black text-xl transition-all border-2 ${
-                      selectedMm === m 
-                        ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10' 
+                      selectedMm === m
+                        ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10'
                         : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
                     }`}
                   >
@@ -315,18 +345,19 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
 
             {/* YEAR SELECTOR */}
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">3. AÑO DE VENCIMIENTO</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">
+                3. AÑO DE VENCIMIENTO
+              </label>
               <div className="grid grid-cols-2 gap-3">
                 {years.map(y => (
                   <button
                     key={y}
                     onClick={() => {
                       setSelectedYyyy(y);
-                      
                     }}
                     className={`h-20 rounded-2xl font-black text-2xl transition-all border-2 flex items-center justify-center italic tracking-tighter ${
-                      selectedYyyy === y 
-                        ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10' 
+                      selectedYyyy === y
+                        ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10'
                         : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
                     }`}
                   >
@@ -343,7 +374,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               disabled={!barcode || !selectedMm || !selectedYyyy || isSubmitting}
               onClick={handleSave}
               className={`w-full py-8 rounded-[2rem] font-black text-2xl uppercase tracking-[0.3em] flex items-center justify-center gap-6 transition-all ${
-                isSubmitting 
+                isSubmitting
                   ? 'bg-blue-900/50 text-blue-200 border border-blue-500/30 cursor-wait'
                   : barcode && selectedMm && selectedYyyy
                     ? 'bg-white text-black hover:bg-blue-50 shadow-[0_20px_40px_rgba(255,255,255,0.1)] cursor-pointer active:scale-[0.98]'
@@ -370,10 +401,9 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               Presiona <span className="text-muted">ENTER</span> para confirmar rápido
             </p>
           </div>
-
         </div>
       </motion.div>
-      
+
       <style>{`
         @keyframes spin-slow {
           from { rotate: 0deg; }
@@ -386,4 +416,3 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
     </div>
   );
 };
-
