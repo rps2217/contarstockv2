@@ -11,12 +11,29 @@ export function cn(...inputs: ClassValue[]) {
 export default cn;
 
 // =============================================================================
+// TEXT HELPERS
+// =============================================================================
+
+/**
+ * Normalize text for search: uppercase, remove accents, trim
+ * ponytail: Shared by suppliers, customers, inventory, reception domains
+ */
+export function normalizeText(text: string | null | undefined): string {
+  if (!text) return '';
+  return text
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+// =============================================================================
 // THEME HELPERS
 // =============================================================================
 
 // Lista de temas oscuros
 const DARK_THEMES = ['dark', 'night', 'high-contrast', 'appsheet-dark', 'gray'] as const;
-type DarkTheme = typeof DARK_THEMES[number];
+type DarkTheme = (typeof DARK_THEMES)[number];
 type ThemeLike = DarkTheme | 'light' | undefined;
 
 /**

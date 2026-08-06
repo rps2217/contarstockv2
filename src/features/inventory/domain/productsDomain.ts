@@ -1,6 +1,6 @@
 /**
  * productsDomain.ts - Lógica de negocio pura para el módulo de productos
- * 
+ *
  * Principios:
  * - Sin dependencias de React hooks
  * - Sin estado global
@@ -8,16 +8,17 @@
  */
 
 import { Product } from '@/types';
+import { normalizeText } from '@/lib/utils';
 import type { ProductWithPolicy } from '@/features/product/types';
 
 /**
  * Estados de producto según política
  */
 export enum ProductPolicyStatus {
-  EXCHANGE = 'EXCHANGE',     // Productos con política de cambio/canje
-  LOSS = 'LOSS',             // Productos con política de pérdida/merma
-  NO_INFO = 'NO_INFO',       // Productos sin información de política
-  ALL = 'ALL'                // Todos los productos
+  EXCHANGE = 'EXCHANGE', // Productos con política de cambio/canje
+  LOSS = 'LOSS', // Productos con política de pérdida/merma
+  NO_INFO = 'NO_INFO', // Productos sin información de política
+  ALL = 'ALL', // Todos los productos
 }
 
 /**
@@ -27,82 +28,88 @@ export enum StockStatus {
   NORMAL = 'NORMAL',
   LOW = 'LOW',
   CRITICAL = 'CRITICAL',
-  EXCESS = 'EXCESS'
+  EXCESS = 'EXCESS',
 }
 
 /**
  * Configuración de estados para UI
  */
-export const PRODUCT_POLICY_CONFIG: Record<ProductPolicyStatus, {
-  label: string;
-  color: string;
-  bg: string;
-  text: string;
-  icon: string;
-}> = {
+export const PRODUCT_POLICY_CONFIG: Record<
+  ProductPolicyStatus,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    text: string;
+    icon: string;
+  }
+> = {
   [ProductPolicyStatus.EXCHANGE]: {
     label: 'Canje',
     color: 'bg-emerald-500',
     bg: 'bg-emerald-500/10',
     text: 'text-emerald-400',
-    icon: '↺'
+    icon: '↺',
   },
   [ProductPolicyStatus.LOSS]: {
     label: 'Merma',
     color: 'bg-rose-500',
     bg: 'bg-rose-500/10',
     text: 'text-rose-400',
-    icon: '↓'
+    icon: '↓',
   },
   [ProductPolicyStatus.NO_INFO]: {
     label: 'Sin Info',
     color: 'bg-slate-500',
     bg: 'bg-slate-500/10',
     text: 'text-slate-400',
-    icon: '?'
+    icon: '?',
   },
   [ProductPolicyStatus.ALL]: {
     label: 'Todos',
     color: 'bg-blue-500',
     bg: 'bg-blue-500/10',
     text: 'text-blue-400',
-    icon: '☰'
-  }
+    icon: '☰',
+  },
 };
 
 /**
  * Configuración de estados de stock
  */
-export const STOCK_STATUS_CONFIG: Record<StockStatus, {
-  label: string;
-  color: string;
-  bg: string;
-  text: string;
-}> = {
+export const STOCK_STATUS_CONFIG: Record<
+  StockStatus,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    text: string;
+  }
+> = {
   [StockStatus.NORMAL]: {
     label: 'Normal',
     color: 'bg-emerald-500',
     bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400'
+    text: 'text-emerald-400',
   },
   [StockStatus.LOW]: {
     label: 'Bajo',
     color: 'bg-amber-500',
     bg: 'bg-amber-500/10',
-    text: 'text-amber-400'
+    text: 'text-amber-400',
   },
   [StockStatus.CRITICAL]: {
     label: 'Crítico',
     color: 'bg-rose-500',
     bg: 'bg-rose-500/10',
-    text: 'text-rose-400'
+    text: 'text-rose-400',
   },
   [StockStatus.EXCESS]: {
     label: 'Exceso',
     color: 'bg-violet-500',
     bg: 'bg-violet-500/10',
-    text: 'text-violet-400'
-  }
+    text: 'text-violet-400',
+  },
 };
 
 /**
@@ -112,87 +119,66 @@ export const evaluateProductPolicy = (
   product: Product | ProductWithPolicy
 ): ProductPolicyStatus => {
   const p = product as ProductWithPolicy;
-  
+
   if (p.hasExchange !== undefined) {
-    return p.hasExchange 
-      ? ProductPolicyStatus.EXCHANGE 
-      : ProductPolicyStatus.LOSS;
+    return p.hasExchange ? ProductPolicyStatus.EXCHANGE : ProductPolicyStatus.LOSS;
   }
-  
+
   if (p.policy?.daysToExpiry !== undefined && p.policy.daysToExpiry > 0) {
     return ProductPolicyStatus.EXCHANGE;
   }
-  
+
   if (p.withdrawalDays !== undefined && p.withdrawalDays > 0) {
     return ProductPolicyStatus.EXCHANGE;
   }
-  
+
   return ProductPolicyStatus.NO_INFO;
 };
 
 /**
  * Evalúa el estado de stock de un producto
  */
-export const evaluateStockStatus = (
-  product: Product | ProductWithPolicy
-): StockStatus => {
+export const evaluateStockStatus = (product: Product | ProductWithPolicy): StockStatus => {
   const currentStock = (product as ProductWithPolicy).currentStock ?? product.stock ?? 0;
   const minStock = product.minStock ?? 0;
   const maxStock = product.stock ? product.stock * 1.5 : 0;
-  
+
   if (currentStock === 0) {
     return StockStatus.CRITICAL;
   }
-  
+
   if (currentStock < minStock) {
-    return currentStock < minStock * 0.5 
-      ? StockStatus.CRITICAL 
-      : StockStatus.LOW;
+    return currentStock < minStock * 0.5 ? StockStatus.CRITICAL : StockStatus.LOW;
   }
-  
+
   if (maxStock > 0 && currentStock > maxStock) {
     return StockStatus.EXCESS;
   }
-  
+
   return StockStatus.NORMAL;
 };
 
 /**
- * Normaliza texto para búsqueda (uppercase + sin acentos)
- */
-export const normalizeText = (text: string | null | undefined): string => {
-  if (!text) return '';
-  return text
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-};
 
 /**
  * Verifica si un producto coincide con la búsqueda
  */
-export const productMatchesSearch = (
-  product: Product,
-  query: string
-): boolean => {
+export const productMatchesSearch = (product: Product, query: string): boolean => {
   if (!query.trim()) return true;
-  
+
   const normalizedQuery = normalizeText(query);
   const searchTerms = normalizedQuery.split(/\s+/).filter(Boolean);
-  
+
   const searchableFields = [
     product.barcode,
     product.name,
     product.category,
     product.supplier,
     product.sku,
-    product.location
+    product.location,
   ].map(normalizeText);
-  
-  return searchTerms.every(term => 
-    searchableFields.some(field => field.includes(term))
-  );
+
+  return searchTerms.every(term => searchableFields.some(field => field.includes(term)));
 };
 
 /**
@@ -221,43 +207,43 @@ export const calculateProductStats = (
       [ProductPolicyStatus.EXCHANGE]: 0,
       [ProductPolicyStatus.LOSS]: 0,
       [ProductPolicyStatus.NO_INFO]: 0,
-      [ProductPolicyStatus.ALL]: 0
+      [ProductPolicyStatus.ALL]: 0,
     },
     byStock: {
       [StockStatus.NORMAL]: 0,
       [StockStatus.LOW]: 0,
       [StockStatus.CRITICAL]: 0,
-      [StockStatus.EXCESS]: 0
+      [StockStatus.EXCESS]: 0,
     },
     missingPolicy: 0,
     lowStock: 0,
     syncing: 0,
-    pendingChanges: pendingChangesCount
+    pendingChanges: pendingChangesCount,
   };
-  
+
   for (const product of products) {
     // Por política
     const policyStatus = evaluateProductPolicy(product);
     stats.byPolicy[policyStatus]++;
-    
+
     if (policyStatus === ProductPolicyStatus.NO_INFO) {
       stats.missingPolicy++;
     }
-    
+
     // Por stock
     const stockStatus = evaluateStockStatus(product);
     stats.byStock[stockStatus]++;
-    
+
     if (stockStatus === StockStatus.LOW || stockStatus === StockStatus.CRITICAL) {
       stats.lowStock++;
     }
-    
+
     // Por sync
     if (product.syncStatus === 'pending') {
       stats.syncing++;
     }
   }
-  
+
   return stats;
 };
 
@@ -285,10 +271,8 @@ export const filterByPolicy = (
   if (filter === 'all' || filter === ProductPolicyStatus.ALL) {
     return products;
   }
-  
-  return products.filter(product => 
-    evaluateProductPolicy(product) === filter
-  );
+
+  return products.filter(product => evaluateProductPolicy(product) === filter);
 };
 
 /**
@@ -304,7 +288,7 @@ export const sortProducts = (
 ): Product[] => {
   const sorted = [...products].sort((a, b) => {
     let comparison = 0;
-    
+
     switch (field) {
       case 'name':
         comparison = (a.name || '').localeCompare(b.name || '');
@@ -322,9 +306,9 @@ export const sortProducts = (
         comparison = (a.updatedAt || 0) - (b.updatedAt || 0);
         break;
     }
-    
+
     return order === 'asc' ? comparison : -comparison;
   });
-  
+
   return sorted;
 };

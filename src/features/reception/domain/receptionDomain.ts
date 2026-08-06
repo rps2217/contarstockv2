@@ -3,6 +3,7 @@
  */
 
 import { format } from 'date-fns';
+import { normalizeText } from '@/lib/utils';
 
 /**
  * Estados de recepción
@@ -10,36 +11,39 @@ import { format } from 'date-fns';
 export enum ReceptionStatus {
   DRAFT = 'draft',
   COMPLETED = 'completed',
-  SYNCED = 'synced'
+  SYNCED = 'synced',
 }
 
 /**
  * Configuración de estados para UI
  */
-export const RECEPTION_STATUS_CONFIG: Record<ReceptionStatus | string, {
-  label: string;
-  color: string;
-  bg: string;
-  text: string;
-}> = {
+export const RECEPTION_STATUS_CONFIG: Record<
+  ReceptionStatus | string,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    text: string;
+  }
+> = {
   [ReceptionStatus.DRAFT]: {
     label: 'Borrador',
     color: 'bg-amber-500',
     bg: 'bg-amber-500/10',
-    text: 'text-amber-400'
+    text: 'text-amber-400',
   },
   [ReceptionStatus.COMPLETED]: {
     label: 'Completado',
     color: 'bg-blue-500',
     bg: 'bg-blue-500/10',
-    text: 'text-blue-400'
+    text: 'text-blue-400',
   },
   [ReceptionStatus.SYNCED]: {
     label: 'Sincronizado',
     color: 'bg-emerald-500',
     bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400'
-  }
+    text: 'text-emerald-400',
+  },
 };
 
 /**
@@ -75,7 +79,7 @@ export const calculateReceptionStats = <T extends Session>(sessions: T[]): Recep
     pending: 0,
     today: 0,
     withPhoto: 0,
-    withoutPhoto: 0
+    withoutPhoto: 0,
   };
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -106,34 +110,19 @@ export const calculateReceptionStats = <T extends Session>(sessions: T[]): Recep
 };
 
 /**
- * Normaliza texto para búsqueda
- */
-export const normalizeText = (text: string | null | undefined): string => {
-  if (!text) return '';
-  return text
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-};
 
 /**
  * Verifica si una recepción coincide con la búsqueda
  */
-export const receptionMatchesSearch = <T extends Session>(
-  session: T,
-  query: string
-): boolean => {
+export const receptionMatchesSearch = <T extends Session>(session: T, query: string): boolean => {
   if (!query.trim()) return true;
-  
+
   const normalizedQuery = normalizeText(query);
-  
-  const searchableFields = [
-    session.erpOrder,
-    session.labelCode,
-    String(session.id)
-  ].map(normalizeText);
-  
+
+  const searchableFields = [session.erpOrder, session.labelCode, String(session.id)].map(
+    normalizeText
+  );
+
   return searchableFields.some(field => field.includes(normalizedQuery));
 };
 
@@ -150,7 +139,7 @@ export const sortReceptions = <T extends Session>(
 ): T[] => {
   const sorted = [...sessions].sort((a, b) => {
     let comparison = 0;
-    
+
     switch (field) {
       case 'createdAt':
         comparison = a.createdAt - b.createdAt;
@@ -162,10 +151,10 @@ export const sortReceptions = <T extends Session>(
         comparison = (a.labelCode || '').localeCompare(b.labelCode || '');
         break;
     }
-    
+
     return order === 'asc' ? comparison : -comparison;
   });
-  
+
   return sorted;
 };
 
@@ -230,7 +219,9 @@ export const getUniqueErps = <T extends Session>(sessions: T[]): string[] => {
 /**
  * Evalúa el estado visual de una recepción
  */
-export const evaluateReceptionStatus = <T extends Session>(session: T): ReceptionStatus | string => {
+export const evaluateReceptionStatus = <T extends Session>(
+  session: T
+): ReceptionStatus | string => {
   if (session.lastSyncTimestamp) {
     return ReceptionStatus.SYNCED;
   }
@@ -246,16 +237,16 @@ export const evaluateReceptionStatus = <T extends Session>(session: T): Receptio
 export const formatReceptionDate = (timestamp: number): string => {
   const now = Date.now();
   const diff = now - timestamp;
-  
+
   const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  
+
   if (minutes < 1) return 'Ahora';
   if (minutes < 60) return `Hace ${minutes}m`;
   if (hours < 24) return `Hace ${hours}h`;
   if (days === 1) return 'Ayer';
   if (days < 7) return `Hace ${days}d`;
-  
+
   return format(timestamp, 'dd/MM/yyyy');
 };

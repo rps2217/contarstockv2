@@ -6,7 +6,6 @@
  * Única fuente de verdad para normalización de:
  * - SKUs y Barcodes (normalizeSku)
  * - Identidades/RUTs (normalizeIdentity)
- * - Cabeceras CSV (normalizeHeader)
  *
  * @module normalize
  */
@@ -62,11 +61,3 @@ export function normalizeIdentity(val: string | undefined | null): string {
  * Elimina espacios, acentos, caracteres especiales y convierte a mayúsculas.
  * Esto hace que "Cód. Producto" y "COD_PRODUCTO" sean equivalentes.
  */
-export function normalizeHeader(h: string): string {
-  return String(h || '')
-    .trim()
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
-    .replace(/[^A-Z0-9]/g, '');
-}

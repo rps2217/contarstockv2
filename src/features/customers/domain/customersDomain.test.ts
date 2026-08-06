@@ -4,22 +4,46 @@
 
 import { describe, it, expect } from 'vitest';
 import { Customer } from '@/types';
+import { normalizeText } from '@/lib/utils';
 import {
   calculateCustomerStats,
-  normalizeText,
   customerMatchesSearch,
   getCustomerInitials,
   getFullName,
   sortCustomers,
   validateCustomer,
-  CustomerSortField
+  CustomerSortField,
 } from './customersDomain';
 
 describe('customersDomain', () => {
   const mockCustomers: Customer[] = [
-    { id: '1', firstName: 'Juan', lastName: 'Pérez', phone: '+56912345678', createdAt: 1000, updatedAt: 1000, syncStatus: 'synced' },
-    { id: '2', firstName: 'María', lastName: 'García', phone: '+56987654321', createdAt: 2000, updatedAt: 2000, syncStatus: 'pending' },
-    { id: '3', firstName: 'Pedro', lastName: 'López', phone: '+56123456789', createdAt: 3000, updatedAt: 3000, syncStatus: 'synced' }
+    {
+      id: '1',
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      phone: '+56912345678',
+      createdAt: 1000,
+      updatedAt: 1000,
+      syncStatus: 'synced',
+    },
+    {
+      id: '2',
+      firstName: 'María',
+      lastName: 'García',
+      phone: '+56987654321',
+      createdAt: 2000,
+      updatedAt: 2000,
+      syncStatus: 'pending',
+    },
+    {
+      id: '3',
+      firstName: 'Pedro',
+      lastName: 'López',
+      phone: '+56123456789',
+      createdAt: 3000,
+      updatedAt: 3000,
+      syncStatus: 'synced',
+    },
   ];
 
   describe('normalizeText', () => {
@@ -39,7 +63,7 @@ describe('customersDomain', () => {
   describe('calculateCustomerStats', () => {
     it('debe calcular estadísticas correctamente', () => {
       const stats = calculateCustomerStats(mockCustomers);
-      
+
       expect(stats.total).toBe(3);
       expect(stats.syncedCount).toBe(2);
       expect(stats.pendingCount).toBe(1);
@@ -47,7 +71,7 @@ describe('customersDomain', () => {
 
     it('debe manejar array vacío', () => {
       const stats = calculateCustomerStats([]);
-      
+
       expect(stats.total).toBe(0);
       expect(stats.syncedCount).toBe(0);
       expect(stats.pendingCount).toBe(0);
@@ -82,7 +106,14 @@ describe('customersDomain', () => {
     });
 
     it('debe manejar valores faltantes', () => {
-      const customer: Customer = { id: '1', firstName: 'Juan', lastName: '', phone: '', createdAt: 0, updatedAt: 0 };
+      const customer: Customer = {
+        id: '1',
+        firstName: 'Juan',
+        lastName: '',
+        phone: '',
+        createdAt: 0,
+        updatedAt: 0,
+      };
       expect(getCustomerInitials(customer)).toBe('J');
     });
   });
@@ -93,7 +124,14 @@ describe('customersDomain', () => {
     });
 
     it('debe manejar valores faltantes', () => {
-      const customer: Customer = { id: '1', firstName: 'Juan', lastName: '', phone: '', createdAt: 0, updatedAt: 0 };
+      const customer: Customer = {
+        id: '1',
+        firstName: 'Juan',
+        lastName: '',
+        phone: '',
+        createdAt: 0,
+        updatedAt: 0,
+      };
       expect(getFullName(customer)).toBe('Juan');
     });
   });
@@ -101,14 +139,14 @@ describe('customersDomain', () => {
   describe('sortCustomers', () => {
     it('debe ordenar por nombre ascendente', () => {
       const sorted = sortCustomers(mockCustomers, 'firstName', 'asc');
-      
+
       expect(sorted[0].firstName).toBe('Juan');
       expect(sorted[2].firstName).toBe('Pedro');
     });
 
     it('debe ordenar por nombre descendente', () => {
       const sorted = sortCustomers(mockCustomers, 'firstName', 'desc');
-      
+
       expect(sorted[0].firstName).toBe('Pedro');
       expect(sorted[2].firstName).toBe('Juan');
     });
@@ -116,7 +154,7 @@ describe('customersDomain', () => {
     it('no debe mutar el array original', () => {
       const original = [...mockCustomers];
       sortCustomers(mockCustomers, 'firstName', 'asc');
-      
+
       expect(mockCustomers[0].firstName).toBe(original[0].firstName);
     });
   });
@@ -124,7 +162,7 @@ describe('customersDomain', () => {
   describe('validateCustomer', () => {
     it('debe validar cliente válido', () => {
       const result = validateCustomer(mockCustomers[0]);
-      
+
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
@@ -132,7 +170,7 @@ describe('customersDomain', () => {
     it('debe reportar error si falta nombre', () => {
       const customer = { ...mockCustomers[0], firstName: '' };
       const result = validateCustomer(customer);
-      
+
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('El nombre es requerido');
     });
@@ -140,7 +178,7 @@ describe('customersDomain', () => {
     it('debe reportar error si falta apellido', () => {
       const customer = { ...mockCustomers[0], lastName: '' };
       const result = validateCustomer(customer);
-      
+
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('El apellido es requerido');
     });
@@ -148,7 +186,7 @@ describe('customersDomain', () => {
     it('debe reportar error si falta teléfono', () => {
       const customer = { ...mockCustomers[0], phone: '' };
       const result = validateCustomer(customer);
-      
+
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('El teléfono es requerido');
     });

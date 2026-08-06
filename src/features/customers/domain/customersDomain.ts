@@ -3,6 +3,7 @@
  */
 
 import { Customer } from '@/types';
+import { normalizeText } from '@/lib/utils';
 
 /**
  * Estados de sincronización
@@ -11,7 +12,7 @@ export enum SyncStatus {
   SYNCED = 'synced',
   PENDING = 'pending',
   ERROR = 'error',
-  PENDING_DELETE = 'pending_delete'
+  PENDING_DELETE = 'pending_delete',
 }
 
 /**
@@ -30,39 +31,24 @@ export const calculateCustomerStats = (customers: Customer[]): CustomerStats => 
   return {
     total: customers.length,
     syncedCount: customers.filter(c => c.syncStatus === 'synced').length,
-    pendingCount: customers.filter(c => c.syncStatus !== 'synced').length
+    pendingCount: customers.filter(c => c.syncStatus !== 'synced').length,
   };
 };
 
 /**
- * Normaliza texto para búsqueda
- */
-export const normalizeText = (text: string | null | undefined): string => {
-  if (!text) return '';
-  return text
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-};
 
 /**
  * Verifica si un cliente coincide con la búsqueda
  */
-export const customerMatchesSearch = (
-  customer: Customer,
-  query: string
-): boolean => {
+export const customerMatchesSearch = (customer: Customer, query: string): boolean => {
   if (!query.trim()) return true;
-  
+
   const normalizedQuery = normalizeText(query);
-  
-  const searchableFields = [
-    customer.firstName,
-    customer.lastName,
-    customer.phone
-  ].map(normalizeText);
-  
+
+  const searchableFields = [customer.firstName, customer.lastName, customer.phone].map(
+    normalizeText
+  );
+
   return searchableFields.some(field => field.includes(normalizedQuery));
 };
 
@@ -95,7 +81,7 @@ export const sortCustomers = (
 ): Customer[] => {
   const sorted = [...customers].sort((a, b) => {
     let comparison = 0;
-    
+
     switch (field) {
       case 'firstName':
         comparison = (a.firstName || '').localeCompare(b.firstName || '');
@@ -107,10 +93,10 @@ export const sortCustomers = (
         comparison = (a.createdAt || 0) - (b.createdAt || 0);
         break;
     }
-    
+
     return order === 'asc' ? comparison : -comparison;
   });
-  
+
   return sorted;
 };
 
@@ -124,26 +110,26 @@ export interface CustomerValidationResult {
 
 export const validateCustomer = (customer: Partial<Customer>): CustomerValidationResult => {
   const errors: string[] = [];
-  
+
   if (!customer.firstName?.trim()) {
     errors.push('El nombre es requerido');
   }
-  
+
   if (!customer.lastName?.trim()) {
     errors.push('El apellido es requerido');
   }
-  
+
   if (!customer.phone?.trim()) {
     errors.push('El teléfono es requerido');
   }
-  
+
   // Validar formato de teléfono básico
   if (customer.phone && !/^\+?[0-9\s-]{8,}$/.test(customer.phone)) {
     errors.push('El formato del teléfono no es válido');
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 };

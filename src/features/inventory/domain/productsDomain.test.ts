@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
+import { normalizeText } from '@/lib/utils';
 import {
   ProductPolicyStatus,
   StockStatus,
   evaluateProductPolicy,
   evaluateStockStatus,
-  normalizeText,
   productMatchesSearch,
   calculateProductStats,
   filterByPolicy,
   sortProducts,
   getPolicyLabel,
-  getStockLabel
+  getStockLabel,
 } from './productsDomain';
 import { Product } from '@/types';
 
@@ -45,10 +45,10 @@ describe('productsDomain', () => {
     });
 
     it('should return EXCHANGE when policy.daysToExpiry > 0', () => {
-      const product = { 
-        barcode: '123', 
-        name: 'Test', 
-        policy: { daysToExpiry: 30 } 
+      const product = {
+        barcode: '123',
+        name: 'Test',
+        policy: { daysToExpiry: 30 },
       } as any;
       expect(evaluateProductPolicy(product)).toBe(ProductPolicyStatus.EXCHANGE);
     });
@@ -87,11 +87,11 @@ describe('productsDomain', () => {
 
     it('should return EXCESS when stock > maxStock', () => {
       // Note: maxStock is calculated as stock * 1.5, so we test via ProductWithPolicy
-      const product = { 
-        barcode: '123', 
-        name: 'Test', 
-        stock: 100, 
-        currentStock: 200 // Override to simulate excess
+      const product = {
+        barcode: '123',
+        name: 'Test',
+        stock: 100,
+        currentStock: 200, // Override to simulate excess
       } as any;
       expect(evaluateStockStatus(product)).toBe(StockStatus.EXCESS);
     });
@@ -125,7 +125,7 @@ describe('productsDomain', () => {
       category: 'Electrónica',
       supplier: 'Supplier ABC',
       sku: 'SKU001',
-      location: 'BOD.37'
+      location: 'BOD.37',
     };
 
     it('should return true for empty query', () => {

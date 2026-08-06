@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { normalizeSku, sanitizeBarcode, normalizeIdentity, normalizeHeader } from '@/lib/normalize';
+import { normalizeSku, sanitizeBarcode, normalizeIdentity } from '@/lib/normalize';
 
 // Re-exportar funciones compartidas para compatibilidad
 export {
@@ -23,7 +23,7 @@ export const handleError = (error: unknown): string => {
 };
 
 // Re-exportar desde lib/normalize para mantener compatibilidad
-export { normalizeSku, sanitizeBarcode, normalizeIdentity, normalizeHeader };
+export { normalizeSku, sanitizeBarcode, normalizeIdentity };
 
 export const generateUUID = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();

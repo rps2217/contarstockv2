@@ -8,7 +8,7 @@
 // NOTA: normalizeSku ha sido movido a @/lib/normalize
 
 // Re-export normalize functions from centralized location
-export { normalizeSku, sanitizeBarcode, normalizeIdentity, normalizeHeader } from '@/lib/normalize';
+export { normalizeSku, sanitizeBarcode, normalizeIdentity } from '@/lib/normalize';
 
 /**
  * Formatea un timestamp a fecha legible
