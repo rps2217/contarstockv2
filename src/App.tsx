@@ -20,7 +20,6 @@ import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useExpiryNotifications } from '@/hooks/useExpiryNotifications';
 import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
-import { initializeWorkflows } from '@/lib/workflowEngine';
 import { useRowLevelSecurityStore, usePermissionStore } from '@/stores';
 import { db } from './db';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
@@ -161,11 +160,6 @@ const AppContent = () => {
   useExpiryWatcher();
   useExpiryNotifications();
   useAppShortcuts();
-
-  // Inicializar workflows al cargar la app
-  useEffect(() => {
-    initializeWorkflows();
-  }, []);
 
   // Sincronizar rol de usuario con RLS
   useEffect(() => {

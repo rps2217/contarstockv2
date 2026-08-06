@@ -1,11 +1,12 @@
-"use client";
+'use client';
 /**
  * VirtualBadge - Componente para mostrar campos virtuales calculados
  */
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { BadgeStyle } from '@/lib/virtualFields';
+
+type BadgeStyle = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 interface VirtualBadgeProps {
   /** Valor del badge */
@@ -87,9 +88,7 @@ export const VirtualBadge: React.FC<VirtualBadgeProps> = ({
         className
       )}
     >
-      {showIcon && (
-        <span className={cn('w-1.5 h-1.5 rounded-full', config.dot)} />
-      )}
+      {showIcon && <span className={cn('w-1.5 h-1.5 rounded-full', config.dot)} />}
       {label}
     </span>
   );
@@ -111,13 +110,7 @@ export const StockStatusBadge: React.FC<{
     unknown: 'neutral',
   };
 
-  return (
-    <VirtualBadge
-      value={status}
-      style={styleMap[status] || 'neutral'}
-      size={size}
-    />
-  );
+  return <VirtualBadge value={status} style={styleMap[status] || 'neutral'} size={size} />;
 };
 
 /**
@@ -127,11 +120,7 @@ export const PercentageBadge: React.FC<{
   value: number | null;
   thresholds?: { warning: number; critical: number };
   size?: 'sm' | 'md' | 'lg';
-}> = ({ 
-  value, 
-  thresholds = { warning: 50, critical: 25 },
-  size = 'sm' 
-}) => {
+}> = ({ value, thresholds = { warning: 50, critical: 25 }, size = 'sm' }) => {
   if (value === null || value === undefined) {
     return <VirtualBadge value="N/A" style="neutral" size={size} />;
   }
@@ -143,14 +132,7 @@ export const PercentageBadge: React.FC<{
     style = 'warning';
   }
 
-  return (
-    <VirtualBadge
-      value={`${value}%`}
-      style={style}
-      size={size}
-      showIcon={false}
-    />
-  );
+  return <VirtualBadge value={`${value}%`} style={style} size={size} showIcon={false} />;
 };
 
 /**
@@ -176,9 +158,7 @@ export const DaysBadge: React.FC<{
     style = 'warning';
   }
 
-  return (
-    <VirtualBadge value={label} style={style} size={size} showIcon={false} />
-  );
+  return <VirtualBadge value={label} style={style} size={size} showIcon={false} />;
 };
 
 export default VirtualBadge;
