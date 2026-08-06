@@ -36,7 +36,6 @@ export { useVoiceCommands, VoiceIndicator } from './useVoiceCommands';
 
 // Re-exports desde shared/hooks para compatibilidad
 export { useProductivity, type ProductivityStats } from '@/shared/hooks';
-export { useTurboMode, type TurboState, type UseTurboModeReturn } from '@/shared/hooks';
 
 // =============================================================================
 // NUEVOS HOOKS - Refactor del Orquestador (Sprint 1)

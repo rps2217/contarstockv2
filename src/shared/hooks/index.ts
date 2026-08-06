@@ -35,9 +35,6 @@ export * from './usePaginatedQuery';
 export { useProductivity } from './useProductivity';
 export type { ProductivityStats } from './useProductivity';
 
-export { useTurboMode } from './useTurboMode';
-export type { TurboState, UseTurboModeReturn } from './useTurboMode';
-
 // ============================================================================
 // Sincronización unificada
 // ============================================================================
