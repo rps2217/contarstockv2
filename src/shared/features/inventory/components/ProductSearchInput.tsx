@@ -1,12 +1,12 @@
 /**
  * ProductSearchInput - Componente compartido para búsqueda de productos
- * 
+ *
  * Características:
  * - Búsqueda por SKU/barcode en IndexedDB
  * - Autocompletado de nombre de producto
  * - Obtiene políticas de proveedor desde PRODUCTO_PROVEEDOR
  * - Soporte para múltiples temas
- * 
+ *
  * Usado en: Expiry, Events, Reports
  */
 
@@ -65,37 +65,39 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
     }
 
     setIsSearching(true);
-    
+
     try {
       // 1. Buscar el producto en la tabla products
       const foundProduct = await db.products.get(barcode);
-      
+
       if (foundProduct) {
         // 2. Buscar políticas del proveedor en PRODUCTO_PROVEEDOR
         let providerPolicy: ProductInfo['providerPolicy'] = undefined;
-        
+
         try {
           // Buscar por productBarcode (IndexedDB usa camelCase)
-          const productProviders = await db.table('productProviders')
+          const productProviders = await db
+            .table('productProviders')
             .where('productBarcode')
             .equals(barcode)
             .toArray();
-          
+
           if (productProviders && productProviders.length > 0) {
             // Obtener el proveedor primario o el primero
             const pp = productProviders.find(p => p.isPrimary) || productProviders[0];
-            
+
             // También buscar info del proveedor
             const provider = await db.table('providers').get(pp.providerRut);
-            
+
             providerPolicy = {
               hasExchange: pp.hasExchange ?? pp.has_exchange ?? provider?.hasExchange ?? true,
-              withdrawalDays: pp.withdrawalDays ?? pp.withdrawal_days ?? provider?.withdrawalDays ?? 30,
+              withdrawalDays:
+                pp.withdrawalDays ?? pp.withdrawal_days ?? provider?.withdrawalDays ?? 30,
               isPrimary: pp.isPrimary ?? false,
             };
           } else {
             // Fallback: buscar solo en providers
-            const provider = foundProduct.supplierRut 
+            const provider = foundProduct.supplierRut
               ? await db.table('providers').get(foundProduct.supplierRut)
               : undefined;
             if (provider) {
@@ -107,7 +109,11 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             }
           }
         } catch (ppError) {
-          logger.warn('ProductSearchInput', 'No se pudo obtener políticas del proveedor', String(ppError));
+          logger.warn(
+            'ProductSearchInput',
+            'No se pudo obtener políticas del proveedor',
+            String(ppError)
+          );
         }
 
         // 3. Mapear campos del producto al formato esperado
@@ -120,7 +126,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
           unitsPerBox: foundProduct.unitsPerBox,
           providerPolicy,
         };
-        
+
         setProduct(productInfo);
         onProductFound?.(productInfo);
       } else {
@@ -139,7 +145,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   // Debounce de búsqueda
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    
+
     debounceRef.current = setTimeout(() => {
       searchProduct(value);
     }, 300);
@@ -156,14 +162,19 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
     }
   }, [autoFocus]);
 
-  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
+  const isDark =
+    (theme as unknown) === 'dark' ||
+    (theme as unknown) === 'night' ||
+    (theme as unknown) === 'high-contrast' ||
+    (theme as unknown) === 'appsheet-dark' ||
+    (theme as unknown) === 'gray';
   const isHighContrast = theme === 'high-contrast';
 
-  const borderColor = isHighContrast 
-    ? 'border-yellow-400' 
-    : isDark 
-      ? product 
-        ? 'border-emerald-500/50' 
+  const borderColor = isHighContrast
+    ? 'border-yellow-400'
+    : isDark
+      ? product
+        ? 'border-emerald-500/50'
         : 'border-white/10 focus:border-blue-500'
       : 'border-slate-300 focus:border-blue-500';
 
@@ -175,7 +186,9 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   return (
     <div className={`space-y-2 ${className}`}>
       {/* Label */}
-      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${labelColor}`}>
+      <label
+        className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${labelColor}`}
+      >
         <Package className="w-3 h-3" />
         SKU / Código de Barras
         <span className="text-rose-500">*</span>
@@ -187,7 +200,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
           ref={inputRef}
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          onChange={e => onChange(e.target.value.toUpperCase())}
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           disabled={disabled}
@@ -200,11 +213,13 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             ${isHighContrast ? 'ring-2 ring-yellow-400/50' : ''}
           `}
         />
-        
+
         {/* Icon */}
         <div className="absolute left-4 top-1/2 -translate-y-1/2">
           {isSearching ? (
-            <Loader2 className={`w-4 h-4 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            <Loader2
+              className={`w-4 h-4 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+            />
           ) : product ? (
             <Package className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
           ) : (
@@ -216,7 +231,11 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
         {value && (
           <button
             type="button"
-            onClick={() => { onChange(''); setProduct(null); onProductFound?.(null); }}
+            onClick={() => {
+              onChange('');
+              setProduct(null);
+              onProductFound?.(null);
+            }}
             className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
               isDark ? 'hover:bg-white/10 text-muted' : 'hover:bg-black/5 text-muted'
             }`}
@@ -235,10 +254,14 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             isDark ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
           }`}
         >
-          <p className={`text-xs font-black truncate ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+          <p
+            className={`text-xs font-black truncate ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}
+          >
             {product.name}
           </p>
-          <div className={`mt-1 flex items-center gap-3 text-[10px] font-mono ${isDark ? 'text-muted' : 'text-slate-500'}`}>
+          <div
+            className={`mt-1 flex items-center gap-3 text-[10px] font-mono ${isDark ? 'text-muted' : 'text-slate-500'}`}
+          >
             <span>{product.category || 'N/A'}</span>
             <span>•</span>
             <span>{product.supplierName || 'Sin proveedor'}</span>
@@ -248,9 +271,11 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
 
       {/* Nuevo producto */}
       {!isSearching && value.length >= 8 && !product && (
-        <div className={`p-3 rounded-xl border ${
-          isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
-        }`}>
+        <div
+          className={`p-3 rounded-xl border ${
+            isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
             <span className={`text-xs font-bold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
@@ -267,4 +292,4 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
 };
 
 // Import motion
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';

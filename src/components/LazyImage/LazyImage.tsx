@@ -1,6 +1,6 @@
 /**
  * LazyImage - Componente para carga perezosa de imágenes
- * 
+ *
  * Características:
  * - Blur placeholder
  * - Intersection Observer para cargar solo cuando es visible
@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { ImageOff } from 'lucide-react';
 
 interface LazyImageProps {
@@ -72,7 +72,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
   if (hasError) {
     return (
-      <div className={`flex items-center justify-center bg-elevated ${placeholderClassName} ${className}`}>
+      <div
+        className={`flex items-center justify-center bg-elevated ${placeholderClassName} ${className}`}
+      >
         {fallback || (
           <div className="flex flex-col items-center text-slate-500">
             <ImageOff className="w-8 h-8" />
@@ -138,7 +140,7 @@ export const LazyAvatar: React.FC<LazyAvatarProps> = ({
 }) => {
   const initials = name
     .split(' ')
-    .map((n) => n[0])
+    .map(n => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);

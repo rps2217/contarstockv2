@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Printer, Trash2, Edit3, Download } from 'lucide-react';
 import { BulkAction, BulkActionBar } from '@/hooks/useBulkActions';
 

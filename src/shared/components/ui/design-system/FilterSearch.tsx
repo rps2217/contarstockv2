@@ -1,11 +1,11 @@
 /**
  * FilterSearch - Barra de búsqueda y filtros unificada
- * 
+ *
  * Diseño minimalista, solo lo esencial.
  */
 
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 
 interface FilterOption {
@@ -44,23 +44,28 @@ export const FilterSearch: React.FC<FilterSearchProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className={`
+      <div
+        className={`
         flex items-center gap-2 px-3 py-2.5 rounded-xl border
         transition-all duration-150
         ${isFocused ? 'ring-2' : ''}
-        ${isDark 
-          ? 'bg-neutral-900 border-neutral-800 focus-within:ring-neutral-700' 
-          : 'bg-white border-neutral-200 focus-within:ring-neutral-300'
+        ${
+          isDark
+            ? 'bg-neutral-900 border-neutral-800 focus-within:ring-neutral-700'
+            : 'bg-white border-neutral-200 focus-within:ring-neutral-300'
         }
-      `}>
+      `}
+      >
         {/* Search Icon */}
-        <Search className={`w-4 h-4 shrink-0 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
-        
+        <Search
+          className={`w-4 h-4 shrink-0 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}
+        />
+
         {/* Input */}
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
@@ -69,7 +74,7 @@ export const FilterSearch: React.FC<FilterSearchProps> = ({
             ${isDark ? 'text-neutral-100' : 'text-neutral-900'}
           `}
         />
-        
+
         {/* Clear Button */}
         {value && (
           <motion.button
@@ -85,16 +90,21 @@ export const FilterSearch: React.FC<FilterSearchProps> = ({
             <X className={`w-3.5 h-3.5 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
           </motion.button>
         )}
-        
+
         {/* Filter Toggle */}
         {filters.length > 0 && onToggleFilters && (
           <button
             onClick={onToggleFilters}
             className={`
               p-1.5 rounded-md flex items-center gap-1
-              ${showFilters 
-                ? isDark ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-800'
-                : isDark ? 'hover:bg-neutral-800 text-neutral-500' : 'hover:bg-neutral-100 text-neutral-400'
+              ${
+                showFilters
+                  ? isDark
+                    ? 'bg-neutral-800 text-neutral-200'
+                    : 'bg-neutral-100 text-neutral-800'
+                  : isDark
+                    ? 'hover:bg-neutral-800 text-neutral-500'
+                    : 'hover:bg-neutral-100 text-neutral-400'
               }
             `}
           >
@@ -113,20 +123,21 @@ export const FilterSearch: React.FC<FilterSearchProps> = ({
             className="overflow-hidden"
           >
             <div className="flex flex-wrap gap-2 py-2">
-              {filters.map((filter) => (
+              {filters.map(filter => (
                 <button
                   key={filter.value}
                   onClick={() => onFilterChange?.(filter.value)}
                   className={`
                     px-3 py-1.5 rounded-full text-xs font-medium
                     transition-all duration-150 border
-                    ${selectedFilter === filter.value
-                      ? isDark 
-                        ? 'bg-neutral-700 text-white border-neutral-600' 
-                        : 'bg-neutral-800 text-white border-neutral-700'
-                      : isDark 
-                        ? 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800' 
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                    ${
+                      selectedFilter === filter.value
+                        ? isDark
+                          ? 'bg-neutral-700 text-white border-neutral-600'
+                          : 'bg-neutral-800 text-white border-neutral-700'
+                        : isDark
+                          ? 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'
+                          : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
                     }
                   `}
                 >

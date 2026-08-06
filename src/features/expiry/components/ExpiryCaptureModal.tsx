@@ -17,7 +17,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { logger } from '@/services/logger';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   CornerDownLeft,
   Loader2,

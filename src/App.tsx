@@ -29,7 +29,7 @@ import { SkipLinksProvider } from '@/shared/components/ui/SkipLinks';
 import { useAppInit } from '@/hooks/useAppInit';
 import { MotionProvider, useMotionContext } from '@/hooks/useMotionContext';
 import { useSimpleUI } from '@/hooks/useDeviceCapability';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSimple } from '@/shared/components/redesign/DashboardSimple';
 
 // ============================================================================

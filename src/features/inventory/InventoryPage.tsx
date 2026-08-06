@@ -1,14 +1,14 @@
 /**
  * InventoryPage.tsx - Módulo de Gestión de Inventario v2
- * 
+ *
  * Diseño monocromático de grises, estructura unificada.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { 
-  RefreshCw, 
-  Trash2, 
+import { motion } from 'framer-motion';
+import {
+  RefreshCw,
+  Trash2,
   Plus,
   Package,
   ArrowUpRight,
@@ -16,7 +16,7 @@ import {
   Minus,
   Printer,
   LayoutGrid,
-  List
+  List,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/stores';
@@ -64,7 +64,9 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   isDark,
 }) => {
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}>
+    <div
+      className={`rounded-2xl border overflow-hidden ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}
+    >
       {/* Section Header */}
       <button
         onClick={onToggle}
@@ -75,8 +77,12 @@ const ProductSection: React.FC<ProductSectionProps> = ({
             <Icon className={`w-4 h-4 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
           </div>
           <div className="text-left">
-            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>{title}</span>
-            <span className={`ml-2 text-[10px] font-mono ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
+            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+              {title}
+            </span>
+            <span
+              className={`ml-2 text-[10px] font-mono ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}
+            >
               {products.length} productos
             </span>
           </div>
@@ -96,7 +102,9 @@ const ProductSection: React.FC<ProductSectionProps> = ({
       >
         <div className="p-2 space-y-1 max-h-[400px] overflow-y-auto">
           {products.length === 0 ? (
-            <p className={`text-center py-4 text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
+            <p
+              className={`text-center py-4 text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}
+            >
               Sin productos
             </p>
           ) : (
@@ -123,20 +131,13 @@ const InventoryPage: React.FC = () => {
   const isDark = settings?.theme !== 'light';
   const { can } = usePermissions();
 
-  const {
-    filteredProducts,
-    filters,
-    isLoading,
-    isSyncing,
-    selectedIds,
-    actions,
-    ui
-  } = useInventory();
+  const { filteredProducts, filters, isLoading, isSyncing, selectedIds, actions, ui } =
+    useInventory();
 
   const [expandedSections, setExpandedSections] = useState({
     exchange: true,
     loss: true,
-    noInfo: false
+    noInfo: false,
   });
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -159,12 +160,12 @@ const InventoryPage: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-      
+
       if (e.key === 'Escape' && isInput) {
         target.blur();
         actions.setSearchQuery('');
       }
-      
+
       if (e.key === '/' && !isInput) {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
@@ -231,9 +232,11 @@ const InventoryPage: React.FC = () => {
   // Agrupar productos por política
   const exchangeProducts = filteredProducts.filter(p => {
     const pWithPolicy = p as ProductWithPolicy;
-    return pWithPolicy.hasExchange === true || 
-           (pWithPolicy.policy?.daysToExpiry && pWithPolicy.policy.daysToExpiry > 0) ||
-           (pWithPolicy.withdrawalDays && pWithPolicy.withdrawalDays > 0);
+    return (
+      pWithPolicy.hasExchange === true ||
+      (pWithPolicy.policy?.daysToExpiry && pWithPolicy.policy.daysToExpiry > 0) ||
+      (pWithPolicy.withdrawalDays && pWithPolicy.withdrawalDays > 0)
+    );
   });
 
   const lossProducts = filteredProducts.filter(p => {
@@ -243,9 +246,11 @@ const InventoryPage: React.FC = () => {
 
   const noInfoProducts = filteredProducts.filter(p => {
     const pWithPolicy = p as ProductWithPolicy;
-    return pWithPolicy.hasExchange === undefined && 
-           !pWithPolicy.policy?.daysToExpiry && 
-           !pWithPolicy.withdrawalDays;
+    return (
+      pWithPolicy.hasExchange === undefined &&
+      !pWithPolicy.policy?.daysToExpiry &&
+      !pWithPolicy.withdrawalDays
+    );
   });
 
   const totalCount = filteredProducts.length;
@@ -261,10 +266,14 @@ const InventoryPage: React.FC = () => {
       actions={
         <>
           <button
-            onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
+            onClick={() => setViewMode(v => (v === 'list' ? 'kanban' : 'list'))}
             className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}
           >
-            {viewMode === 'list' ? <LayoutGrid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+            {viewMode === 'list' ? (
+              <LayoutGrid className="w-4 h-4" />
+            ) : (
+              <List className="w-4 h-4" />
+            )}
           </button>
           <button
             onClick={handleMassDelete}
@@ -298,12 +307,19 @@ const InventoryPage: React.FC = () => {
 
       {/* Selection info */}
       {selectedIds.size > 0 && (
-        <div className={`mt-3 p-3 rounded-xl ${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 border border-neutral-200'}`}>
+        <div
+          className={`mt-3 p-3 rounded-xl ${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 border border-neutral-200'}`}
+        >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-medium ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
+            <p
+              className={`text-xs font-medium ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}
+            >
               {selectedIds.size} seleccionado(s)
             </p>
-            <button onClick={actions.clearSelection} className={`text-xs ${isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'}`}>
+            <button
+              onClick={actions.clearSelection}
+              className={`text-xs ${isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'}`}
+            >
               Limpiar
             </button>
           </div>
@@ -314,7 +330,9 @@ const InventoryPage: React.FC = () => {
       <div className="mt-4 space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className={`w-6 h-6 animate-spin ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
+            <RefreshCw
+              className={`w-6 h-6 animate-spin ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}
+            />
           </div>
         ) : filteredProducts.length === 0 ? (
           <EmptyState
@@ -323,7 +341,7 @@ const InventoryPage: React.FC = () => {
             icon={<Package className="w-8 h-8" />}
           />
         ) : viewMode === 'kanban' ? (
-          <InventoryKanbanView 
+          <InventoryKanbanView
             products={filteredProducts as ProductWithPolicy[]}
             onItemClick={actions.openEdit}
           />
@@ -366,12 +384,12 @@ const InventoryPage: React.FC = () => {
       </div>
 
       {/* Mass Actions Panel */}
-      <MassActionsPanel 
+      <MassActionsPanel
         selectedCount={selectedIds.size}
         onClear={actions.clearSelection}
         actions={[
           { label: 'Imprimir', icon: Printer, onClick: handleMassPrint, variant: 'warning' },
-          { label: 'Borrar', icon: Trash2, onClick: handleMassDelete, variant: 'danger' }
+          { label: 'Borrar', icon: Trash2, onClick: handleMassDelete, variant: 'danger' },
         ]}
       />
 
@@ -380,14 +398,14 @@ const InventoryPage: React.FC = () => {
         isOpen={ui.isCreateModalOpen || ui.isEditModalOpen}
         onClose={() => actions.openEdit(null)}
         initialData={ui.editingProduct}
-        onSaveSuccess={(msg) => toast.success(msg)}
+        onSaveSuccess={msg => toast.success(msg)}
       />
 
       {/* Import Tools Modal */}
       <ImportTools
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onImportComplete={(count) => toast.success(`${count} productos importados`)}
+        onImportComplete={count => toast.success(`${count} productos importados`)}
       />
 
       {/* Print Label Modal */}
@@ -437,4 +455,3 @@ const InventoryPage: React.FC = () => {
 };
 
 export default InventoryPage;
-

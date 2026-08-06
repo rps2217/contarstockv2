@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             // Separar UI para mejor cache - tree-shaking parcial
-            'vendor-ui': ['lucide-react', 'framer-motion', 'motion', 'sonner'],
+            'vendor-ui': ['lucide-react', 'framer-motion', 'sonner'],
             'vendor-charts': ['recharts'],
             'vendor-db': ['dexie', 'dexie-react-hooks'],
             // SEPARADO: Export chunks para lazy loading independiente

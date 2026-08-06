@@ -2,18 +2,18 @@
  * =============================================================================
  * TestModeExpiryModal - Modal para registrar fecha de vencimiento en conteo
  * =============================================================================
- * 
+ *
  * SIMPLIFICADO según feedback:
  * - Solo muestra años válidos (2025-2027)
  * - Botón "Omitir" para productos sin fecha de interés
  * - Si selecciona año válido → se registra el vencimiento
  * - Si presiona omitir → solo se cuenta el producto
- * 
+ *
  * @since 2026-07-07
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Check, X, Zap, Calendar, SkipForward } from 'lucide-react';
 import { EXPIRY_MIN_YEAR, EXPIRY_MAX_YEAR } from '@/lib/expiryConfig';
 
@@ -37,10 +37,10 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  
+
   // Solo años válidos para registrar (2025-2027)
   const years = Array.from(
-    { length: EXPIRY_MAX_YEAR - EXPIRY_MIN_YEAR + 1 }, 
+    { length: EXPIRY_MAX_YEAR - EXPIRY_MIN_YEAR + 1 },
     (_, i) => EXPIRY_MIN_YEAR + i
   );
 
@@ -73,7 +73,7 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         className="w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)]"
@@ -85,12 +85,14 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
               <Zap className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">FECHA VENCIMIENTO</h2>
+              <h2 className="text-lg font-black text-white uppercase tracking-wider">
+                FECHA VENCIMIENTO
+              </h2>
               <p className="text-[10px] text-slate-500 uppercase tracking-widest">Conteo</p>
             </div>
           </div>
-          <button 
-            onClick={onCancel} 
+          <button
+            onClick={onCancel}
             className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors group"
           >
             <X className="w-6 h-6 text-slate-500 group-hover:text-white transition-colors" />
@@ -100,7 +102,9 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
         {/* PRODUCT INFO */}
         <div className="px-6 pt-6">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
-            <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">SKU</div>
+            <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
+              SKU
+            </div>
             <div className="text-xl font-black text-white font-mono tracking-wider">{barcode}</div>
             <div className="text-sm text-muted mt-1 uppercase truncate">{productName}</div>
           </div>
@@ -120,8 +124,8 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
                   key={m}
                   onClick={() => setSelectedMm(m)}
                   className={`h-14 rounded-xl font-black text-lg transition-all border-2 ${
-                    selectedMm === m 
-                      ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10' 
+                    selectedMm === m
+                      ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10'
                       : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
                   }`}
                 >
@@ -143,8 +147,8 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
                   key={y}
                   onClick={() => setSelectedYyyy(y)}
                   className={`h-16 rounded-2xl font-black text-xl transition-all border-2 ${
-                    selectedYyyy === y 
-                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10' 
+                    selectedYyyy === y
+                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10'
                       : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
                   }`}
                 >
@@ -178,7 +182,7 @@ export const TestModeExpiryModal: React.FC<TestModeExpiryModalProps> = ({
               <SkipForward className="w-5 h-5" />
               OMITIR - Solo contar
             </button>
-            
+
             <p className="text-center text-[9px] font-bold text-slate-600 uppercase tracking-widest">
               ENTER = Registrar • SHIFT+ENTER = Omitir • ESC = Cancelar
             </p>
