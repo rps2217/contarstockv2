@@ -101,11 +101,5 @@ export { useKeyboardAware, KeyboardAwareContainer } from './useKeyboardAware';
 export { usePermissions, RequirePermission } from './usePermissions';
 
 // ============================================================================
-// Undo/Redo
+// Undo/Redo (eliminado - código no utilizado)
 // ============================================================================
-export {
-  showUndoToast,
-  useUndoToast,
-  UndoIndicator,
-  useUndoRedoShortcuts,
-} from '@/shared/components/ui/UndoRedoToast';
