@@ -1,14 +1,56 @@
 ---
 
-## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-21)
+## 🐴 REGLAS PONYTAIL (Adoptadas 2026-08-06)
+
+> "El mejor código es el código nunca escrito"
+
+### Escalera de Decisión (antes de escribir código)
+
+1. **¿Necesita construirse?** (YAGNI)
+2. ¿Ya existe en el codebase? Reusar, no re-escribir
+3. ¿La stdlib ya lo hace? Usarla
+4. ¿Una feature nativa de la plataforma lo cubre? Usarla
+5. ¿Una dependencia ya instalada lo resuelve? Usarla
+6. ¿Puede ser una línea? Hacerlo una línea
+7. Solo entonces: escribir el mínimo código que funcione
+
+### Reglas Clave
+
+- **Sin abstracciones** no solicitadas explícitamente
+- **Sin nuevas dependencias** si pueden evitarse
+- **Sin boilerplate** que nadie pidió
+- **Eliminación > Adición**. Aburrido > Inteligente. Mínimos archivos posibles
+- **Bug fix = causa raíz**, no síntoma
+- **Dif más corto gana**, pero solo cuando entiendes el problema
+- **Comentar** `ponytail:` en simplificaciones deliberadas con nombre del techo y path de upgrade
+
+### No ser perezoso con
+- Entender el problema completamente
+- Validación de input en trust boundaries
+- Manejo de errores que previene pérdida de datos
+- Seguridad, accesibilidad
+- Calibración de hardware real
+
+---
+
+## 📋 ESTADO ACTUAL DEL PROYECTO (2026-08-06)
 
 ### ✅ VALIDACIÓN ACTUAL
 
 ```bash
-npm run test:run   # 978 tests passing (actualizado 2026-07-21)
+npm run test:run   # 972 tests passing
 npx tsc --noEmit   # 0 errores TypeScript
 npm run build      # Build exitoso
 ```
+
+### 📊 MÉTRICAS DE CÓDIGO (Actualizado)
+
+| Métrica     | Valor    | Cambio |
+| ----------- | -------- | ------ |
+| LOC Totales | ~132,000 | -9,700 |
+| Archivos TS | 705      | -      |
+| Tests       | 972      | -6     |
+| Cobertura   | ~8.0%    | -      |
 
 ### 🔧 CORRECCIÓN: Modo Conteo con Registro de Vencimiento (2026-07-21)
 
@@ -29,6 +71,7 @@ npm run build      # Build exitoso
    - Toggle en ToolsSheet ahora cambia el estado local, no el feature flag global
 
 **Flujo corregido:**
+
 ```
 StartCountingModal (registerExpiry=true)
     ↓
@@ -52,39 +95,39 @@ registerExpiry=true → TestModeExpiryModal se muestra al escanear
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
-| Archivo | Inicio | Actual | Reducción | Estado |
-|---------|--------|--------|-----------|--------|
-| ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
-| TheoreticalLoadsPage.tsx | 1,150 | 787 | -363 (-32%) | ✅ |
-| ThermalPrinterEngine.ts | 1,070 | 385 | -685 (-64%) | ✅ |
-| EventsModal.tsx | 1,057 | 861 | -196 (-19%) | ✅ |
-| UnifiedSyncEngine.ts | 1,039 | 805 | -234 (-22.5%) | ✅ |
-| syncRegistry.ts | 839 | 429 | -410 (-49%) | ✅ |
+| Archivo                  | Inicio | Actual | Reducción     | Estado |
+| ------------------------ | ------ | ------ | ------------- | ------ |
+| ExpiryPage.tsx           | 1,292  | 928    | -364 (-28%)   | ✅     |
+| TheoreticalLoadsPage.tsx | 1,150  | 787    | -363 (-32%)   | ✅     |
+| ThermalPrinterEngine.ts  | 1,070  | 385    | -685 (-64%)   | ✅     |
+| EventsModal.tsx          | 1,057  | 861    | -196 (-19%)   | ✅     |
+| UnifiedSyncEngine.ts     | 1,039  | 805    | -234 (-22.5%) | ✅     |
+| syncRegistry.ts          | 839    | 429    | -410 (-49%)   | ✅     |
 
 **Total reducido:** ~2,700 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
-| Archivo | Descripción |
-|---------|------------|
-| `syncHelpers.ts` | Helpers utilitarios (formatError, sanitizeData) |
-| `syncQueueProcessor.ts` | Lógica de procesamiento de cola |
-| `syncTableOperations.ts` | Operaciones de sincronización por tabla |
-| `escposCommands.ts` | Comandos ESC/POS para impresoras |
-| `expiryConstants.ts` | Constantes de expiración |
-| `expiryHelpers.ts` | Helpers de fechas y colores |
-| `expiryRecordRow.tsx` | Fila de registro |
-| `expiryKanbanCard.tsx` | Tarjeta kanban |
-| `expirySection.tsx` | Sección colapsable |
-| `theoreticalLoadsCards.tsx` | Tarjetas de órdenes y manifiestos |
-| `thermalTypes.ts` | Tipos compartidos para impresoras |
-| `expectedOrderHtmlGenerator.ts` | Generador HTML de órdenes teóricas |
-| `hammerTicketHtmlGenerator.ts` | Generador HTML de tickets Hammer |
-| `theoreticalLoadsComponents.tsx` | SummaryCard, TabButton, EmptyState |
-| `confirmModal.tsx` | Modal de confirmación reutilizable |
-| `syncRealtimeConstants.ts` | Constantes de realtime sync |
-| `syncMappingHelpers.ts` | Funciones de mapeo local↔remote |
-| `syncEventFilters.ts` | Filtros para prevención de duplicados |
+| Archivo                          | Descripción                                     |
+| -------------------------------- | ----------------------------------------------- |
+| `syncHelpers.ts`                 | Helpers utilitarios (formatError, sanitizeData) |
+| `syncQueueProcessor.ts`          | Lógica de procesamiento de cola                 |
+| `syncTableOperations.ts`         | Operaciones de sincronización por tabla         |
+| `escposCommands.ts`              | Comandos ESC/POS para impresoras                |
+| `expiryConstants.ts`             | Constantes de expiración                        |
+| `expiryHelpers.ts`               | Helpers de fechas y colores                     |
+| `expiryRecordRow.tsx`            | Fila de registro                                |
+| `expiryKanbanCard.tsx`           | Tarjeta kanban                                  |
+| `expirySection.tsx`              | Sección colapsable                              |
+| `theoreticalLoadsCards.tsx`      | Tarjetas de órdenes y manifiestos               |
+| `thermalTypes.ts`                | Tipos compartidos para impresoras               |
+| `expectedOrderHtmlGenerator.ts`  | Generador HTML de órdenes teóricas              |
+| `hammerTicketHtmlGenerator.ts`   | Generador HTML de tickets Hammer                |
+| `theoreticalLoadsComponents.tsx` | SummaryCard, TabButton, EmptyState              |
+| `confirmModal.tsx`               | Modal de confirmación reutilizable              |
+| `syncRealtimeConstants.ts`       | Constantes de realtime sync                     |
+| `syncMappingHelpers.ts`          | Funciones de mapeo local↔remote                 |
+| `syncEventFilters.ts`            | Filtros para prevención de duplicados           |
 
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
@@ -200,6 +243,7 @@ toggleFeature('FEATURE_KEY')     # Cambiar
 ### 🔒 PATRONES DE TIPADO
 
 **Catch blocks - Usar `unknown` en lugar de `any`:**
+
 ```typescript
 // ❌ Incorrecto
 catch (err: any) {
@@ -214,6 +258,7 @@ catch (err: unknown) {
 ```
 
 **Genéricos con default `any`:**
+
 ```typescript
 // Aceptable para flexibilidad
 interface SearchResult<T = any> { ... }
@@ -221,10 +266,11 @@ type EventCallback<T = any> = (event: T) => void;
 ```
 
 **Props de componentes React:**
+
 ```typescript
 // Evitar any en props cuando sea posible
 interface Props {
-  item: Product;  // Tipo específico
+  item: Product; // Tipo específico
   onSelect: (item: Product) => void;
 }
 ```
