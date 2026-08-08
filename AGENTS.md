@@ -19,15 +19,16 @@ npm run build      # Build exitoso
 | Tests       | 978     |
 | Cobertura   | ~10%    |
 
-### 🔧 AUDITORÍA YAGNI (Fases 1-3)
+### 🔧 AUDITORÍA YAGNI (Fases 1-4)
 
 | Fase | Commits | LOC Eliminadas |
 |------|---------|---------------|
 | Fase 1 | 029d23e, 4882a9b, 2019d38 | ~1,200 |
 | Fase 2 | 807612f | ~60 |
 | Fase 3 | 51e5f18 | ~15 |
+| Fase 4 | 84ab533 | ~24 |
 
-**Total acumulado:** ~1,275 LOC eliminadas
+**Total acumulado:** ~1,299 LOC eliminadas
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
@@ -1281,13 +1282,13 @@ Todos los archivos >1000 LOC han sido refactorizados o están por debajo del umb
 
 ### 🎯 Oportunidades YAGNI Pendientes
 
-| # | Archivo | Función/Código | Razón |
-|---|---------|---------------|-------|
-| 1 | `src/types.ts` | `isSyncError()` | No se usa en el codebase |
-| 2 | `src/types.ts` | `needsSync()` | No se usa en el codebase |
-| 3 | `src/features/suppliers/domain/suppliersDomain.ts` | `getFilterLabel()` | No se usa en el codebase |
-| 4 | `src/lib/expressionEngine.ts` | Módulo completo (711 LOC) | Integrado pero AI_ASSISTANT desactivado |
-| 5 | `src/lib/workflowEngine.ts` | Módulo completo (596 LOC) | Integrado pero AI_ASSISTANT desactivado |
+| # | Archivo | Función/Código | Razón | Estado |
+|---|---------|---------------|-------|--------|
+| 1 | `src/types.ts` | `isSyncError()` | No se usa | ✅ Eliminado |
+| 2 | `src/types.ts` | `needsSync()` | No se usa | ✅ Eliminado |
+| 3 | `src/features/suppliers/domain/suppliersDomain.ts` | `getFilterLabel()` | No se usa | ✅ Eliminado |
+| 4 | `src/lib/expressionEngine.ts` | Módulo completo (711 LOC) | Integrado pero AI_ASSISTANT desactivado | ⏸️ Mantener |
+| 5 | `src/lib/workflowEngine.ts` | Módulo completo (596 LOC) | Integrado pero AI_ASSISTANT desactivado | ⏸️ Mantener |
 
 ### 📦 Dependencias AI Instaladas (Fase 3)
 
