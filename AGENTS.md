@@ -14,12 +14,12 @@ npm run build      # Build exitoso
 
 | Métrica     | Valor   |
 | ----------- | ------- |
-| LOC Totales | 138,500 |
-| Archivos TS | 748     |
+| LOC Totales | 138,300 |
+| Archivos TS | 746     |
 | Tests       | 965     |
 | Cobertura   | ~10%    |
 
-### 🔧 AUDITORÍA YAGNI (Fases 1-5)
+### 🔧 AUDITORÍA YAGNI (Fases 1-6)
 
 | Fase | Commits | LOC Eliminadas |
 |------|---------|---------------|
@@ -28,8 +28,9 @@ npm run build      # Build exitoso
 | Fase 3 | 51e5f18 | ~15 |
 | Fase 4 | 84ab533 | ~24 |
 | Fase 5 | 78962eb, f9e2408, 1c8f5c3, 3d5982b | ~700 |
+| Fase 6 | 99830fd | ~1,185 |
 
-**Total acumulado:** ~1,999 LOC eliminadas
+**Total acumulado:** ~3,184 LOC eliminadas
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
@@ -136,6 +137,43 @@ npm run build      # Build exitoso
 - **Tests:** 978 → 965 (-13 tests de archivos eliminados)
 - **Archivos TS:** 752 → 748 (-4 archivos)
 - **ReceptionPage.tsx:** 747 → 366 LOC (-51%)
+
+### 🔍 AUDITORÍA YAGNI FASE 6 (2026-08-06)
+
+#### Eliminados
+
+| Archivo/Función | LOC | Razón |
+|----------------|------|-------|
+| `RFIDService.ts` | 435 | ❌ SIN USO |
+| `countingExportService.ts` | 339 | ❌ SIN USO |
+| `expiryExport.ts` | 218 | ❌ SIN USO |
+| `SummaryCard` embebido en TheoreticalLoadsPage | ~30 | Extraído a componente reutilizable |
+| `TabButton` embebido en TheoreticalLoadsPage | ~45 | Extraído a componente reutilizable |
+| `ConfirmModal` embebido en TheoreticalLoadsPage | ~120 | Ya existía en carpeta |
+
+#### Componentes Creados
+
+| Archivo | Descripción |
+|---------|------------|
+| `SummaryCard.tsx` | Tarjeta de resumen reutilizable |
+| `TabButton.tsx` | Botón de tabs reutilizable |
+
+#### Archivos Analizados (Sin Cambios)
+
+| Archivo | LOC | Razón |
+|---------|-----|-------|
+| `ExpiryPage.tsx` | 928 | Ya refactorizado |
+| `HammerPage.tsx` | 812 | Sin componentes embebidos |
+| `HealthService.ts` | 681 | Clase singleton cohesiva |
+| `syncRegistry.ts` | 642 | Funciones exportadas necesarias |
+| `UnifiedSyncEngine.ts` | 973 | Ya modularizado con imports |
+
+#### Resultado
+
+- **Archivos eliminados:** 3 (~992 LOC)
+- **TheoreticalLoadsPage.tsx:** 984 → 791 LOC (-193 líneas)
+- **Componentes reutilizables:** 2 archivos creados
+- **Archivos TS:** 748 → 746 (-2 archivos)
 
 ### 🎯 TAREAS PENDIENTES DE REFACTORIZACIÓN
 
