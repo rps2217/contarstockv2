@@ -195,18 +195,4 @@ export const sortProviders = (
   return sorted;
 };
 
-/**
- * Obtiene el label para un filtro
- */
-export const getFilterLabel = (filter: ProviderFilter): string => {
-  switch (filter) {
-    case ProviderFilter.ALL:
-      return 'Todos';
-    case ProviderFilter.WITH_EXCHANGE:
-      return 'Con Canje';
-    case ProviderFilter.WITHOUT_EXCHANGE:
-      return 'Sin Canje';
-    default:
-      return 'Desconocido';
-  }
-};
+

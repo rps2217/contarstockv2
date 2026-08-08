@@ -375,15 +375,6 @@ export interface SyncConflict {
   detectedAt: number;
 }
 
-// Helper functions for sync types
-export const isSyncError = (status: SyncStatus): boolean => {
-  return status === SyncStatus.ERROR || status === SyncStatus.PENDING_DELETE;
-};
-
-export const needsSync = (status: SyncStatus): boolean => {
-  return status === SyncStatus.PENDING || status === SyncStatus.ERROR || status === SyncStatus.PENDING_DELETE;
-};
-
 export interface ColumnSchema {
   col: string;
   label: string;
