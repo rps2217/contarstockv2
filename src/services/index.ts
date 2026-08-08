@@ -7,9 +7,6 @@
 // Analytics
 export * from './analytics';
 
-// AI Services
-export * from './ai';
-
 // Cloud Services - exports específicos para evitar duplicados
 export {
   // Batch operations
