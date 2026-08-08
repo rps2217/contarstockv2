@@ -5,7 +5,7 @@
 ### ✅ VALIDACIÓN ACTUAL
 
 ```bash
-npm run test:run   # 978 tests passing (actualizado 2026-08-06)
+npm run test:run   # 965 tests passing (actualizado 2026-08-06)
 npx tsc --noEmit   # 0 errores TypeScript
 npm run build      # Build exitoso
 ```
@@ -14,12 +14,12 @@ npm run build      # Build exitoso
 
 | Métrica     | Valor   |
 | ----------- | ------- |
-| LOC Totales | 138,945 |
-| Archivos TS | 752     |
-| Tests       | 978     |
+| LOC Totales | 138,500 |
+| Archivos TS | 748     |
+| Tests       | 965     |
 | Cobertura   | ~10%    |
 
-### 🔧 AUDITORÍA YAGNI (Fases 1-4)
+### 🔧 AUDITORÍA YAGNI (Fases 1-5)
 
 | Fase | Commits | LOC Eliminadas |
 |------|---------|---------------|
@@ -27,8 +27,9 @@ npm run build      # Build exitoso
 | Fase 2 | 807612f | ~60 |
 | Fase 3 | 51e5f18 | ~15 |
 | Fase 4 | 84ab533 | ~24 |
+| Fase 5 | 78962eb, f9e2408, 1c8f5c3, 3d5982b | ~700 |
 
-**Total acumulado:** ~1,299 LOC eliminadas
+**Total acumulado:** ~1,999 LOC eliminadas
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
@@ -102,6 +103,39 @@ npm run build      # Build exitoso
 1. Si la función no se importa desde ningún lugar → eliminar
 2. Si hay múltiples versiones → mantener la más robusta, actualizar imports
 3. Si el barrel export ya re-exporta → convertir a re-export simple
+
+### 🔍 AUDITORÍA YAGNI FASE 5 (2026-08-06)
+
+#### Eliminados
+
+| Archivo/Función | LOC | Razón |
+|----------------|------|-------|
+| `moduleManager.ts` | ~150 | No usado, código legacy |
+| `ScanBufferService.ts` | ~182 | No usado, código legacy |
+| `generateSimpleId()` en HammerPage | ~15 | Duplicado de useCountingEngine |
+| `ReceptionFormModal` (inline) | ~191 | Extraído a componente |
+| `ReceptionDetailModal` (inline) | ~185 | Extraído a componente |
+| `ReceptionPage.tsx` | 747 → 366 | Refactorización completa |
+| `syncEventFilters.ts` | ~174 | Duplicado de syncRegistry.ts |
+| `syncEventFilters.test.ts` | ~41 | Tests para código duplicado |
+| `syncMappingHelpers.ts` | ~203 | Duplicado de syncRegistry.ts |
+| `syncMappingHelpers.test.ts` | ~99 | Tests para código duplicado |
+
+#### Commits de esta sesión
+
+| Commit | Descripción | LOC Eliminadas |
+|--------|-------------|---------------|
+| `78962eb` | Eliminar moduleManager.ts y ScanBufferService.ts | ~332 |
+| `f9e2408` | Eliminar generateSimpleId() duplicado | ~15 |
+| `1c8f5c3` | Extraer ReceptionFormModal y ReceptionDetailModal | ~381 |
+| `b1f11a6` | Eliminar syncEventFilters.ts duplicado | ~215 |
+| `3d5982b` | Eliminar syncMappingHelpers.ts duplicado | ~302 |
+
+#### Resultado
+
+- **Tests:** 978 → 965 (-13 tests de archivos eliminados)
+- **Archivos TS:** 752 → 748 (-4 archivos)
+- **ReceptionPage.tsx:** 747 → 366 LOC (-51%)
 
 ### 🎯 TAREAS PENDIENTES DE REFACTORIZACIÓN
 
