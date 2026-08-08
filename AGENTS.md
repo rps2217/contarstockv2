@@ -1,11 +1,11 @@
 ---
 
-## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-18)
+## 📋 ESTADO ACTUAL DEL PROYECTO (2026-08-06)
 
 ### ✅ VALIDACIÓN ACTUAL
 
 ```bash
-npm run test:run   # 915 tests passing (actualizado 2026-07-18)
+npm run test:run   # 978 tests passing (actualizado 2026-08-06)
 npx tsc --noEmit   # 0 errores TypeScript
 npm run build      # Build exitoso
 ```
@@ -14,10 +14,20 @@ npm run build      # Build exitoso
 
 | Métrica     | Valor   |
 | ----------- | ------- |
-| LOC Totales | 133,953 |
-| Archivos TS | 705     |
-| Tests       | 964     |
-| Cobertura   | ~7.2%   |
+| LOC Totales | 138,945 |
+| Archivos TS | 752     |
+| Tests       | 978     |
+| Cobertura   | ~10%    |
+
+### 🔧 AUDITORÍA YAGNI (Fases 1-3)
+
+| Fase | Commits | LOC Eliminadas |
+|------|---------|---------------|
+| Fase 1 | 029d23e, 4882a9b, 2019d38 | ~1,200 |
+| Fase 2 | 807612f | ~60 |
+| Fase 3 | 51e5f18 | ~15 |
+
+**Total acumulado:** ~1,275 LOC eliminadas
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
@@ -1268,3 +1278,22 @@ Todos los archivos >1000 LOC han sido refactorizados o están por debajo del umb
 - ThermalPrinterEngine.ts: 1,044 LOC ✅
 - EventsModal.tsx: 861 LOC ✅
 - UnifiedSyncEngine.ts: 981 LOC ✅
+
+### 🎯 Oportunidades YAGNI Pendientes
+
+| # | Archivo | Función/Código | Razón |
+|---|---------|---------------|-------|
+| 1 | `src/types.ts` | `isSyncError()` | No se usa en el codebase |
+| 2 | `src/types.ts` | `needsSync()` | No se usa en el codebase |
+| 3 | `src/features/suppliers/domain/suppliersDomain.ts` | `getFilterLabel()` | No se usa en el codebase |
+| 4 | `src/lib/expressionEngine.ts` | Módulo completo (711 LOC) | Integrado pero AI_ASSISTANT desactivado |
+| 5 | `src/lib/workflowEngine.ts` | Módulo completo (596 LOC) | Integrado pero AI_ASSISTANT desactivado |
+
+### 📦 Dependencias AI Instaladas (Fase 3)
+
+```bash
+npm install @google/genai @xenova/transformers
+```
+- Resuelven errores de compilación en servicios AI
+- AI_ASSISTANT desactivado por defecto (feature flag)
+- Código mantiene lazy loading para evitar impacto en bundle
