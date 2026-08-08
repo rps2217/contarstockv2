@@ -10,19 +10,17 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { CloudStockSchema, CloudOrderRowSchema } from './schemas';
 import { telemetry } from './telemetryService';
 import { getSettings } from './settings';
-import type { ZodError, z } from 'zod';
+import type { ZodError } from 'zod';
 import type { Table } from 'dexie';
 
-// Tipo para filas de orden de la nube
-type CloudOrderRow = z.infer<typeof CloudOrderRowSchema>;
-
 /** Helper para transacciones Dexie con tipado correcto */
-const runTransaction = async <T>(db: Dexie, tables: Table[], fn: () => Promise<T>): Promise<T> => {
-  return (
-    db as unknown as {
-      transaction<T>(mode: 'rw', tables: Table[], fn: () => Promise<T>): Promise<T>;
-    }
-  ).transaction('rw', tables, fn);
+const runTransaction = async <T>(
+  db: Dexie,
+  tables: Table[],
+  fn: () => Promise<T>
+): Promise<T> => {
+  return (db as unknown as { transaction<T>(mode: 'rw', tables: Table[], fn: () => Promise<T>): Promise<T> })
+    .transaction('rw', tables, fn);
 };
 
 // Tipos Dexie para las tablas
@@ -33,24 +31,24 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
   try {
     const rawScans = await hammerDb.blindScans.where('batchId').equals(batchId).toArray();
     const manifestItems = await hammerDb.blindManifests.where('batchId').equals(batchId).toArray();
-
-    if (rawScans.length === 0) throw new Error('No hay datos para migrar.');
+    
+    if (rawScans.length === 0) throw new Error("No hay datos para migrar.");
 
     const erpOrder = `HM-${batchId.substring(0, 8).toUpperCase()}`;
     const sessionLabel = batchId;
-
+    
     const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
     const expectedItems: ExpectedItem[] = manifestItems.map(m => ({
       barcode: m.barcode,
-      name: m.name || 'Producto Martillo',
-      expectedQty: m.expectedQty,
+      name: m.name || "Producto Martillo",
+      expectedQty: m.expectedQty
     }));
 
     if (expectedItems.length > 0) {
-      await db.sessions.update(session.id, {
+      await db.sessions.update(session.id, { 
         expectedItems: expectedItems,
-        isVerifiedMode: true,
+        isVerifiedMode: true 
       });
     }
 
@@ -62,7 +60,7 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         quantity: scan.quantity,
         timestamp: scan.timestamp,
         synced: 0,
-        isIncident: false,
+        isIncident: false 
       };
     });
 
@@ -77,19 +75,19 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
     // AUTO-SYNC EN FIN_DE_PROCESO: Sincronizar de forma inmediata con Supabase para visibilidad multi-dispositivo
     try {
       const config = getSettings().cloudConfig;
-      const targetTable = config?.countsTableName || 'CONTEOS';
+      const targetTable = config?.countsTableName || "CONTEOS";
       const { aggregateScans } = await import('./aggregator');
       const consolidatedItems = await aggregateScans(recordsToMigrate);
       const { createInventoryPayload } = await import('./cloud/mappers');
       const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
-
+      
       const uploadResult = await supabaseSyncService.pushBatch(targetTable, fullPayload);
       if (uploadResult.success) {
         const scanIds = recordsToMigrate.map(r => r.id);
         await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
-        await db.sessions.update(session.id, {
+        await db.sessions.update(session.id, { 
           lastSyncTimestamp: Date.now(),
-          syncStatus: 'synced',
+          syncStatus: 'synced'
         });
 
         const sessionPayload = {
@@ -102,37 +100,23 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
           totalUnits: recordsToMigrate.reduce((sum, r) => sum + r.quantity, 0),
           totalSKUs: new Set(recordsToMigrate.map(r => r.barcode)).size,
           photoUrl: session.photoUrl || '',
-          lastSyncTimestamp: Date.now(),
+          lastSyncTimestamp: Date.now()
         };
         await supabaseSyncService.pushBatch('SESIONES_CONTEO', [sessionPayload]);
       }
     } catch (pushErr) {
-      logger.warn('HammerSync', 'Auto-push falló, se sincronizará luego', {
-        error: String(pushErr),
-      });
+      logger.warn('HammerSync', 'Auto-push falló, se sincronizará luego', { error: String(pushErr) });
     }
 
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SESSION',
-      'MIGRATE_SUCCESS',
-      { batchId, scanCount: rawScans.length },
-      duration,
-      batchId
-    );
-
+    telemetry.track('SESSION', 'MIGRATE_SUCCESS', { batchId, scanCount: rawScans.length }, duration, batchId);
+    
     logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado.`);
     return session.id;
   } catch (err: unknown) {
     const error = handleError(err, 'migrateMassiveToMaster');
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SESSION',
-      'MIGRATE_FAIL',
-      { batchId, error: error.message },
-      duration,
-      batchId
-    );
+    telemetry.track('SESSION', 'MIGRATE_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('MASSIVE_MIGRATION_FAIL', error.message);
     throw error;
   }
@@ -158,7 +142,7 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
         barcode: s.barcode,
         quantity: s.quantity,
         location: s.location || '',
-        timestamp: s.timestamp, // Ya es número epoch en hammerDb
+        timestamp: s.timestamp  // Ya es número epoch en hammerDb
       };
     });
 
@@ -166,10 +150,10 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
     const tableName = config?.countsTableName || 'CONTEOS';
 
     await supabaseSyncService.pushBatch(tableName, payload);
-
+    
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PUSH_SUCCESS', { batchId, count: scans.length }, duration, batchId);
-
+    
     logger.success('CLOUD_SYNC', `Sincronización exitosa para lote: ${batchId}`);
   } catch (err: unknown) {
     const error = handleError(err, 'pushScansToCloud');
@@ -187,11 +171,11 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
   const startTime = performance.now();
   try {
     logger.info('CLOUD_MANIFEST', `Solicitando descarga de STOCK para lote: ${batchId}`);
-
+    
     const result = await supabaseSyncService.pullBatch('STOCK');
-
+    
     if (!result.success || !Array.isArray(result.rows)) {
-      throw new Error('El servidor devolvió un formato inválido o la tabla STOCK está vacía.');
+      throw new Error("El servidor devolvió un formato inválido o la tabla STOCK está vacía.");
     }
 
     const rawRows = result.rows;
@@ -215,11 +199,11 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
         barcode: sanitizeBarcode(item!.barcode),
         name: item!.name,
         expectedQty: item.expectedQty,
-        loc: item.loc,
+        loc: item.loc
       }));
 
     if (itemsToSave.length === 0) {
-      throw new Error('No se encontraron registros con Stock mayor a 0 en el Excel.');
+      throw new Error("No se encontraron registros con Stock mayor a 0 en el Excel.");
     }
 
     await runTransaction(hammerDb, [hammerDb.blindManifests], async () => {
@@ -228,16 +212,11 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
     });
 
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'PULL_SUCCESS',
-      { batchId, count: itemsToSave.length },
-      duration,
-      batchId
-    );
-
+    telemetry.track('SYNC', 'PULL_SUCCESS', { batchId, count: itemsToSave.length }, duration, batchId);
+    
     logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${itemsToSave.length} metas instaladas.`);
     return itemsToSave.length;
+
   } catch (err: unknown) {
     const error = handleError(err, 'importManifestFromCloud');
     const duration = performance.now() - startTime;
@@ -250,36 +229,26 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
 /**
  * IMPORTAR CARGA TEÓRICA / PEDIDO ESPECÍFICO DESDE LA NUBE
  */
-export const importExpectedOrderFromCloud = async (
-  batchId: string,
-  orderId: string
-): Promise<number> => {
+export const importExpectedOrderFromCloud = async (batchId: string, orderId: string): Promise<number> => {
   const startTime = performance.now();
   try {
-    logger.info(
-      'CLOUD_MANIFEST',
-      `Solicitando descarga de CARGA TEÓRICA "${orderId}" para lote: ${batchId}`
-    );
-
+    logger.info('CLOUD_MANIFEST', `Solicitando descarga de CARGA TEÓRICA "${orderId}" para lote: ${batchId}`);
+    
     const config = getSettings().cloudConfig;
     const tableName = config?.ordersTableName || 'PEDIDOS';
     const result = await supabaseSyncService.pullBatch(tableName);
-
+    
     if (!result.success || !Array.isArray(result.rows)) {
-      throw new Error('El servidor devolvió un formato inválido o la tabla está vacía.');
+      throw new Error("El servidor devolvió un formato inválido o la tabla está vacía.");
     }
 
-    const erpId = String(orderId || '')
-      .toUpperCase()
-      .trim();
+    const erpId = String(orderId || '').toUpperCase().trim();
     const filteredRows = result.rows
-      .map((row: Record<string, unknown>) => {
+      .map((row: any) => {
         const parsed = CloudOrderRowSchema.safeParse(row);
         return parsed.success ? parsed.data : null;
       })
-      .filter(
-        (p: CloudOrderRow | null) => p !== null && String(p.erp || '').toUpperCase() === erpId
-      );
+      .filter((p: any) => p !== null && String(p.erp || '').toUpperCase() === erpId);
 
     if (filteredRows.length === 0) {
       throw new Error(`La carga teórica "${orderId}" no se encuentra en el servidor.`);
@@ -290,7 +259,7 @@ export const importExpectedOrderFromCloud = async (
       barcode: sanitizeBarcode(item!.barcode),
       name: item!.name,
       expectedQty: item!.qty,
-      loc: '',
+      loc: ''
     }));
 
     await hammerDb.transaction('rw', hammerDb.blindManifests, async () => {
@@ -299,29 +268,15 @@ export const importExpectedOrderFromCloud = async (
     });
 
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'PULL_SUCCESS',
-      { batchId, count: itemsToSave.length, orderId },
-      duration,
-      batchId
-    );
-
-    logger.success(
-      'CLOUD_MANIFEST',
-      `Carga teórica "${orderId}" importada con éxito: ${itemsToSave.length} SKUs.`
-    );
+    telemetry.track('SYNC', 'PULL_SUCCESS', { batchId, count: itemsToSave.length, orderId }, duration, batchId);
+    
+    logger.success('CLOUD_MANIFEST', `Carga teórica "${orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
     return itemsToSave.length;
+
   } catch (err: unknown) {
     const error = handleError(err, 'importExpectedOrderFromCloud');
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'PULL_FAIL',
-      { batchId, error: error.message, orderId },
-      duration,
-      batchId
-    );
+    telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
     throw error;
   }
@@ -330,17 +285,11 @@ export const importExpectedOrderFromCloud = async (
 /**
  * IMPORTAR CARGA TEÓRICA LOCAL AL SISTEMA MARTILLO
  */
-export const importLocalExpectedOrderToHammer = async (
-  batchId: string,
-  orderId: string
-): Promise<number> => {
+export const importLocalExpectedOrderToHammer = async (batchId: string, orderId: string): Promise<number> => {
   const startTime = performance.now();
   try {
-    logger.info(
-      'CLOUD_MANIFEST',
-      `Importando localmente CARGA TEÓRICA "${orderId}" para lote: ${batchId}`
-    );
-
+    logger.info('CLOUD_MANIFEST', `Importando localmente CARGA TEÓRICA "${orderId}" para lote: ${batchId}`);
+    
     const order = await db.expectedOrders.get(orderId);
     if (!order) {
       throw new Error(`La carga teórica local "${orderId}" no existe.`);
@@ -351,7 +300,7 @@ export const importLocalExpectedOrderToHammer = async (
       barcode: sanitizeBarcode(item!.barcode),
       name: item!.name,
       expectedQty: item.expectedQty,
-      loc: '',
+      loc: ''
     }));
 
     await hammerDb.transaction('rw', hammerDb.blindManifests, async () => {
@@ -360,29 +309,14 @@ export const importLocalExpectedOrderToHammer = async (
     });
 
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'LOCAL_IMPORT_SUCCESS',
-      { batchId, count: itemsToSave.length, orderId },
-      duration,
-      batchId
-    );
-
-    logger.success(
-      'CLOUD_MANIFEST',
-      `Carga teórica local "${order?.metadata?.internalGuide || orderId}" importada con éxito: ${itemsToSave.length} SKUs.`
-    );
+    telemetry.track('SYNC', 'LOCAL_IMPORT_SUCCESS', { batchId, count: itemsToSave.length, orderId }, duration, batchId);
+    
+    logger.success('CLOUD_MANIFEST', `Carga teórica local "${order?.metadata?.internalGuide || orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
     return itemsToSave.length;
   } catch (err: unknown) {
     const error = handleError(err, 'importLocalExpectedOrderToHammer');
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'LOCAL_IMPORT_FAIL',
-      { batchId, error: error.message, orderId },
-      duration,
-      batchId
-    );
+    telemetry.track('SYNC', 'LOCAL_IMPORT_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
     throw error;
   }
@@ -390,23 +324,17 @@ export const importLocalExpectedOrderToHammer = async (
 
 /**
  * MIGRAR MANIFEST DE HAMMER A EXPECTED ORDERS (PARA MODO PRUEBA)
- *
+ * 
  * Esta función permite que el "modo prueba" (StartSessionModal) pueda ver
  * las cargas teóricas que se importaron en Hammer (hammerDb).
- *
- * Sin esta migración, Hammer guarda en hammerDb.blindManifests y
+ * 
+ * Sin esta migración, Hammer guarda en hammerDb.blindManifests y 
  * StartSessionModal busca en db.expectedOrders, causando desconexión.
  */
-export const migrateHammerManifestToExpectedOrders = async (
-  batchId: string,
-  orderId?: string
-): Promise<string> => {
+export const migrateHammerManifestToExpectedOrders = async (batchId: string, orderId?: string): Promise<string> => {
   const startTime = performance.now();
   try {
-    logger.info(
-      'MANIFEST_MIGRATION',
-      `Migrando manifest de Hammer a ExpectedOrders para lote: ${batchId}`
-    );
+    logger.info('MANIFEST_MIGRATION', `Migrando manifest de Hammer a ExpectedOrders para lote: ${batchId}`);
 
     // Obtener los manifests del batch
     const manifests = await hammerDb.blindManifests.where('batchId').equals(batchId).toArray();
@@ -420,7 +348,7 @@ export const migrateHammerManifestToExpectedOrders = async (
 
     // Verificar si ya existe la orden en expectedOrders
     const existingOrder = await db.expectedOrders.get(targetOrderId);
-
+    
     if (existingOrder) {
       logger.info('MANIFEST_MIGRATION', `La orden ${targetOrderId} ya existe, actualizando...`);
     }
@@ -429,7 +357,7 @@ export const migrateHammerManifestToExpectedOrders = async (
     const items = manifests.map(m => ({
       barcode: sanitizeBarcode(m.barcode),
       name: m.name || `SKU ${m.barcode}`,
-      expectedQty: m.expectedQty,
+      expectedQty: m.expectedQty
     }));
 
     // Crear la orden esperada
@@ -443,29 +371,21 @@ export const migrateHammerManifestToExpectedOrders = async (
       metadata: {
         documentType: 'Hammer Manifest',
         date: new Date().toLocaleDateString(),
-        orderNote: `Migrado desde Hammer batch: ${batchId}`,
+        orderNote: `Migrado desde Hammer batch: ${batchId}`
       },
       // Marcar que viene de hammer para diferenciarlo
-      _fromHammer: true,
+      _fromHammer: true
     };
 
     // Guardar en db.expectedOrders
     await db.expectedOrders.put(expectedOrder);
 
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'MIGRATION_SUCCESS',
-      { batchId, orderId: targetOrderId, itemCount: items.length },
-      duration,
-      batchId
-    );
+    telemetry.track('SYNC', 'MIGRATION_SUCCESS', { batchId, orderId: targetOrderId, itemCount: items.length }, duration, batchId);
 
-    logger.success(
-      'MANIFEST_MIGRATION',
-      `Manifest migrado: ${targetOrderId} con ${items.length} SKUs`
-    );
+    logger.success('MANIFEST_MIGRATION', `Manifest migrado: ${targetOrderId} con ${items.length} SKUs`);
     return targetOrderId;
+
   } catch (err: unknown) {
     const error = handleError(err, 'migrateHammerManifestToExpectedOrders');
     const duration = performance.now() - startTime;
@@ -477,16 +397,13 @@ export const migrateHammerManifestToExpectedOrders = async (
 
 /**
  * CARGAR MANIFEST COMO EXPECTED ORDER Y CREAR SESIÓN (COMBINADO)
- *
+ * 
  * Función utility que:
  * 1. Migra el manifest de Hammer a ExpectedOrders
  * 2. Crea una sesión lista para usar en modo prueba
  * 3. Retorna el ID de sesión para navegar directamente
  */
-export const loadHammerManifestAsTestSession = async (
-  batchId: string,
-  orderId?: string
-): Promise<{ sessionId: string; orderId: string }> => {
+export const loadHammerManifestAsTestSession = async (batchId: string, orderId?: string): Promise<{ sessionId: string; orderId: string }> => {
   const startTime = performance.now();
   try {
     logger.info('HAMMER_TEST_SESSION', `Creando sesión de prueba desde Hammer batch: ${batchId}`);
@@ -501,30 +418,25 @@ export const loadHammerManifestAsTestSession = async (
 
     // 2. Crear sesión de conteo
     const sessionLabel = `TEST_${batchId.substring(0, 8)}`;
-    const session = await createSession(migratedOrderId, sessionLabel, 'standard', expectedOrder);
+    const session = await createSession(
+      migratedOrderId,
+      sessionLabel,
+      'standard',
+      expectedOrder
+    );
 
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'TEST_SESSION_CREATED',
-      { batchId, orderId: migratedOrderId, sessionId: session.id },
-      duration,
-      batchId
-    );
+    telemetry.track('SYNC', 'TEST_SESSION_CREATED', { batchId, orderId: migratedOrderId, sessionId: session.id }, duration, batchId);
 
     logger.success('HAMMER_TEST_SESSION', `Sesión de prueba creada: ${session.id}`);
     return { sessionId: session.id, orderId: migratedOrderId };
+
   } catch (err: unknown) {
     const error = handleError(err, 'loadHammerManifestAsTestSession');
     const duration = performance.now() - startTime;
-    telemetry.track(
-      'SYNC',
-      'TEST_SESSION_FAIL',
-      { batchId, error: error.message },
-      duration,
-      batchId
-    );
+    telemetry.track('SYNC', 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
     logger.error('HAMMER_TEST_SESSION_FAIL', error.message);
     throw error;
   }
 };
+

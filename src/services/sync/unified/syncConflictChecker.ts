@@ -16,13 +16,6 @@ import { formatError } from './syncHelpers';
 import { syncRegistry } from './registry';
 import type { SyncConflict, ConflictStrategy } from './types';
 
-// Tipo para acceso dinámico a tablas Dexie
-type DexieTable = {
-  where: (index: string) => {
-    equals: (value: unknown) => { toArray: () => Promise<Record<string, unknown>[]> };
-  };
-};
-
 /**
  * Detecta conflictos de sincronización para todas las tablas registradas
  */
@@ -38,7 +31,7 @@ export async function checkConflicts(
     try {
       const conflictsForTable = await checkTableConflicts(meta, tableName);
       conflicts.push(...conflictsForTable);
-    } catch (e: unknown) {
+    } catch (e) {
       logger.error('CONFLICT_CHECK', `Error checking conflicts for ${tableName}`, formatError(e));
     }
   }
@@ -63,7 +56,7 @@ async function checkTableConflicts(
   const conflicts: SyncConflict[] = [];
   const now = Date.now();
 
-  const localTable = (db as unknown as Record<string, DexieTable>)[meta.localTable];
+  const localTable = (db as any)[meta.localTable];
   if (!localTable) return conflicts;
 
   // Obtener items con cambios pendientes
@@ -80,8 +73,8 @@ async function checkTableConflicts(
       .single();
 
     if (!error && remoteItem) {
-      const remoteUpdated = new Date(remoteItem.updated_at as string).getTime();
-      const localModified = (localItem.lastSyncTimestamp as number) || 0;
+      const remoteUpdated = new Date(remoteItem.updated_at).getTime();
+      const localModified = localItem.lastSyncTimestamp || 0;
 
       // Conflicto si remoto es más nuevo y local tiene cambios
       if (remoteUpdated > localModified) {
@@ -124,7 +117,7 @@ export async function resolveConflicts(
 
         emitResolved(conflict, strategy.type);
       }
-    } catch (e: unknown) {
+    } catch (e) {
       failed++;
       logger.error(
         'CONFLICT_RESOLVE',

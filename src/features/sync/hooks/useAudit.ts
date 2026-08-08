@@ -1,15 +1,15 @@
 /**
  * useAudit - Hook para registro de auditoría estilo AppSheet
- *
+ * 
  * Proporciona trazabilidad completa de cambios en la aplicación:
  * - CREATE, UPDATE, DELETE por registro
  * - Historial de cambios por tabla/registro
  * - Sincronización a la nube
- *
+ * 
  * @example
  * ```tsx
  * const { log, getRecordHistory, getTableHistory } = useAudit();
- *
+ * 
  * // Registrar un cambio
  * await log({
  *   tableName: 'events',
@@ -19,7 +19,7 @@
  *   oldValue: '10',
  *   newValue: '15'
  * });
- *
+ * 
  * // Obtener historial de un registro
  * const history = await getRecordHistory('events', '123');
  * ```
@@ -82,6 +82,7 @@ export interface UseAuditReturn {
  * Hook de auditoría - debe llamarse dentro de React context
  */
 export function useAudit(): UseAuditReturn {
+  
   const log = useCallback(async (entry: CreateAuditEntry) => {
     const auditEntry: Omit<AuditLogEntry, 'id'> = {
       tableName: entry.tableName,
@@ -99,31 +100,32 @@ export function useAudit(): UseAuditReturn {
     await db.audit_logs.add(auditEntry as AuditLogEntry);
   }, []);
 
-  const getRecordHistory = useCallback(
-    async (tableName: string, recordId: string): Promise<AuditLogEntry[]> => {
-      return db.audit_logs
-        .where('[tableName+recordId]')
-        .equals([tableName, recordId])
-        .reverse()
-        .sortBy('timestamp');
-    },
-    []
-  );
+  const getRecordHistory = useCallback(async (tableName: string, recordId: string): Promise<AuditLogEntry[]> => {
+    return db.audit_logs
+      .where('[tableName+recordId]')
+      .equals([tableName, recordId])
+      .reverse()
+      .sortBy('timestamp');
+  }, []);
 
-  const getTableHistory = useCallback(
-    async (tableName: string, limit = 50): Promise<AuditLogEntry[]> => {
-      return db.audit_logs.where('tableName').equals(tableName).reverse().limit(limit).toArray();
-    },
-    []
-  );
+  const getTableHistory = useCallback(async (tableName: string, limit = 50): Promise<AuditLogEntry[]> => {
+    return db.audit_logs
+      .where('tableName')
+      .equals(tableName)
+      .reverse()
+      .limit(limit)
+      .toArray();
+  }, []);
 
-  const getUserHistory = useCallback(
-    async (userId?: string, limit = 50): Promise<AuditLogEntry[]> => {
-      const uid = userId || getCurrentUserId();
-      return db.audit_logs.where('userId').equals(uid).reverse().limit(limit).toArray();
-    },
-    []
-  );
+  const getUserHistory = useCallback(async (userId?: string, limit = 50): Promise<AuditLogEntry[]> => {
+    const uid = userId || getCurrentUserId();
+    return db.audit_logs
+      .where('userId')
+      .equals(uid)
+      .reverse()
+      .limit(limit)
+      .toArray();
+  }, []);
 
   const getPendingSync = useCallback(async (): Promise<AuditLogEntry[]> => {
     return db.audit_logs
@@ -133,12 +135,18 @@ export function useAudit(): UseAuditReturn {
   }, []);
 
   const markSynced = useCallback(async (ids: number[]): Promise<void> => {
-    await db.audit_logs.where('id!').anyOf(ids).modify({ synced: true });
+    await db.audit_logs
+      .where('id!')
+      .anyOf(ids)
+      .modify({ synced: true });
   }, []);
 
   const purgeOld = useCallback(async (beforeTimestamp: number): Promise<number> => {
-    const toDelete = await db.audit_logs.where('timestamp').below(beforeTimestamp).toArray();
-
+    const toDelete = await db.audit_logs
+      .where('timestamp')
+      .below(beforeTimestamp)
+      .toArray();
+    
     const ids = toDelete.map(l => l.id!).filter(Boolean);
     await db.audit_logs.bulkDelete(ids);
     return ids.length;
@@ -147,7 +155,7 @@ export function useAudit(): UseAuditReturn {
   // Sincronizar logs pendientes a la nube
   const syncToCloud = useCallback(async (): Promise<{ synced: number; failed: number }> => {
     const pending = await getPendingSync();
-
+    
     if (pending.length === 0) {
       return { synced: 0, failed: 0 };
     }
@@ -171,12 +179,12 @@ export function useAudit(): UseAuditReturn {
         user_id: entry.userId || null,
         device_info: entry.deviceInfo || null,
         timestamp: new Date(entry.timestamp).toISOString(),
-        synced: true,
+        synced: true
       }));
 
       try {
         const result = await supabaseSyncService.pushBatch('AUDIT_LOGS', rows);
-
+        
         if (result?.success) {
           batch.forEach(entry => {
             if (entry.id) syncedIds.push(entry.id);
@@ -186,7 +194,7 @@ export function useAudit(): UseAuditReturn {
           failed += batch.length;
           logger.error('AUDIT_SYNC', result?.error || 'Unknown error');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         failed += batch.length;
         logger.error('AUDIT_SYNC', String(err));
       }
@@ -240,16 +248,24 @@ export const auditService = {
   },
 
   async getTableHistory(tableName: string, limit = 50): Promise<AuditLogEntry[]> {
-    return db.audit_logs.where('tableName').equals(tableName).reverse().limit(limit).toArray();
+    return db.audit_logs
+      .where('tableName')
+      .equals(tableName)
+      .reverse()
+      .limit(limit)
+      .toArray();
   },
 
   async getPendingSync(): Promise<AuditLogEntry[]> {
-    return db.audit_logs.where('synced').equals(0).toArray();
+    return db.audit_logs
+      .where('synced')
+      .equals(0)
+      .toArray();
   },
 
   async syncToCloud(): Promise<{ synced: number; failed: number }> {
     const pending = await this.getPendingSync();
-
+    
     if (pending.length === 0) {
       return { synced: 0, failed: 0 };
     }
@@ -272,12 +288,12 @@ export const auditService = {
         user_id: entry.userId || null,
         device_info: entry.deviceInfo || null,
         timestamp: new Date(entry.timestamp).toISOString(),
-        synced: true,
+        synced: true
       }));
 
       try {
         const result = await supabaseSyncService.pushBatch('AUDIT_LOGS', rows);
-
+        
         if (result?.success) {
           batch.forEach((entry: AuditLogEntry) => {
             if (entry.id) syncedIds.push(entry.id);
@@ -287,18 +303,21 @@ export const auditService = {
           failed += batch.length;
           logger.error('AUDIT_SYNC', result?.error || 'Unknown error');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         failed += batch.length;
         logger.error('AUDIT_SYNC', String(err));
       }
     }
 
     if (syncedIds.length > 0) {
-      await db.audit_logs.where('id!').anyOf(syncedIds).modify({ synced: true });
+      await db.audit_logs
+        .where('id!')
+        .anyOf(syncedIds)
+        .modify({ synced: true });
     }
 
     return { synced, failed };
-  },
+  }
 };
 
 export default useAudit;

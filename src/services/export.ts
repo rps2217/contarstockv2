@@ -59,6 +59,23 @@ const createExcelWorkbook = async (
   return { workbook, worksheet };
 };
 
+/**
+ * Generates and downloads a CSV file containing the provided data.
+ */
+export const exportToCSV = async (data: ExportData[], fileName: string) => {
+  const Papa = await import('papaparse');
+  const csv = Papa.unparse(data);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${fileName}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const HAMMER_COLUMNS: ExcelColumn[] = [
   { header: 'Código/SKU', width: 20 },
   { header: 'Descripción', width: 45 },

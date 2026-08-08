@@ -1,8 +1,8 @@
 /**
  * useProvidersSync - Hook para sincronización de proveedores
- *
+ * 
  * Usa genericSyncEngine directamente para sync de proveedores.
- *
+ * 
  * @deprecated Usar useSync de @/shared/hooks para sincronización genérica
  * y genericSyncEngine para operaciones específicas.
  */
@@ -10,7 +10,10 @@
 import { useCallback, useState } from 'react';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 
-export const useProvidersSync = (tableName: string, loadProviders: () => Promise<void>) => {
+export const useProvidersSync = (
+  tableName: string, 
+  loadProviders: () => Promise<void>
+) => {
   // Estado de sincronización
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -21,7 +24,7 @@ export const useProvidersSync = (tableName: string, loadProviders: () => Promise
       const result = await genericSyncEngine.pushIncremental('providers');
       setIsSyncing(false);
       return result;
-    } catch (error: unknown) {
+    } catch (error) {
       setIsSyncing(false);
       throw error;
     }
@@ -37,7 +40,7 @@ export const useProvidersSync = (tableName: string, loadProviders: () => Promise
       await loadProviders();
       setIsSyncing(false);
       return result;
-    } catch (error: unknown) {
+    } catch (error) {
       setIsSyncing(false);
       throw error;
     }
@@ -46,6 +49,6 @@ export const useProvidersSync = (tableName: string, loadProviders: () => Promise
   return {
     isSyncing,
     handleSyncToCloud,
-    handleDownloadFromCloud,
+    handleDownloadFromCloud
   };
 };

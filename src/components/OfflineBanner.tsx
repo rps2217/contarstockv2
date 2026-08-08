@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { WifiOff, RefreshCw, Cloud, AlertTriangle, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useSyncStore } from '@/stores';
@@ -18,23 +18,16 @@ export const EnhancedOfflineBanner: React.FC = () => {
   const prevPendingCountRef = useRef<number>(0);
 
   // Contar items pendientes de sync
-  const pendingCount = useLiveQuery(
-    async () => {
-      try {
-        const scans = await db.scans.where('syncStatus').equals('pending').count();
-        const sessions = await db.sessions.where('syncStatus').equals('pending').count();
-        const dynamic = await db.dynamic_data
-          .where('syncStatus')
-          .anyOf(['pending', 'error'])
-          .count();
-        return scans + sessions + dynamic;
-      } catch {
-        return 0;
-      }
-    },
-    [],
-    0
-  );
+  const pendingCount = useLiveQuery(async () => {
+    try {
+      const scans = await db.scans.where('syncStatus').equals('pending').count();
+      const sessions = await db.sessions.where('syncStatus').equals('pending').count();
+      const dynamic = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count();
+      return scans + sessions + dynamic;
+    } catch {
+      return 0;
+    }
+  }, [], 0);
 
   // Determinar estado - memoizado para evitar cálculos innecesarios
   const status = useMemo<BannerStatus>(() => {
@@ -54,7 +47,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
         iconColor: 'text-white',
         label: 'Modo Offline',
         sublabel: pendingCount > 0 ? `${pendingCount} cambios pendientes` : 'Sin conexión',
-        animate: true,
+        animate: true
       },
       syncing: {
         bg: 'bg-blue-600',
@@ -62,7 +55,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
         iconColor: 'text-white animate-spin',
         label: 'Sincronizando...',
         sublabel: 'Subiendo cambios',
-        animate: false,
+        animate: false
       },
       synced: {
         bg: 'bg-emerald-600',
@@ -72,7 +65,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
         sublabel: lastSyncTime
           ? `Última sync: hace ${formatDistanceToNow(lastSyncTime, { addSuffix: true, locale: es })}`
           : 'Todo al día',
-        animate: false,
+        animate: false
       },
       pending: {
         bg: 'bg-amber-500',
@@ -80,7 +73,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
         iconColor: 'text-white',
         label: 'Cambios Pendientes',
         sublabel: `${pendingCount} elementos por sincronizar`,
-        animate: true,
+        animate: true
       },
       error: {
         bg: 'bg-rose-600',
@@ -88,8 +81,8 @@ export const EnhancedOfflineBanner: React.FC = () => {
         iconColor: 'text-white',
         label: 'Error de Sincronización',
         sublabel: syncError || 'Revisa tu conexión',
-        animate: true,
-      },
+        animate: true
+      }
     };
     return config[status];
   }, [status, pendingCount, lastSyncTime, syncError]);
@@ -153,16 +146,10 @@ export const EnhancedOfflineBanner: React.FC = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           {/* Left: Icon + Text */}
           <div className="flex items-center gap-2.5">
-            <Icon
-              className={`w-4 h-4 ${currentConfig.iconColor} ${currentConfig.animate ? 'animate-pulse' : ''}`}
-            />
+            <Icon className={`w-4 h-4 ${currentConfig.iconColor} ${currentConfig.animate ? 'animate-pulse' : ''}`} />
             <div className="flex flex-col">
-              <span className="text-[11px] font-black uppercase tracking-tight leading-none">
-                {currentConfig.label}
-              </span>
-              <span className="text-[9px] font-medium opacity-90 mt-0.5">
-                {currentConfig.sublabel}
-              </span>
+              <span className="text-[11px] font-black uppercase tracking-tight leading-none">{currentConfig.label}</span>
+              <span className="text-[9px] font-medium opacity-90 mt-0.5">{currentConfig.sublabel}</span>
             </div>
           </div>
 
@@ -179,7 +166,6 @@ export const EnhancedOfflineBanner: React.FC = () => {
             {/* Dismiss button for pending */}
             {status === 'pending' && (
               <button
-                aria-label="Ocultar notificación"
                 onClick={() => setDismissedPending(true)}
                 className="w-6 h-6 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors"
                 title="Ocultar notificación"
@@ -189,9 +175,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
             )}
 
             {/* Online/Offline indicator */}
-            <div
-              className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-300' : 'bg-white/50'}`}
-            />
+            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-300' : 'bg-white/50'}`} />
           </div>
         </div>
       </motion.div>

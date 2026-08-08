@@ -8,7 +8,7 @@
 // NOTA: normalizeSku ha sido movido a @/lib/normalize
 
 // Re-export normalize functions from centralized location
-export { normalizeSku, sanitizeBarcode, normalizeIdentity } from '@/lib/normalize';
+export { normalizeSku, sanitizeBarcode, normalizeIdentity, normalizeHeader } from '@/lib/normalize';
 
 /**
  * Formatea un timestamp a fecha legible
@@ -252,12 +252,32 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 }
 
 /**
- * Formatea bytes a string legible (B, KB, MB, GB)
+ * Sleep utility
  */
-export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry con backoff exponencial
+ */
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  let lastError: Error;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (i < maxRetries - 1) {
+        await sleep(baseDelay * Math.pow(2, i));
+      }
+    }
+  }
+
+  throw lastError!;
 }

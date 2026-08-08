@@ -5,15 +5,6 @@ import { logger } from './logger';
 import { useSyncStore } from '@/stores';
 import { handleError } from './types';
 
-// Tipo para el resultado de supabaseSyncService
-interface SyncPullResult {
-  success: boolean;
-  rows?: Record<string, unknown>[];
-  error?: string;
-  isMissing?: boolean;
-  isOffline?: boolean;
-}
-
 export const dynamicSyncService = {
   /**
    * Sincroniza registros pendientes de la tabla dynamic_data.
@@ -140,7 +131,7 @@ export const dynamicSyncService = {
           }
 
           const rows = batchRecords.map(r => {
-            const row: Record<string, unknown> = { ...r.data };
+            const row: Record<string, any> = { ...r.data };
 
             // Asegurar que el ID y el Timestamp se incluyan siempre
             row['id'] = r.id; // Supabase standard
@@ -159,10 +150,9 @@ export const dynamicSyncService = {
           let result;
           try {
             result = await supabaseSyncService.pushBatch(tableName, rows);
-          } catch (syncError: unknown) {
-            const err = syncError as { code?: string; message?: string };
+          } catch (syncError: any) {
             // Handle "relation does not exist" error gracefully
-            if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
+            if (syncError?.code === '42P01' || syncError?.message?.includes('does not exist')) {
               logger.warn(
                 'DYNAMIC_SYNC',
                 `Tabla ${tableName} no existe en Supabase. Ignorando ${rows.length} registros.`
@@ -250,13 +240,13 @@ export const dynamicSyncService = {
   ): Promise<{ added: number; updated: number }> {
     if (onProgress) onProgress(`Descargando datos de ${tableName}...`);
 
-    const result = (await supabaseSyncService.pullBatch(tableName)) as SyncPullResult;
+    const result = await supabaseSyncService.pullBatch(tableName);
     if (!result.success || !result.rows) {
-      if (result.isMissing) {
+      if ((result as any).isMissing) {
         logger.info('SYNC', `Tabla ${tableName} no existe en el origen. Ignorando.`);
         return { added: 0, updated: 0 };
       }
-      if (result.isOffline) {
+      if ((result as any).isOffline) {
         logger.info('SYNC', `Sin conexión: omitiendo pull para ${tableName}`);
         return { added: 0, updated: 0 };
       }
@@ -294,7 +284,7 @@ export const dynamicSyncService = {
         for (const rawRow of batch) {
           // NORMALIZACIÓN DE LLAVES (Protocolo de Resiliencia)
           // Esto asegura que exp["SKU"] funcione aunque en el Excel diga "Sku " o "sku"
-          const remoteRow: Record<string, unknown> = {};
+          const remoteRow: Record<string, any> = {};
           Object.keys(rawRow).forEach(k => {
             const normalizedKey = k
               .trim()
@@ -318,11 +308,12 @@ export const dynamicSyncService = {
           const localRecord = await db.dynamic_data.get(remoteId);
 
           if (localRecord) {
-            const timestampValue =
-              remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA'];
-            const remoteTimestamp = timestampValue
-              ? new Date(timestampValue as string | number).getTime()
-              : 0;
+            const remoteTimestamp =
+              remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']
+                ? new Date(
+                    remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']
+                  ).getTime()
+                : 0;
 
             // FASE 3: SMART MERGE (Joyeria Técnica)
             // Si el registro local tiene cambios pendientes, hacemos un merge campo por campo
@@ -355,11 +346,12 @@ export const dynamicSyncService = {
               updated++;
             }
           } else {
-            const timestampValue =
-              remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA'];
-            const remoteTimestamp = timestampValue
-              ? new Date(timestampValue as string | number).getTime()
-              : Date.now();
+            const remoteTimestamp =
+              remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']
+                ? new Date(
+                    remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']
+                  ).getTime()
+                : Date.now();
 
             recordsToPut.push({
               id: remoteId,

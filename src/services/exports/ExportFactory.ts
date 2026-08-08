@@ -8,42 +8,7 @@
 import type { ExportFormat, ExportData, ExportOptions, ExportResult } from './exportTypes';
 import { exportToCSV } from './csvExport';
 import { exportToExcel } from './excelExport';
-import {
-  exportToPDF,
-  exportSessionManifestPDF,
-  exportDiscrepancyPDF,
-  SessionPDFData,
-} from './pdfExport';
-
-// Tipos para exports
-export interface SessionExportItem {
-  barcode: string;
-  productName: string;
-  totalQuantity: number;
-  scans: number;
-  expectedQuantity?: number;
-}
-
-export interface HammerExportItem {
-  barcode: string;
-  name: string;
-  loc?: string;
-  totalQuantity: number;
-  expectedQty?: number;
-  lastTimestamp: number;
-}
-
-export interface DiscrepancyItem {
-  barcode: string;
-  productName: string;
-  physical: number;
-  expected: number;
-  difference: number;
-}
-
-export interface DiscrepancyMatch {
-  discrepancies?: DiscrepancyItem[];
-}
+import { exportToPDF, exportSessionManifestPDF, exportDiscrepancyPDF } from './pdfExport';
 
 export interface ExportConfig {
   format: ExportFormat;
@@ -100,7 +65,7 @@ export class ExportFactory {
         fileName: config.fileName,
         mimeType: this.getMimeType(config.format),
       };
-    } catch (error: unknown) {
+    } catch (error) {
       return {
         success: false,
         error: String(error),
@@ -112,8 +77,8 @@ export class ExportFactory {
    * Exportar sesión de conteo
    */
   static async exportSession(
-    session: SessionPDFData,
-    items: SessionExportItem[],
+    session: any,
+    items: any[],
     format: ExportFormat
   ): Promise<ExportResult> {
     try {
@@ -149,7 +114,7 @@ export class ExportFactory {
         fileName: `Conteo_${session.erpOrder}.${format}`,
         mimeType: this.getMimeType(format),
       };
-    } catch (error: unknown) {
+    } catch (error) {
       return {
         success: false,
         error: String(error),
@@ -162,7 +127,7 @@ export class ExportFactory {
    */
   static async exportHammer(
     batchId: string,
-    items: HammerExportItem[],
+    items: any[],
     format: ExportFormat
   ): Promise<ExportResult> {
     try {
@@ -196,7 +161,7 @@ export class ExportFactory {
         fileName: `Hammer_${batchId}.${format}`,
         mimeType: this.getMimeType(format),
       };
-    } catch (error: unknown) {
+    } catch (error) {
       return {
         success: false,
         error: String(error),
@@ -208,7 +173,7 @@ export class ExportFactory {
    * Exportar discrepancias
    */
   static async exportDiscrepancies(
-    match: DiscrepancyMatch,
+    match: any,
     sessionLabel: string,
     format: ExportFormat
   ): Promise<ExportResult> {
@@ -216,7 +181,7 @@ export class ExportFactory {
       if (format === 'pdf') {
         await exportDiscrepancyPDF(match.discrepancies || [], sessionLabel);
       } else {
-        const csvData = (match.discrepancies || []).map((d: DiscrepancyItem) => ({
+        const csvData = (match.discrepancies || []).map((d: any) => ({
           barcode: d.barcode,
           productName: d.productName,
           physical: d.physical,
@@ -231,7 +196,7 @@ export class ExportFactory {
         fileName: `Discrepancias_${sessionLabel}.${format}`,
         mimeType: this.getMimeType(format),
       };
-    } catch (error: unknown) {
+    } catch (error) {
       return {
         success: false,
         error: String(error),

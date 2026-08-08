@@ -2,12 +2,12 @@
  * =============================================================================
  * SYNC QUEUE - Cola de Operaciones Offline
  * =============================================================================
- *
+ * 
  * Maneja operaciones que deben sincronizarse cuando hay conexión.
  * Garantiza que ninguna operación se pierda aunque la app se cierre.
- *
+ * 
  * ARQUITECTURA:
- *
+ * 
  * ┌─────────────────────────────────────────────────────────────────┐
  * │                      OPERACIONES                               │
  * │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐         │
@@ -41,7 +41,7 @@
  * │                                 │  Supabase    │          │
  * │                                 └──────────────┘          │
  * └─────────────────────────────────────────────────────────────┘
- *
+ * 
  * @module SyncQueue
  */
 
@@ -67,7 +67,7 @@ export interface SyncQueueItem {
   /** Operación a realizar */
   operation: SyncOperation;
   /** Datos del registro */
-  data: Record<string, unknown>;
+  data: Record<string, any>;
   /** Timestamp cuando se creó el item */
   createdAt: number;
   /** Timestamp de la última modificación del registro */
@@ -108,7 +108,7 @@ interface SyncQueueDB extends DBSchema {
     key: string;
     value: {
       key: string;
-      value: unknown;
+      value: any;
       updatedAt: number;
     };
   };
@@ -126,7 +126,7 @@ class SyncQueueManager {
   private isProcessing = false;
   private isOnline = navigator.onLine;
   private processorInterval: ReturnType<typeof setInterval> | null = null;
-
+  
   // Referencias a handlers para cleanup
   private onlineHandler = () => this.handleOnline();
   private offlineHandler = () => this.handleOffline();
@@ -174,13 +174,11 @@ class SyncQueueManager {
   /**
    * Añade una operación a la cola
    */
-  async enqueue(
-    item: Omit<SyncQueueItem, 'id' | 'createdAt' | 'retryCount' | 'status' | 'lastAttemptAt'>
-  ): Promise<string> {
+  async enqueue(item: Omit<SyncQueueItem, 'id' | 'createdAt' | 'retryCount' | 'status' | 'lastAttemptAt'>): Promise<string> {
     await this.ensureDb();
 
     const id = `${item.tableName}_${item.recordId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
+    
     const queueItem: SyncQueueItem = {
       ...item,
       id,
@@ -190,9 +188,9 @@ class SyncQueueManager {
     };
 
     await this.db!.put('syncQueue', queueItem);
-
+    
     logger.info('SyncQueue', `Enqueued: ${item.operation} on ${item.tableName}/${item.recordId}`);
-
+    
     // Intentar procesar inmediatamente si estamos online
     if (this.isOnline) {
       this.processQueue();
@@ -208,7 +206,7 @@ class SyncQueueManager {
     await this.ensureDb();
 
     const items = await this.db!.getAllFromIndex('syncQueue', 'by-status', 'queued');
-
+    
     // Ordenar por createdAt (FIFO)
     items.sort((a, b) => a.createdAt - b.createdAt);
 
@@ -229,17 +227,17 @@ class SyncQueueManager {
    */
   async markSynced(id: string): Promise<void> {
     await this.ensureDb();
-
+    
     const item = await this.db!.get('syncQueue', id);
     if (item) {
       item.status = 'synced';
       await this.db!.put('syncQueue', item);
-
+      
       // Remover después de un delay para debugging
       setTimeout(async () => {
         await this.db?.delete('syncQueue', id);
       }, 60000); // 1 minuto
-
+      
       logger.info('SyncQueue', `Synced: ${id}`);
     }
   }
@@ -249,14 +247,14 @@ class SyncQueueManager {
    */
   async markFailed(id: string, error: string): Promise<void> {
     await this.ensureDb();
-
+    
     const item = await this.db!.get('syncQueue', id);
     if (item) {
       item.status = item.retryCount >= 5 ? 'failed' : 'queued';
       item.lastError = error;
       item.retryCount++;
       await this.db!.put('syncQueue', item);
-
+      
       logger.warn('SyncQueue', `Failed: ${id} (attempt ${item.retryCount}): ${error}`);
     }
   }
@@ -266,12 +264,12 @@ class SyncQueueManager {
    */
   async cancel(id: string): Promise<void> {
     await this.ensureDb();
-
+    
     const item = await this.db!.get('syncQueue', id);
     if (item) {
       item.status = 'cancelled';
       await this.db!.put('syncQueue', item);
-
+      
       // Remover después de un delay
       setTimeout(async () => {
         await this.db?.delete('syncQueue', id);
@@ -286,7 +284,7 @@ class SyncQueueManager {
     await this.ensureDb();
 
     const all = await this.db!.getAll('syncQueue');
-
+    
     return {
       pending: all.filter(i => i.status === 'queued').length,
       processing: all.filter(i => i.status === 'processing').length,
@@ -330,7 +328,7 @@ class SyncQueueManager {
     await this.ensureDb();
 
     const failed = await this.db!.getAllFromIndex('syncQueue', 'by-status', 'failed');
-
+    
     for (const item of failed) {
       item.status = 'queued';
       item.retryCount = 0;
@@ -373,12 +371,12 @@ class SyncQueueManager {
 
   private async processQueue(): Promise<void> {
     if (this.isProcessing || !this.isOnline) return;
-
+    
     this.isProcessing = true;
 
     try {
       const item = await this.dequeue();
-
+      
       if (!item) {
         this.isProcessing = false;
         return;
@@ -386,7 +384,8 @@ class SyncQueueManager {
 
       // Emitir evento para que el sync engine procese
       window.dispatchEvent(new CustomEvent('sync:process', { detail: item }));
-    } catch (error: unknown) {
+
+    } catch (error) {
       logger.error('SyncQueue', 'Processing error', String(error));
     } finally {
       this.isProcessing = false;
@@ -401,11 +400,11 @@ class SyncQueueManager {
       clearInterval(this.processorInterval);
       this.processorInterval = null;
     }
-
+    
     // Limpiar event listeners
     window.removeEventListener('online', this.onlineHandler);
     window.removeEventListener('offline', this.offlineHandler);
-
+    
     if (this.db) {
       this.db.close();
       this.db = null;
@@ -428,7 +427,7 @@ export async function enqueueSync(
   registryKey: string,
   recordId: string,
   operation: SyncOperation,
-  data: Record<string, unknown>,
+  data: Record<string, any>,
   recordUpdatedAt?: number
 ): Promise<string> {
   return syncQueue.enqueue({

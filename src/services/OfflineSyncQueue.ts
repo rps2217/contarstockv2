@@ -82,7 +82,7 @@ export class OfflineSyncQueue {
   private isOnline = navigator.onLine;
   private syncInterval: ReturnType<typeof setInterval> | null = null;
   private listeners: Set<(state: QueueState) => void> = new Set();
-
+  
   // Referencias a handlers para cleanup
   private onlineHandler = () => {
     this.isOnline = true;
@@ -90,7 +90,7 @@ export class OfflineSyncQueue {
     this.notifyListeners();
     this.triggerSync();
   };
-
+  
   private offlineHandler = () => {
     this.isOnline = false;
     logger.info('OfflineSyncQueue', 'Network offline');
@@ -137,7 +137,7 @@ export class OfflineSyncQueue {
         });
         logger.info('OfflineSyncQueue', `Loaded ${operations.length} queued operations`);
       }
-    } catch (e: unknown) {
+    } catch (e) {
       logger.error('OfflineSyncQueue', 'Error loading from storage', e);
     }
   }
@@ -146,7 +146,7 @@ export class OfflineSyncQueue {
     try {
       const operations = Array.from(this.operations.values());
       localStorage.setItem(this.options.storageKey, JSON.stringify({ operations }));
-    } catch (e: unknown) {
+    } catch (e) {
       logger.error('OfflineSyncQueue', 'Error saving to storage', e);
     }
   }
@@ -247,7 +247,7 @@ export class OfflineSyncQueue {
           await this.syncOperation(operation);
           this.operations.delete(operation.id);
           telemetry.track('SYNC', 'SYNC_SUCCESS', { id: operation.id });
-        } catch (e: unknown) {
+        } catch (e) {
           const error = e instanceof Error ? e.message : 'Unknown error';
 
           if (operation.retryCount >= this.options.maxRetries) {
@@ -332,11 +332,11 @@ export class OfflineSyncQueue {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
-
+    
     // Limpiar event listeners
     window.removeEventListener('online', this.onlineHandler);
     window.removeEventListener('offline', this.offlineHandler);
-
+    
     this.listeners.clear();
   }
 }

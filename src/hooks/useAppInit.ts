@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
 import { logger } from '@/services/logger';
+;
 import { InitializationService, InitStep } from '@/services/initializationService';
 import { initPersistence } from '@/services/backupService';
 
@@ -24,7 +25,7 @@ export const useAppInit = () => {
       setIsAuthenticated(authStatus);
 
       if (authStatus) {
-        InitializationService.run(step => {
+        InitializationService.run((step) => {
           setInitStep(step);
           if (step === 'ready') setBootState('ready');
         });
@@ -54,7 +55,7 @@ export const useAppInit = () => {
     bootState,
     initStep,
     isAuthenticated,
-    handleLoginSuccess,
+    handleLoginSuccess
   };
 };
 
@@ -69,20 +70,14 @@ async function runIntegrityCheckInBackground(): Promise<void> {
 
     // Registrar métricas en HealthService
     if (!result.passed && result.criticalIssues > 0) {
-      logger.warn('useAppInit', 'Problemas críticos encontrados en IntegrityCheck', {
-        count: result.criticalIssues,
-      });
+      logger.warn('useAppInit', 'Problemas críticos encontrados en IntegrityCheck', { count: result.criticalIssues });
     }
 
     // Auto-fix solo problemas menores automáticamente
     if (result.warningIssues > 0 && result.criticalIssues === 0) {
       await integrityService.autoFix();
     }
-  } catch (error: unknown) {
-    logger.error(
-      'useAppInit',
-      'IntegrityCheck error',
-      error instanceof Error ? error.message : String(error)
-    );
+  } catch (error) {
+    logger.error('useAppInit', 'IntegrityCheck error', error instanceof Error ? error.message : String(error));
   }
 }

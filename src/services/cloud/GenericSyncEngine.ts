@@ -14,19 +14,6 @@ import {
 // Tipo para registros de sync
 type SyncRecord = Record<string, unknown>;
 
-// Tipo para acceso dinámico a tablas Dexie
-type DexieTable = {
-  get: (id: unknown) => Promise<unknown>;
-  put: (item: unknown) => Promise<unknown>;
-  add: (item: unknown) => Promise<unknown>;
-  update: (id: unknown, changes: unknown) => Promise<number>;
-  delete: (id: unknown) => Promise<void>;
-  toArray: () => Promise<SyncRecord[]>;
-  where: (field: string) => {
-    equals: (value: unknown) => { toArray: () => Promise<SyncRecord[]> };
-  };
-};
-
 export class GenericSyncEngine {
   /**
    * Pushes only dirty (non-synced) local changes to the cloud.
@@ -35,7 +22,7 @@ export class GenericSyncEngine {
     const meta = syncRegistry[registryKey];
     if (!meta) throw new Error(`Registry key ${registryKey} not found`);
 
-    const localTable = db[meta.localTable] as DexieTable;
+    const localTable = (db as any)[meta.localTable];
     if (!localTable) return { success: 0, failed: 0 };
 
     // Skip optional tables that don't exist
@@ -108,7 +95,7 @@ export class GenericSyncEngine {
         const result = await supabaseSyncService.pushBatch(meta.remoteTable, rows as object[]);
         if (result.success) {
           // Mark as synced locally
-          await db.transaction('rw', localTable as unknown as string[], async () => {
+          await db.transaction('rw', localTable, async () => {
             for (const item of chunk) {
               const id = item[meta.primaryKey] || item.id;
               await localTable.update(id, {
@@ -180,14 +167,14 @@ export class GenericSyncEngine {
       return { added: 0, updated: 0 };
     }
 
-    const localTable = db[meta.localTable] as DexieTable;
+    const localTable = (db as any)[meta.localTable];
     if (!localTable) return { added: 0, updated: 0 };
 
     let added = 0;
     let updated = 0;
     let maxRemoteTime = 0;
 
-    await db.transaction('rw', localTable as unknown as string[], async () => {
+    await db.transaction('rw', localTable, async () => {
       // 1. Obtener todos los registros locales cargados para este registry (solo si es full pull)
       let localRecords: SyncRecord[] = [];
       if (!lastSyncDate) {
@@ -206,12 +193,11 @@ export class GenericSyncEngine {
       // 2. Procesar inserciones y actualizaciones remotas (Upsert remoto -> local)
       const remoteIds = new Set<string>();
       for (const row of remoteRows) {
-        const mapped = meta.mapToLocal ? meta.mapToLocal(row) : (row as Record<string, unknown>);
-        const mappedRecord = mapped as Record<string, unknown>;
-        const id = mappedRecord[meta.primaryKey] || mappedRecord.id;
+        const mapped = meta.mapToLocal ? meta.mapToLocal(row) : row;
+        const id = mapped[meta.primaryKey] || mapped.id;
         remoteIds.add(String(id));
 
-        const existing = (await localTable.get(id)) as SyncRecord | undefined;
+        const existing = await localTable.get(id);
         const rawRemoteTime = row.updated_at || row.timestamp || 0;
         let remoteTime = 0;
         if (rawRemoteTime) {
@@ -223,13 +209,10 @@ export class GenericSyncEngine {
         if (remoteTime > maxRemoteTime) maxRemoteTime = remoteTime;
 
         if (existing) {
-          const rawLocalTime =
-            (existing as { updatedAt?: unknown; timestamp?: unknown }).updatedAt ||
-            (existing as { timestamp?: unknown }).timestamp ||
-            0;
+          const rawLocalTime = existing.updatedAt || existing.timestamp || 0;
           let localTime = 0;
           if (rawLocalTime) {
-            const parsedLocal = new Date(rawLocalTime as string | number).getTime();
+            const parsedLocal = new Date(rawLocalTime).getTime();
             if (!isNaN(parsedLocal)) {
               localTime = parsedLocal;
             }
@@ -246,7 +229,7 @@ export class GenericSyncEngine {
             const resolution = applyStrategy(
               strategy,
               { data: existing, timestamp: localTime },
-              { data: mapped as Record<string, unknown>, timestamp: remoteTime }
+              { data: mapped, timestamp: remoteTime }
             );
 
             const store = useSyncStore.getState();
@@ -267,10 +250,7 @@ export class GenericSyncEngine {
               );
             } else {
               // Server wins: Apply remote version
-              await localTable.update(id, {
-                ...(resolution.resolvedData as Record<string, unknown>),
-                syncStatus: 'synced',
-              });
+              await localTable.update(id, { ...resolution.resolvedData, syncStatus: 'synced' });
               updated++;
               logger.info(
                 'SYNC_CONFLICT',
@@ -278,11 +258,11 @@ export class GenericSyncEngine {
               );
             }
           } else if (remoteTime > localTime) {
-            await localTable.update(id, { ...mappedRecord, syncStatus: 'synced' });
+            await localTable.update(id, { ...mapped, syncStatus: 'synced' });
             updated++;
           }
         } else {
-          await localTable.add({ ...mappedRecord, syncStatus: 'synced' });
+          await localTable.add({ ...mapped, syncStatus: 'synced' });
           added++;
         }
       }
@@ -312,7 +292,7 @@ export class GenericSyncEngine {
         // Save the date slightly before the max to handle identical timestamps if any.
         // Actually, saving maxRemoteTime exactly is okay.
         await db.settings.put({ key: lastSyncKey, value: new Date(maxRemoteTime).toISOString() });
-      } catch (e: unknown) {
+      } catch (e) {
         logger.error('SYNC_ENGINE', `Failed to update last sync date for ${meta.remoteTable}`);
       }
     }

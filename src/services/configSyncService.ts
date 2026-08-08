@@ -3,7 +3,7 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings, saveSettings } from './settings';
 import { logger } from './logger';
 import { handleError, ServiceError } from './types';
-import { AppSettings, CloudStorageConfig, MessageTemplate } from '../types';
+import { AppSettings, MessageTemplate } from '../types';
 
 const CONFIG_COLLECTION = 'APP_CONFIG';
 const CONFIG_DOC_ID = 'global_settings';
@@ -18,17 +18,11 @@ export const configSyncService = {
   async pushSettings(): Promise<void> {
     try {
       const settings = getSettings();
-
+      
       // Obtener plantillas
-      const emailTemplateRecords = await db.dynamic_data
-        .where('tableName')
-        .equals('PLANTILLAS_CORREOS')
-        .toArray();
+      const emailTemplateRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_CORREOS').toArray();
       const emailTemplates = emailTemplateRecords.map(r => r.data);
-      const messageTemplateRecords = await db.dynamic_data
-        .where('tableName')
-        .equals('PLANTILLAS_MENSAJES')
-        .toArray();
+      const messageTemplateRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_MENSAJES').toArray();
       const messageTemplates = messageTemplateRecords.map(r => r.data);
 
       // Solo subimos lo que es relevante para la sincronización entre dispositivos
@@ -41,16 +35,14 @@ export const configSyncService = {
         defaultStartModule: settings.defaultStartModule,
         emailTemplates,
         messageTemplates,
-        updatedAt: Date.now(),
+        updatedAt: Date.now()
       };
 
-      await supabaseSyncService.pushBatch(CONFIG_COLLECTION, [
-        {
-          id: CONFIG_DOC_ID,
-          ...syncableSettings,
-        },
-      ]);
-
+      await supabaseSyncService.pushBatch(CONFIG_COLLECTION, [{
+        id: CONFIG_DOC_ID,
+        ...syncableSettings
+      }]);
+      
       logger.info('CONFIG_SYNC', 'Configuración respaldada en la nube');
     } catch (err: unknown) {
       const error = handleError(err, 'CONFIG_SYNC_PUSH_FAIL');
@@ -76,24 +68,18 @@ export const configSyncService = {
       if (!remoteConfig) return false;
 
       const currentSettings = getSettings();
-
+      
       // Fusionar configuraciones con type assertions apropiados
-      // Nota: cloudConfig requiere cast directo debido a campos opcionales en SupabaseRow
-      const remoteCloudConfig = remoteConfig.cloudConfig as Partial<CloudStorageConfig> | undefined;
-      const mergedCloudConfig = remoteCloudConfig
-        ? ({ ...currentSettings.cloudConfig, ...remoteCloudConfig } as CloudStorageConfig)
-        : currentSettings.cloudConfig;
       const newSettings: AppSettings = {
         ...currentSettings,
         pharmacyName: (remoteConfig.pharmacyName as string) || currentSettings.pharmacyName,
-        cloudConfig: mergedCloudConfig,
+        cloudConfig: {
+          ...currentSettings.cloudConfig,
+          ...(remoteConfig.cloudConfig as any)
+        },
         schema: (remoteConfig.schema as AppSettings['schema']) || currentSettings.schema,
-        mobileNavConfig:
-          (remoteConfig.mobileNavConfig as AppSettings['mobileNavConfig']) ||
-          currentSettings.mobileNavConfig,
-        defaultStartModule:
-          (remoteConfig.defaultStartModule as AppSettings['defaultStartModule']) ||
-          currentSettings.defaultStartModule,
+        mobileNavConfig: (remoteConfig.mobileNavConfig as AppSettings['mobileNavConfig']) || currentSettings.mobileNavConfig,
+        defaultStartModule: (remoteConfig.defaultStartModule as AppSettings['defaultStartModule']) || currentSettings.defaultStartModule
       };
 
       await saveSettings(newSettings);
@@ -101,12 +87,9 @@ export const configSyncService = {
       // Restaurar plantillas
       if (Array.isArray(remoteConfig.emailTemplates) && remoteConfig.emailTemplates.length > 0) {
         // Obtenemos las actuales para no duplicar incontrolablemente o limpiar y restaurar
-        const existingRecords = await db.dynamic_data
-          .where('tableName')
-          .equals('PLANTILLAS_CORREOS')
-          .toArray();
+        const existingRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_CORREOS').toArray();
         const existingIds = new Set(existingRecords.map(r => r.id));
-
+        
         const newRecords: DynamicRecord[] = [];
         for (const tpl of remoteConfig.emailTemplates) {
           if (!tpl.id) continue;
@@ -116,7 +99,7 @@ export const configSyncService = {
               tableName: 'PLANTILLAS_CORREOS',
               data: tpl,
               timestamp: Date.now(),
-              syncStatus: 'synced',
+              syncStatus: 'synced'
             });
           } else {
             // Actualizar existente
@@ -128,16 +111,10 @@ export const configSyncService = {
         }
       }
 
-      if (
-        Array.isArray(remoteConfig.messageTemplates) &&
-        remoteConfig.messageTemplates.length > 0
-      ) {
-        const existingMessages = await db.dynamic_data
-          .where('tableName')
-          .equals('PLANTILLAS_MENSAJES')
-          .toArray();
+      if (Array.isArray(remoteConfig.messageTemplates) && remoteConfig.messageTemplates.length > 0) {
+        const existingMessages = await db.dynamic_data.where('tableName').equals('PLANTILLAS_MENSAJES').toArray();
         const existingMIds = new Set(existingMessages.map(m => m.id));
-
+        
         const newRecords: DynamicRecord[] = [];
         for (const tpl of remoteConfig.messageTemplates) {
           if (!tpl.id) continue;
@@ -147,7 +124,7 @@ export const configSyncService = {
               tableName: 'PLANTILLAS_MENSAJES',
               data: tpl,
               timestamp: Date.now(),
-              syncStatus: 'synced',
+              syncStatus: 'synced'
             });
           } else {
             await db.dynamic_data.update(tpl.id, { data: tpl });
@@ -165,5 +142,5 @@ export const configSyncService = {
       logger.error('CONFIG_SYNC_PULL_FAIL', error.message);
       return false;
     }
-  },
+  }
 };

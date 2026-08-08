@@ -1,6 +1,6 @@
 /**
  * Monitoring Service - Sentry + Web Vitals
- *
+ * 
  * Configuración centralizada para monitoreo en producción.
  * Solo se inicializa en entorno de producción.
  */
@@ -18,18 +18,9 @@ interface WebVitalsMetric {
   id: string;
 }
 
-// Tipos para Google Analytics 4
-interface GtagCommand {
-  (command: 'event', action: string, params: Record<string, unknown>): void;
-}
-
-interface WindowWithGtag extends Window {
-  gtag?: GtagCommand;
-}
-
 /**
  * Inicializa Sentry para tracking de errores
- *
+ * 
  * Para activar:
  * 1. Crear cuenta en sentry.io
  * 2. Agregar VITE_SENTRY_DSN en .env
@@ -42,7 +33,7 @@ export async function initSentry() {
   }
 
   const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
-
+  
   if (!sentryDsn) {
     logger.warn('MONITORING', 'Sentry DSN not configured - set VITE_SENTRY_DSN in .env');
     return;
@@ -53,13 +44,13 @@ export async function initSentry() {
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
       release: `contarstock@${import.meta.env.VITE_APP_VERSION || '1.0.0'}`,
-
+      
       // Sample rate para reducir volumen
       tracesSampleRate: 0.1,
-
+      
       // Integraciones automáticas de @sentry/react
       // BrowserTracing, Replay están incluidos en el bundle
-
+      
       // Tags globales
       initialScope: {
         tags: {
@@ -70,7 +61,7 @@ export async function initSentry() {
     });
 
     logger.info('MONITORING', 'Sentry initialized');
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error('MONITORING', 'Failed to init Sentry', error);
   }
 }
@@ -129,16 +120,11 @@ export async function initWebVitals() {
   try {
     const reportWebVital = (metric: WebVitalsMetric) => {
       // Log en consola
-      logger.info('monitoring', 'WebVital', {
-        name: metric.name,
-        value: metric.value.toFixed(2),
-        rating: metric.rating,
-      });
+      logger.info('monitoring', 'WebVital', { name: metric.name, value: metric.value.toFixed(2), rating: metric.rating });
 
       // Enviar a Google Analytics 4 si está disponible
       if (typeof window !== 'undefined' && 'gtag' in window) {
-        const win = window as WindowWithGtag;
-        win.gtag?.('event', metric.name, {
+        (window as any).gtag('event', metric.name, {
           value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
           metric_rating: metric.rating,
           page_path: window.location.pathname,
@@ -169,7 +155,7 @@ export async function initWebVitals() {
     onINP(reportWebVital);
 
     logger.info('WEB_VITALS', 'Web Vitals tracking initialized');
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error('WEB_VITALS', 'Failed to init Web Vitals', error);
   }
 }
@@ -196,8 +182,7 @@ export function trackEvent({ category, action, label, value }: AnalyticsEvent) {
 
   // Google Analytics 4
   if (typeof window !== 'undefined' && 'gtag' in window) {
-    const win = window as WindowWithGtag;
-    win.gtag?.('event', action, {
+    (window as any).gtag('event', action, {
       event_category: category,
       event_label: label,
       value: value,

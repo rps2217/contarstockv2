@@ -140,7 +140,7 @@ export async function processSyncQueue(
           recordId: item.recordId,
           timestamp: Date.now(),
         });
-      } catch (error: unknown) {
+      } catch (error) {
         const errorMsg = formatError(error);
         errors[item.id!] = errorMsg;
         failed++;

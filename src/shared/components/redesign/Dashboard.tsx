@@ -155,9 +155,7 @@ const ActionCard: React.FC<ActionCardProps> = ({
 // Métricas adicionales desde IndexedDB
 const useDashboardMetrics = () => {
   // Safe access to db tables with fallback
-  const safeCount = async (
-    table: { count(): Promise<number> } | null | undefined
-  ): Promise<number> => {
+  const safeCount = async (table: any): Promise<number> => {
     try {
       if (!table) return 0;
       return await table.count();

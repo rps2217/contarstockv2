@@ -1,25 +1,13 @@
 /**
  * CommandMenu - Búsqueda global estilo Spotlight/Notion
- *
+ * 
  * Accesible via Cmd+K (Mac) o Ctrl+K (Windows/Linux)
  * Busca en: productos, vencimientos, eventos, proveedores
  */
 
 import React, { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  Package,
-  FileText,
-  Truck,
-  Users,
-  Clock,
-  ArrowRight,
-  X,
-  Command,
-  CalendarClock,
-  AlertTriangle,
-} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Search, Package, FileText, Truck, Users, Clock, ArrowRight, X, Command, CalendarClock, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
@@ -126,30 +114,26 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
 
     // Productos
     products?.forEach(product => {
-      if (
-        product.barcode?.toLowerCase().includes(q) ||
-        product.name?.toLowerCase().includes(q) ||
-        product.sku?.toLowerCase().includes(q)
-      ) {
+      if (product.barcode?.toLowerCase().includes(q) ||
+          product.name?.toLowerCase().includes(q) ||
+          product.sku?.toLowerCase().includes(q)) {
         results.push({
           id: `product-${product.id}`,
           type: 'product',
           title: product.name || product.barcode || 'Sin nombre',
           subtitle: `${product.barcode || ''} • Stock: ${product.stock || 0}`,
           icon: Package,
-          url: `/data/products/${product.id}`,
+          url: `/data/products/${product.id}`
         });
       }
     });
 
     // Vencimientos
     expirations?.forEach(expiry => {
-      if (
-        expiry.barcode?.toLowerCase().includes(q) ||
-        expiry.productName?.toLowerCase().includes(q) ||
-        String(expiry.mm).padStart(2, '0').includes(q) ||
-        String(expiry.yyyy).includes(q)
-      ) {
+      if (expiry.barcode?.toLowerCase().includes(q) ||
+          expiry.productName?.toLowerCase().includes(q) ||
+          String(expiry.mm).padStart(2, '0').includes(q) ||
+          String(expiry.yyyy).includes(q)) {
         const daysLeft = expiry.daysLeft ?? 0;
         results.push({
           id: `expiry-${expiry.id}`,
@@ -157,39 +141,38 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
           title: expiry.productName || expiry.barcode || 'Sin nombre',
           subtitle: `${String(expiry.mm).padStart(2, '0')}/${expiry.yyyy} • ${daysLeft < 0 ? `Venció hace ${Math.abs(daysLeft)} días` : `Faltan ${daysLeft} días`}`,
           icon: CalendarClock,
-          url: '/expiry',
+          url: '/expiry'
         });
       }
     });
 
     // Sesiones de conteo
     (sessions as SearchableSession[])?.forEach(session => {
-      if (
-        session.id?.toLowerCase().includes(q) ||
-        session.erpOrder?.toLowerCase().includes(q) ||
-        session.location?.toLowerCase().includes(q)
-      ) {
+      if (session.id?.toLowerCase().includes(q) ||
+          session.erpOrder?.toLowerCase().includes(q) ||
+          session.location?.toLowerCase().includes(q)) {
         results.push({
           id: `session-${session.id}`,
           type: 'event',
           title: `Conteo: ${session.erpOrder || session.id}`,
           subtitle: `${session.location || 'Sin ubicación'} • ${session.totalSKUs || 0} SKUs`,
           icon: FileText,
-          url: `/reports/${session.id}`,
+          url: `/reports/${session.id}`
         });
       }
     });
 
     // Proveedores
     providers?.forEach(provider => {
-      if (provider.name?.toLowerCase().includes(q) || provider.rut?.toLowerCase().includes(q)) {
+      if (provider.name?.toLowerCase().includes(q) ||
+          provider.rut?.toLowerCase().includes(q)) {
         results.push({
           id: `provider-${provider.id}`,
           type: 'provider',
           title: provider.name || 'Sin nombre',
           subtitle: `RUT: ${provider.rut || 'N/A'}`,
           icon: Users,
-          url: '/providers',
+          url: '/providers'
         });
       }
     });
@@ -257,9 +240,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             className="fixed top-[15%] left-1/2 -translate-x-1/2 z-[201] w-full max-w-xl"
           >
-            <div
-              className={`${bgClass} rounded-2xl shadow-2xl border ${borderClass} overflow-hidden`}
-            >
+            <div className={`${bgClass} rounded-2xl shadow-2xl border ${borderClass} overflow-hidden`}>
               {/* Input */}
               <div className={`flex items-center gap-3 px-4 py-4 border-b ${borderClass}`}>
                 <Search className={`w-5 h-5 ${mutedClass}`} />
@@ -267,7 +248,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                   ref={inputRef}
                   type="text"
                   value={query}
-                  onChange={e => setQuery(e.target.value)}
+                  onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar productos, vencimientos, eventos, proveedores..."
                   className={`flex-1 bg-transparent border-none outline-none ${textClass} placeholder:text-muted text-base`}
                 />
@@ -276,7 +257,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                   <span className="text-xs font-bold">K</span>
                 </div>
               </div>
-
+	
               {/* Results */}
               <div className="max-h-80 overflow-y-auto">
                 {results.length > 0 ? (
@@ -287,36 +268,23 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
                       return (
                         <button
                           key={result.id}
-                          onClick={() => {
-                            navigate(result.url);
-                            onClose();
-                          }}
+                          onClick={() => { navigate(result.url); onClose(); }}
                           onMouseEnter={() => setSelectedIndex(index)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-left ${
                             index === selectedIndex ? (isDark ? 'bg-elevated' : 'bg-slate-100') : ''
                           }`}
                         >
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}
-                          >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}>
                             <Icon className="w-5 h-5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-semibold text-sm truncate ${textClass}`}>
-                              {result.title}
-                            </div>
-                            <div className={`text-xs truncate ${mutedClass}`}>
-                              {result.subtitle}
-                            </div>
+                            <div className={`font-semibold text-sm truncate ${textClass}`}>{result.title}</div>
+                            <div className={`text-xs truncate ${mutedClass}`}>{result.subtitle}</div>
                           </div>
-                          <div
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${colorClass}`}
-                          >
+                          <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${colorClass}`}>
                             {TYPE_LABELS[result.type]}
                           </div>
-                          {index === selectedIndex && (
-                            <ArrowRight className={`w-4 h-4 ${mutedClass}`} />
-                          )}
+                          {index === selectedIndex && <ArrowRight className={`w-4 h-4 ${mutedClass}`} />}
                         </button>
                       );
                     })}
@@ -337,9 +305,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose, theme
               </div>
 
               {/* Footer */}
-              <div
-                className={`flex items-center justify-between px-4 py-3 border-t ${borderClass}`}
-              >
+              <div className={`flex items-center justify-between px-4 py-3 border-t ${borderClass}`}>
                 <div className="flex items-center gap-4 text-[10px]">
                   <span className={`px-1.5 py-0.5 rounded ${inputBgClass} ${mutedClass}`}>↑↓</span>
                   <span className={mutedClass}>Navegar</span>
@@ -400,13 +366,11 @@ export function CommandMenuProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <CommandMenuContext.Provider
-      value={{
-        isOpen,
-        open: () => setIsOpen(true),
-        close: () => setIsOpen(false),
-      }}
-    >
+    <CommandMenuContext.Provider value={{
+      isOpen,
+      open: () => setIsOpen(true),
+      close: () => setIsOpen(false),
+    }}>
       {children}
       <CommandMenu isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </CommandMenuContext.Provider>

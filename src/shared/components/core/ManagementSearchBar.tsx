@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, Plus } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ManagementSearchBarProps {
   searchQuery: string;
@@ -22,19 +22,14 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
   onOpenAdd,
   onClearFilters,
   activeFiltersCount,
-  placeholder = 'BUSCAR...',
+  placeholder = "BUSCAR...",
   accentColor = 'gray',
   theme = 'dark',
-  extraActions,
+  extraActions
 }) => {
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const [isFocused, setIsFocused] = useState(false);
-  const isDark =
-    (theme as unknown) === 'dark' ||
-    (theme as unknown) === 'night' ||
-    (theme as unknown) === 'high-contrast' ||
-    (theme as unknown) === 'appsheet-dark' ||
-    (theme as unknown) === 'gray';
+  const isDark = (theme as unknown) === 'dark' || (theme as unknown) === 'night' || (theme as unknown) === 'high-contrast' || (theme as unknown) === 'appsheet-dark' || (theme as unknown) === 'gray';
 
   // Synchronize local search text with global state
   useEffect(() => {
@@ -60,64 +55,55 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
       text: 'text-amber-500',
       badge: 'bg-amber-500 text-black',
       glow: 'shadow-[0_0_25px_rgba(245,158,11,0.06)]',
-      fabBg:
-        'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/25 focus:ring-amber-400/50',
+      fabBg: 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/25 focus:ring-amber-400/50',
       iconColor: 'text-amber-500 hover:bg-amber-500/10',
-      shimmer: 'from-amber-400/20 to-amber-500/30',
+      shimmer: 'from-amber-400/20 to-amber-500/30'
     },
     blue: {
       border: 'border-blue-500/10 focus-within:border-blue-500/40 focus-within:ring-blue-500/5',
       text: 'text-blue-500',
       badge: 'bg-blue-500 text-white',
       glow: 'shadow-[0_0_25px_rgba(59,130,246,0.06)]',
-      fabBg:
-        'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 focus:ring-blue-400/50',
+      fabBg: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 focus:ring-blue-400/50',
       iconColor: 'text-blue-500 hover:bg-blue-500/10',
-      shimmer: 'from-blue-400/20 to-blue-500/30',
+      shimmer: 'from-blue-400/20 to-blue-500/30'
     },
     emerald: {
-      border:
-        'border-emerald-500/10 focus-within:border-emerald-500/40 focus-within:ring-emerald-500/5',
+      border: 'border-emerald-500/10 focus-within:border-emerald-500/40 focus-within:ring-emerald-500/5',
       text: 'text-emerald-500',
       badge: 'bg-emerald-500 text-black',
       glow: 'shadow-[0_0_25px_rgba(16,185,129,0.06)]',
-      fabBg:
-        'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 focus:ring-emerald-400/50',
+      fabBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 focus:ring-emerald-400/50',
       iconColor: 'text-emerald-500 hover:bg-emerald-500/10',
-      shimmer: 'from-emerald-400/20 to-emerald-500/30',
+      shimmer: 'from-emerald-400/20 to-emerald-500/30'
     },
     rose: {
       border: 'border-rose-500/10 focus-within:border-rose-500/40 focus-within:ring-rose-500/5',
       text: 'text-rose-500',
       badge: 'bg-rose-500 text-white',
       glow: 'shadow-[0_0_25px_rgba(244,63,94,0.06)]',
-      fabBg:
-        'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-500/25 focus:ring-rose-400/50',
+      fabBg: 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-500/25 focus:ring-rose-400/50',
       iconColor: 'text-rose-500 hover:bg-rose-500/10',
-      shimmer: 'from-rose-400/20 to-rose-500/30',
+      shimmer: 'from-rose-400/20 to-rose-500/30'
     },
     indigo: {
-      border:
-        'border-indigo-500/15 focus-within:border-indigo-500/40 focus-within:ring-indigo-500/5',
+      border: 'border-indigo-500/15 focus-within:border-indigo-500/40 focus-within:ring-indigo-500/5',
       text: 'text-indigo-500',
       badge: 'bg-indigo-500 text-white',
       glow: 'shadow-[0_0_25px_rgba(99,102,241,0.06)]',
-      fabBg:
-        'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 focus:ring-indigo-400/50',
+      fabBg: 'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 focus:ring-indigo-400/50',
       iconColor: 'text-indigo-500 hover:bg-indigo-500/10',
-      shimmer: 'from-indigo-400/20 to-indigo-500/30',
+      shimmer: 'from-indigo-400/20 to-indigo-500/30'
     },
     gray: {
-      border:
-        'border-neutral-500/10 focus-within:border-neutral-500/40 focus-within:ring-neutral-500/5',
+      border: 'border-neutral-500/10 focus-within:border-neutral-500/40 focus-within:ring-neutral-500/5',
       text: 'text-neutral-500',
       badge: 'bg-neutral-500 text-white',
       glow: 'shadow-[0_0_25px_rgba(0,0,0,0.06)]',
-      fabBg:
-        'bg-neutral-600 hover:bg-neutral-500 text-white shadow-lg shadow-black/25 focus:ring-neutral-400/50',
+      fabBg: 'bg-neutral-600 hover:bg-neutral-500 text-white shadow-lg shadow-black/25 focus:ring-neutral-400/50',
       iconColor: 'text-neutral-500 hover:bg-neutral-500/10',
-      shimmer: 'from-neutral-400/20 to-neutral-500/30',
-    },
+      shimmer: 'from-neutral-400/20 to-neutral-500/30'
+    }
   };
 
   const colors = colorClasses[accentColor] || colorClasses.gray;
@@ -126,32 +112,32 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
     <>
       {/* Master Search Bar - Elegant, compact, highly integrated */}
       <div className="w-full max-w-7xl mx-auto px-1">
-        <div
+        <div 
           className={`flex items-center rounded-2xl border transition-all duration-300 px-3 pl-4 gap-2 ${
             isFocused ? `${colors.glow} ring-4 ring-slate-400/5 dark:ring-white/5` : ''
           } ${
-            isDark ? 'bg-black/30 border-white/5' : 'bg-stone-50/70 border-slate-200/80 shadow-sm'
+            isDark 
+              ? 'bg-black/30 border-white/5' 
+              : 'bg-stone-50/70 border-slate-200/80 shadow-sm'
           } ${colors.border}`}
         >
           {/* Quiet Search Icon */}
-          <Search
-            className={`w-4 h-4 transition-colors duration-300 shrink-0 ${
-              isFocused ? colors.text : 'text-muted dark:text-slate-500'
-            }`}
-          />
-
-          <input
+          <Search className={`w-4 h-4 transition-colors duration-300 shrink-0 ${
+            isFocused ? colors.text : 'text-muted dark:text-slate-500'
+          }`} />
+          
+          <input 
             type="text"
             placeholder={placeholder}
             value={localQuery}
-            onChange={e => setLocalQuery(e.target.value)}
+            onChange={(e) => setLocalQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             className={`w-full py-3 md:py-3.5 text-xs font-black tracking-wide bg-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 uppercase ${
               isDark ? 'text-white' : 'text-slate-800'
             }`}
           />
-
+          
           {/* Actions panel right inside the search box */}
           <div className="flex items-center gap-1.5 shrink-0 pl-2">
             {/* Clear querying search text */}
@@ -166,9 +152,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
                     setSearchQuery('');
                   }}
                   className={`p-1.5 rounded-lg text-muted transition-colors ${
-                    isDark
-                      ? 'hover:bg-white/5 hover:text-white'
-                      : 'hover:bg-slate-200 text-slate-600'
+                    isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-slate-200 text-slate-600'
                   }`}
                   title="Borrar búsqueda"
                 >
@@ -222,7 +206,9 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
             {extraActions && (
               <>
                 <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-0.5 shrink-0" />
-                <div className="flex items-center gap-1">{extraActions}</div>
+                <div className="flex items-center gap-1">
+                  {extraActions}
+                </div>
               </>
             )}
           </div>

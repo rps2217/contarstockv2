@@ -101,7 +101,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
         if (!window.BarcodeDetector) throw new Error('BarcodeDetector not available');
         detector = new window.BarcodeDetector({ formats });
         setEngineType('native');
-      } catch (e: unknown) {
+      } catch (e) {
         logger.warn(
           'useOpticalEngine',
           'BarcodeDetector API not available, falling back to legacy engine'
@@ -125,7 +125,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
                 handleSuccessfulScan(barcodes[0].rawValue);
               }
             }
-          } catch (e: unknown) {
+          } catch (e) {
             // Silently ignore detection errors for smoother experience
           }
           lastDetectTime = timestamp;

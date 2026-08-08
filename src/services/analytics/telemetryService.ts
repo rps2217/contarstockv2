@@ -5,24 +5,17 @@ class TelemetryService {
   private buffer: TelemetryEvent[] = [];
   private readonly MAX_BUFFER_SIZE = 50;
   private readonly FLUSH_INTERVAL = 60000; // 1 minute
-  private flushTimer: ReturnType<typeof setInterval> | null = null;
+  private flushTimer: any = null;
   private deviceInfo: string = '';
-  private disabled = false;
 
   constructor() {
     this.deviceInfo = `${navigator.userAgent} | ${window.innerWidth}x${window.innerHeight}`;
     this.startFlushTimer();
   }
 
-  public track(
-    type: TelemetryEventType,
-    action: string,
-    metadata?: Record<string, unknown>,
-    duration?: number,
-    batchId?: string
-  ) {
-    if (this.disabled) return;
-
+  public track(type: TelemetryEventType, action: string, metadata?: Record<string, any>, duration?: number, batchId?: string) {
+    if ((this as any).disabled) return;
+    
     const event: TelemetryEvent = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -32,7 +25,7 @@ class TelemetryService {
       metadata,
       operatorId: localStorage.getItem('logicount_operator_id') || 'UNKNOWN',
       batchId,
-      deviceInfo: this.deviceInfo,
+      deviceInfo: this.deviceInfo
     };
 
     this.buffer.push(event);
@@ -65,24 +58,17 @@ class TelemetryService {
         OPERADOR: e.operatorId,
         LOTE: e.batchId || '',
         DISPOSITIVO: e.deviceInfo,
-        METADATOS: JSON.stringify(e.metadata || {}),
+        METADATOS: JSON.stringify(e.metadata || {})
       }));
 
       // Use a direct call to avoid circular logging via supabase -> logger -> telemetry
-      const { error } = await (
-        await import('../../lib/supabase')
-      ).supabase
+      const { error } = await (await import('../../lib/supabase')).supabase
         .from('TELEMETRIA')
         .insert(rows);
-
+        
       if (error) {
         // If table doesn't exist, we don't want to spam the console
-        if (
-          error.code === '42P01' ||
-          error.message?.includes('schema cache') ||
-          error.code === 'PGRST116' ||
-          error.message?.includes('404')
-        ) {
+        if (error.code === '42P01' || error.message?.includes('schema cache') || error.code === 'PGRST116' || error.message?.includes('404')) {
           logger.warn('TelemetryService', 'Table TELEMETRIA not found. Disabling telemetry.');
           this.buffer = [];
           if (this.flushTimer) {
@@ -90,24 +76,20 @@ class TelemetryService {
             this.flushTimer = null;
           }
           // Mark as disabled to avoid further tracks
-          this.disabled = true;
+          (this as any).disabled = true;
           return;
         }
         throw error;
       }
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      if (
-        error.message === 'Failed to fetch' ||
-        error.message?.includes('NetworkError') ||
-        error.message?.includes('net::ERR')
-      ) {
-        this.buffer = [...eventsToFlush, ...this.buffer].slice(0, 500); // keep max 500 in offline mode
-        return; // silent fallback
+    } catch (err: any) {
+      if (err.message === 'Failed to fetch' || err.message?.includes('NetworkError') || err.message?.includes('net::ERR')) {
+          this.buffer = [...eventsToFlush, ...this.buffer].slice(0, 500); // keep max 500 in offline mode
+          return; // silent fallback 
       }
-      logger.warn('TelemetryService', 'Silent flush failure', error.message);
+      logger.warn('TelemetryService', 'Silent flush failure', err.message);
     }
   }
 }
 
 export const telemetry = new TelemetryService();
+

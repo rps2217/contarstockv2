@@ -7,6 +7,9 @@
 // Analytics
 export * from './analytics';
 
+// AI Services
+export * from './ai';
+
 // Cloud Services - exports específicos para evitar duplicados
 export {
   // Batch operations
@@ -78,6 +81,7 @@ export { useSyncFSM } from './sync/fsm/useSyncFSM';
 export { configSyncService } from './configSyncService';
 export { dynamicDataService } from './dynamicDataService';
 export { InitializationService } from './initializationService';
+export { localBrain } from './localBrain';
 export { logger } from './logger';
 
 // Constants

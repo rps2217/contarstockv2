@@ -1,25 +1,17 @@
 /**
  * NotificationCenter - Centro de notificaciones centralizado
- *
+ * 
  * Gestiona notificaciones push, alertas de sincronización,
  * vencimientos próximos y tareas pendientes.
  */
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  createContext,
-  useContext,
-  ReactNode,
-  useRef,
-} from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Bell,
-  X,
-  Check,
-  CheckCheck,
+import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Bell, 
+  X, 
+  Check, 
+  CheckCheck, 
   AlertTriangle,
   AlertCircle,
   Info,
@@ -28,15 +20,14 @@ import {
   Package,
   RefreshCw,
   Calendar,
-  ChevronRight,
+  ChevronRight
 } from 'lucide-react';
 
 // ============================================================
 // TIPOS
 // ============================================================
 
-export type NotificationType =
-  'info' | 'warning' | 'error' | 'success' | 'sync' | 'expiry' | 'task';
+export type NotificationType = 'info' | 'warning' | 'error' | 'success' | 'sync' | 'expiry' | 'task';
 
 export interface Notification {
   id: string;
@@ -115,21 +106,18 @@ export function NotificationCenterProvider({ children }: { children: ReactNode }
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const addNotification = useCallback(
-    (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-      const newNotification: Notification = {
-        ...notification,
-        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: Date.now(),
-        read: false,
-      };
-      setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Max 50 notifications
-    },
-    []
-  );
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotification: Notification = {
+      ...notification,
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      read: false,
+    };
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Max 50 notifications
+  }, []);
 
   const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   }, []);
 
   const markAllAsRead = useCallback(() => {
@@ -145,22 +133,21 @@ export function NotificationCenterProvider({ children }: { children: ReactNode }
   }, []);
 
   return (
-    <NotificationCenterContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        addNotification,
-        markAsRead,
-        markAllAsRead,
-        removeNotification,
-        clearAll,
-        isOpen,
-        open: () => setIsOpen(true),
-        close: () => setIsOpen(false),
-      }}
-    >
+    <NotificationCenterContext.Provider value={{
+      notifications,
+      unreadCount,
+      addNotification,
+      markAsRead,
+      markAllAsRead,
+      removeNotification,
+      clearAll,
+      isOpen,
+      open: () => setIsOpen(true),
+      close: () => setIsOpen(false),
+    }}>
       {children}
       <NotificationPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      
     </NotificationCenterContext.Provider>
   );
 }
@@ -197,10 +184,7 @@ const COLORS: Record<NotificationType, { bg: string; text: string; border: strin
   task: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
 };
 
-import { formatTimeAgo } from '@/lib/date';
-
-// Eliminada función local - usar formatTimeAgo de lib/date
-function _deprecated_formatTimeAgo(timestamp: number): string {
+function formatTimeAgo(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
   if (seconds < 60) return 'Ahora';
   const minutes = Math.floor(seconds / 60);
@@ -212,8 +196,7 @@ function _deprecated_formatTimeAgo(timestamp: number): string {
 }
 
 function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } =
-    useNotificationCenter();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotificationCenter();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Cerrar al hacer click fuera
@@ -244,7 +227,7 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             className="fixed inset-0 z-[190]"
             onClick={onClose}
           />
-
+          
           {/* Panel */}
           <motion.div
             ref={panelRef}
@@ -294,10 +277,10 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             {/* Lista */}
             <div className="max-h-96 overflow-y-auto">
               {notifications.length > 0 ? (
-                notifications.map(notification => {
+                notifications.map((notification) => {
                   const Icon = notification.icon || ICONS[notification.type];
                   const colors = COLORS[notification.type];
-
+                  
                   return (
                     <div
                       key={notification.id}
@@ -310,19 +293,15 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                       {!notification.read && (
                         <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-amber-500 rounded-full" />
                       )}
-
+                      
                       <div className="flex items-start gap-3 pl-4">
-                        <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors.bg}`}
-                        >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors.bg}`}>
                           <Icon className={`w-5 h-5 ${colors.text}`} />
                         </div>
-
+                        
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <h3
-                              className={`font-bold text-sm truncate ${notification.read ? 'text-secondary' : 'text-white'}`}
-                            >
+                            <h3 className={`font-bold text-sm truncate ${notification.read ? 'text-secondary' : 'text-white'}`}>
                               {notification.title}
                             </h3>
                             <span className="text-[10px] text-slate-500 whitespace-nowrap">
@@ -332,10 +311,10 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                           <p className="text-xs text-muted line-clamp-2 mt-0.5">
                             {notification.message}
                           </p>
-
+                          
                           {notification.action && (
                             <button
-                              onClick={e => {
+                              onClick={(e) => {
                                 e.stopPropagation();
                                 notification.action?.onClick();
                               }}
@@ -345,9 +324,9 @@ function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                             </button>
                           )}
                         </div>
-
+                        
                         <button
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
                             removeNotification(notification.id);
                           }}
@@ -405,27 +384,22 @@ export function useToastNotifications() {
   const { addNotification } = useNotificationCenter();
 
   return {
-    notify: (
-      type: NotificationType,
-      title: string,
-      message: string,
-      options?: Partial<Notification>
-    ) => {
+    notify: (type: NotificationType, title: string, message: string, options?: Partial<Notification>) => {
       addNotification({ type, title, message, ...options });
     },
-    info: (title: string, message: string, options?: Partial<Notification>) =>
+    info: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'info', title, message, ...options }),
-    warning: (title: string, message: string, options?: Partial<Notification>) =>
+    warning: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'warning', title, message, ...options }),
-    error: (title: string, message: string, options?: Partial<Notification>) =>
+    error: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'error', title, message, ...options }),
-    success: (title: string, message: string, options?: Partial<Notification>) =>
+    success: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'success', title, message, ...options }),
-    sync: (title: string, message: string, options?: Partial<Notification>) =>
+    sync: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'sync', title, message, ...options }),
-    expiry: (title: string, message: string, options?: Partial<Notification>) =>
+    expiry: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'expiry', title, message, ...options }),
-    task: (title: string, message: string, options?: Partial<Notification>) =>
+    task: (title: string, message: string, options?: Partial<Notification>) => 
       addNotification({ type: 'task', title, message, ...options }),
   };
 }

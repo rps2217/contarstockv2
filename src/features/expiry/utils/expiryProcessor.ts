@@ -1,28 +1,15 @@
-import {
-  parseISO,
-  endOfMonth,
-  format,
-  startOfMonth,
-  addMonths,
-  isWithinInterval,
-  isPast,
-} from 'date-fns';
+
+import { parseISO, endOfMonth, format, startOfMonth, addMonths, isWithinInterval, isPast } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Product, Provider } from '../../../types';
 import { ExpiryItem } from '@/stores';
 import { normalizeSku, normalizeIdentity } from '../../../services/utils';
 import { evaluateExpiry, ExpiryPolicy } from '../domain/expiryDomain';
 
-/**
- * Input item for expiry processing
- * Uses `any` due to mixed data sources (Supabase, local DB, user input)
- * with varying field names and dynamic property access
- */
-
 export const processExpiryItem = (
-  item: any,
-  productMap: Map<string, Product>,
-  providerMap: Map<string, Provider>,
+  item: any, 
+  productMap: Map<string, Product>, 
+  providerMap: Map<string, Provider>, 
   now: Date,
   defaultWithdrawalDays: number = 30
 ): ExpiryItem => {
@@ -30,7 +17,7 @@ export const processExpiryItem = (
   let expiry: Date | null = null;
   if (item.mm && item.yyyy) {
     expiry = endOfMonth(new Date(Number(item.yyyy), Number(item.mm) - 1));
-  } else if (item.expiryDateObj instanceof Date) {
+  } else if (item.expiryDateObj) {
     expiry = item.expiryDateObj;
   } else if (item.expiryDate) {
     const parsed = parseISO(item.expiryDate);
@@ -39,28 +26,24 @@ export const processExpiryItem = (
 
   // 2. RESOLUCIÓN DE PRODUCTO Y PROVEEDOR (IDENTIDAD)
   const product = productMap.get(normalizeSku(item.barcode));
-
+  
   // ESTRATEGIA DE RESOLUCIÓN DE NOMBRE (Source of Truth: Catálogo Maestro)
-  const catalogueName = (product?.name || '').trim();
-  const recordName = (item.productName || item.DESCRIPTOR || item.DESCRIPCION || '').trim();
+  const catalogueName = (product?.name || (product as any)?.DESCRIPTOR || (product as any)?.DESCRIPCION || '').trim();
+  const recordName = (item.productName || item.DESCRIPTOR || item.DESCRIPCION || item.PRODUCTO || '').trim();
   const productName = (catalogueName || recordName || 'PRODUCTO SIN DESCRIPTOR').toUpperCase();
-
-  const providerRut = item.providerRut;
-  const supplierRut =
-    product?.supplierRut || providerRut
-      ? normalizeIdentity(product?.supplierRut || providerRut || '')
-      : null;
+  
+  const supplierRut = (product?.supplierRut || (item as any).providerRut) ? normalizeIdentity(product?.supplierRut || (item as any).providerRut) : null;
   const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;
   const itemSupplierName = item.providerName ? normalizeIdentity(item.providerName) : null;
   const effectiveSupplierName = supplierName || itemSupplierName;
-
+  
   // MEMOIZED RESOLUTION: We use the providerMap more efficiently
   let provider = supplierRut ? providerMap.get(supplierRut) : null;
-
+  
   if (!provider && effectiveSupplierName) {
-    // Si no hay match por RUT, intentamos por nombre.
+    // Si no hay match por RUT, intentamos por nombre. 
     provider = providerMap.get(effectiveSupplierName);
-
+    
     // Fallback para nombres no exactamente iguales (normalización profunda)
     if (!provider) {
       const normalizedQuery = normalizeIdentity(effectiveSupplierName);
@@ -72,45 +55,30 @@ export const processExpiryItem = (
       }
     }
   }
-
+  
   // 3. OBTENER POLÍTICAS (del item guardado o del proveedor genérico)
+  // Las políticas ya vienen en el item (guardadas desde PRODUCTO_PROVEEDOR en handleAddItem)
   const withdrawalDays = item.withdrawalDays ?? provider?.withdrawalDays ?? defaultWithdrawalDays;
   const hasExchange = item.hasExchange ?? provider?.hasExchange ?? false;
 
-  const evaluation = evaluateExpiry(
-    expiry,
-    { withdrawalDays, hasCanje: hasExchange },
-    now,
-    item.quantity || 1
-  );
+  const evaluation = evaluateExpiry(expiry, { withdrawalDays, hasCanje: hasExchange }, now, item.quantity || 1);
 
   // 4. CONSTRUCCIÓN DEL OBJETO DE INTERFAZ
-  const estado = !evaluation.withdrawalDate
-    ? ''
-    : `${hasExchange ? 'Canje' : 'Merma'} ${format(evaluation.withdrawalDate, 'MMM yyyy', { locale: es })}`;
+  const estado = !evaluation.withdrawalDate 
+    ? "" 
+    : `${hasExchange ? "Canje" : "Merma"} ${format(evaluation.withdrawalDate, 'MMM yyyy', { locale: es })}`;
 
-  const providerName = (provider?.name || product?.supplier || item.providerName || 'N/A')
-    .toString()
-    .trim()
-    .toUpperCase();
+  const providerName = (provider?.name || product?.supplier || item.providerName || 'N/A').trim().toUpperCase();
   const observaciones = item.observaciones || '';
 
-  const normalizeText = (s: string) =>
-    (s || '')
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-  const _searchIndex = normalizeText(
-    `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`
-  );
+  const normalizeText = (s: string) => (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const _searchIndex = normalizeText(`${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`);
 
   return {
-    id: item.id || item.barcode || `temp-${Date.now()}`,
-    barcode: item.barcode,
+    ...item,
     productName,
     providerName,
-    providerRut: provider?.rut || providerRut,
+    providerRut: provider?.rut || item.providerRut,
     observaciones,
     category: product?.category || 'GENERAL',
     withdrawalDays,
@@ -127,8 +95,8 @@ export const processExpiryItem = (
     price: product?.price || 0,
     frc: item.frc || '',
     syncStatus: item.syncStatus,
-    _searchIndex,
-  } as ExpiryItem;
+    _searchIndex
+  };
 };
 
 export const filterExpiryItems = (
@@ -142,24 +110,12 @@ export const filterExpiryItems = (
     creationDateRange?: { start: Date | null; end: Date | null };
   }
 ): ExpiryItem[] => {
-  const {
-    query,
-    selectedCategories,
-    selectedCanje,
-    actionPeriod,
-    customDateRange,
-    creationDateRange,
-  } = filters;
-
+  const { query, selectedCategories, selectedCanje, actionPeriod, customDateRange, creationDateRange } = filters;
+  
   // Pre-procesar la query para búsqueda ultra-rápida una sola vez
-  const normalizeText = (s: string) =>
-    (s || '')
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
+  const normalizeText = (s: string) => (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   const searchTerms = normalizeText(query).split(/\s+/).filter(Boolean);
-
+  
   const now = new Date();
   const currentMonthStart = startOfMonth(now);
   const currentMonthEnd = endOfMonth(now);
@@ -184,15 +140,9 @@ export const filterExpiryItems = (
     // Filtrado por Periodo Operativo basado en la Fecha de Retiro (Withdrawal Date)
     if (actionPeriod !== 'all') {
       if (!item.withdrawalDate) return false;
-
+      
       if (actionPeriod === 'this_month') {
-        if (
-          !isWithinInterval(item.withdrawalDate, {
-            start: currentMonthStart,
-            end: currentMonthEnd,
-          }) &&
-          !isPast(item.withdrawalDate)
-        ) {
+        if (!isWithinInterval(item.withdrawalDate, { start: currentMonthStart, end: currentMonthEnd }) && !isPast(item.withdrawalDate)) {
           return false;
         }
       } else if (actionPeriod === 'next_month') {
@@ -200,13 +150,7 @@ export const filterExpiryItems = (
           return false;
         }
       } else if (actionPeriod === 'next_3_months') {
-        if (
-          !isWithinInterval(item.withdrawalDate, {
-            start: currentMonthStart,
-            end: next3MonthsEnd,
-          }) &&
-          !isPast(item.withdrawalDate)
-        ) {
+        if (!isWithinInterval(item.withdrawalDate, { start: currentMonthStart, end: next3MonthsEnd }) && !isPast(item.withdrawalDate)) {
           return false;
         }
       } else if (actionPeriod === 'custom') {
@@ -225,9 +169,8 @@ export const filterExpiryItems = (
     // Filtrado por Fecha de Creación (timestamp)
     if (creationDateRange && (creationDateRange.start || creationDateRange.end)) {
       if (!item.timestamp) return false;
-      const itemCreationDate =
-        typeof item.timestamp === 'number' ? item.timestamp : new Date(item.timestamp).getTime();
-
+      const itemCreationDate = typeof item.timestamp === 'number' ? item.timestamp : new Date(item.timestamp).getTime();
+      
       if (creationDateRange.start) {
         const start = new Date(creationDateRange.start).setHours(0, 0, 0, 0);
         if (itemCreationDate < start) return false;
@@ -248,7 +191,7 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
     critical: 0,
     next_expiry: 0,
     withdrawal: 0,
-    total: items.length,
+    total: items.length
   };
 
   const categoryCounts: Record<string, number> = {};
@@ -256,7 +199,7 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
     merma: [] as ExpiryItem[],
     canje: [] as ExpiryItem[],
     drenaje: [] as ExpiryItem[],
-    impulso: [] as ExpiryItem[],
+    impulso: [] as ExpiryItem[]
   };
 
   // ÚNICO RECORRIDO DE DATOS (O(n))
@@ -273,8 +216,7 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
     }
 
     // 3. Agrupar para acciones sugeridas
-    const isUrgent =
-      item.status === 'critical' || item.status === 'expired' || item.status === 'withdrawal';
+    const isUrgent = item.status === 'critical' || item.status === 'expired' || item.status === 'withdrawal';
     const isNext = item.status === 'next_expiry';
 
     if (isUrgent) {
@@ -293,38 +235,16 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
     .slice(0, 3);
 
   const suggestedActions = [
-    {
-      type: 'merma',
-      list: suggestGroups.merma,
-      title: 'Solicitudes de precios especiales',
-      desc: 'Gestionar rebajas para ítems críticos/vencidos sin opción a canje.',
-    },
-    {
-      type: 'canje',
-      list: suggestGroups.canje,
-      title: 'Gestión de Canjes',
-      desc: 'Coordinar devolución con proveedores para ítems críticos/vencidos.',
-    },
-    {
-      type: 'drenaje',
-      list: suggestGroups.drenaje,
-      title: 'Plan de Drenaje (Próximos)',
-      desc: 'Solicitar ofertas para ítems (4 meses) sin canje para evitar pérdidas.',
-    },
-    {
-      type: 'impulso',
-      list: suggestGroups.impulso,
-      title: 'Impulso de Ventas (Próximos)',
-      desc: 'Promocionar ítems (4 meses) con canje para minimizar devoluciones.',
-    },
-  ]
-    .filter(a => a.list.length > 0)
-    .map(a => ({
-      title: a.title,
-      description: a.desc.replace('ítems', `${a.list.length} ítems`),
-      count: a.list.length,
-      type: a.type,
-    }));
+    { type: 'merma', list: suggestGroups.merma, title: 'Solicitudes de precios especiales', desc: 'Gestionar rebajas para ítems críticos/vencidos sin opción a canje.' },
+    { type: 'canje', list: suggestGroups.canje, title: 'Gestión de Canjes', desc: 'Coordinar devolución con proveedores para ítems críticos/vencidos.' },
+    { type: 'drenaje', list: suggestGroups.drenaje, title: 'Plan de Drenaje (Próximos)', desc: 'Solicitar ofertas para ítems (4 meses) sin canje para evitar pérdidas.' },
+    { type: 'impulso', list: suggestGroups.impulso, title: 'Impulso de Ventas (Próximos)', desc: 'Promocionar ítems (4 meses) con canje para minimizar devoluciones.' }
+  ].filter(a => a.list.length > 0).map(a => ({
+    title: a.title,
+    description: a.desc.replace('ítems', `${a.list.length} ítems`),
+    count: a.list.length,
+    type: a.type
+  }));
 
   const priorityItems = [...items]
     .filter(item => item.status !== 'safe')
@@ -335,6 +255,7 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
     ...stats,
     priorityItems,
     volumeAlerts,
-    suggestedActions,
+    suggestedActions
   };
 };
+

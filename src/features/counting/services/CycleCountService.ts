@@ -306,7 +306,7 @@ class CycleCountServiceClass {
       }
 
       return suggestions;
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('CycleCount', 'Error generating cycle count list', { error });
       return [];
     }
@@ -531,7 +531,7 @@ class CycleCountServiceClass {
         sessionId,
         barcode,
       });
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('CycleCount', 'Error saving count record', { error });
       throw error;
     }

@@ -3,7 +3,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { sanitizeBarcode, normalizeSku, normalizeIdentity, generateUUID } from './utils';
+import {
+  sanitizeBarcode,
+  normalizeSku,
+  normalizeIdentity,
+  normalizeHeader,
+  generateUUID
+} from './utils';
 
 describe('Utils - Normalización', () => {
   describe('sanitizeBarcode', () => {
@@ -75,6 +81,37 @@ describe('Utils - Normalización', () => {
 
     it('should handle mixed input', () => {
       expect(normalizeIdentity('  RUT: 12.345.678-K  ')).toBe('RUT12345678K');
+    });
+  });
+
+  describe('normalizeHeader', () => {
+    it('should return empty string for null/undefined', () => {
+      expect(normalizeHeader('')).toBe('');
+      expect(normalizeHeader(undefined as any)).toBe('');
+    });
+
+    it('should trim whitespace', () => {
+      expect(normalizeHeader('  HEADER  ')).toBe('HEADER');
+    });
+
+    it('should convert to uppercase', () => {
+      expect(normalizeHeader('Header')).toBe('HEADER');
+    });
+
+    it('should remove accents', () => {
+      expect(normalizeHeader('CÓDIGO')).toBe('CODIGO');
+      expect(normalizeHeader('RECEPCIÓN')).toBe('RECEPCION');
+      expect(normalizeHeader('PEÑASCO')).toBe('PENASCO');
+    });
+
+    it('should remove special characters', () => {
+      expect(normalizeHeader('CÓD_PRODUCTO')).toBe('CODPRODUCTO');
+      expect(normalizeHeader('COD-PRODUCTO')).toBe('CODPRODUCTO');
+    });
+
+    it('should handle Excel headers', () => {
+      expect(normalizeHeader('Cód. Producto')).toBe('CODPRODUCTO');
+      expect(normalizeHeader('Código de Barras')).toBe('CODIGODEBARRAS');
     });
   });
 

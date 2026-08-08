@@ -19,7 +19,7 @@ export interface MetricRecord {
   error?: string;
 }
 
-export type MetricOperation =
+export type MetricOperation = 
   | 'push'
   | 'pull'
   | 'batch_push'
@@ -76,9 +76,12 @@ class SyncMetricsService {
   async getTableMetrics(since?: number): Promise<TableMetrics[]> {
     try {
       let records: MetricRecord[];
-
+      
       if (since) {
-        records = await db.syncMetrics.where('timestamp').above(since).toArray();
+        records = await db.syncMetrics
+          .where('timestamp')
+          .above(since)
+          .toArray();
       } else {
         records = await db.syncMetrics.toArray();
       }
@@ -91,11 +94,11 @@ class SyncMetricsService {
       }
 
       const results: TableMetrics[] = [];
-
+      
       for (const [name, tableRecords] of byTable) {
         const successful = tableRecords.filter(r => r.success);
         const durations = tableRecords.map(r => r.duration);
-
+        
         results.push({
           tableName: name,
           totalOperations: tableRecords.length,
@@ -107,7 +110,7 @@ class SyncMetricsService {
       }
 
       return results.sort((a, b) => b.totalOperations - a.totalOperations);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('METRICS', 'Failed to get table metrics', String(error));
       return [];
     }
@@ -116,7 +119,10 @@ class SyncMetricsService {
   async getTrends(days: number = 7): Promise<SyncTrend[]> {
     try {
       const since = Date.now() - days * 24 * 60 * 60 * 1000;
-      const records = await db.syncMetrics.where('timestamp').above(since).toArray();
+      const records = await db.syncMetrics
+        .where('timestamp')
+        .above(since)
+        .toArray();
 
       const byDay = new Map<string, MetricRecord[]>();
       for (const record of records) {
@@ -127,7 +133,7 @@ class SyncMetricsService {
       }
 
       const trends: SyncTrend[] = [];
-
+      
       for (const [date, dayRecords] of byDay) {
         const successful = dayRecords.filter(r => r.success);
         trends.push({
@@ -140,7 +146,7 @@ class SyncMetricsService {
       }
 
       return trends.sort((a, b) => a.date.localeCompare(b.date));
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('METRICS', 'Failed to get trends', String(error));
       return [];
     }
@@ -153,20 +159,23 @@ class SyncMetricsService {
   }> {
     try {
       const since = Date.now() - 24 * 60 * 60 * 1000;
-      const records = await db.syncMetrics.where('timestamp').above(since).toArray();
+      const records = await db.syncMetrics
+        .where('timestamp')
+        .above(since)
+        .toArray();
 
       if (records.length === 0) {
         return { successRate: 1, avgResponseTime: 0, lastSyncAt: null };
       }
 
       const successful = records.filter(r => r.success);
-
+      
       return {
         successRate: successful.length / records.length,
         avgResponseTime: records.reduce((sum, r) => sum + r.duration, 0) / records.length,
         lastSyncAt: Math.max(...records.map(r => r.timestamp)),
       };
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('METRICS', 'Failed to get health', String(error));
       return { successRate: 0, avgResponseTime: 0, lastSyncAt: null };
     }
@@ -175,11 +184,14 @@ class SyncMetricsService {
   async cleanupOldMetrics(days: number = 30): Promise<number> {
     try {
       const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-      const oldRecords = await db.syncMetrics.where('timestamp').below(cutoff).toArray();
+      const oldRecords = await db.syncMetrics
+        .where('timestamp')
+        .below(cutoff)
+        .toArray();
 
       await db.syncMetrics.bulkDelete(oldRecords.map(r => r.id!));
       return oldRecords.length;
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('METRICS', 'Cleanup failed', String(error));
       return 0;
     }
@@ -192,8 +204,8 @@ class SyncMetricsService {
     this.inMemoryCache = [];
 
     try {
-      await db.syncMetrics.bulkAdd(records);
-    } catch (error: unknown) {
+      await db.syncMetrics.bulkAdd(records as any[]);
+    } catch (error) {
       logger.error('METRICS', 'Flush failed', String(error));
       this.inMemoryCache = [...records, ...this.inMemoryCache];
     }

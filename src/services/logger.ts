@@ -82,7 +82,7 @@ const writeLog = async (
         await db.logs.bulkDelete(keys);
       }
     }
-  } catch (e: unknown) {
+  } catch (e) {
     // Fallback silencioso si falla IndexedDB (ej. cuota excedida o bloqueo)
     // No usar console.warn aquí para evitar recursión
   }

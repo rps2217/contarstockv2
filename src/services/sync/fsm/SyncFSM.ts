@@ -14,49 +14,41 @@ type TransitionHandler = (ctx: SyncContext) => Partial<SyncContext> | void;
 /**
  * Tabla de transiciones de estado
  */
-const transitions: Record<
-  SyncState,
-  Partial<
-    Record<
-      SyncEvent['type'],
-      {
-        nextState: SyncState;
-        handler?: TransitionHandler;
-      }
-    >
-  >
-> = {
+const transitions: Record<SyncState, Partial<Record<SyncEvent['type'], {
+  nextState: SyncState;
+  handler?: TransitionHandler;
+}>>> = {
   idle: {
     START: { nextState: 'preparing' },
   },
   preparing: {
     PREPARED: { nextState: 'uploading' },
-    ERROR: { nextState: 'error', handler: ctx => ({ error: ctx.error }) },
+    ERROR: { nextState: 'error', handler: (ctx) => ({ error: ctx.error }) },
   },
   uploading: {
-    UPLOADING: { nextState: 'uploading', handler: ctx => ({ progress: ctx.progress }) },
+    UPLOADING: { nextState: 'uploading', handler: (ctx) => ({ progress: ctx.progress }) },
     WAITING: { nextState: 'waiting' },
-    ERROR: { nextState: 'error', handler: ctx => ({ error: ctx.error }) },
+    ERROR: { nextState: 'error', handler: (ctx) => ({ error: ctx.error }) },
   },
   waiting: {
     PROCESSING: { nextState: 'processing' },
-    ERROR: { nextState: 'error', handler: ctx => ({ error: ctx.error }) },
+    ERROR: { nextState: 'error', handler: (ctx) => ({ error: ctx.error }) },
   },
   processing: {
     SUCCESS: { nextState: 'success' },
-    ERROR: { nextState: 'error', handler: ctx => ({ error: ctx.error }) },
+    ERROR: { nextState: 'error', handler: (ctx) => ({ error: ctx.error }) },
   },
   success: {
     START: { nextState: 'preparing' },
     RESET: { nextState: 'idle' },
   },
   error: {
-    RETRY: { nextState: 'retrying', handler: ctx => ({ retryCount: ctx.retryCount + 1 }) },
+    RETRY: { nextState: 'retrying', handler: (ctx) => ({ retryCount: ctx.retryCount + 1 }) },
     RESET: { nextState: 'idle' },
   },
   retrying: {
     START: { nextState: 'preparing' },
-    ERROR: { nextState: 'error', handler: ctx => ({ error: ctx.error }) },
+    ERROR: { nextState: 'error', handler: (ctx) => ({ error: ctx.error }) },
   },
 };
 
@@ -87,13 +79,13 @@ class SyncFSMClass {
 
   private notify(): void {
     const update: { isSyncing: boolean; lastError?: string } = {
-      isSyncing: this.isRunning(),
+      isSyncing: this.isRunning()
     };
     if (this.context.error) {
       update.lastError = this.context.error;
     }
     useSyncStore.setState(update);
-    this.listeners.forEach(l => l(this.state, this.context));
+    this.listeners.forEach((l) => l(this.state, this.context));
   }
 
   dispatch(event: SyncEvent): boolean {
@@ -124,7 +116,10 @@ class SyncFSMClass {
     return true;
   }
 
-  async execute(action: () => Promise<void>, onProgress?: (msg: string) => void): Promise<void> {
+  async execute(
+    action: () => Promise<void>,
+    onProgress?: (msg: string) => void
+  ): Promise<void> {
     if (this.state === 'error' && this.context.retryCount >= MAX_RETRIES) {
       throw new Error(`Maximo de reintentos alcanzado: ${this.context.error}`);
     }
@@ -143,7 +138,7 @@ class SyncFSMClass {
       this.dispatch({ type: 'PROCESSING' });
       this.dispatch({ type: 'SUCCESS' });
       if (onProgress) onProgress('Sincronizacion completada');
-    } catch (err: unknown) {
+    } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       this.dispatch({ type: 'ERROR', error: errorMsg });
       if (onProgress) onProgress(`Error: ${errorMsg}`);

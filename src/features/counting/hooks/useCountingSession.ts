@@ -136,7 +136,7 @@ export function useCountingSession(sessionId: string | undefined): UseCountingSe
             logger.warn('useCountingSession', 'Session not found', { sessionId });
           }
         }
-      } catch (err: unknown) {
+      } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : 'Error loading session';
           setError(message);
@@ -212,7 +212,7 @@ export function useCountingSession(sessionId: string | undefined): UseCountingSe
 
       toast.success('Sesión reseteada');
       logger.info('useCountingSession', 'Session reset', { sessionId });
-    } catch (err: unknown) {
+    } catch (err) {
       const message = err instanceof Error ? err.message : 'Error resetting session';
       toast.error('Error al resetear sesión');
       logger.error('useCountingSession', 'Failed to reset session', { sessionId, error: message });

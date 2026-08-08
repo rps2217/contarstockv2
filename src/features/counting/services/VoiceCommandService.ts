@@ -19,54 +19,6 @@ import { logger } from '@/services/logger';
 // TIPOS
 // ============================================================================
 
-// Web Speech API types
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  length: number;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-  isFinal: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  start(): void;
-  stop(): void;
-}
-
-interface WindowWithSpeechRecognition extends Window {
-  SpeechRecognition?: {
-    new (): SpeechRecognition;
-  };
-  webkitSpeechRecognition?: {
-    new (): SpeechRecognition;
-  };
-}
-
 export type VoiceCommand =
   | 'NEXT'
   | 'PREVIOUS'
@@ -181,7 +133,7 @@ const COMMAND_PATTERNS: Array<{
 
 class VoiceCommandServiceClass {
   private config: VoiceCommandConfig;
-  private recognition: SpeechRecognition | null = null;
+  private recognition: any = null;
   private isListening = false;
   private lastResult: VoiceCommandResult | null = null;
   private audioContext: AudioContext | null = null;
@@ -203,35 +155,34 @@ class VoiceCommandServiceClass {
    */
   private initSpeechRecognition(): void {
     // Verificar soporte
-    const win = window as WindowWithSpeechRecognition;
-    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       logger.warn('VoiceCommand', 'Speech Recognition not supported');
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    this.recognition = recognition;
-    recognition.continuous = this.config.continuous;
-    recognition.interimResults = false;
-    recognition.lang = this.config.language;
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = this.config.continuous;
+    this.recognition.interimResults = false;
+    this.recognition.lang = this.config.language;
 
-    recognition.onstart = () => {
+    this.recognition.onstart = () => {
       this.isListening = true;
       this.config.onStart?.();
       this.config.onListening?.(true);
       logger.debug('VoiceCommand', 'Started listening');
     };
 
-    recognition.onend = () => {
+    this.recognition.onend = () => {
       this.isListening = false;
       this.config.onEnd?.();
       this.config.onListening?.(false);
       logger.debug('VoiceCommand', 'Stopped listening');
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    this.recognition.onerror = (event: any) => {
       logger.error('VoiceCommand', 'Recognition error', { error: event.error });
 
       if (event.error === 'not-allowed') {
@@ -243,22 +194,22 @@ class VoiceCommandServiceClass {
       }
     };
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    this.recognition.onresult = (event: any) => {
       const results = event.results;
       const last = results[results.length - 1];
       const transcript = last[0].transcript.trim().toLowerCase();
       const confidence = last[0].confidence;
 
-      const cmdResult = this.parseCommand(transcript, confidence);
-      this.lastResult = cmdResult;
+      const result = this.parseCommand(transcript, confidence);
+      this.lastResult = result;
 
       logger.debug('VoiceCommand', 'Command recognized', {
         transcript,
-        command: cmdResult.command,
+        command: result.command,
         confidence,
       });
 
-      this.config.onCommand?.(cmdResult);
+      this.config.onCommand?.(result);
     };
   }
 
@@ -315,7 +266,7 @@ class VoiceCommandServiceClass {
     try {
       this.recognition.start();
       return true;
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('VoiceCommand', 'Failed to start', { error });
       return false;
     }
@@ -329,7 +280,7 @@ class VoiceCommandServiceClass {
 
     try {
       this.recognition.stop();
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('VoiceCommand', 'Failed to stop', { error });
     }
   }
@@ -398,8 +349,7 @@ class VoiceCommandServiceClass {
    * Verificar si el navegador soporta voz
    */
   isSupported(): boolean {
-    const win = window as WindowWithSpeechRecognition;
-    return !!(win.SpeechRecognition || win.webkitSpeechRecognition);
+    return !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
   }
 
   /**
@@ -414,17 +364,10 @@ class VoiceCommandServiceClass {
    */
   private playFeedback(type: 'success' | 'error' | 'info'): void {
     if (!this.audioContext) {
-      const AudioCtor =
-        window.AudioContext ||
-        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtor) {
-        this.audioContext = new AudioCtor();
-      }
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
     const ctx = this.audioContext;
-    if (!ctx) return;
-
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
 

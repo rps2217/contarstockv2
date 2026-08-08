@@ -1,15 +1,15 @@
 import { logger } from '@/services/logger';
 /**
  * AuditRepository - Repositorio decorado con auditoría
- *
+ * 
  * Envuelve cualquier repositorio existente y añade logging de auditoría
  * a todas las operaciones CREATE, UPDATE, DELETE.
- *
+ * 
  * @example
  * ```typescript
  * // Crear repositorio con auditoría
  * const auditedRepo = new AuditRepository(baseRepo, 'products');
- *
+ * 
  * // Usar normalmente - el logging es automático
  * await auditedRepo.update(id, data); // ← Se registra en audit_logs
  * ```
@@ -42,7 +42,10 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
   private wrapped!: IRepository<T, ID>;
   private tableName!: string;
 
-  constructor(wrapped: IRepository<T, ID>, tableName: string) {
+  constructor(
+    wrapped: IRepository<T, ID>,
+    tableName: string
+  ) {
     this.wrapped = wrapped;
     this.tableName = tableName;
   }
@@ -69,12 +72,8 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
 
     try {
       await db.audit_logs.add(entry as AuditLogEntry);
-    } catch (err: unknown) {
-      logger.error(
-        'AuditRepository',
-        'Failed to log audit',
-        err instanceof Error ? err.message : String(err)
-      );
+    } catch (err) {
+      logger.error('AuditRepository', 'Failed to log audit', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -90,7 +89,13 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
     const isNew = !entity.id;
     const id = await this.wrapped.save(entity);
 
-    await this.logAudit(String(id), 'CREATE', undefined, undefined, entity);
+    await this.logAudit(
+      String(id),
+      'CREATE',
+      undefined,
+      undefined,
+      entity
+    );
 
     return id;
   }
@@ -102,7 +107,13 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
     const ids = await this.wrapped.saveMany(entities);
 
     for (let i = 0; i < entities.length; i++) {
-      await this.logAudit(String(ids[i]), 'CREATE', undefined, undefined, entities[i]);
+      await this.logAudit(
+        String(ids[i]),
+        'CREATE',
+        undefined,
+        undefined,
+        entities[i]
+      );
     }
 
     return ids;
@@ -124,7 +135,13 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
 
         // Solo log si realmente cambió
         if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-          await this.logAudit(String(id), 'UPDATE', String(field), oldVal, newVal);
+          await this.logAudit(
+            String(id),
+            'UPDATE',
+            String(field),
+            oldVal,
+            newVal
+          );
         }
       }
     }
@@ -139,7 +156,13 @@ export class AuditRepository<T extends { id?: ID }, ID = string> {
 
     // Log de auditoría
     if (entity) {
-      await this.logAudit(String(id), 'DELETE', undefined, entity, undefined);
+      await this.logAudit(
+        String(id),
+        'DELETE',
+        undefined,
+        entity,
+        undefined
+      );
     }
   }
 

@@ -23,35 +23,6 @@ import { useSyncStore } from '@/stores';
 import { getConfiguredStrategy, applyStrategy } from './ConflictResolution';
 import { withSyncRetry, withCircuitBreaker } from '@/lib/retry';
 import { GenericSyncEngine, genericSyncEngine } from './GenericSyncEngine';
-import type { TableSyncMeta, SupabaseRow } from '../sync/unified/types';
-
-// Tipo para registros locales pendientes de sincronizar
-interface SyncableRecord {
-  id?: number;
-  syncStatus?: string;
-  [key: string]: unknown;
-}
-
-// Tipo para acceso dinámico a tablas Dexie
-type DexieTable = {
-  get: (id: unknown) => Promise<unknown>;
-  put: (item: unknown) => Promise<unknown>;
-  add: (item: unknown) => Promise<unknown>;
-  update: (id: unknown, changes: unknown) => Promise<number>;
-  toArray: () => Promise<unknown[]>;
-  where: (field: string) => {
-    equals: (value: unknown) => { toArray: () => Promise<unknown[]> };
-  };
-};
-
-// Tipo para registro local existente
-interface ExistingRecord {
-  id?: number;
-  syncStatus?: string;
-  updatedAt?: number;
-  timestamp?: number;
-  [key: string]: unknown;
-}
 
 export interface SyncMetrics {
   lastSyncAt: number;
@@ -139,7 +110,7 @@ export class EnhancedSyncEngine {
    */
   private async pullWithRetry(
     registryKey: string,
-    meta: TableSyncMeta
+    meta: any
   ): Promise<{ added: number; updated: number }> {
     const lastSyncKey = `lastSync_${meta.remoteTable}`;
     let lastSyncDate: string | undefined;
@@ -177,24 +148,21 @@ export class EnhancedSyncEngine {
    */
   private async pushWithRetry(
     registryKey: string,
-    meta: TableSyncMeta
+    meta: any
   ): Promise<{ success: number; failed: number }> {
-    const localTable = db[meta.localTable] as DexieTable;
+    const localTable = (db as any)[meta.localTable];
     if (!localTable) return { success: 0, failed: 0 };
 
     // Obtener items pendientes
-    let dirtyItems: SyncableRecord[] = [];
+    let dirtyItems: any[] = [];
     if (meta.filterField === 'tableName' && meta.filterValue) {
       const pending = await localTable
         .where('[tableName+syncStatus]')
         .equals([meta.filterValue, 'pending'])
         .toArray();
-      dirtyItems = pending as SyncableRecord[];
+      dirtyItems = pending;
     } else {
-      dirtyItems = (await localTable
-        .where('syncStatus')
-        .equals('pending')
-        .toArray()) as SyncableRecord[];
+      dirtyItems = await localTable.where('syncStatus').equals('pending').toArray();
     }
 
     if (dirtyItems.length === 0) {
@@ -209,7 +177,7 @@ export class EnhancedSyncEngine {
       const chunk = dirtyItems.slice(i, i + BATCH_SIZE);
       const rows = meta.mapToRemote
         ? chunk.map(meta.mapToRemote)
-        : chunk.map((item: SyncableRecord) => ({ ...item, id: item[meta.primaryKey] || item.id }));
+        : chunk.map((item: any) => ({ ...item, id: item[meta.primaryKey] || item.id }));
 
       // Retry con backoff exponencial
       const result = await withSyncRetry(
@@ -225,7 +193,7 @@ export class EnhancedSyncEngine {
 
       if (result.success) {
         // Marcar como synced
-        await db.transaction('rw', localTable as unknown as string[], async () => {
+        await db.transaction('rw', localTable, async () => {
           for (const item of chunk) {
             const id = item[meta.primaryKey] || item.id;
             await localTable.update(id, {
@@ -253,10 +221,10 @@ export class EnhancedSyncEngine {
    */
   private async processPullResult(
     registryKey: string,
-    meta: TableSyncMeta,
-    remoteRows: SupabaseRow[]
+    meta: any,
+    remoteRows: any[]
   ): Promise<{ added: number; updated: number }> {
-    const localTable = db[meta.localTable] as DexieTable;
+    const localTable = (db as any)[meta.localTable];
     if (!localTable) return { added: 0, updated: 0 };
 
     let added = 0;
@@ -264,20 +232,16 @@ export class EnhancedSyncEngine {
     let conflictsResolved = 0;
     let maxRemoteTime = 0;
 
-    await db.transaction('rw', localTable as unknown as string[], async () => {
+    await db.transaction('rw', localTable, async () => {
       const remoteIds = new Set<string>();
 
       for (const row of remoteRows) {
-        const mapped = (meta.mapToLocal ? meta.mapToLocal(row) : row) as ExistingRecord;
+        const mapped = meta.mapToLocal ? meta.mapToLocal(row) : row;
         const id = mapped[meta.primaryKey] || mapped.id;
         remoteIds.add(String(id));
 
-        const existing = (await localTable.get(id)) as ExistingRecord | undefined;
-        const rawRemoteTime =
-          (row as SupabaseRow & { updated_at?: string | number; timestamp?: string | number })
-            .updated_at ||
-          (row as SupabaseRow & { timestamp?: string | number }).timestamp ||
-          0;
+        const existing = await localTable.get(id);
+        const rawRemoteTime = row.updated_at || row.timestamp || 0;
         const remoteTime = rawRemoteTime ? new Date(rawRemoteTime as string | number).getTime() : 0;
         if (remoteTime > maxRemoteTime) maxRemoteTime = remoteTime;
 

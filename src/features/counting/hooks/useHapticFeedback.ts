@@ -40,7 +40,7 @@ export function useHapticFeedback(config: Partial<HapticConfig> = {}) {
 
       try {
         navigator.vibrate(pattern);
-      } catch (error: unknown) {
+      } catch (error) {
         logger.debug('HapticFeedback', 'Vibration failed', { error });
       }
     },

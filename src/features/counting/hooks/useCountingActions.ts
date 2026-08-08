@@ -29,7 +29,6 @@ import { SessionRepository } from '@/repositories/SessionRepository';
 import { ScanRepository } from '@/repositories/ScanRepository';
 import type { ConsolidatedItem, Product, MatchResult, AppSettings, CountingSession } from '@/types';
 import type { ExpiryEntry } from '@/services/ExpiryService';
-import { isPharmaBarcode } from '../domain/countingDomain';
 
 interface UseCountingActionsOptions {
   sessionId: string | undefined;
@@ -55,9 +54,6 @@ interface UseCountingActionsOptions {
   getExpiryForBarcode?: (barcode: string) => Promise<any>;
 
   syncExpiry?: (entry: any) => Promise<any>;
-
-  /** Si true, solicita fecha de vencimiento al escanear productos pharma */
-  registerExpiry?: boolean;
 }
 
 interface UseCountingActionsResult {
@@ -107,17 +103,7 @@ export const useCountingActions = (
     saveExpiry,
     getExpiryForBarcode,
     syncExpiry,
-    registerExpiry = false,
   } = options;
-
-  // Determinar si debe solicitar vencimiento según configuración y tipo de producto
-  const shouldRequestExpiry = useCallback(
-    (barcode: string): boolean => {
-      if (!registerExpiry) return false;
-      return isPharmaBarcode(barcode);
-    },
-    [registerExpiry]
-  );
 
   // ============================================================================
   // ACCIÓN: Escanear producto
@@ -160,24 +146,19 @@ export const useCountingActions = (
 
           async (cleanBarcode: string, product: Product | null, newQty: number) => {
             try {
-              // Determinar si debe solicitar vencimiento (pharma + registerExpiry)
-              const needsPharma = shouldRequestExpiry(cleanBarcode);
-              dispatch({ type: 'PRODUCT_RESOLVED', needsPharma });
-
-              // Solo guardar si NO necesita pharma (el modal se encargará)
-              if (!needsPharma) {
-                await sessionService.addScanEvent(
-                  sessionId,
-                  cleanBarcode,
-                  qty,
-                  mm,
-                  yyyy,
-                  currentLocation,
-                  batch
-                );
-                dispatch({ type: 'COMMIT_COMPLETE' });
-              }
-            } catch (err: unknown) {
+              // TODO: Usar shouldPromptForBatch cuando esté disponible
+              dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
+              await sessionService.addScanEvent(
+                sessionId,
+                cleanBarcode,
+                qty,
+                mm,
+                yyyy,
+                currentLocation,
+                batch
+              );
+              dispatch({ type: 'COMMIT_COMPLETE' });
+            } catch (err) {
               logger.error(
                 'useCountingActions',
                 'Error in scan commit',
@@ -188,7 +169,7 @@ export const useCountingActions = (
           },
           () => dispatch({ type: 'ERROR_OCCURRED' })
         );
-      } catch (err: unknown) {
+      } catch (err) {
         logger.error(
           'useCountingActions',
           'Error in finalizeScanPipeline',
@@ -197,15 +178,7 @@ export const useCountingActions = (
         dispatch({ type: 'ERROR_OCCURRED' });
       }
     },
-    [
-      sessionId,
-      currentLocation,
-      consolidatedHistory,
-      machineState,
-      engine,
-      dispatch,
-      shouldRequestExpiry,
-    ]
+    [sessionId, currentLocation, consolidatedHistory, machineState, engine, dispatch]
   );
 
   // ============================================================================
@@ -218,7 +191,7 @@ export const useCountingActions = (
       await sessionService.updateSessionMetadata(sessionId);
       engine.actions.resetActive();
       engine.actions.triggerFeedback('undo');
-    } catch (err: unknown) {
+    } catch (err) {
       logger.error(
         'useCountingActions',
         'Error resetting session',
@@ -275,7 +248,7 @@ export const useCountingActions = (
 
           finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
         }
-      } catch (err: unknown) {
+      } catch (err) {
         logger.error(
           'useCountingActions',
           'Error in handlePharmaComplete',
@@ -312,7 +285,7 @@ export const useCountingActions = (
         const undone = await sessionService.undoLastAction(sessionId);
         if (undone) engine.actions.triggerFeedback('undo');
       }
-    } catch (err: unknown) {
+    } catch (err) {
       logger.error(
         'useCountingActions',
         'Error in undoLastScan',
@@ -333,7 +306,7 @@ export const useCountingActions = (
           await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
           engine.actions.triggerFeedback(newState ? 'success' : 'undo');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         logger.error(
           'useCountingActions',
           'Error in toggleAutoLock',
@@ -369,7 +342,7 @@ export const useCountingActions = (
         });
         engine.actions.triggerFeedback('success');
         setPotentialMatch(null);
-      } catch (err: unknown) {
+      } catch (err) {
         logger.error(
           'useCountingActions',
           'Error in applyPotentialMatch',

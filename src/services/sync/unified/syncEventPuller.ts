@@ -9,27 +9,11 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { db, DynamicRecord } from '@/db';
+import { db } from '@/db';
 import { logger } from '@/services/logger';
 import { syncRegistry } from './registry';
 import { syncMetricsService } from './SyncMetricsService';
-import type { TableSyncMeta, TableSyncResult, SupabaseRow } from './types';
-
-// Tipo para acceso dinámico a tablas Dexie
-type DexieTable = {
-  get: (id: unknown) => Promise<unknown>;
-  put: (item: Record<string, unknown>) => Promise<unknown>;
-  update: (id: number, changes: Record<string, unknown>) => Promise<number>;
-  toArray: () => Promise<unknown[]>;
-};
-
-// Tipo para eventos locales
-interface LocalEvent {
-  id: number;
-  frcNumber?: string;
-  barcode?: string;
-  createdAt?: number;
-}
+import type { TableSyncMeta, TableSyncResult } from './types';
 
 /**
  * Pull de registros desde Supabase para una tabla específica
@@ -118,7 +102,7 @@ export async function pullTable(tableName: string): Promise<TableSyncResult> {
  * Procesa eventos desde la nube con manejo de eliminados localmente
  */
 export async function processRemoteEvents(
-  data: SupabaseRow[],
+  data: any[],
   meta: TableSyncMeta
 ): Promise<{ added: number; updated: number }> {
   let added = 0;
@@ -130,14 +114,14 @@ export async function processRemoteEvents(
     const deletedKeys = new Set(deletedEvents.map(e => e.eventKey.toLowerCase()));
 
     // Obtener todos los eventos locales existentes
-    const localTable = db[meta.localTable] as DexieTable;
+    const localTable = (db as any)[meta.localTable];
     if (!localTable) return { added, updated };
 
-    const existingEvents = (await localTable.toArray()) as LocalEvent[];
+    const existingEvents = await localTable.toArray();
 
     // Crear mapa de eventos locales: key -> { id, localTimestamp }
     const localEventsMap = new Map<string, { id: number; timestamp: number }>();
-    existingEvents.forEach(e => {
+    existingEvents.forEach((e: any) => {
       const key = `${e.frcNumber || ''}~${e.barcode || ''}`.toLowerCase();
       if (key !== '~') {
         localEventsMap.set(key, {
@@ -149,10 +133,8 @@ export async function processRemoteEvents(
 
     // Procesar cada evento remoto
     for (const row of data || []) {
-      const remoteKey =
-        `${(row.frc_code as string) || ''}~${(row.barcode as string) || ''}`.toLowerCase();
-      const updatedAt = row.updated_at as string | number | Date | undefined;
-      const remoteTimestamp = updatedAt ? new Date(updatedAt).getTime() : 0;
+      const remoteKey = `${row.frc_code || ''}~${row.barcode || ''}`.toLowerCase();
+      const remoteTimestamp = row.updated_at ? new Date(row.updated_at).getTime() : 0;
 
       // Solo procesar si tiene clave válida
       if (remoteKey === '~' || (!row.frc_code && !row.barcode)) continue;
@@ -169,7 +151,7 @@ export async function processRemoteEvents(
         // No existe localmente, agregar
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
-          await localTable.put(local as Record<string, unknown>);
+          await localTable.put(local as any);
           added++;
         }
       } else if (remoteTimestamp > localEvent.timestamp) {
@@ -177,9 +159,9 @@ export async function processRemoteEvents(
         const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
         if (local) {
           await localTable.update(localEvent.id, {
-            ...(local as Record<string, unknown>),
+            ...local,
             syncStatus: 'synced',
-          });
+          } as any);
           updated++;
         }
       }
@@ -189,7 +171,7 @@ export async function processRemoteEvents(
     if (added > 0 || updated > 0) {
       logger.info('SYNC', `Eventos: ${added} agregados, ${updated} actualizados desde nube`);
     }
-  } catch (err: unknown) {
+  } catch (err) {
     logger.warn('SYNC', 'Error procesando eventos desde nube:', err);
   }
 
@@ -199,22 +181,12 @@ export async function processRemoteEvents(
 /**
  * Procesa datos remotos genéricos para tablas dinámicas
  */
-export async function processDynamicData(
-  data: SupabaseRow[],
-  meta: TableSyncMeta
-): Promise<number> {
+export async function processDynamicData(data: any[], meta: TableSyncMeta): Promise<number> {
   let count = 0;
   for (const row of data || []) {
     const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
     if (local) {
-      const dynamicRecord: DynamicRecord = {
-        id: ((local as Record<string, unknown>).id as string) || crypto.randomUUID(),
-        tableName: meta.filterValue || meta.remoteTable,
-        data: local as Record<string, unknown>,
-        timestamp: Date.now(),
-        syncStatus: 'synced',
-      };
-      await db.dynamic_data.put(dynamicRecord);
+      await db.dynamic_data.put(local as any);
       count++;
     }
   }
@@ -224,18 +196,15 @@ export async function processDynamicData(
 /**
  * Procesa datos remotos genéricos para tablas normales
  */
-export async function processGenericTable(
-  data: SupabaseRow[],
-  meta: TableSyncMeta
-): Promise<number> {
+export async function processGenericTable(data: any[], meta: TableSyncMeta): Promise<number> {
   let count = 0;
-  const localTable = db[meta.localTable] as DexieTable;
+  const localTable = (db as any)[meta.localTable];
   if (!localTable) return count;
 
   for (const row of data || []) {
     const local = meta.mapToLocal ? meta.mapToLocal(row) : row;
     if (local) {
-      await localTable.put(local as Record<string, unknown>);
+      await localTable.put(local as any);
       count++;
     }
   }

@@ -14,26 +14,25 @@ export interface VersionCheckResult {
 /**
  * Verifica si la aplicación fue actualizada desde la última ejecución
  */
-export const checkVersion = async (onProgress?: InitStepCallback): Promise<VersionCheckResult> => {
+export const checkVersion = async (
+  onProgress?: InitStepCallback
+): Promise<VersionCheckResult> => {
   try {
     onProgress?.('version_check');
-    const wasUpdated = await AppMaintenanceService.checkVersion(
-      CURRENT_APP_VERSION,
-      onProgress as (step: string) => void
-    );
-
+    const wasUpdated = await AppMaintenanceService.checkVersion(CURRENT_APP_VERSION, onProgress as (step: string) => void);
+    
     logger.info('INIT_VERSION', `App version: ${CURRENT_APP_VERSION}, Was updated: ${wasUpdated}`);
-
+    
     return {
       wasUpdated,
-      currentVersion: CURRENT_APP_VERSION,
+      currentVersion: CURRENT_APP_VERSION
     };
-  } catch (error: unknown) {
+  } catch (error) {
     logger.warn('INIT_VERSION', 'Error checking version', error);
     // No fallar la inicialización por errores de version check
     return {
       wasUpdated: false,
-      currentVersion: CURRENT_APP_VERSION,
+      currentVersion: CURRENT_APP_VERSION
     };
   }
 };

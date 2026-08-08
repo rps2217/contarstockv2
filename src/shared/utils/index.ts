@@ -1,6 +1,6 @@
 /**
  * Shared Utils - Índice de utilidades compartidas
- *
+ * 
  * Este archivo centraliza todas las utilidades para evitar duplicación
  */
 
@@ -13,6 +13,7 @@ export {
   sanitizeBarcode,
   normalizeSku,
   normalizeIdentity,
+  normalizeHeader,
   generateUUID,
   generateSessionSignature,
 } from '@/services/utils';

@@ -39,7 +39,10 @@ export function handleError(error: unknown, context?: string): ServiceError {
       context ? { context } : undefined
     );
   }
-  return new ServiceError(context ? `${context}: Unknown error` : 'Unknown error', 'UNKNOWN');
+  return new ServiceError(
+    context ? `${context}: Unknown error` : 'Unknown error',
+    'UNKNOWN'
+  );
 }
 
 /**
@@ -52,7 +55,7 @@ export async function tryCatch<T>(
   try {
     const data = await fn();
     return { data, error: null };
-  } catch (error: unknown) {
+  } catch (error) {
     return { data: fallback, error: handleError(error) };
   }
 }

@@ -1,6 +1,6 @@
 /**
  * useViewPreferences - Hook para persistencia de preferencias de vista
- *
+ * 
  * Funcionalidades:
  * - Guardar/cargar preferencias en IndexedDB
  * - Vista compacta
@@ -8,8 +8,9 @@
  * - Paneles expandibles
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react'
 import { logger } from '@/services/logger';
+;
 import { db } from '@/db';
 
 export interface ViewPreferences {
@@ -26,7 +27,7 @@ const DEFAULT_PREFERENCES: Omit<ViewPreferences, 'module'> = {
   sortBy: 'date',
   sortOrder: 'desc',
   expandedPanels: {},
-  lastUpdated: Date.now(),
+  lastUpdated: Date.now()
 };
 
 export interface UseViewPreferencesReturn {
@@ -45,7 +46,7 @@ export interface UseViewPreferencesReturn {
 export function useViewPreferences(module: string): UseViewPreferencesReturn {
   const [preferences, setPreferences] = useState<ViewPreferences>(() => ({
     ...DEFAULT_PREFERENCES,
-    module,
+    module
   }));
 
   // Cargar preferencias al iniciar
@@ -57,71 +58,54 @@ export function useViewPreferences(module: string): UseViewPreferencesReturn {
           setPreferences({
             ...DEFAULT_PREFERENCES,
             ...stored,
-            lastUpdated: stored.lastUpdated || Date.now(),
+            lastUpdated: stored.lastUpdated || Date.now()
           });
         }
-      } catch (e: unknown) {
-        logger.error(
-          'useViewPreferences',
-          'Error loading preferences',
-          e instanceof Error ? e.message : String(e)
-        );
+      } catch (e) {
+        logger.error('useViewPreferences', 'Error loading preferences', e instanceof Error ? e.message : String(e));
       }
     };
     loadPreferences();
   }, [module]);
 
   // Guardar preferencias
-  const savePreferences = useCallback(
-    async (updates: Partial<ViewPreferences>) => {
-      const newPrefs = {
-        ...preferences,
-        ...updates,
-        module,
-        lastUpdated: Date.now(),
-      };
-      setPreferences(newPrefs);
-
-      try {
-        await db.viewPreferences.put(newPrefs);
-      } catch (e: unknown) {
-        logger.error(
-          'useViewPreferences',
-          'Error saving preferences',
-          e instanceof Error ? e.message : String(e)
-        );
-      }
-    },
-    [preferences, module]
-  );
+  const savePreferences = useCallback(async (updates: Partial<ViewPreferences>) => {
+    const newPrefs = {
+      ...preferences,
+      ...updates,
+      module,
+      lastUpdated: Date.now()
+    };
+    setPreferences(newPrefs);
+    
+    try {
+      await db.viewPreferences.put(newPrefs);
+    } catch (e) {
+      logger.error('useViewPreferences', 'Error saving preferences', e instanceof Error ? e.message : String(e));
+    }
+  }, [preferences, module]);
 
   // Acciones de preferencias
   const toggleCompactView = useCallback(() => {
     savePreferences({ compactView: !preferences.compactView });
   }, [preferences.compactView, savePreferences]);
 
-  const setSortBy = useCallback(
-    (sortBy: ViewPreferences['sortBy']) => {
-      savePreferences({ sortBy });
-    },
-    [savePreferences]
-  );
+  const setSortBy = useCallback((sortBy: ViewPreferences['sortBy']) => {
+    savePreferences({ sortBy });
+  }, [savePreferences]);
 
   const toggleSortOrder = useCallback(() => {
     savePreferences({ sortOrder: preferences.sortOrder === 'asc' ? 'desc' : 'asc' });
   }, [preferences.sortOrder, savePreferences]);
 
-  const togglePanel = useCallback(
-    (panelId: string) => {
-      savePreferences({
-        expandedPanels: {
-          ...preferences.expandedPanels,
-          [panelId]: !preferences.expandedPanels[panelId],
-        },
-      });
-    },
-    [preferences.expandedPanels, savePreferences]
-  );
+  const togglePanel = useCallback((panelId: string) => {
+    savePreferences({
+      expandedPanels: {
+        ...preferences.expandedPanels,
+        [panelId]: !preferences.expandedPanels[panelId]
+      }
+    });
+  }, [preferences.expandedPanels, savePreferences]);
 
   return {
     preferences,
@@ -130,7 +114,7 @@ export function useViewPreferences(module: string): UseViewPreferencesReturn {
     toggleSortOrder,
     togglePanel,
     savePreferences,
-    isPanelExpanded: (panelId: string) => preferences.expandedPanels[panelId] ?? true,
+    isPanelExpanded: (panelId: string) => preferences.expandedPanels[panelId] ?? true
   };
 }
 

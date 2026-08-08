@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { normalizeText } from '@/lib/utils';
 import {
   calculateReceptionStats,
+  normalizeText,
   receptionMatchesSearch,
   sortReceptions,
   filterReceptions,
@@ -13,36 +13,14 @@ import {
   evaluateReceptionStatus,
   formatReceptionDate,
   RECEPTION_STATUS_CONFIG,
-  Session,
+  Session
 } from './receptionDomain';
 
 describe('receptionDomain', () => {
   const mockSessions: Session[] = [
-    {
-      id: '1',
-      erpOrder: 'ERP001',
-      labelCode: 'LBL001',
-      status: 'draft',
-      createdAt: Date.now(),
-      lastSyncTimestamp: undefined,
-    },
-    {
-      id: '2',
-      erpOrder: 'ERP002',
-      labelCode: 'LBL002',
-      status: 'completed',
-      createdAt: Date.now() - 1000,
-      lastSyncTimestamp: Date.now(),
-    },
-    {
-      id: '3',
-      erpOrder: 'ERP001',
-      labelCode: 'LBL003',
-      status: 'draft',
-      createdAt: Date.now() - 2000,
-      labelPhoto: 'photo1',
-      photoUrl: undefined,
-    },
+    { id: '1', erpOrder: 'ERP001', labelCode: 'LBL001', status: 'draft', createdAt: Date.now(), lastSyncTimestamp: undefined },
+    { id: '2', erpOrder: 'ERP002', labelCode: 'LBL002', status: 'completed', createdAt: Date.now() - 1000, lastSyncTimestamp: Date.now() },
+    { id: '3', erpOrder: 'ERP001', labelCode: 'LBL003', status: 'draft', createdAt: Date.now() - 2000, labelPhoto: 'photo1', photoUrl: undefined }
   ];
 
   describe('normalizeText', () => {
@@ -62,7 +40,7 @@ describe('receptionDomain', () => {
   describe('calculateReceptionStats', () => {
     it('debe calcular estadísticas correctamente', () => {
       const stats = calculateReceptionStats(mockSessions);
-
+      
       expect(stats.total).toBe(3);
       expect(stats.pending).toBe(2);
       expect(stats.withPhoto).toBe(1);
@@ -71,7 +49,7 @@ describe('receptionDomain', () => {
 
     it('debe manejar array vacío', () => {
       const stats = calculateReceptionStats([]);
-
+      
       expect(stats.total).toBe(0);
       expect(stats.synced).toBe(0);
       expect(stats.pending).toBe(0);
@@ -99,14 +77,14 @@ describe('receptionDomain', () => {
   describe('sortReceptions', () => {
     it('debe ordenar por fecha ascendente', () => {
       const sorted = sortReceptions(mockSessions, 'createdAt', 'asc');
-
+      
       expect(sorted[0].id).toBe('3');
       expect(sorted[2].id).toBe('1');
     });
 
     it('debe ordenar por fecha descendente', () => {
       const sorted = sortReceptions(mockSessions, 'createdAt', 'desc');
-
+      
       expect(sorted[0].id).toBe('1');
       expect(sorted[2].id).toBe('3');
     });
@@ -114,7 +92,7 @@ describe('receptionDomain', () => {
     it('no debe mutar el array original', () => {
       const original = [...mockSessions];
       sortReceptions(mockSessions, 'createdAt', 'asc');
-
+      
       expect(mockSessions[0].id).toBe(original[0].id);
     });
   });
@@ -122,14 +100,14 @@ describe('receptionDomain', () => {
   describe('filterReceptions', () => {
     it('debe filtrar por estado draft', () => {
       const filtered = filterReceptions(mockSessions, { status: 'draft' });
-
+      
       expect(filtered.length).toBe(2);
       expect(filtered.every(s => s.status === 'draft')).toBe(true);
     });
 
     it('debe filtrar por ERP específico', () => {
       const filtered = filterReceptions(mockSessions, { erp: 'ERP001' });
-
+      
       expect(filtered.length).toBe(2);
       expect(filtered.every(s => s.erpOrder === 'ERP001')).toBe(true);
     });
@@ -151,7 +129,7 @@ describe('receptionDomain', () => {
   describe('getUniqueErps', () => {
     it('debe obtener ERPs únicos ordenados', () => {
       const erps = getUniqueErps(mockSessions);
-
+      
       expect(erps).toEqual(['ERP001', 'ERP002']);
     });
 

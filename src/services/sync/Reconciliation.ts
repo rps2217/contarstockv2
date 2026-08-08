@@ -40,7 +40,7 @@ export const reconcileReception = async (
       const idsToDelete = toDelete.map(s => s.id);
       if (onProgress) onProgress(`Limpiando ${idsToDelete.length} registros obsoletos...`);
 
-      await db.transaction('rw', [db.scans, db.sessions], async () => {
+      await (db as any).transaction('rw', db.scans, db.sessions, async () => {
         await ScanRepository.deleteBySessions(idsToDelete);
         await SessionRepository.deleteMany(idsToDelete);
       });
@@ -96,7 +96,7 @@ export const getGlobalPendingCount = async (): Promise<number> => {
     count += dynamicCount;
 
     return count;
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error(
       'Reconciliation',
       'getGlobalPendingCount failed',

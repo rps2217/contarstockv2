@@ -1,6 +1,6 @@
 /**
  * Compatibility exports para funciones legacy de importacion
- *
+ * 
  * Estas funciones fueron movidas a unified/ pero mantenemos la API
  * para no romper codigo existente.
  */
@@ -17,7 +17,7 @@ export async function importProductsFromCloud(): Promise<number> {
     logger.info('IMPORT', 'Importing products from cloud...');
     const result = await unifiedSyncEngine.pullTable('products');
     return result.added + result.updated;
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error('IMPORT', 'Failed to import products', error);
     throw error;
   }
@@ -31,7 +31,7 @@ export async function importProvidersFromCloud(): Promise<number> {
     logger.info('IMPORT', 'Importing providers from cloud...');
     const result = await unifiedSyncEngine.pullTable('providers');
     return result.added + result.updated;
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error('IMPORT', 'Failed to import providers', error);
     throw error;
   }
@@ -45,7 +45,7 @@ export async function importCustomersAndTemplatesFromCloud(): Promise<number> {
     logger.info('IMPORT', 'Importing customers and templates...');
     const customersResult = await unifiedSyncEngine.pullTable('customers');
     return customersResult.added + customersResult.updated;
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error('IMPORT', 'Failed to import customers', error);
     throw error;
   }

@@ -393,7 +393,7 @@ export const useExpiry = (): UseExpiryReturn => {
             },
           },
         });
-      } catch (error: unknown) {
+      } catch (error) {
         logger.error('useExpiry', 'Error deleting record', String(error));
         toast.error('Error al eliminar registro');
         throw error;
@@ -429,7 +429,7 @@ export const useExpiry = (): UseExpiryReturn => {
             },
           },
         });
-      } catch (error: unknown) {
+      } catch (error) {
         logger.error('useExpiry', 'Error bulk deleting', String(error));
         toast.error('Error al eliminar registros');
         throw error;
@@ -521,7 +521,7 @@ export const useExpiry = (): UseExpiryReturn => {
       setRecords(prev => [...prev, record]);
       toast.success('Vencimiento registrado');
       return record.id;
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('useExpiry', 'Error creating record', String(error));
       toast.error('Error al crear vencimiento');
       return null;
@@ -570,7 +570,7 @@ export const useExpiry = (): UseExpiryReturn => {
       clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => prev.map(r => (r.id === id ? updated : r)));
       toast.success('Registro actualizado');
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('useExpiry', 'Error updating record', String(error));
       toast.error('Error al actualizar registro');
       throw error;

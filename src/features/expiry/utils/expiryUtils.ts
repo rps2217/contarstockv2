@@ -70,7 +70,7 @@ export const handlePrintExpirations = (processedScans: PrintLabelItem[]) => {
                 displayValue: false,
                 margin: 0
               });
-            } catch (e: unknown) {
+            } catch (e) {
               logger.error('ExpiryUtils', 'Error barcode', { error: String(e) });
             }
           });
@@ -184,7 +184,7 @@ export const handlePrintLabels = (processedScans: PrintLabelItem[]) => {
                             fontSize: 14,
                             margin: 5
                         });
-                    } catch (e: unknown) {
+                    } catch (e) {
                         logger.error('ExpiryUtils', 'Error generating barcode', { barcode: item.barcode, error: String(e) });
                     }
                 });
@@ -257,7 +257,7 @@ export const handlePrintSelectedEvents = (items: PrintLabelItem[]) => {
                 margin: 0
               });
             }
-          } catch (e: unknown) {
+          } catch (e) {
             logger.error('ExpiryUtils', 'Error generating FRC barcode', { error: String(e) });
           }
           setTimeout(() => { window.print(); }, 500);
@@ -484,7 +484,7 @@ export const handleSendEmail = (items: PrintLabelItem[]) => {
             setTimeout(() => {
               mensaje.style.display = 'none';
             }, 3000);
-          } catch (err: unknown) {
+          } catch (err) {
             alert('No se pudo copiar automáticamente. Por favor, selecciona la tabla y presiona Ctrl+C.');
           }
           

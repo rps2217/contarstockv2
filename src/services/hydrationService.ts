@@ -21,7 +21,7 @@ export const HydrationService = {
       const [productCount, sessionCount, pendingSyncCount] = await Promise.all([
         db.products.count(),
         db.sessions.count(),
-        db.dynamic_data.where('syncStatus').equals('pending').count(),
+        db.dynamic_data.where('syncStatus').equals('pending').count()
       ]);
 
       const lastSession = await db.sessions.orderBy('createdAt').last();
@@ -33,11 +33,11 @@ export const HydrationService = {
         productCount,
         sessionCount,
         lastSessionId: lastSession?.id || null,
-        pendingSyncCount,
+        pendingSyncCount
       };
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-    } catch (e: unknown) {
+    } catch (e) {
       logger.warn('HYDRATION', 'No se pudo persistir el snapshot', e as LoggerDetails);
     }
   },
@@ -52,5 +52,6 @@ export const HydrationService = {
     } catch {
       return null;
     }
-  },
+  }
 };
+

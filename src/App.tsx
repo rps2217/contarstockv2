@@ -1,12 +1,7 @@
-import React, { Suspense, useEffect, useState, useMemo, lazy, useRef } from 'react';
+
+import React, { Suspense, useEffect, useState, useMemo, lazy, useRef } from 'react'
 import { logger } from '@/services/logger';
-
-// Extensión de Window para settings de la app
-interface AppWindow extends Window {
-  __APP_SETTINGS__?: import('./types').AppSettings;
-}
-declare const window: AppWindow;
-
+;
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -20,6 +15,7 @@ import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useExpiryNotifications } from '@/hooks/useExpiryNotifications';
 import { useAppShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useNavigate } from 'react-router-dom';
+import { initializeWorkflows } from '@/lib/workflowEngine';
 import { useRowLevelSecurityStore, usePermissionStore } from '@/stores';
 import { db } from './db';
 import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
@@ -29,7 +25,7 @@ import { SkipLinksProvider } from '@/shared/components/ui/SkipLinks';
 import { useAppInit } from '@/hooks/useAppInit';
 import { MotionProvider, useMotionContext } from '@/hooks/useMotionContext';
 import { useSimpleUI } from '@/hooks/useDeviceCapability';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { DashboardSimple } from '@/shared/components/redesign/DashboardSimple';
 
 // ============================================================================
@@ -40,120 +36,64 @@ import { DashboardSimple } from '@/shared/components/redesign/DashboardSimple';
 const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
 
 // Dashboard - carga diferida o versión simple según dispositivo
-const DashboardFull = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignDashboard }))
-);
+const DashboardFull = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDashboard })));
 
 // Vistas principales (AppSheet-style) - Carga diferida
-const DataPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignDataPage }))
-);
-const SyncPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignSyncPage }))
-);
-const SettingsPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage }))
-);
+const DataPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDataPage })));
+const SyncPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSyncPage })));
+const SettingsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSettingsPage })));
 
 // Páginas en redesign (consolidadas)
-const ReportsLegacy = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage }))
-);
-const ExpiryPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage }))
-);
+const ReportsLegacy = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReportsPage })));
+const ExpiryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignExpiryPage })));
 
 // Páginas redesignadas
-const CustomersPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage }))
-);
-const SuppliersPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage }))
-);
-const SlicesPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage }))
-);
-const CountingPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignCountingPage }))
-);
-const ReceptionPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignReceptionPage }))
-);
-const DynamicPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignDynamicPage }))
-);
+const CustomersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCustomersPage })));
+const SuppliersPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSuppliersPage })));
+const SlicesPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignSlicesPage })));
+const CountingPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignCountingPage })));
+const ReceptionPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignReceptionPage })));
+const DynamicPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignDynamicPage })));
 
 // Otras páginas
-const TheoreticalLoadsPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage }))
-);
-const HammerPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignHammerPage }))
-);
-const InventoryPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignInventoryPage }))
-);
-const AuditPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignAuditPage }))
-);
-const EventsPage = lazyWithRetry(() =>
-  import('@/shared/components/redesign').then(m => ({ default: m.RedesignEventsPage }))
-);
+const TheoreticalLoadsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignTheoreticalLoadsPage })));
+const HammerPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignHammerPage })));
+const InventoryPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignInventoryPage })));
+const AuditPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignAuditPage })));
+const EventsPage = lazyWithRetry(() => import('@/shared/components/redesign').then(m => ({ default: m.RedesignEventsPage })));
 
 // Componentes pesados - Solo carga cuando se necesitan (y solo en desktop)
-const Sidebar = lazyWithRetry(() =>
-  import('@/components/Sidebar').then(m => ({ default: m.Sidebar }))
-);
-const BottomDock = lazyWithRetry(() =>
-  import('@/components/BottomDock').then(m => ({ default: m.BottomDock }))
-);
-const OnboardingOverlay = lazyWithRetry(() =>
-  import('@/shared/components/core/OnboardingOverlay').then(m => ({ default: m.OnboardingOverlay }))
-);
-const SystemOperationsDrawer = lazyWithRetry(() =>
-  import('@/shared/components/core/SystemOperationsDrawer').then(m => ({
-    default: m.SystemOperationsDrawer,
-  }))
-);
-const ToastContainer = lazyWithRetry(() =>
-  import('@/shared/components/ui/ToastContainer').then(m => ({ default: m.ToastContainer }))
-);
-const TaskProgressIndicator = lazyWithRetry(() =>
-  import('@/shared/components/TaskProgressIndicator').then(m => ({
-    default: m.TaskProgressIndicator,
-  }))
-);
-const ThemeDemo = lazyWithRetry(() =>
-  import('@/shared/components/ui/ThemeDemo').then(m => ({ default: m.ThemeDemo }))
-);
+const Sidebar = lazyWithRetry(() => import('@/components/Sidebar').then(m => ({ default: m.Sidebar })));
+const BottomDock = lazyWithRetry(() => import('@/components/BottomDock').then(m => ({ default: m.BottomDock })));
+const OnboardingOverlay = lazyWithRetry(() => import('@/shared/components/core/OnboardingOverlay').then(m => ({ default: m.OnboardingOverlay })));
+const SystemOperationsDrawer = lazyWithRetry(() => import('@/shared/components/core/SystemOperationsDrawer').then(m => ({ default: m.SystemOperationsDrawer })));
+const ToastContainer = lazyWithRetry(() => import('@/shared/components/ui/ToastContainer').then(m => ({ default: m.ToastContainer })));
+const TaskProgressIndicator = lazyWithRetry(() => import('@/shared/components/TaskProgressIndicator').then(m => ({ default: m.TaskProgressIndicator })));
+const ThemeDemo = lazyWithRetry(() => import('@/shared/components/ui/ThemeDemo').then(m => ({ default: m.ThemeDemo })));
 
 // Wrapper para ThemeDemo
 const ThemeDemoPage = () => <ThemeDemo />;
 
 // Redesign Preview
-const RedesignPreviewApp = lazyWithRetry(() =>
-  import('@/shared/components/redesign/AppShell').then(m => ({
-    default: m.RedesignAppShellWrapper,
-  }))
-);
+const RedesignPreviewApp = lazyWithRetry(() => import('@/shared/components/redesign/AppShell').then(m => ({ default: m.RedesignAppShellWrapper })));
 const RedesignPreviewPage = () => <RedesignPreviewApp />;
 
 const AppContent = () => {
   const location = useLocation();
   const settings = useAppStore(state => state.settings);
   const { bootState, initStep, isAuthenticated, handleLoginSuccess } = useAppInit();
-
+  
   // Motion context para animaciones optimizadas
   const { shouldReduceMotion, motionVariants } = useMotionContext();
-
+  
   // Detectar si usar UI simplificada (móvil de gama baja)
   const isSimpleUI = useSimpleUI();
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
+  
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const hasInitialRedirectedRef = useRef(false);
   const navigate = useNavigate();
-
+  
   // Activar hooks globales
   useAutoSync();
   useAutoSession();
@@ -161,21 +101,26 @@ const AppContent = () => {
   useExpiryNotifications();
   useAppShortcuts();
 
+  // Inicializar workflows al cargar la app
+  useEffect(() => {
+    initializeWorkflows();
+  }, []);
+
   // Sincronizar rol de usuario con RLS
   useEffect(() => {
     const syncRoleToRLS = () => {
       const permissionStore = usePermissionStore.getState();
       const rlsStore = useRowLevelSecurityStore.getState();
-
+      
       const role = permissionStore.currentRole;
       const user = permissionStore.currentUser;
-
+      
       // Actualizar contexto de seguridad
       rlsStore.setContext({
         userId: user?.id || 'anonymous',
         role: role,
       });
-
+      
       // Si es admin, establecer bypass (ve todo)
       if (role === 'admin') {
         rlsStore.enableAdminBypass(true);
@@ -183,19 +128,16 @@ const AppContent = () => {
         rlsStore.enableAdminBypass(false);
       }
     };
-
+    
     syncRoleToRLS();
-
+    
     // Suscribirse a cambios en el store de permisos
     const unsubscribe = usePermissionStore.subscribe((state, prevState) => {
-      if (
-        state.currentRole !== prevState.currentRole ||
-        state.currentUser !== prevState.currentUser
-      ) {
+      if (state.currentRole !== prevState.currentRole || state.currentUser !== prevState.currentUser) {
         syncRoleToRLS();
       }
     });
-
+    
     return () => unsubscribe();
   }, []);
 
@@ -207,36 +149,26 @@ const AppContent = () => {
         const locations = await db.locations.toArray();
         const locationNames = locations.map(l => l.name).filter(Boolean);
         locationNames.forEach(loc => rlsStore.addWarehouse(loc));
-
+        
         // También cargar ubicaciones únicas de productos
         const products = await db.products.toArray();
         const uniqueLocations = [...new Set(products.map(p => p.location).filter(Boolean))];
-        uniqueLocations.forEach(loc => {
-          if (loc) rlsStore.addWarehouse(loc as string);
-        });
+        uniqueLocations.forEach(loc => { if (loc) rlsStore.addWarehouse(loc as string); });
       } catch (err) {
-        logger.warn(
-          'App',
-          'Error cargando ubicaciones',
-          err instanceof Error ? err.message : String(err)
-        );
+        logger.warn('App', 'Error cargando ubicaciones', err instanceof Error ? err.message : String(err));
       }
     };
     loadLocations();
   }, []);
 
   useEffect(() => {
-    window.__APP_SETTINGS__ = settings;
+    (window as any).__APP_SETTINGS__ = settings;
   }, [settings]);
 
   useEffect(() => {
     if (isAuthenticated && bootState === 'ready' && !hasInitialRedirectedRef.current) {
       hasInitialRedirectedRef.current = true;
-      if (
-        settings.defaultStartModule &&
-        settings.defaultStartModule !== 'dashboard' &&
-        location.pathname === '/'
-      ) {
+      if (settings.defaultStartModule && settings.defaultStartModule !== 'dashboard' && location.pathname === '/') {
         navigate(`/${settings.defaultStartModule}`, { replace: true });
       }
     }
@@ -244,14 +176,8 @@ const AppContent = () => {
 
   const { isScanningMode } = React.useMemo(() => {
     const path = location.pathname;
-    const scanningPaths = [
-      '/counting/',
-      '/reception',
-      '/expiry/capture',
-      '/events/capture',
-      '/massive/',
-    ];
-
+    const scanningPaths = ['/counting/', '/reception', '/expiry/capture', '/events/capture', '/massive/'];
+    
     const isScanning = scanningPaths.some(p => path.startsWith(p));
 
     return {
@@ -259,33 +185,22 @@ const AppContent = () => {
     };
   }, [location.pathname]);
 
-  const currentThemeClass =
-    settings.theme === 'high-contrast'
-      ? 'bg-black text-yellow-400'
-      : settings.theme === 'light'
-        ? 'bg-slate-50 text-slate-900'
-        : settings.theme === 'gray'
-          ? 'bg-[#E8E8E8] text-[#171717]'
-          : settings.theme === 'night'
-            ? 'bg-[#0A0A0B] text-white'
-            : 'bg-base text-slate-100';
+  const currentThemeClass = 
+    settings.theme === 'high-contrast' ? 'bg-black text-yellow-400' :
+    settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 
+    settings.theme === 'gray' ? 'bg-[#E8E8E8] text-[#171717]' :
+    settings.theme === 'night' ? 'bg-[#0A0A0B] text-white' :
+    'bg-base text-slate-100';
 
-  const isDarkMode =
-    settings.theme === 'dark' ||
-    settings.theme === 'night' ||
-    settings.theme === 'high-contrast' ||
-    settings.theme === 'appsheet-dark';
+  const isDarkMode = settings.theme === 'dark' || settings.theme === 'night' || settings.theme === 'high-contrast' || settings.theme === 'appsheet-dark';
   const isHighContrast = settings.theme === 'high-contrast';
-
+  
   // Memoizar transición de página para evitar recrear en cada render
-  const pageTransition = useMemo(
-    () => ({
-      duration: shouldReduceMotion ? 0 : 0.25,
-      ease: [0.23, 1, 0.32, 1] as const,
-    }),
-    [shouldReduceMotion]
-  );
-
+  const pageTransition = useMemo(() => ({
+    duration: shouldReduceMotion ? 0 : 0.25,
+    ease: [0.23, 1, 0.32, 1] as const
+  }), [shouldReduceMotion]);
+  
   // Dashboard según tipo de dispositivo
   const Dashboard = useMemo(() => {
     if (isSimpleUI) {
@@ -297,23 +212,17 @@ const AppContent = () => {
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
       <div className="h-screen w-full bg-base flex flex-col items-center justify-center text-white p-8">
-        <motion.div
+        <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="relative mb-12"
         >
           <div className="p-12 border border-white/5 rounded-[3.5rem] relative z-10 bg-surface/50 backdrop-blur-2xl shadow-2xl shadow-blue-500/10">
-            {initStep === 'config' ? (
-              <Cpu className="w-16 h-16 text-blue-400 animate-pulse" />
-            ) : initStep === 'database' ? (
-              <Database className="w-16 h-16 text-emerald-500 animate-bounce" />
-            ) : initStep === 'purging' ? (
-              <RefreshCw className="w-16 h-16 text-amber-500 animate-spin" />
-            ) : initStep === 'offline' ? (
-              <WifiOff className="w-16 h-16 text-rose-500" />
-            ) : (
-              <Box className="w-16 h-16 text-blue-500" />
-            )}
+            {initStep === 'config' ? <Cpu className="w-16 h-16 text-blue-400 animate-pulse" /> : 
+            initStep === 'database' ? <Database className="w-16 h-16 text-emerald-500 animate-bounce" /> :
+            initStep === 'purging' ? <RefreshCw className="w-16 h-16 text-amber-500 animate-spin" /> :
+            initStep === 'offline' ? <WifiOff className="w-16 h-16 text-rose-500" /> :
+            <Box className="w-16 h-16 text-blue-500" />}
           </div>
           <div className="absolute inset-0 bg-blue-500 blur-[80px] opacity-20 animate-pulse"></div>
         </motion.div>
@@ -321,26 +230,23 @@ const AppContent = () => {
         <h1 className="text-5xl font-black uppercase tracking-tighter italic mb-2 bg-gradient-to-r from-white to-white/40 bg-clip-text text-transparent">
           LOGICOUNT <span className="text-blue-500">PRO</span>
         </h1>
-
+        
         <div className="mt-10 w-72 space-y-4">
           <div className="flex justify-between items-center px-1">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
-              {initStep === 'config'
-                ? 'Optimizing_Cloud'
-                : initStep === 'database'
-                  ? 'Rebuilding_Catalog'
-                  : initStep === 'purging'
-                    ? 'Cleaning_Environment'
-                    : 'System_Warming_Up'}
+              {initStep === 'config' ? 'Optimizing_Cloud' : 
+              initStep === 'database' ? 'Rebuilding_Catalog' : 
+              initStep === 'purging' ? 'Cleaning_Environment' :
+              'System_Warming_Up'}
             </span>
             <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
           </div>
           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/10">
-            <motion.div
-              initial={{ width: '10%' }}
-              animate={{ width: '100%' }}
-              transition={{ duration: 3, ease: 'easeInOut' }}
-              className="h-full bg-blue-600 rounded-full"
+            <motion.div 
+              initial={{ width: "10%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 3, ease: "easeInOut" }}
+              className="h-full bg-blue-600 rounded-full" 
             />
           </div>
         </div>
@@ -357,9 +263,7 @@ const AppContent = () => {
   }
 
   return (
-    <div
-      className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} ${isHighContrast ? 'high-contrast' : ''} font-sans selection:bg-blue-500/30`}
-    >
+    <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} ${isHighContrast ? 'high-contrast' : ''} font-sans selection:bg-blue-500/30`}>
       {/* Solo cargar componentes de overlay en desktop */}
       {!isMobile && (
         <Suspense fallback={null}>
@@ -369,27 +273,28 @@ const AppContent = () => {
           <TaskProgressIndicator />
         </Suspense>
       )}
-
+      
       <Toaster position="bottom-center" />
-
+      
       <div className="flex-1 flex overflow-hidden relative">
         {/* Solo mostrar Sidebar en desktop */}
         {!isScanningMode && !isMobile && (
           <Suspense fallback={null}>
-            <Sidebar
-              view={location.pathname.split('/')[1] || 'dashboard'}
-              settings={settings}
+            <Sidebar 
+              view={location.pathname.split('/')[1] || 'dashboard'} 
+              settings={settings} 
               isCollapsed={isSidebarCollapsed}
               onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             />
           </Suspense>
         )}
-
-        <main
+        
+        <main 
           id="main-content"
           role="main"
           className={`flex-1 relative overflow-hidden ${!isScanningMode && !isMobile ? `transition-[padding-left] duration-300 ease-in-out ${isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64'}` : ''}`}
         >
+          
           <ErrorBoundary>
             {/* Contenido con o sin animaciones según el dispositivo */}
             <RoutesWrapper
@@ -420,14 +325,11 @@ const AppContent = () => {
           </ErrorBoundary>
         </main>
       </div>
-
+      
       {/* BottomDock y botón flotante - siempre en móvil */}
       {!isScanningMode && (
         <Suspense fallback={null}>
-          <BottomDock
-            currentView={location.pathname.split('/')[1] || 'dashboard'}
-            settings={settings}
-          />
+          <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
         </Suspense>
       )}
     </div>
@@ -438,52 +340,13 @@ const AppContent = () => {
 // ROUTES WRAPPER - Renderiza rutas con o sin animaciones según dispositivo
 // ============================================================================
 
-type PageComponent = React.ComponentType<Record<string, unknown>>;
-
-interface MotionState {
-  opacity: number;
-  scale: number;
-  y: number;
-}
-
-interface MotionVariants {
-  page: {
-    initial: MotionState;
-    animate: MotionState;
-    exit: MotionState;
-  };
-}
-
-interface PageTransition {
-  duration: number;
-  ease: readonly [number, number, number, number];
-}
-
 interface RoutesWrapperProps {
   location: ReturnType<typeof useLocation>;
   Dashboard: React.ComponentType;
   shouldReduceMotion: boolean;
-  motionVariants: MotionVariants;
-  pageTransition: PageTransition;
-  // Páginas dinámicamente pasadas
-  DataPage: PageComponent;
-  SyncPage: PageComponent;
-  ReportsLegacy: PageComponent;
-  ExpiryPage: PageComponent;
-  SettingsPage: PageComponent;
-  CustomersPage: PageComponent;
-  SuppliersPage: PageComponent;
-  SlicesPage: PageComponent;
-  CountingPage: PageComponent;
-  ReceptionPage: PageComponent;
-  DynamicPage: PageComponent;
-  HammerPage: PageComponent;
-  TheoreticalLoadsPage: PageComponent;
-  InventoryPage: PageComponent;
-  AuditPage: PageComponent;
-  EventsPage: PageComponent;
-  ThemeDemoPage: PageComponent;
-  RedesignPreviewPage: PageComponent;
+  motionVariants: any;
+  pageTransition: any;
+  [key: string]: any;
 }
 
 const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
@@ -494,25 +357,13 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
   pageTransition,
   ...pages
 }) => {
-  const {
-    DataPage,
-    SyncPage,
-    ReportsLegacy,
-    ExpiryPage,
-    SettingsPage,
-    CustomersPage,
-    SuppliersPage,
-    SlicesPage,
-    CountingPage,
-    ReceptionPage,
-    DynamicPage,
-    HammerPage,
-    TheoreticalLoadsPage,
-    InventoryPage,
-    AuditPage,
+  const { 
+    DataPage, SyncPage, ReportsLegacy, ExpiryPage, 
+    SettingsPage, CustomersPage, SuppliersPage, SlicesPage, 
+    CountingPage, ReceptionPage, DynamicPage,
+    HammerPage, TheoreticalLoadsPage, InventoryPage, AuditPage,
     EventsPage,
-    ThemeDemoPage,
-    RedesignPreviewPage,
+    ThemeDemoPage, RedesignPreviewPage 
   } = pages;
 
   const content = (
@@ -575,7 +426,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
   // Sin animaciones para dispositivos lentos
   if (shouldReduceMotion) {
     return (
-      <Suspense
+      <Suspense 
         fallback={
           <div className="h-full w-full flex items-center justify-center bg-base">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -590,7 +441,7 @@ const RoutesWrapper: React.FC<RoutesWrapperProps> = ({
   // Con animaciones para dispositivos de gama alta
   return (
     <AnimatePresence mode="wait">
-      <Suspense
+      <Suspense 
         fallback={
           <div className="h-full w-full flex items-center justify-center bg-base">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -635,3 +486,4 @@ const App = () => (
 );
 
 export default App;
+

@@ -3,13 +3,11 @@ import { Provider } from '../../../types';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { db } from '../../../db';
 
-export const useProvidersMutations = (loadProviders: () => Promise<void>) => {
+export const useProvidersMutations = (
+  loadProviders: () => Promise<void>
+) => {
   const handleDelete = async (rut: string) => {
-    if (
-      confirm(
-        '¿Estás seguro de eliminar este proveedor? Esto afectará el cálculo de vencimientos de sus productos.'
-      )
-    ) {
+    if (confirm('¿Estás seguro de eliminar este proveedor? Esto afectará el cálculo de vencimientos de sus productos.')) {
       await ProviderRepository.delete(rut);
       toast.success('Proveedor eliminado');
       await loadProviders();
@@ -23,38 +21,28 @@ export const useProvidersMutations = (loadProviders: () => Promise<void>) => {
   };
 
   const handleAutoFill = async () => {
-    if (
-      !confirm(
-        '¿Deseas extraer los proveedores de tu catálogo de productos actual? Se agregarán con la política por defecto (Canje: Sí, 90 días).'
-      )
-    )
-      return;
-
+    if (!confirm('¿Deseas extraer los proveedores de tu catálogo de productos actual? Se agregarán con la política por defecto (Canje: Sí, 90 días).')) return;
+    
     const products = await db.products.toArray();
     const existingProviders = await ProviderRepository.getAll();
     const existingRuts = new Set(existingProviders.map(p => p.rut));
-
+    
     const newProvidersMap = new Map<string, Provider>();
-
+    
     products.forEach(p => {
       if (p.supplier && p.supplier.trim() !== '' && p.supplier.trim().toUpperCase() !== 'N/A') {
-        const rut =
-          p.supplierRut ||
-          `GEN-${p.supplier
-            .substring(0, 8)
-            .toUpperCase()
-            .replace(/[^A-Z0-9]/g, '')}`;
+        const rut = p.supplierRut || `GEN-${p.supplier.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, '')}`;
         if (!existingRuts.has(rut) && !newProvidersMap.has(rut)) {
           newProvidersMap.set(rut, {
             rut,
             name: p.supplier.trim().toUpperCase(),
             hasExchange: true,
-            withdrawalDays: 90,
+            withdrawalDays: 90
           });
         }
       }
     });
-
+    
     const newProviders = Array.from(newProvidersMap.values());
     if (newProviders.length > 0) {
       await db.providers.bulkPut(newProviders);
@@ -77,7 +65,7 @@ export const useProvidersMutations = (loadProviders: () => Promise<void>) => {
     toast.loading('Importando políticas...');
     const reader = new FileReader();
 
-    reader.onload = async event => {
+    reader.onload = async (event) => {
       try {
         const csvText = event.target?.result as string;
         const { bulkImportProviders } = await import('../../../services/providerImporter');
@@ -85,7 +73,7 @@ export const useProvidersMutations = (loadProviders: () => Promise<void>) => {
         toast.dismiss();
         toast.success(`¡Se importaron/actualizaron ${count} proveedores exitosamente!`);
         await loadProviders();
-      } catch (err: unknown) {
+      } catch (err: any) {
         toast.dismiss();
         toast.error('Error en formato CSV. Asegúrate de que tenga las columnas correctas.');
       }
@@ -95,14 +83,14 @@ export const useProvidersMutations = (loadProviders: () => Promise<void>) => {
       toast.error('Ocurrió un error al leer el archivo.');
     };
     reader.readAsText(file, 'UTF-8');
-
-    if (e.target) e.target.value = '';
+    
+    if(e.target) e.target.value = '';
   };
 
   return {
     handleDelete,
     handleSave,
     handleAutoFill,
-    handleImportCSV,
+    handleImportCSV
   };
 };

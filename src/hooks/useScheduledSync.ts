@@ -84,7 +84,7 @@ export const useScheduledSync = (options: UseScheduledSyncOptions) => {
       await onSync();
       setLastScheduledSync(new Date());
       onSyncSuccess?.();
-    } catch (error: unknown) {
+    } catch (error) {
       onSyncError?.(error as Error);
     } finally {
       setIsRunning(false);

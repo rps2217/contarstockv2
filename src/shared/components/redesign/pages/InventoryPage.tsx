@@ -1,15 +1,15 @@
 /**
  * InventoryPage.tsx - Módulo de Gestión de Inventario v2
- *
+ * 
  * Diseño monocromático de grises, estructura unificada.
  * Migrado a redesign/pages/ para consolidar UI.
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import {
-  RefreshCw,
-  Trash2,
+import { motion } from 'motion/react';
+import { 
+  RefreshCw, 
+  Trash2, 
   Plus,
   Package,
   ArrowUpRight,
@@ -71,9 +71,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   isDark,
 }) => {
   return (
-    <div
-      className={`rounded-2xl border overflow-hidden ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}
-    >
+    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}>
       {/* Section Header */}
       <button
         onClick={onToggle}
@@ -84,12 +82,8 @@ const ProductSection: React.FC<ProductSectionProps> = ({
             <Icon className={`w-4 h-4 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
           </div>
           <div className="text-left">
-            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
-              {title}
-            </span>
-            <span
-              className={`ml-2 text-[10px] font-mono ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}
-            >
+            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>{title}</span>
+            <span className={`ml-2 text-[10px] font-mono ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
               {products.length} productos
             </span>
           </div>
@@ -109,9 +103,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({
       >
         <div className="p-2 space-y-1 max-h-[400px] overflow-y-auto">
           {products.length === 0 ? (
-            <p
-              className={`text-center py-4 text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}
-            >
+            <p className={`text-center py-4 text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
               Sin productos
             </p>
           ) : (
@@ -137,30 +129,34 @@ export const RedesignInventoryPage: React.FC = () => {
   const settings = useAppStore(state => state.settings);
   const isDark = settings?.theme !== 'light';
 
-  const { filteredProducts, filters, isLoading, isSyncing, selectedIds, actions, ui } =
-    useInventory();
+  const {
+    filteredProducts,
+    filters,
+    isLoading,
+    isSyncing,
+    selectedIds,
+    actions,
+    ui
+  } = useInventory();
 
   // Hook de exportación
-  const inventoryColumns = useMemo(
-    () => [
-      { key: 'barcode' as const, header: 'Código' },
-      { key: 'name' as const, header: 'Producto' },
-      { key: 'stock' as const, header: 'Stock' },
-      { key: 'sku' as const, header: 'SKU' },
-      { key: 'location' as const, header: 'Ubicación' },
-    ],
-    []
-  );
-  const { isExporting, exportTo } = useExport<Product>({
-    fileName: 'Inventario',
-    columns: inventoryColumns,
-    sheetName: 'Productos',
+  const inventoryColumns = useMemo(() => [
+    { key: 'barcode' as const, header: 'Código' },
+    { key: 'name' as const, header: 'Producto' },
+    { key: 'stock' as const, header: 'Stock' },
+    { key: 'sku' as const, header: 'SKU' },
+    { key: 'location' as const, header: 'Ubicación' },
+  ], []);
+  const { isExporting, exportTo } = useExport<Product>({ 
+    fileName: 'Inventario', 
+    columns: inventoryColumns, 
+    sheetName: 'Productos' 
   });
 
   const [expandedSections, setExpandedSections] = useState({
     exchange: true,
     loss: true,
-    noInfo: false,
+    noInfo: false
   });
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -183,12 +179,12 @@ export const RedesignInventoryPage: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-
+      
       if (e.key === 'Escape' && isInput) {
         target.blur();
         actions.setSearchQuery('');
       }
-
+      
       if (e.key === '/' && !isInput) {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
@@ -255,11 +251,9 @@ export const RedesignInventoryPage: React.FC = () => {
   // Agrupar productos por política
   const exchangeProducts = filteredProducts.filter(p => {
     const pWithPolicy = p as ProductWithPolicy;
-    return (
-      pWithPolicy.hasExchange === true ||
-      (pWithPolicy.policy?.daysToExpiry && pWithPolicy.policy.daysToExpiry > 0) ||
-      (pWithPolicy.withdrawalDays && pWithPolicy.withdrawalDays > 0)
-    );
+    return pWithPolicy.hasExchange === true || 
+           (pWithPolicy.policy?.daysToExpiry && pWithPolicy.policy.daysToExpiry > 0) ||
+           (pWithPolicy.withdrawalDays && pWithPolicy.withdrawalDays > 0);
   });
 
   const lossProducts = filteredProducts.filter(p => {
@@ -269,11 +263,9 @@ export const RedesignInventoryPage: React.FC = () => {
 
   const noInfoProducts = filteredProducts.filter(p => {
     const pWithPolicy = p as ProductWithPolicy;
-    return (
-      pWithPolicy.hasExchange === undefined &&
-      !pWithPolicy.policy?.daysToExpiry &&
-      !pWithPolicy.withdrawalDays
-    );
+    return pWithPolicy.hasExchange === undefined && 
+           !pWithPolicy.policy?.daysToExpiry && 
+           !pWithPolicy.withdrawalDays;
   });
 
   const totalCount = filteredProducts.length;
@@ -296,7 +288,7 @@ export const RedesignInventoryPage: React.FC = () => {
           >
             <Upload className="w-4 h-4" />
           </button>
-
+          
           {/* Exportar dropdown */}
           <div className="relative group">
             <button
@@ -306,48 +298,27 @@ export const RedesignInventoryPage: React.FC = () => {
               <Download className="w-4 h-4" />
             </button>
             <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
-              <div
-                className={`${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-white border border-neutral-200'} rounded-xl shadow-xl overflow-hidden min-w-[120px]`}
-              >
-                <button
-                  onClick={() => {
-                    exportTo(filteredProducts as Product[], 'csv');
-                  }}
-                  disabled={isExporting}
-                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}
-                >
+              <div className={`${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-white border border-neutral-200'} rounded-xl shadow-xl overflow-hidden min-w-[120px]`}>
+                <button onClick={() => { exportTo(filteredProducts as Product[], 'csv'); }} disabled={isExporting}
+                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}>
                   <Table2 className="w-4 h-4 text-emerald-500" /> CSV
                 </button>
-                <button
-                  onClick={() => {
-                    exportTo(filteredProducts as Product[], 'excel');
-                  }}
-                  disabled={isExporting}
-                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}
-                >
+                <button onClick={() => { exportTo(filteredProducts as Product[], 'excel'); }} disabled={isExporting}
+                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}>
                   <FileSpreadsheet className="w-4 h-4 text-blue-500" /> Excel
                 </button>
-                <button
-                  onClick={() => {
-                    exportTo(filteredProducts as Product[], 'pdf');
-                  }}
-                  disabled={isExporting}
-                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}
-                >
+                <button onClick={() => { exportTo(filteredProducts as Product[], 'pdf'); }} disabled={isExporting}
+                  className={`w-full flex items-center gap-2 px-4 py-2.5 ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} transition-colors text-sm`}>
                   <FileText className="w-4 h-4 text-rose-500" /> PDF
                 </button>
               </div>
             </div>
           </div>
           <button
-            onClick={() => setViewMode(v => (v === 'list' ? 'kanban' : 'list'))}
+            onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
             className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}
           >
-            {viewMode === 'list' ? (
-              <LayoutGrid className="w-4 h-4" />
-            ) : (
-              <List className="w-4 h-4" />
-            )}
+            {viewMode === 'list' ? <LayoutGrid className="w-4 h-4" /> : <List className="w-4 h-4" />}
           </button>
           <button
             onClick={handleMassDelete}
@@ -381,19 +352,12 @@ export const RedesignInventoryPage: React.FC = () => {
 
       {/* Selection info */}
       {selectedIds.size > 0 && (
-        <div
-          className={`mt-3 p-3 rounded-xl ${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 border border-neutral-200'}`}
-        >
+        <div className={`mt-3 p-3 rounded-xl ${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 border border-neutral-200'}`}>
           <div className="flex items-center justify-between">
-            <p
-              className={`text-xs font-medium ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}
-            >
+            <p className={`text-xs font-medium ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
               {selectedIds.size} seleccionado(s)
             </p>
-            <button
-              onClick={actions.clearSelection}
-              className={`text-xs ${isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'}`}
-            >
+            <button onClick={actions.clearSelection} className={`text-xs ${isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'}`}>
               Limpiar
             </button>
           </div>
@@ -404,9 +368,7 @@ export const RedesignInventoryPage: React.FC = () => {
       <div className="mt-4 space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw
-              className={`w-6 h-6 animate-spin ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}
-            />
+            <RefreshCw className={`w-6 h-6 animate-spin ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
           </div>
         ) : filteredProducts.length === 0 ? (
           <EmptyState
@@ -415,7 +377,7 @@ export const RedesignInventoryPage: React.FC = () => {
             icon={<Package className="w-8 h-8" />}
           />
         ) : viewMode === 'kanban' ? (
-          <InventoryKanbanView
+          <InventoryKanbanView 
             products={filteredProducts as ProductWithPolicy[]}
             onItemClick={actions.openEdit}
           />
@@ -458,12 +420,12 @@ export const RedesignInventoryPage: React.FC = () => {
       </div>
 
       {/* Mass Actions Panel */}
-      <MassActionsPanel
+      <MassActionsPanel 
         selectedCount={selectedIds.size}
         onClear={actions.clearSelection}
         actions={[
           { label: 'Imprimir', icon: Printer, onClick: handleMassPrint, variant: 'warning' },
-          { label: 'Borrar', icon: Trash2, onClick: handleMassDelete, variant: 'danger' },
+          { label: 'Borrar', icon: Trash2, onClick: handleMassDelete, variant: 'danger' }
         ]}
       />
 
@@ -472,14 +434,14 @@ export const RedesignInventoryPage: React.FC = () => {
         isOpen={ui.isCreateModalOpen || ui.isEditModalOpen}
         onClose={() => actions.openEdit(null)}
         initialData={ui.editingProduct}
-        onSaveSuccess={msg => toast.success(msg)}
+        onSaveSuccess={(msg) => toast.success(msg)}
       />
 
       {/* Import Tools Modal */}
       <ImportTools
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onImportComplete={count => toast.success(`${count} productos importados`)}
+        onImportComplete={(count) => toast.success(`${count} productos importados`)}
       />
 
       {/* Print Label Modal */}

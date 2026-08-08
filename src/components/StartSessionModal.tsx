@@ -1,15 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  DownloadCloud,
-  Loader2,
-  AlertCircle,
-  FileSearch,
-  Database,
-  Box,
-  ArrowRight,
-  Lock,
-  Unlock,
-} from 'lucide-react';
+import { DownloadCloud, Loader2, AlertCircle, FileSearch, Database, Box, ArrowRight, Lock, Unlock } from 'lucide-react';
 import { CountingSession, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService';
 import { SoundFX } from '../services/audio';
@@ -26,23 +16,19 @@ interface StartSessionModalProps {
 
 type Step = 'enter_erp' | 'confirm';
 
-export const StartSessionModal: React.FC<StartSessionModalProps> = ({
-  isOpen,
-  onClose,
-  onSessionStart,
-}) => {
+export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, onClose, onSessionStart }) => {
   const [step, setStep] = useState<Step>('enter_erp');
   const [erpOrder, setErpOrder] = useState('');
   const [isAutoLockEnabled, setIsAutoLockEnabled] = useState(true);
   const [error, setError] = useState('');
-
+  
   const [isCloudLoading, setIsCloudLoading] = useState(false);
   const [cloudOrder, setCloudOrder] = useState<ExpectedOrder | null>(null);
   const [localSavedOrders, setLocalSavedOrders] = useState<ExpectedOrder[]>([]);
 
   const loadSavedOrders = useCallback(() => {
     ExpectedOrderRepository.getAll()
-      .then(list => {
+      .then((list) => {
         setLocalSavedOrders(list || []);
       })
       .catch(err => {
@@ -58,21 +44,19 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
 
   useHIDScanner({
     isEnabled: isOpen && step === 'enter_erp',
-    onScan: raw => {
+    onScan: (raw) => {
       const cleanCode = raw.trim().toUpperCase();
       setErpOrder(cleanCode);
       SoundFX.play('success');
-    },
+    }
   });
 
   const handleFetchFromCloud = async () => {
     if (!erpOrder.trim()) return;
     setIsCloudLoading(true);
-    setError('');
+    setError("");
     try {
-      const localOrder = await ExpectedOrderRepository.getById(
-        String(erpOrder || '').toUpperCase()
-      );
+      const localOrder = await ExpectedOrderRepository.getById(String(erpOrder || '').toUpperCase());
       if (localOrder) {
         setCloudOrder(localOrder);
         SoundFX.play('success');
@@ -81,7 +65,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
       }
       const order = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
       if (!order || order.items.length === 0) {
-        setError('Documento no encontrado en la nube');
+        setError("Documento no encontrado en la nube");
         setCloudOrder(null);
         SoundFX.play('error');
       } else {
@@ -89,9 +73,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
         SoundFX.play('success');
         setStep('confirm');
       }
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      setError('Error de red: ' + error.message);
+    } catch (err: any) {
+      setError("Error de red: " + err.message);
       setCloudOrder(null);
     } finally {
       setIsCloudLoading(false);
@@ -121,14 +104,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
         setError('');
       }, 500);
     } catch (err) {
-      setError('Error de base de datos local');
+      setError("Error de base de datos local");
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
       variant="bottom-sheet"
       className="md:max-w-md bg-base text-white border-t-4 border-blue-600"
     >
@@ -137,12 +120,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
           <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
             <FileSearch className="w-8 h-8 text-blue-400" />
           </div>
-          <h3 className="text-xl font-black uppercase italic tracking-tight text-white">
-            Nueva Carga
-          </h3>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-            Con Orden ERP
-          </p>
+          <h3 className="text-xl font-black uppercase italic tracking-tight text-white">Nueva Carga</h3>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Con Orden ERP</p>
         </div>
 
         {error && (
@@ -155,20 +134,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
         {step === 'enter_erp' && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
             <div className="text-center">
-              <p className="text-[10px] text-muted font-bold uppercase">
-                Ingresa el numero de orden
-              </p>
+              <p className="text-[10px] text-muted font-bold uppercase">Ingresa el numero de orden</p>
             </div>
 
             <div className="relative">
               <input
                 type="text"
                 value={erpOrder}
-                onChange={e => {
-                  setErpOrder(e.target.value.toUpperCase());
-                  setCloudOrder(null);
-                  setError('');
-                }}
+                onChange={(e) => { setErpOrder(e.target.value.toUpperCase()); setCloudOrder(null); setError(''); }}
                 autoFocus
                 placeholder="Numero de Orden / ERP"
                 className="w-full h-16 bg-surface rounded-2xl px-5 font-mono font-black text-lg md:text-xl border-2 border-blue-500 text-white outline-none shadow-[0_0_20px_rgba(59,130,246,0.15)] focus:border-blue-400 transition-all text-center"
@@ -176,16 +149,11 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
             </div>
 
             <button
-              aria-label="Validar y continuar"
               disabled={!erpOrder.trim() || isCloudLoading}
               onClick={handleFetchFromCloud}
               className="w-full h-14 bg-blue-600 text-white font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 active:scale-[0.98] transition-all"
             >
-              {isCloudLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <DownloadCloud className="w-5 h-5" />
-              )}
+              {isCloudLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <DownloadCloud className="w-5 h-5" />}
               Validar y Continuar
             </button>
 
@@ -195,14 +163,12 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
                   <Database className="w-3 h-3 text-emerald-400" /> Cargas Teoricas Guardadas:
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                  {localSavedOrders.slice(0, 5).map(order => {
-                    const dispName =
-                      order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id;
+                  {localSavedOrders.slice(0, 5).map((order) => {
+                    const dispName = order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id;
                     return (
                       <button
                         key={order.id}
                         type="button"
-                        aria-label={`Cargar orden ${dispName}`}
                         onClick={() => {
                           setErpOrder(order.id);
                           setCloudOrder(order);
@@ -216,9 +182,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
                           <span className="text-[8px] text-slate-500 truncate">ID: {order.id}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <span className="px-1.5 py-0.5 bg-blue-500/10 rounded text-[7px] font-black text-blue-400">
-                            {order.items?.length || 0} SKUs
-                          </span>
+                          <span className="px-1.5 py-0.5 bg-blue-500/10 rounded text-[7px] font-black text-blue-400">{order.items?.length || 0} SKUs</span>
                           <ArrowRight className="w-3.5 h-3.5 text-slate-600" />
                         </div>
                       </button>
@@ -246,67 +210,46 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
               </div>
               {cloudOrder && (
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase">
-                    SKUs en Lista
-                  </span>
-                  <span className="text-sm font-bold text-emerald-400">
-                    {cloudOrder.items.length} productos
-                  </span>
+                  <span className="text-[10px] font-black text-emerald-500 uppercase">SKUs en Lista</span>
+                  <span className="text-sm font-bold text-emerald-400">{cloudOrder.items.length} productos</span>
                 </div>
               )}
-
+              
               <div className="pt-2 border-t border-white/5">
                 <button
-                  aria-label={
-                    isAutoLockEnabled ? 'Desactivar auto-bloqueo' : 'Activar auto-bloqueo'
-                  }
                   onClick={() => setIsAutoLockEnabled(!isAutoLockEnabled)}
                   className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    isAutoLockEnabled
-                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                    isAutoLockEnabled 
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
                       : 'bg-elevated/50 border-white/5 text-muted'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${isAutoLockEnabled ? 'bg-blue-500/20' : 'bg-slate-700/50'}`}
-                    >
-                      {isAutoLockEnabled ? (
-                        <Lock className="w-4 h-4" />
-                      ) : (
-                        <Unlock className="w-4 h-4" />
-                      )}
+                    <div className={`p-2 rounded-lg ${isAutoLockEnabled ? 'bg-blue-500/20' : 'bg-slate-700/50'}`}>
+                      {isAutoLockEnabled ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] font-black uppercase tracking-wider">
-                        Auto-Bloqueo
-                      </div>
+                      <div className="text-[10px] font-black uppercase tracking-wider">Auto-Bloqueo</div>
                       <div className="text-[8px] font-bold opacity-60 uppercase">
                         {isAutoLockEnabled ? 'Activado' : 'Desactivado'}
                       </div>
                     </div>
                   </div>
-                  <div
-                    className={`w-10 h-5 rounded-full relative transition-colors ${isAutoLockEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}
-                  >
-                    <div
-                      className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isAutoLockEnabled ? 'right-1' : 'left-1'}`}
-                    />
+                  <div className={`w-10 h-5 rounded-full relative transition-colors ${isAutoLockEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}>
+                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isAutoLockEnabled ? 'right-1' : 'left-1'}`} />
                   </div>
                 </button>
               </div>
             </div>
 
-            <button
-              aria-label="Comenzar conteo"
+            <button 
               onClick={handleStart}
               className="w-full h-16 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
             >
               Comenzar Conteo
             </button>
 
-            <button
-              aria-label="Cambiar orden"
+            <button 
               onClick={() => setStep('enter_erp')}
               className="w-full h-10 text-slate-500 font-black uppercase text-[10px] tracking-widest"
             >

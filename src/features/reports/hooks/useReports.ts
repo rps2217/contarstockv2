@@ -404,7 +404,7 @@ export const useReports = () => {
       if (count > 0) {
         toast.success(`Purga exitosa: ${count} registros eliminados.`);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       toast.error('Error al realizar la limpieza.');
     } finally {
       setIsCleaning(false);

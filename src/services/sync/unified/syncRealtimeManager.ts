@@ -15,23 +15,11 @@ import { telemetry } from '@/services/analytics/telemetryService';
 import { syncRegistry } from './registry';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-// Tipo para registros de cambio realtime
-type RealtimeChange = {
-  eventType: string;
-  newRecord?: Record<string, unknown>;
-  oldRecord?: Record<string, unknown>;
-};
-
-// Tipo para acceso dinámico a tablas Dexie
-type DexieTable = {
-  delete: (key: unknown) => Promise<unknown>;
-};
-
 export interface RealtimeState {
   isConnected: boolean;
   lastHeartbeat: number;
   reconnectAttempts: number;
-  pendingChanges: Map<string, RealtimeChange[]>;
+  pendingChanges: Map<string, any[]>;
   debounceTimers: Map<string, NodeJS.Timeout>;
 }
 
@@ -92,11 +80,11 @@ export function createRealtimeManager(config: RealtimeManagerConfig) {
     }
   };
 
-  const handleRealtimeChange = async (payload: Record<string, unknown>): Promise<void> => {
-    const tableName = payload.table as string;
-    const eventType = payload.eventType as string;
-    const newRecord = payload.new as Record<string, unknown> | undefined;
-    const oldRecord = payload.old as Record<string, unknown> | undefined;
+  const handleRealtimeChange = async (payload: any): Promise<void> => {
+    const tableName = payload.table;
+    const eventType = payload.eventType;
+    const newRecord = payload.new;
+    const oldRecord = payload.old;
 
     if (!tableName) return;
 
@@ -104,7 +92,10 @@ export function createRealtimeManager(config: RealtimeManagerConfig) {
     debounceRealtimeChange(tableName, { eventType, newRecord, oldRecord });
   };
 
-  const debounceRealtimeChange = (tableName: string, change: RealtimeChange): void => {
+  const debounceRealtimeChange = (
+    tableName: string,
+    change: { eventType: string; newRecord?: any; oldRecord?: any }
+  ): void => {
     // Clear existing timer for this table
     const existingTimer = state.debounceTimers.get(tableName);
     if (existingTimer) {
@@ -142,7 +133,7 @@ export function createRealtimeManager(config: RealtimeManagerConfig) {
       } else if (eventType === 'DELETE' && lastChange.oldRecord) {
         const meta = syncRegistry[tableName];
         if (meta) {
-          const localTable = (db as unknown as Record<string, DexieTable>)[meta.localTable];
+          const localTable = (db as any)[meta.localTable];
           await localTable?.delete(lastChange.oldRecord[meta.primaryKey]);
           telemetry.track('SYNC', 'REALTIME_DELETE', { table: tableName });
         }
@@ -153,7 +144,7 @@ export function createRealtimeManager(config: RealtimeManagerConfig) {
         lastHeartbeat: state.lastHeartbeat,
         pendingChanges: getPendingCount(),
       });
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('REALTIME', `Error processing changes for ${tableName}`, error);
       telemetry.track('ERROR', 'REALTIME_PROCESS_ERROR', {
         table: tableName,
@@ -200,7 +191,7 @@ export function createRealtimeManager(config: RealtimeManagerConfig) {
         .subscribe(handleRealtimeStatus);
 
       logger.info('REALTIME', `Connecting to channel: ${channelName}`);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('REALTIME', 'Failed to connect', error);
       scheduleReconnect();
     }

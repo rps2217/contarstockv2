@@ -1,87 +1,13 @@
 ---
 
-## 🐴 REGLAS PONYTAIL (Adoptadas 2026-08-06)
-
-> "El mejor código es el código nunca escrito"
-
-### Escalera de Decisión (antes de escribir código)
-
-1. **¿Necesita construirse?** (YAGNI)
-2. ¿Ya existe en el codebase? Reusar, no re-escribir
-3. ¿La stdlib ya lo hace? Usarla
-4. ¿Una feature nativa de la plataforma lo cubre? Usarla
-5. ¿Una dependencia ya instalada lo resuelve? Usarla
-6. ¿Puede ser una línea? Hacerlo una línea
-7. Solo entonces: escribir el mínimo código que funcione
-
-### Reglas Clave
-
-- **Sin abstracciones** no solicitadas explícitamente
-- **Sin nuevas dependencias** si pueden evitarse
-- **Sin boilerplate** que nadie pidió
-- **Eliminación > Adición**. Aburrido > Inteligente. Mínimos archivos posibles
-- **Bug fix = causa raíz**, no síntoma
-- **Dif más corto gana**, pero solo cuando entiendes el problema
-- **Comentar** `ponytail:` en simplificaciones deliberadas con nombre del techo y path de upgrade
-
-### No ser perezoso con
-- Entender el problema completamente
-- Validación de input en trust boundaries
-- Manejo de errores que previene pérdida de datos
-- Seguridad, accesibilidad
-- Calibración de hardware real
-
----
-
-## 📋 ESTADO ACTUAL DEL PROYECTO (2026-08-06)
+## 📋 ESTADO ACTUAL DEL PROYECTO (2026-07-18)
 
 ### ✅ VALIDACIÓN ACTUAL
 
 ```bash
-npm run test:run   # 972 tests passing
+npm run test:run   # 915 tests passing (actualizado 2026-07-18)
 npx tsc --noEmit   # 0 errores TypeScript
 npm run build      # Build exitoso
-```
-
-### 📊 MÉTRICAS DE CÓDIGO (Actualizado)
-
-| Métrica     | Valor    | Cambio |
-| ----------- | -------- | ------ |
-| LOC Totales | ~132,000 | -9,700 |
-| Archivos TS | 705      | -      |
-| Tests       | 972      | -6     |
-| Cobertura   | ~8.0%    | -      |
-
-### 🔧 CORRECCIÓN: Modo Conteo con Registro de Vencimiento (2026-07-21)
-
-**Problema identificado:** El registro de vencimiento no se activaba cuando el usuario lo seleccionaba en el modal de inicio.
-
-**Causa raíz:** El parámetro `expiry` pasado en la URL desde `StartCountingModal` no se leía en `HammerPage`.
-
-**Solución implementada:**
-
-1. **HammerPage.tsx:**
-   - Lee el parámetro `expiry` de la URL al cargar
-   - Lo pasa a `useHammerLogic` mediante el nuevo parámetro `registerExpiryOverride`
-
-2. **useHammerLogic.ts:**
-   - Nuevo parámetro opcional `options.registerExpiryOverride`
-   - Estado local `localRegisterExpiry` para permitir toggles
-   - Lógica de precedencia: override (URL) > local > feature flag global
-   - Toggle en ToolsSheet ahora cambia el estado local, no el feature flag global
-
-**Flujo corregido:**
-
-```
-StartCountingModal (registerExpiry=true)
-    ↓
-useCountingEngine.navigate(`/massive/${batchId}?expiry=1&skipModal=true`)
-    ↓
-HammerPage lee expiry=1 de la URL
-    ↓
-useHammerLogic(..., { registerExpiryOverride: true })
-    ↓
-registerExpiry=true → TestModeExpiryModal se muestra al escanear
 ```
 
 ### 📊 MÉTRICAS DE CÓDIGO
@@ -90,90 +16,52 @@ registerExpiry=true → TestModeExpiryModal se muestra al escanear
 | ----------- | ------- |
 | LOC Totales | 133,953 |
 | Archivos TS | 705     |
-| Tests       | 978     |
-| Cobertura   | ~8.0%   |
+| Tests       | 964     |
+| Cobertura   | ~7.2%   |
 
 ### 📈 PROGRESO DE REFACTORIZACIÓN (Fase 3)
 
-| Archivo                  | Inicio | Actual | Reducción     | Estado |
-| ------------------------ | ------ | ------ | ------------- | ------ |
-| ExpiryPage.tsx           | 1,292  | 928    | -364 (-28%)   | ✅     |
-| TheoreticalLoadsPage.tsx | 1,150  | 787    | -363 (-32%)   | ✅     |
-| ThermalPrinterEngine.ts  | 1,070  | 385    | -685 (-64%)   | ✅     |
-| EventsModal.tsx          | 1,057  | 861    | -196 (-19%)   | ✅     |
-| UnifiedSyncEngine.ts     | 1,039  | 805    | -234 (-22.5%) | ✅     |
-| syncRegistry.ts          | 839    | 429    | -410 (-49%)   | ✅     |
+| Archivo | Inicio | Actual | Reducción | Estado |
+|---------|--------|--------|-----------|--------|
+| ExpiryPage.tsx | 1,292 | 928 | -364 (-28%) | ✅ |
+| TheoreticalLoadsPage.tsx | 1,150 | 984 | -166 (-14%) | ✅ |
+| ThermalPrinterEngine.ts | 1,059 | 1,044 | -15 (-1%) | ✅ |
+| EventsModal.tsx | 1,057 | 861 | -196 (-19%) | ✅ |
+| UnifiedSyncEngine.ts | 1,346 | 981 | -365 (-27%) | ✅ |
 
-**Total reducido:** ~2,700 líneas extraídas de archivos monolíticos
+**Total reducido:** 1029 líneas extraídas de archivos monolíticos
 
 ### Archivos Extraídos
 
-| Archivo                          | Descripción                                     |
-| -------------------------------- | ----------------------------------------------- |
-| `syncHelpers.ts`                 | Helpers utilitarios (formatError, sanitizeData) |
-| `syncQueueProcessor.ts`          | Lógica de procesamiento de cola                 |
-| `syncTableOperations.ts`         | Operaciones de sincronización por tabla         |
-| `escposCommands.ts`              | Comandos ESC/POS para impresoras                |
-| `expiryConstants.ts`             | Constantes de expiración                        |
-| `expiryHelpers.ts`               | Helpers de fechas y colores                     |
-| `expiryRecordRow.tsx`            | Fila de registro                                |
-| `expiryKanbanCard.tsx`           | Tarjeta kanban                                  |
-| `expirySection.tsx`              | Sección colapsable                              |
-| `theoreticalLoadsCards.tsx`      | Tarjetas de órdenes y manifiestos               |
-| `thermalTypes.ts`                | Tipos compartidos para impresoras               |
-| `expectedOrderHtmlGenerator.ts`  | Generador HTML de órdenes teóricas              |
-| `hammerTicketHtmlGenerator.ts`   | Generador HTML de tickets Hammer                |
-| `theoreticalLoadsComponents.tsx` | SummaryCard, TabButton, EmptyState              |
-| `confirmModal.tsx`               | Modal de confirmación reutilizable              |
-| `syncRealtimeConstants.ts`       | Constantes de realtime sync                     |
-| `syncMappingHelpers.ts`          | Funciones de mapeo local↔remote                 |
-| `syncEventFilters.ts`            | Filtros para prevención de duplicados           |
-
-### 🔍 AUDITORÍA DE CÓDIGO DUPLICADO (2026-08-06)
-
-**Resultado:** ~400+ LOC eliminadas aplicando reglas YAGNI
-
-#### Eliminados por no uso
-
-| Archivo/Función                          | LOC  | Razón                         |
-| ---------------------------------------- | ---- | ----------------------------- |
-| `shared/hooks/useTheme.ts`               | ~50  | 0 referencias                 |
-| `shared/hooks/useReducedMotion.ts`       | ~30  | 0 referencias                 |
-| `shared/hooks/useErrorHandler.ts`        | ~40  | 0 referencias                 |
-| `sleep` + `retryWithBackoff` (common.ts) | ~25  | No exportados ni usados       |
-| `checkIsDark` (lib/utils.ts)             | ~5   | No usado externamente         |
-| `hooks/useAudit.ts`                      | -291 | Reducido a re-export (13 LOC) |
-
-#### Unificados
-
-| Función                   | Antes            | Después                         |
-| ------------------------- | ---------------- | ------------------------------- |
-| `exportToCSV` (export.ts) | 17 LOC duplicado | Usa `csvExport.ts`              |
-| `getStatusIcon`           | 2 versiones      | Usa solo `redesign/utils/icons` |
-
-#### Criterios aplicados
-
-1. Si la función no se importa desde ningún lugar → eliminar
-2. Si hay múltiples versiones → mantener la más usada, actualizar imports
-3. Si el barrel export ya re-exporta → convertir a re-export simple
+| Archivo | Descripción |
+|---------|------------|
+| `syncHelpers.ts` | Helpers utilitarios (formatError, sanitizeData) |
+| `syncQueueProcessor.ts` | Lógica de procesamiento de cola |
+| `syncTableOperations.ts` | Operaciones de sincronización por tabla |
+| `escposCommands.ts` | Comandos ESC/POS para impresoras |
+| `expiryConstants.ts` | Constantes de expiración |
+| `expiryHelpers.ts` | Helpers de fechas y colores |
+| `expiryRecordRow.tsx` | Fila de registro |
+| `expiryKanbanCard.tsx` | Tarjeta kanban |
+| `expirySection.tsx` | Sección colapsable |
+| `theoreticalLoadsCards.tsx` | Tarjetas de órdenes y manifiestos |
 
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
 1. **Archivos monolíticos** (>1000 LOC):
-   - `UnifiedSyncEngine.ts` (805 LOC) - ✅ Completado
-   - `ThermalPrinterEngine.ts` (385 LOC) - ✅ Modularizado
-   - `syncRegistry.ts` (429 LOC) - ✅ Modularizado
+   - `UnifiedSyncEngine.ts` (1,491 LOC)
+   - `ExpiryPage.tsx` (1,378 LOC)
+   - `TheoreticalLoadsPage.tsx` (1,325 LOC)
+   - `ThermalPrinterEngine.ts` (1,144 LOC)
+   - `EventsModal.tsx` (1,054 LOC)
 
-2. **Tipos `any`**: ~104 ocurrencias (mejora de 795)
-   - Genéricos con default `any`: aceptables
-   - Catch errors: ✅ Corregidos a `unknown`
-   - Props de componentes: revisar caso por caso
+2. **Tipos `any`**: ~795 ocurrencias
 
 3. **Memory leaks potenciales**:
    - 78 `addEventListener` sin remove
    - 45 `setInterval` sin clearInterval
 
-4. **Cobertura de tests baja**: ~7.2%
+4. **Cobertura de tests baja**: 7.2%
 
 ### 🎯 TAREAS PENDIENTES DE REFACTORIZACIÓN
 
@@ -199,9 +87,9 @@ registerExpiry=true → TestModeExpiryModal se muestra al escanear
 
 **Reducción:** 1150 → 984 LOC (-166 líneas, -14%)
 
-#### 3. UnifiedSyncEngine.ts (1,039 LOC) - ✅ COMPLETADO
+#### 3. UnifiedSyncEngine.ts (1,346 LOC) - EN PROGRESO
 
-**Estado:** Refactorización completada
+**Estado:** ~27% refactorizado
 **Archivos extraídos:**
 
 - `syncHelpers.ts` - Helpers utilitarios ✅
@@ -210,11 +98,13 @@ registerExpiry=true → TestModeExpiryModal se muestra al escanear
 - `syncEventPuller.ts` - Procesamiento de eventos desde nube ✅
 - `syncConflictChecker.ts` - Detección y resolución de conflictos ✅
 - `syncRealtimeManager.ts` - Gestión de realtime sync ✅
-- `syncPushOperations.ts` - Push de cambios locales a Supabase ✅
-- `syncRealtimeHandlers.ts` - Handlers de estado realtime ✅
-- `syncStatsHelpers.ts` - Helpers de estadísticas y FSM ✅
 
-**Reducción:** 1,039 → 805 LOC (-234 líneas, -22.5%)
+**Reducción:** 1346 → 981 LOC (-365 líneas, -27%)
+
+**Pendiente:**
+
+- Continuar reduciendo código restante
+- Evaluar extracción de realtime sync
 
 #### 4. ThermalPrinterEngine.ts (1,059 LOC) - ✅ COMPLETADO
 
@@ -266,41 +156,6 @@ npm run test:run -- src/__tests__/contracts/
 # Feature flags
 isFeatureEnabled('FEATURE_KEY')  # Verificar
 toggleFeature('FEATURE_KEY')     # Cambiar
-```
-
-### 🔒 PATRONES DE TIPADO
-
-**Catch blocks - Usar `unknown` en lugar de `any`:**
-
-```typescript
-// ❌ Incorrecto
-catch (err: any) {
-  console.log(err.message);
-}
-
-// ✅ Correcto
-catch (err: unknown) {
-  const message = err instanceof Error ? err.message : String(err);
-  console.log(message);
-}
-```
-
-**Genéricos con default `any`:**
-
-```typescript
-// Aceptable para flexibilidad
-interface SearchResult<T = any> { ... }
-type EventCallback<T = any> = (event: T) => void;
-```
-
-**Props de componentes React:**
-
-```typescript
-// Evitar any en props cuando sea posible
-interface Props {
-  item: Product; // Tipo específico
-  onSelect: (item: Product) => void;
-}
 ```
 
 ---
@@ -1377,10 +1232,10 @@ SYNC_CONSTANTS.MANIFEST_AUTO_DISCARD_HOURS; // 24
 
 ### Archivos Refactorizados ✅
 
-Todos los archivos >1000 LOC han sido refactorizados:
+Todos los archivos >1000 LOC han sido refactorizados o están por debajo del umbral:
 
 - ExpiryPage.tsx: 928 LOC ✅
-- TheoreticalLoadsPage.tsx: 787 LOC ✅
-- ThermalPrinterEngine.ts: 385 LOC ✅
+- TheoreticalLoadsPage.tsx: 984 LOC ✅
+- ThermalPrinterEngine.ts: 1,044 LOC ✅
 - EventsModal.tsx: 861 LOC ✅
-- UnifiedSyncEngine.ts: 805 LOC ✅
+- UnifiedSyncEngine.ts: 981 LOC ✅

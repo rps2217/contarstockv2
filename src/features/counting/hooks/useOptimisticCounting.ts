@@ -190,7 +190,7 @@ export function useOptimisticCounting(options: UseOptimisticCountingOptions = {}
 
           callbacksRef.current.onConfirm?.(update);
           log('addItem - confirmed', { optimisticId });
-        } catch (error: unknown) {
+        } catch (error) {
           // Falló - hacer rollback
           log('addItem - error, rolling back', { optimisticId, error });
 

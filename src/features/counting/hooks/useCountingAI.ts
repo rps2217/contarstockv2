@@ -56,7 +56,7 @@ export const useCountingAI = (
             SoundFX.play('success');
           }
         }
-      } catch (e: unknown) {
+      } catch (e) {
         logger.error('CountingAI', 'Inference Error', {
           error: e instanceof Error ? e.message : String(e),
         });

@@ -1,6 +1,6 @@
 /**
  * useBulkOperations - Hook para operaciones masivas con deshacer y dry-run
- *
+ * 
  * Funcionalidades:
  * - Sistema de deshacer (undo)
  * - Modo dry-run para previsualizar cambios
@@ -8,8 +8,9 @@
  * - Notificaciones de escritorio
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { logger } from '@/services/logger';
+;
 import { db } from '@/db';
 import { useTaskStore } from '@/stores';
 import { toast } from 'sonner';
@@ -35,24 +36,22 @@ export interface BulkOperationsConfig<T> {
 export interface UseBulkOperationsReturn<T> {
   // Historial
   history: BulkHistoryEntry[];
-  addEntry: (
-    entry: Omit<BulkHistoryEntry, 'id' | 'timestamp' | 'undone' | 'canUndo' | 'undoTimeout'>
-  ) => Promise<BulkHistoryEntry | null>;
+  addEntry: (entry: Omit<BulkHistoryEntry, 'id' | 'timestamp' | 'undone' | 'canUndo' | 'undoTimeout'>) => Promise<BulkHistoryEntry | null>;
   markAsUndone: (id: string) => Promise<void>;
   clearHistory: () => Promise<void>;
-
+  
   // Undo
   undoContext: BulkUndoContext | null;
   canUndo: boolean;
   performUndo: () => Promise<void>;
-
+  
   // Dry-run
   isDryRunMode: boolean;
   dryRunResults: DryRunResult | null;
   performDryRun: (actionId: string, items: T[]) => void;
   executeDryRun: (actionId: string, items: T[]) => Promise<void>;
   cancelDryRun: () => void;
-
+  
   // Notificaciones
   canNotify: boolean;
   requestNotificationPermission: () => Promise<void>;
@@ -78,93 +77,82 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
   const [undoContext, setUndoContext] = useState<BulkUndoContext | null>(null);
   const [isDryRunMode, setIsDryRunMode] = useState(false);
   const [dryRunResults, setDryRunResults] = useState<DryRunResult | null>(null);
-
+  
   const configRef = useRef(config);
   configRef.current = config;
 
   // ============================================================
   // HISTORIAL DE ACCIONES MASIVAS
   // ============================================================
-
+  
   const [history, setHistory] = useState<BulkHistoryEntry[]>([]);
-
+  
   // Cargar historial inicial
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const entries = await db.bulkHistory.orderBy('timestamp').reverse().limit(50).toArray();
+        const entries = await db.bulkHistory
+          .orderBy('timestamp')
+          .reverse()
+          .limit(50)
+          .toArray();
         setHistory(entries || []);
-      } catch (e: unknown) {
-        logger.error(
-          'useBulkOperations',
-          'Error loading history',
-          e instanceof Error ? e.message : String(e)
-        );
+      } catch (e) {
+        logger.error('useBulkOperations', 'Error loading history', e instanceof Error ? e.message : String(e));
       }
     };
     loadHistory();
-
+    
     // Suscribirse a cambios
     const subscription = db.bulkHistory.hook('creating', () => {
       loadHistory();
     });
-
+    
     return () => {
       // Cleanup subscription if needed
     };
   }, []);
 
-  const addEntry = useCallback(
-    async (
-      entry: Omit<BulkHistoryEntry, 'id' | 'timestamp' | 'undone' | 'canUndo' | 'undoTimeout'>
-    ): Promise<BulkHistoryEntry | null> => {
-      const id = crypto.randomUUID();
-      const fullEntry: BulkHistoryEntry = {
-        ...entry,
-        id,
-        timestamp: Date.now(),
-        undone: false,
-        canUndo: true,
-        undoTimeout: UNDO_TIMEOUT,
-      };
+  const addEntry = useCallback(async (
+    entry: Omit<BulkHistoryEntry, 'id' | 'timestamp' | 'undone' | 'canUndo' | 'undoTimeout'>
+  ): Promise<BulkHistoryEntry | null> => {
+    const id = crypto.randomUUID();
+    const fullEntry: BulkHistoryEntry = {
+      ...entry,
+      id,
+      timestamp: Date.now(),
+      undone: false,
+      canUndo: true,
+      undoTimeout: UNDO_TIMEOUT
+    };
 
-      try {
-        await db.bulkHistory.add(fullEntry);
-        setHistory(prev => [fullEntry, ...prev.slice(0, 49)]);
+    try {
+      await db.bulkHistory.add(fullEntry);
+      setHistory(prev => [fullEntry, ...prev.slice(0, 49)]);
+      
+      // Auto-mark as non-undoable after timeout
+      setTimeout(async () => {
+        try {
+          await db.bulkHistory.update(id, { canUndo: false });
+          setHistory(prev => prev.map(e => e.id === id ? { ...e, canUndo: false } : e));
+        } catch (e) {
+          // Entry might have been deleted
+        }
+      }, UNDO_TIMEOUT);
 
-        // Auto-mark as non-undoable after timeout
-        setTimeout(async () => {
-          try {
-            await db.bulkHistory.update(id, { canUndo: false });
-            setHistory(prev => prev.map(e => (e.id === id ? { ...e, canUndo: false } : e)));
-          } catch (e: unknown) {
-            // Entry might have been deleted
-          }
-        }, UNDO_TIMEOUT);
-
-        return fullEntry;
-      } catch (e: unknown) {
-        logger.error(
-          'useBulkOperations',
-          'Error adding history entry',
-          e instanceof Error ? e.message : String(e)
-        );
-        return null;
-      }
-    },
-    []
-  );
+      return fullEntry;
+    } catch (e) {
+      logger.error('useBulkOperations', 'Error adding history entry', e instanceof Error ? e.message : String(e));
+      return null;
+    }
+  }, []);
 
   const markAsUndone = useCallback(async (id: string) => {
     try {
       await db.bulkHistory.update(id, { undone: true, canUndo: false });
-      setHistory(prev => prev.map(e => (e.id === id ? { ...e, undone: true, canUndo: false } : e)));
-    } catch (e: unknown) {
-      logger.error(
-        'useBulkOperations',
-        'Error marking as undone',
-        e instanceof Error ? e.message : String(e)
-      );
+      setHistory(prev => prev.map(e => e.id === id ? { ...e, undone: true, canUndo: false } : e));
+    } catch (e) {
+      logger.error('useBulkOperations', 'Error marking as undone', e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -172,19 +160,15 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
     try {
       await db.bulkHistory.clear();
       setHistory([]);
-    } catch (e: unknown) {
-      logger.error(
-        'useBulkOperations',
-        'Error clearing history',
-        e instanceof Error ? e.message : String(e)
-      );
+    } catch (e) {
+      logger.error('useBulkOperations', 'Error clearing history', e instanceof Error ? e.message : String(e));
     }
   }, []);
 
   // ============================================================
   // DESHACER
   // ============================================================
-
+  
   const canUndo = undoContext !== null && history.length > 0 && history[0]?.canUndo;
 
   const performUndo = useCallback(async () => {
@@ -198,8 +182,8 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
       await markAsUndone(undoContext.entry.id);
       toast.success('Acción deshecha correctamente');
       setUndoContext(null);
-    } catch (e: unknown) {
-      toast.error(`Error al deshacer: ${e instanceof Error ? e.message : String(e)}`);
+    } catch (e: any) {
+      toast.error(`Error al deshacer: ${e.message}`);
     }
   }, [undoContext, config.onUndoAction, markAsUndone]);
 
@@ -207,31 +191,27 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
   // DRY-RUN MODE
   // ============================================================
 
-  const performDryRun = useCallback(
-    (actionId: string, items: T[]) => {
-      const action = config.actions.find(a => a.id === actionId);
-      if (!action) {
-        toast.error('Acción no encontrada');
-        return;
-      }
+  const performDryRun = useCallback((actionId: string, items: T[]) => {
+    const action = config.actions.find(a => a.id === actionId);
+    if (!action) {
+      toast.error('Acción no encontrada');
+      return;
+    }
 
-      const preview = items.map(item => ({
-        id: config.getItemId(item),
-        status: 'would_change' as const,
-        changes:
-          actionId === 'delete'
-            ? { action: 'delete' }
-            : actionId === 'edit'
-              ? { action: 'update', fields: {} }
-              : { action: action.label },
-      }));
+    const preview = items.map((item) => ({
+      id: config.getItemId(item),
+      status: 'would_change' as const,
+      changes: actionId === 'delete' 
+        ? { action: 'delete' } 
+        : actionId === 'edit' 
+          ? { action: 'update', fields: {} } 
+          : { action: action.label }
+    }));
 
-      setDryRunResults({ actionId, affected: items.length, errors: [], preview });
-      setIsDryRunMode(true);
-      toast.info(`Dry-run: ${action.label} afectaría ${items.length} elementos`);
-    },
-    [config.actions, config.getItemId]
-  );
+    setDryRunResults({ actionId, affected: items.length, errors: [], preview });
+    setIsDryRunMode(true);
+    toast.info(`Dry-run: ${action.label} afectaría ${items.length} elementos`);
+  }, [config.actions, config.getItemId]);
 
   const cancelDryRun = useCallback(() => {
     setIsDryRunMode(false);
@@ -247,12 +227,9 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
   // ============================================================
   // NOTIFICACIONES DE ESCRITORIO
   // ============================================================
-
-  const canNotify =
-    typeof window !== 'undefined' &&
-    'Notification' in window &&
-    Notification.permission === 'granted';
-
+  
+  const canNotify = typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
+  
   const requestNotificationPermission = useCallback(async () => {
     if ('Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission();
@@ -264,7 +241,7 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
       const notification = new Notification(title, {
         icon: '/favicon.ico',
         badge: '/favicon.ico',
-        ...options,
+        ...options
       });
       setTimeout(() => notification.close(), 5000);
       return notification;
@@ -273,7 +250,10 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
   }, []);
 
   // Método para establecer el contexto de undo
-  const setUndoContextForAction = useCallback((entry: BulkHistoryEntry, items: T[]) => {
+  const setUndoContextForAction = useCallback((
+    entry: BulkHistoryEntry,
+    items: T[]
+  ) => {
     setUndoContext({
       entry,
       undoAction: async () => {
@@ -293,26 +273,26 @@ export function useBulkOperations<T>(config: BulkOperationsConfig<T>): UseBulkOp
     addEntry,
     markAsUndone,
     clearHistory,
-
+    
     // Undo
     undoContext,
     canUndo,
     performUndo,
-
+    
     // Dry-run
     isDryRunMode,
     dryRunResults,
     performDryRun,
     executeDryRun,
     cancelDryRun,
-
+    
     // Notificaciones
     canNotify,
     requestNotificationPermission,
     sendNotification,
-
+    
     // Helper interno
-    setUndoContextForAction,
+    setUndoContextForAction
   } as any;
 }
 

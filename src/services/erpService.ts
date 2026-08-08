@@ -19,7 +19,7 @@ type ErpRow = Record<string, unknown>;
  */
 function normalizeRow(rawRow: Record<string, unknown>): ErpRow {
   const normalized: ErpRow = {};
-  Object.keys(rawRow).forEach(k => (normalized[k.trim().toUpperCase()] = rawRow[k]));
+  Object.keys(rawRow).forEach(k => normalized[k.trim().toUpperCase()] = rawRow[k]);
   return normalized;
 }
 
@@ -29,7 +29,10 @@ function normalizeRow(rawRow: Record<string, unknown>): ErpRow {
 const calculateExpectedTrays = (rawRow: Record<string, unknown>, erpId: string): number => {
   const normalized = normalizeRow(rawRow);
   return Number(
-    normalized['BANDEJAS'] || normalized['BULTOS'] || normalized['EXPECTED_TRAYS'] || 0
+    normalized["BANDEJAS"] || 
+    normalized["BULTOS"] || 
+    normalized["EXPECTED_TRAYS"] || 
+    0
   );
 };
 
@@ -52,40 +55,32 @@ export const erpService = {
     try {
       const tableName = getOrdersTableName();
       const res = await supabaseSyncService.pullBatch(tableName);
-
+      
       if (!res.success) {
-        throw new Error(
-          res.isMissing
-            ? `Tabla ${tableName} no encontrada.`
-            : 'No se pudo conectar a la nube. Verifique su conexión.'
-        );
+        throw new Error(res.isMissing ? `Tabla ${tableName} no encontrada.` : 'No se pudo conectar a la nube. Verifique su conexión.');
       }
 
-      const erpId = String(manifestId || '')
-        .toUpperCase()
-        .trim();
-
+      const erpId = String(manifestId || '').toUpperCase().trim();
+      
       // Filter rows for this ERP
-      const rows =
-        res.rows ??
-        []
-          .map((row: ErpRow) => {
-            try {
-              return CloudOrderRowSchema.parse(row);
-            } catch (e: unknown) {
-              return null;
-            }
-          })
-          .filter((p: ErpRow | null) => p !== null && String(p.erp || '').toUpperCase() === erpId);
+      const rows = res.rows ?? []
+        .map((row: ErpRow) => {
+          try {
+            return CloudOrderRowSchema.parse(row);
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter((p: ErpRow | null) => p !== null && String(p.erp || '').toUpperCase() === erpId);
 
       if (rows.length === 0) {
         throw new Error(`No se encontró el ERP "${erpId}" en la nube.`);
       }
 
       const rawMatch = (res.rows ?? []).find((r: ErpRow) => {
-        const n: Record<string, unknown> = {};
-        Object.keys(r).forEach(k => (n[k.trim().toUpperCase()] = r[k]));
-        return n['ERP'] === erpId || n['ORDEN'] === erpId;
+        const n: any = {};
+        Object.keys(r).forEach(k => n[k.trim().toUpperCase()] = r[k]);
+        return n["ERP"] === erpId || n["ORDEN"] === erpId;
       });
 
       const expectedTrays = rawMatch ? calculateExpectedTrays(rawMatch, erpId) : rows.length;
@@ -95,22 +90,14 @@ export const erpService = {
         expectedTrays: expectedTrays || rows.length,
         description: `Pedido ERP: ${erpId} (${rows.length} items)`,
         status: 'pending',
-        items: rows as ErpRow[],
+        items: rows as ErpRow[]
       };
     } catch (error: unknown) {
       const msg = (error as Error).message || String(error);
-      if (
-        msg.includes('Failed to fetch') ||
-        msg.includes('Cerrado por falta de red') ||
-        msg.includes('offline')
-      ) {
+      if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors
       } else {
-        logger.error(
-          'erpService',
-          'ERP Download Error',
-          error instanceof Error ? error.message : String(error)
-        );
+        logger.error('erpService', 'ERP Download Error', error instanceof Error ? error.message : String(error));
       }
       throw new Error(`Error descargando manifest: ${msg}`);
     }
@@ -125,7 +112,7 @@ export const erpService = {
       const config = getSettings().cloudConfig;
       const tableName = config?.ordersTableName || 'PEDIDOS';
       const res = await supabaseSyncService.pullBatch(tableName);
-
+      
       if (!res.success || !res.rows) {
         if (res.isMissing || (res.error && res.error.includes('Table not found'))) {
           // Log as warning and return safe fallback empty array
@@ -136,18 +123,16 @@ export const erpService = {
 
       // Group rows by ERP
       const erpGroups = new Map<string, any[]>();
-
+      
       res.rows.forEach((row: ErpRow) => {
         try {
           const parsed = CloudOrderRowSchema.parse(row);
-          const erpId = String(parsed.erp || '')
-            .toUpperCase()
-            .trim();
+          const erpId = String(parsed.erp || '').toUpperCase().trim();
           if (!erpGroups.has(erpId)) {
             erpGroups.set(erpId, []);
           }
           erpGroups.get(erpId)!.push(parsed);
-        } catch (e: unknown) {
+        } catch (e) {
           // Ignore invalid rows
         }
       });
@@ -157,9 +142,9 @@ export const erpService = {
       erpGroups.forEach((rows, erpId) => {
         // Find raw match for expected trays
         const rawMatch = (res.rows ?? []).find((r: ErpRow) => {
-          const normalized: Record<string, unknown> = {};
-          Object.keys(r).forEach(k => (normalized[k.trim().toUpperCase()] = r[k]));
-          return normalized['ERP'] === erpId || normalized['ORDEN'] === erpId;
+          const normalized: any = {};
+          Object.keys(r).forEach(k => normalized[k.trim().toUpperCase()] = r[k]);
+          return normalized["ERP"] === erpId || normalized["ORDEN"] === erpId;
         });
 
         const expectedTrays = rawMatch ? calculateExpectedTrays(rawMatch, erpId) : rows.length;
@@ -169,25 +154,20 @@ export const erpService = {
           expectedTrays,
           description: `Pedido ERP: ${erpId} (${rows.length} items)`,
           status: 'pending',
-          items: rows as ErpRow[],
+          items: rows as ErpRow[]
         });
       });
 
       return manifests;
     } catch (error: unknown) {
-      const msg =
-        (error as Error).message ||
-        (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      if (
-        msg.includes('Failed to fetch') ||
-        msg.includes('Cerrado por falta de red') ||
-        msg.includes('offline')
-      ) {
+      const msg = (error as Error).message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors in logs
       } else {
         logger.error('erpService', 'ERP Download All Error', msg);
       }
       throw new Error(msg);
     }
-  },
+  }
 };
+

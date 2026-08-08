@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Printer, FileText, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { IndustrialButton } from './IndustrialButton';
-import JsBarcode from 'jsbarcode';
+import Barcode from 'react-barcode';
 
 interface BarcodeLabelModalProps {
   isOpen: boolean;
@@ -16,58 +16,32 @@ interface BarcodeLabelModalProps {
   onPrintPDF?: () => void;
 }
 
-export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
-  isOpen,
-  onClose,
-  barcode,
-  productName,
-  quantity,
-  meta,
-  isPrinting,
-  onPrintThermal,
-  onPrintPDF,
+export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({ 
+  isOpen, onClose, barcode, productName, quantity, meta, isPrinting, onPrintThermal, onPrintPDF 
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (canvasRef.current && barcode) {
-      JsBarcode(canvasRef.current, barcode || '00000000', {
-        width: 1.8,
-        height: 80,
-        fontSize: 14,
-        background: 'transparent',
-        margin: 0,
-        displayValue: true,
-      });
-    }
-  }, [barcode]);
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      variant="center"
-      className="max-w-sm w-[92vw] overflow-hidden rounded-[2.5rem]"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} variant="center" className="max-w-sm w-[92vw] overflow-hidden rounded-[2.5rem]">
       <div className="bg-white text-black p-6 flex flex-col items-center relative">
         {/* BOTÓN CERRAR DISCRETO */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-muted active:scale-90 transition-all z-20"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-muted active:scale-90 transition-all z-20">
           <X className="w-5 h-5" />
         </button>
 
         {/* ÁREA DE ESCANEO - ÉNFASIS RADICAL */}
         <div className="w-full mt-6 mb-8 flex flex-col items-center justify-center">
-          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-secondary mb-6 italic">
-            Optical_Sync_Ready
-          </div>
-
-          {/* EL CÓDIGO DE BARRAS ES EL PROTAGONISTA - Usando jsbarcode */}
+          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-secondary mb-6 italic">Optical_Sync_Ready</div>
+          
+          {/* EL CÓDIGO DE BARRAS ES EL PROTAGONISTA - Usando react-barcode para fiabilidad total */}
           <div className="w-full bg-white flex items-center justify-center py-6 px-2 border-2 border-slate-100 rounded-3xl shadow-inner overflow-hidden">
             <div className="transform-gpu scale-110 md:scale-125">
-              <canvas ref={canvasRef} />
+              <Barcode 
+                value={barcode || '00000000'} 
+                width={1.8}
+                height={80}
+                fontSize={14}
+                background="transparent"
+                margin={0}
+              />
             </div>
           </div>
         </div>
@@ -84,21 +58,13 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 
           <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
             <div className="flex flex-col">
-              <span className="text-[8px] font-black text-muted uppercase tracking-widest">
-                Contenido
-              </span>
-              <span className="text-lg font-black text-slate-900">
-                {quantity || 0} <span className="text-[10px]">UNIDADES</span>
-              </span>
+              <span className="text-[8px] font-black text-muted uppercase tracking-widest">Contenido</span>
+              <span className="text-lg font-black text-slate-900">{quantity || 0} <span className="text-[10px]">UNIDADES</span></span>
             </div>
             {meta && (
               <div className="text-right flex flex-col">
-                <span className="text-[8px] font-black text-muted uppercase tracking-widest">
-                  Referencia
-                </span>
-                <span className="text-[10px] font-bold text-blue-600 truncate max-w-[120px]">
-                  {meta}
-                </span>
+                <span className="text-[8px] font-black text-muted uppercase tracking-widest">Referencia</span>
+                <span className="text-[10px] font-bold text-blue-600 truncate max-w-[120px]">{meta}</span>
               </div>
             )}
           </div>
@@ -106,29 +72,14 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 
         {/* ACCIONES DE SALIDA */}
         <div className="w-full mt-6 grid grid-cols-1 gap-2">
-          <IndustrialButton
-            onClick={onPrintThermal}
-            isLoading={isPrinting}
-            variant="primary"
-            icon={Printer}
-            fullWidth
-          >
+          <IndustrialButton onClick={onPrintThermal} isLoading={isPrinting} variant="primary" icon={Printer} fullWidth>
             Impresora Térmica
           </IndustrialButton>
           <div className="grid grid-cols-2 gap-2">
-            <IndustrialButton
-              onClick={onPrintPDF}
-              variant="black"
-              icon={FileText}
-              fullWidth
-              className="h-12 text-[10px]"
-            >
+            <IndustrialButton onClick={onPrintPDF} variant="black" icon={FileText} fullWidth className="h-12 text-[10px]">
               Exportar PDF
             </IndustrialButton>
-            <button
-              onClick={onClose}
-              className="h-12 bg-slate-100 text-muted font-black uppercase text-[10px] tracking-widest rounded-2xl active:bg-slate-200 transition-colors"
-            >
+            <button onClick={onClose} className="h-12 bg-slate-100 text-muted font-black uppercase text-[10px] tracking-widest rounded-2xl active:bg-slate-200 transition-colors">
               Cerrar
             </button>
           </div>

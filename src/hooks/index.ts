@@ -5,7 +5,7 @@
  * Para nuevos proyectos, preferir:
  *   - features/{feature}/hooks/ para hooks específicos de módulo
  *   - shared/hooks/ para hooks reutilizables
- *
+ * 
  * Los hooks han sido reorganizados siguiendo la Arquitectura Lego:
  *   - features/sync/hooks/ - Hooks de sincronización y auditoría
  *   - features/expiry/hooks/ - Hooks de vencimiento
@@ -33,7 +33,7 @@ export { useExpiryWatcher } from '@/features/expiry/hooks';
 // ============================================================================
 // Shared hooks (re-export desde shared/hooks/)
 // ============================================================================
-export { useProductivity } from '@/shared/hooks';
+export { useProductivity, useTurboMode } from '@/shared/hooks';
 
 // ============================================================================
 // Network
@@ -43,12 +43,12 @@ export { useNetworkStatus } from './useNetworkStatus';
 // ============================================================================
 // Performance
 // ============================================================================
-export {
-  useDebounce,
-  useThrottle,
-  useMediaQuery,
-  useIntersectionObserver,
-  useVirtualScroll,
+export { 
+  useDebounce, 
+  useThrottle, 
+  useMediaQuery, 
+  useIntersectionObserver, 
+  useVirtualScroll 
 } from './usePerformanceOptimizations';
 
 // ============================================================================

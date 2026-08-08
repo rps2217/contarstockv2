@@ -14,12 +14,8 @@ export class HammerDbRepository {
   static async bulkAddBlindScans(scans: Omit<BlindScan, 'id'>[]) {
     try {
       await hammerDb.blindScans.bulkAdd(scans as BlindScan[]);
-    } catch (error: unknown) {
-      logger.error(
-        'HammerDbRepository',
-        'Error in bulkAdd',
-        error instanceof Error ? error.message : String(error)
-      );
+    } catch (error) {
+      logger.error('HammerDbRepository', 'Error in bulkAdd', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -41,12 +37,7 @@ export class HammerDbRepository {
     await hammerDb.blindScans.where({ batchId, barcode }).delete();
   }
 
-  static async updateScanQuantity(
-    batchId: string,
-    barcode: string,
-    newTotal: number,
-    location: string
-  ) {
+  static async updateScanQuantity(batchId: string, barcode: string, newTotal: number, location: string) {
     return await hammerDb.transaction('rw', hammerDb.blindScans, async () => {
       // 1. Borrar registros previos del mismo barcode en ese lote
       await hammerDb.blindScans.where({ batchId, barcode }).delete();
@@ -57,7 +48,7 @@ export class HammerDbRepository {
           barcode,
           quantity: newTotal,
           location,
-          timestamp: Date.now(),
+          timestamp: Date.now()
         });
       }
     });
@@ -82,7 +73,7 @@ export class HammerDbRepository {
   static async getBatchCounts(batchId: string): Promise<{ scans: number; manifests: number }> {
     const [scans, manifests] = await Promise.all([
       this.getBlindScanCountByBatch(batchId),
-      this.getBlindManifestCountByBatch(batchId),
+      this.getBlindManifestCountByBatch(batchId)
     ]);
     return { scans, manifests };
   }
@@ -90,25 +81,22 @@ export class HammerDbRepository {
   static async getBatchSummary(batchId: string) {
     const [scans, manifests] = await Promise.all([
       this.getBlindScansByBatch(batchId),
-      this.getBlindManifestsByBatch(batchId),
+      this.getBlindManifestsByBatch(batchId)
     ]);
 
-    const summary = new Map<
-      string,
-      {
-        barcode: string;
-        scanned: number;
-        expected: number;
-        name?: string;
-      }
-    >();
+    const summary = new Map<string, { 
+      barcode: string, 
+      scanned: number, 
+      expected: number, 
+      name?: string 
+    }>();
 
     manifests.forEach(m => {
       summary.set(m.barcode, {
         barcode: m.barcode,
         scanned: 0,
         expected: m.expectedQty,
-        name: m.name,
+        name: m.name
       });
     });
 
@@ -120,7 +108,7 @@ export class HammerDbRepository {
         summary.set(s.barcode, {
           barcode: s.barcode,
           scanned: s.quantity,
-          expected: 0,
+          expected: 0
         });
       }
     });
@@ -143,24 +131,22 @@ export class HammerDbRepository {
   }> {
     const [scans, manifests] = await Promise.all([
       this.getBlindScansByBatch(batchId),
-      this.getBlindManifestsByBatch(batchId),
+      this.getBlindManifestsByBatch(batchId)
     ]);
 
     const totalScannedUnits = scans.reduce((sum, s) => sum + s.quantity, 0);
     const totalExpectedUnits = manifests.reduce((sum, m) => sum + m.expectedQty, 0);
 
-    const lastScan =
-      scans.length > 0
-        ? scans.reduce((latest, s) => (s.timestamp > latest.timestamp ? s : latest), scans[0])
-        : null;
+    const lastScan = scans.length > 0
+      ? scans.reduce((latest, s) => s.timestamp > latest.timestamp ? s : latest, scans[0])
+      : null;
 
-    const lastManifest =
-      manifests.length > 0
-        ? manifests.reduce((latest, m) => {
-            // Usar barcode como proxy de timestamp si no existe
-            return m;
-          }, manifests[0])
-        : null;
+    const lastManifest = manifests.length > 0
+      ? manifests.reduce((latest, m) => {
+          // Usar barcode como proxy de timestamp si no existe
+          return m;
+        }, manifests[0])
+      : null;
 
     return {
       scans: scans.length,
@@ -169,7 +155,8 @@ export class HammerDbRepository {
       totalExpectedUnits,
       lastScanTimestamp: lastScan?.timestamp || null,
       lastManifestTimestamp: lastManifest ? Date.now() : null, // Manifests no tienen timestamp
-      hasData: scans.length > 0 || manifests.length > 0,
+      hasData: scans.length > 0 || manifests.length > 0
     };
   }
 }
+

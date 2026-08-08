@@ -22,13 +22,13 @@ export interface DatabaseBootstrapResult {
 export const bootstrapDatabase = async (): Promise<DatabaseBootstrapResult> => {
   let dbReady = false;
   let attempts = 0;
-
+  
   while (!dbReady && attempts < DB_BOOTSTRAP_RETRIES) {
     try {
       await (db as any).open();
       dbReady = true;
       logger.info('INIT_DB', `Database opened successfully on attempt ${attempts + 1}`);
-    } catch (e: unknown) {
+    } catch (e) {
       attempts++;
       logger.warn('INIT_DB', 'Database open failed', e);
       if (attempts < DB_BOOTSTRAP_RETRIES) {
@@ -51,7 +51,7 @@ export const bootstrapDatabase = async (): Promise<DatabaseBootstrapResult> => {
       await recoverFromEmergencySnapshot();
       recoveredFromSnapshot = true;
       logger.success('INIT_DB', 'Recovered from emergency snapshot');
-    } catch (e: unknown) {
+    } catch (e) {
       logger.warn('INIT_DB', 'No emergency snapshot found or recovery failed', e);
     }
   }
@@ -60,7 +60,7 @@ export const bootstrapDatabase = async (): Promise<DatabaseBootstrapResult> => {
     success: true,
     sessionCount,
     isFirstLaunch,
-    recoveredFromSnapshot,
+    recoveredFromSnapshot
   };
 };
 
