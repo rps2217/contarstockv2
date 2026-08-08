@@ -51,11 +51,3 @@ export function isDarkMode(theme: unknown): boolean {
 export function isLightMode(theme: unknown): boolean {
   return theme === 'light';
 }
-
-/**
- * Type-safe theme check for dark mode
- * Use this in components with specific theme prop types
- */
-export function checkIsDark(theme: ThemeLike): boolean {
-  return theme ? DARK_THEMES.includes(theme as DarkTheme) : true;
-}

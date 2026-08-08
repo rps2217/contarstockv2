@@ -252,37 +252,6 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 }
 
 /**
- * Sleep utility
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Retry con backoff exponencial
- */
-export async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  baseDelay = 1000
-): Promise<T> {
-  let lastError: Error;
-
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      if (i < maxRetries - 1) {
-        await sleep(baseDelay * Math.pow(2, i));
-      }
-    }
-  }
-
-  throw lastError!;
-}
-
-/**
  * Formatea bytes a string legible (B, KB, MB, GB)
  */
 export function formatBytes(bytes: number): string {

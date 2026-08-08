@@ -129,6 +129,34 @@ registerExpiry=true → TestModeExpiryModal se muestra al escanear
 | `syncMappingHelpers.ts`          | Funciones de mapeo local↔remote                 |
 | `syncEventFilters.ts`            | Filtros para prevención de duplicados           |
 
+### 🔍 AUDITORÍA DE CÓDIGO DUPLICADO (2026-08-06)
+
+**Resultado:** ~400+ LOC eliminadas aplicando reglas YAGNI
+
+#### Eliminados por no uso
+
+| Archivo/Función                          | LOC  | Razón                         |
+| ---------------------------------------- | ---- | ----------------------------- |
+| `shared/hooks/useTheme.ts`               | ~50  | 0 referencias                 |
+| `shared/hooks/useReducedMotion.ts`       | ~30  | 0 referencias                 |
+| `shared/hooks/useErrorHandler.ts`        | ~40  | 0 referencias                 |
+| `sleep` + `retryWithBackoff` (common.ts) | ~25  | No exportados ni usados       |
+| `checkIsDark` (lib/utils.ts)             | ~5   | No usado externamente         |
+| `hooks/useAudit.ts`                      | -291 | Reducido a re-export (13 LOC) |
+
+#### Unificados
+
+| Función                   | Antes            | Después                         |
+| ------------------------- | ---------------- | ------------------------------- |
+| `exportToCSV` (export.ts) | 17 LOC duplicado | Usa `csvExport.ts`              |
+| `getStatusIcon`           | 2 versiones      | Usa solo `redesign/utils/icons` |
+
+#### Criterios aplicados
+
+1. Si la función no se importa desde ningún lugar → eliminar
+2. Si hay múltiples versiones → mantener la más usada, actualizar imports
+3. Si el barrel export ya re-exporta → convertir a re-export simple
+
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
 1. **Archivos monolíticos** (>1000 LOC):
