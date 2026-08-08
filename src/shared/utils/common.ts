@@ -75,13 +75,6 @@ export function slugify(text: string): string {
 }
 
 /**
- * Genera un ID único basado en timestamp + random
- */
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
  * Parses a value that could be a string or number into a number
  */
 export function parseNumber(value: string | number | null | undefined, defaultValue = 0): number {
