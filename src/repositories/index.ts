@@ -42,7 +42,6 @@ export {
 export { ExpiryRepository } from './ExpiryRepository';
 export { LocationRepository } from './LocationRepository';
 export { MessageTemplateRepository } from './MessageTemplateRepository';
-export { EmailTemplateRepository } from './EmailTemplateRepository';
 
 // System Repositories
 export { SystemRepository } from './SystemRepository';
