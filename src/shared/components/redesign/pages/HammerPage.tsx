@@ -82,21 +82,12 @@ import { HammerHeader } from './HammerPage/HammerHeader';
 // Componente principal
 // ============================================================================
 
-// Generar ID único simple sin depender de funciones externas en el módulo
-const generateSimpleId = (): string => {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 10);
-  return `HM-${timestamp}${random}`.toUpperCase();
-};
-
 export const RedesignHammerPage: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
 
   // Hook del motor de conteo
-  const { startCounting, isStarting } = useCountingEngine();
-
-  // Modal de inicio unificado
+  const { startCounting, isStarting, generateBatchId } = useCountingEngine();
 
   // Ref para evitar que el modal se reabra durante navegación
   const isNavigatingRef = useRef(false);
@@ -112,8 +103,7 @@ export const RedesignHammerPage: React.FC = () => {
     if (paramBatchId && paramBatchId !== 'CORE' && paramBatchId.trim() !== '') {
       return paramBatchId;
     }
-    // Generar un nuevo batchId único usando función simple
-    return generateSimpleId();
+    return generateBatchId();
   });
 
   // Si el batchId proporcionado es 'CORE' o está vacío, redirigir a uno nuevo
@@ -371,13 +361,8 @@ export const RedesignHammerPage: React.FC = () => {
 
   // Empezar nueva sesión con ID único (para no reutilizar datos)
   const handleNewSessionWithNewId = () => {
-    // Generar un nuevo batchId único
-    const newBatchId = generateSimpleId();
-
-    // Guardar en localStorage para que el router lo use
+    const newBatchId = generateBatchId();
     localStorage.setItem('hammer_last_batch', newBatchId);
-
-    // Navegar a la nueva sesión
     navigate(`/massive/${newBatchId}`);
   };
 
