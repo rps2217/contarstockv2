@@ -49,19 +49,48 @@ npm run build      # Build exitoso
 ### 🔴 PROBLEMAS CRÍTICOS CONOCIDOS
 
 1. **Archivos monolíticos** (>1000 LOC):
-   - `UnifiedSyncEngine.ts` (1,491 LOC)
-   - `ExpiryPage.tsx` (1,378 LOC)
-   - `TheoreticalLoadsPage.tsx` (1,325 LOC)
-   - `ThermalPrinterEngine.ts` (1,144 LOC)
-   - `EventsModal.tsx` (1,054 LOC)
+   - `UnifiedSyncEngine.ts` (805 LOC) - ✅ Completado
+   - `ThermalPrinterEngine.ts` (385 LOC) - ✅ Modularizado
 
-2. **Tipos `any`**: ~795 ocurrencias
+2. **Tipos `any`**: ~104 ocurrencias (mejora de 795)
 
 3. **Memory leaks potenciales**:
    - 78 `addEventListener` sin remove
    - 45 `setInterval` sin clearInterval
 
-4. **Cobertura de tests baja**: 7.2%
+4. **Cobertura de tests baja**: ~8.0%
+
+### 🔍 AUDITORÍA YAGNI (2026-08-06)
+
+**Resultado:** ~500+ LOC eliminadas aplicando reglas YAGNI
+
+#### Eliminados
+
+| Archivo/Función | LOC | Razón |
+|----------------|------|-------|
+| `shared/hooks/useTheme.ts` | ~50 | 0 referencias |
+| `shared/hooks/useReducedMotion.ts` | ~30 | 0 referencias |
+| `shared/hooks/useErrorHandler.ts` | ~40 | 0 referencias |
+| `sleep` + `retryWithBackoff` (common.ts) | ~31 | Duplicados de lib/retry.ts |
+| `checkIsDark` (lib/utils.ts) | ~5 | No usado externamente |
+| `cn()` (theme/index.ts) | ~7 | Duplicado de lib/utils.ts |
+| `hooks/useAudit.ts` | -291 | Reducido a re-export (13 LOC) |
+| `reception/types/index.ts` | -3 | Archivo vacío |
+| `exportToCSV` (export.ts) | -17 | Duplicado de csvExport.ts |
+
+#### Unificados
+
+| Función | Antes | Después |
+|---------|-------|---------|
+| `FSM_TRANSITIONS` | En 2 archivos | Un solo lugar centralizado |
+| `cn()` | theme + lib/utils | Solo lib/utils (theme re-exporta) |
+| `exportToCSV` | 2 versiones | Solo csvExport.ts |
+
+#### Criterios aplicados
+
+1. Si la función no se importa desde ningún lugar → eliminar
+2. Si hay múltiples versiones → mantener la más robusta, actualizar imports
+3. Si el barrel export ya re-exporta → convertir a re-export simple
 
 ### 🎯 TAREAS PENDIENTES DE REFACTORIZACIÓN
 
