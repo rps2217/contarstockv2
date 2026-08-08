@@ -18,7 +18,6 @@ import { Product } from '@/types';
 import { logger } from '@/services/logger';
 import { useToastStore } from '@/stores';
 import { evaluateExpression } from './expressionEngine';
-import type { BusinessRule } from './expressionEngine';
 
 // =============================================================================
 // TIPOS
