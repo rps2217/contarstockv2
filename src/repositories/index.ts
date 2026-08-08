@@ -26,7 +26,6 @@ export { SessionRepositoryLegacy } from './session/SessionRepository';
 export { ScanRepository, scanRepository, ScanRepositoryLegacy } from './scan/ScanRepository';
 
 // Queue Repositories
-export { SyncQueueRepository, syncQueueRepository } from './SyncQueueRepository';
 export { SyncLogRepository } from './SyncLogRepository';
 
 // Entity Repositories
