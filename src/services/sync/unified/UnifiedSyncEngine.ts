@@ -40,6 +40,7 @@ import {
 import { syncRegistry } from './registry';
 import { syncMetricsService } from './SyncMetricsService';
 import { SyncConflictResolver, getSyncConflictResolver } from './SyncConflictResolver';
+import { FSM_TRANSITIONS } from './syncStatsHelpers';
 
 // =============================================================================
 // HELPERS UTILITARIOS (importados de syncHelpers)
@@ -125,16 +126,7 @@ export class UnifiedSyncEngine {
   }
 
   private canTransition(event: SyncEvent): boolean {
-    const transitions: Record<SyncState, SyncEvent[]> = {
-      idle: ['SYNC_CATALOGS', 'SYNC_BATCHES', 'SYNC_ALL', 'OFFLINE'],
-      syncing_catalogs: ['ERROR', 'RESET'],
-      syncing_batches: ['ERROR', 'RESET'],
-      checking_conflicts: ['ERROR', 'RESET', 'RESOLVE_CONFLICTS'],
-      resolving_conflicts: ['ERROR', 'RESET'],
-      error: ['SYNC_ALL', 'RESET'],
-      offline: ['SYNC_ALL', 'RESET'],
-    };
-    return transitions[this.state]?.includes(event) ?? false;
+    return FSM_TRANSITIONS[this.state]?.includes(event) ?? false;
   }
 
   // ===========================================================================

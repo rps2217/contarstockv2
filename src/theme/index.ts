@@ -1,7 +1,17 @@
 /**
  * Theme Utilities - Helper para aplicar tokens en componentes
  */
-import { designTokens, colors, spacing, typography, shadows, borders, animations, zIndex } from './tokens';
+import {
+  designTokens,
+  colors,
+  spacing,
+  typography,
+  shadows,
+  borders,
+  animations,
+  zIndex,
+} from './tokens';
+export { cn } from '@/lib/utils';
 
 // ============================================
 // CLASES UTILITARIAS
@@ -88,7 +98,9 @@ export function getSyncStatusClass(status: 'synced' | 'pending' | 'error'): stri
 /**
  * Obtiene clase de color basada en expiry status
  */
-export function getExpiryStatusClass(status: 'expired' | 'critical' | 'next_expiry' | 'safe'): string {
+export function getExpiryStatusClass(
+  status: 'expired' | 'critical' | 'next_expiry' | 'safe'
+): string {
   return expiryStatusClasses[status] ?? 'bg-slate-100 text-slate-800';
 }
 
@@ -97,13 +109,6 @@ export function getExpiryStatusClass(status: 'expired' | 'critical' | 'next_expi
  */
 export function getPriorityClass(priority: 'low' | 'medium' | 'high' | 'critical'): string {
   return priorityClasses[priority] ?? priorityClasses.low;
-}
-
-/**
- * Combina clases condicionalmente
- */
-export function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
 }
 
 // ============================================

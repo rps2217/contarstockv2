@@ -1,3 +1,0 @@
-/**
- * Reception Types
- */
